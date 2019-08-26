@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+ <s3>		
+  <bucket>dbp-prod</bucket>
+  <vid_bucket>dbp-vid</vid_bucket>
+  <aws_profile>dbp-prod</aws_profile>
+ </s3>
+ <permissions>
+  <access_restricted>7</access_restricted>
+  <access_granted>9</access_granted>
+  <access_video>4</access_video>
+ </permissions>
+ <directory>
+  <upload_path>/home/parallels/FCBH_uploader/</upload_path>
+  <lpts_xml>qry_dbp4_Regular_and_NonDrama.xml</lpts_xml>
+ </directory>
+</config>

@@ -1,0 +1,739 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<dataroot xmlns:od="urn:schemas-microsoft-com:officedata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"  xsi:noNamespaceSchemaLocation="qry_dbp4_Regular_and_NonDrama.xsd" generated="2019-07-08T11:34:21">
+<qry_dbp4_Regular_and_NonDrama>
+<LangName>!Xun</LangName>
+<Reg_StockNumber>S1KNW/XUN</Reg_StockNumber>
+<Reg_Recording_Status>Scheduled</Reg_Recording_Status>
+<ND_StockNumber> none</ND_StockNumber>
+<ISO>knw</ISO>
+<Licensor>SIL Southern Africa</Licensor>
+<Copyrightc>© Text [year] Wycliffe Bible Translators, Inc.</Copyrightc>
+<Copyrightp>℗ Audio [year] Wycliffe Bible Translators, Inc. and Hosanna</Copyrightp>
+<DBP_Equivalent>N/A</DBP_Equivalent>
+<Country>Angola</Country>
+<DBPText>-1</DBPText>
+<DBPTextOT>-1</DBPTextOT>
+<DBPAudio>-1</DBPAudio>
+<DBPMobile>-1</DBPMobile>
+<DBPWebHub>-1</DBPWebHub>
+<Download>-1</Download>
+<Streaming>-1</Streaming>
+<MobileText>-1</MobileText>
+<HubText>-1</HubText>
+<APIDevText>-1</APIDevText>
+<APIDevAudio>-1</APIDevAudio>
+<FairUseLimitValue>0</FairUseLimitValue>
+<FairUseLimit>0</FairUseLimit>
+<EthName>Kung-Ekoka</EthName>
+<AltName>!Hu, !Khung, !Ku, !Kung, !Xu, !Xun, !Xung, Ekoka !Xung, Ekoka-!Xû, Kung, Qxü</AltName>
+<CreativeCommonsAudioWaiver>0</CreativeCommonsAudioWaiver>
+<ItunesPodcast>-1</ItunesPodcast>
+<WebHubVideo>-1</WebHubVideo>
+<Copyright_Video>Courtesy of LUMO Project Films</Copyright_Video>
+<PostedToServer>0</PostedToServer>
+<APIDevVideo>-1</APIDevVideo>
+</qry_dbp4_Regular_and_NonDrama>
+<qry_dbp4_Regular_and_NonDrama>
+<LangName>’Auhelawa</LangName>
+<Reg_StockNumber>N2KUD/BTA</Reg_StockNumber>
+<Reg_Recording_Status>Text Only</Reg_Recording_Status>
+<ND_StockNumber> none</ND_StockNumber>
+<HeartName>’Auhelawa</HeartName>
+<ISO>kud</ISO>
+<Licensor>SIL</Licensor>
+<Copyrightc>© 2014, Wycliffe Bible Translators, Inc. All rights reserved.</Copyrightc>
+<Copyrightp>℗</Copyrightp>
+<DBP_Equivalent>KUDBTA</DBP_Equivalent>
+<Volumne_Name>2008 Edition</Volumne_Name>
+<Country>Papua New Guinea</Country>
+<DBPText>-1</DBPText>
+<DBPTextOT>0</DBPTextOT>
+<DBPAudio>-1</DBPAudio>
+<DBPMobile>-1</DBPMobile>
+<DBPWebHub>-1</DBPWebHub>
+<Download>-1</Download>
+<Streaming>-1</Streaming>
+<MobileText>-1</MobileText>
+<HubText>-1</HubText>
+<APIDevText>-1</APIDevText>
+<APIDevAudio>-1</APIDevAudio>
+<FairUseLimit>0</FairUseLimit>
+<EthName>’Auhelawa</EthName>
+<AltName>Auhelawa, Kurada, Nuakata, Ulada, ’Urada</AltName>
+<CreativeCommonsAudioWaiver>0</CreativeCommonsAudioWaiver>
+<ItunesPodcast>-1</ItunesPodcast>
+<Reg_NTTextDamID1>KUDBTAN2ET</Reg_NTTextDamID1>
+<Reg_NTTextDamIDStatus1>Live</Reg_NTTextDamIDStatus1>
+<WebHubVideo>0</WebHubVideo>
+<Copyright_Video>Courtesy of LUMO Project Films</Copyright_Video>
+<DBPFont>Charis SIL</DBPFont>
+<_x0031_Orthography>Latin</_x0031_Orthography>
+<USX_Date1>2018-02-09T00:00:00</USX_Date1>
+<PostedToServer>1</PostedToServer>
+<DBPDate>2014-06-02T00:00:00</DBPDate>
+<Version>2008 Papua New Guinea Bible Translation Association, Inc.</Version>
+<APIDevVideo>0</APIDevVideo>
+</qry_dbp4_Regular_and_NonDrama>
+<qry_dbp4_Regular_and_NonDrama>
+<LangName>Aari</LangName>
+<Reg_StockNumber>N1AIW/DPI</Reg_StockNumber>
+<Reg_Recording_Status>Completed</Reg_Recording_Status>
+<ND_StockNumber> none</ND_StockNumber>
+<ISO>aiw</ISO>
+<Licensor>Davar Partners International</Licensor>
+<Copyrightc>© The Word for the World, 2015</Copyrightc>
+<Copyrightp>℗ Davar Partners International, 2016</Copyrightp>
+<DBP_Equivalent>AIWDPI</DBP_Equivalent>
+<Volumne_Name>2015 Edition</Volumne_Name>
+<Country>Ethiopia</Country>
+<DBPText>-1</DBPText>
+<DBPTextOT>-1</DBPTextOT>
+<DBPAudio>-1</DBPAudio>
+<DBPMobile>-1</DBPMobile>
+<DBPWebHub>-1</DBPWebHub>
+<Download>0</Download>
+<Streaming>-1</Streaming>
+<MobileText>-1</MobileText>
+<HubText>-1</HubText>
+<APIDevText>-1</APIDevText>
+<APIDevAudio>0</APIDevAudio>
+<FairUseLimitValue>0</FairUseLimitValue>
+<FairUseLimit>0</FairUseLimit>
+<EthName>Aari</EthName>
+<AltName>Aarai: Ara: Ari: Aro: Shankilla: Shankilligna: Shankillinya</AltName>
+<CreativeCommonsText>BY-NC</CreativeCommonsText>
+<CreativeCommonsAudioWaiver>0</CreativeCommonsAudioWaiver>
+<ItunesPodcast>-1</ItunesPodcast>
+<Reg_NTAudioDamID1>AIWDPIN1DA</Reg_NTAudioDamID1>
+<Reg_NTAudioDamIDStatus1>Live</Reg_NTAudioDamIDStatus1>
+<WebHubVideo>-1</WebHubVideo>
+<Copyright_Video>Courtesy of LUMO Project Films</Copyright_Video>
+<PostedToServer>0</PostedToServer>
+<Version>The Word for the World, 2015</Version>
+<CAudioDamStockNo>AIWDPIC1DA</CAudioDamStockNo>
+<CAudioDamStatus>Live</CAudioDamStatus>
+<NTAudioDamLoad>2018-04-18T00:00:00</NTAudioDamLoad>
+<APIDevVideo>-1</APIDevVideo>
+</qry_dbp4_Regular_and_NonDrama>
+<qry_dbp4_Regular_and_NonDrama>
+<LangName>Aari</LangName>
+<Reg_StockNumber>O1AIW/DPI</Reg_StockNumber>
+<Reg_Recording_Status>Completed</Reg_Recording_Status>
+<ND_StockNumber> none</ND_StockNumber>
+<ISO>aiw</ISO>
+<Licensor>Davar Partners International</Licensor>
+<Copyrightc>© The Word for the World, 2015</Copyrightc>
+<Copyrightp>℗ Davar Partners International, 2016</Copyrightp>
+<DBP_Equivalent>AIWDPI</DBP_Equivalent>
+<Volumne_Name>2015 Edition</Volumne_Name>
+<Country>Ethiopia</Country>
+<DBPText>-1</DBPText>
+<DBPTextOT>-1</DBPTextOT>
+<DBPAudio>-1</DBPAudio>
+<DBPMobile>-1</DBPMobile>
+<DBPWebHub>-1</DBPWebHub>
+<Download>0</Download>
+<Streaming>-1</Streaming>
+<MobileText>-1</MobileText>
+<HubText>-1</HubText>
+<APIDevText>-1</APIDevText>
+<APIDevAudio>0</APIDevAudio>
+<FairUseLimit>0</FairUseLimit>
+<EthName>Aari</EthName>
+<AltName>Aarai: Ara: Ari: Aro: Shankilla: Shankilligna: Shankillinya</AltName>
+<CreativeCommonsText>BY-NC</CreativeCommonsText>
+<CreativeCommonsAudioWaiver>0</CreativeCommonsAudioWaiver>
+<ItunesPodcast>-1</ItunesPodcast>
+<Reg_OTAudioDamID1>AIWDPIO1DA</Reg_OTAudioDamID1>
+<Reg_OTAudioDamIDStatus1>Live</Reg_OTAudioDamIDStatus1>
+<WebHubVideo>0</WebHubVideo>
+<Copyright_Video>Courtesy of LUMO Project Films</Copyright_Video>
+<PostedToServer>0</PostedToServer>
+<APIDevVideo>0</APIDevVideo>
+</qry_dbp4_Regular_and_NonDrama>
+<qry_dbp4_Regular_and_NonDrama>
+<LangName>Abaali, Maya</LangName>
+<Reg_StockNumber>N2BCN/TMP</Reg_StockNumber>
+<Reg_Recording_Status>Unknown</Reg_Recording_Status>
+<ND_StockNumber> none</ND_StockNumber>
+<ISO>BCN</ISO>
+<Copyrightc>©2019 Wycliffe Bible Translators, Inc and The Nigeria Bible Translation Trust</Copyrightc>
+<Copyrightp>℗</Copyrightp>
+<Country>Nigeria</Country>
+<DBPText>0</DBPText>
+<DBPTextOT>0</DBPTextOT>
+<DBPAudio>0</DBPAudio>
+<DBPMobile>0</DBPMobile>
+<DBPWebHub>0</DBPWebHub>
+<Download>0</Download>
+<Streaming>0</Streaming>
+<MobileText>0</MobileText>
+<HubText>0</HubText>
+<APIDevText>0</APIDevText>
+<APIDevAudio>0</APIDevAudio>
+<FairUseLimitValue>0</FairUseLimitValue>
+<FairUseLimit>0</FairUseLimit>
+<EthName>Bali</EthName>
+<AltName>Bibaali, Ekpali, Ibaali</AltName>
+<CreativeCommonsAudioWaiver>0</CreativeCommonsAudioWaiver>
+<ItunesPodcast>0</ItunesPodcast>
+<WebHubVideo>0</WebHubVideo>
+<Copyright_Video>Courtesy of LUMO Project Films</Copyright_Video>
+<PostedToServer>0</PostedToServer>
+<APIDevVideo>0</APIDevVideo>
+</qry_dbp4_Regular_and_NonDrama>
+<qry_dbp4_Regular_and_NonDrama>
+<LangName>Abau</LangName>
+<Reg_StockNumber>N2AAU/WBT</Reg_StockNumber>
+<Reg_Recording_Status>Text Only</Reg_Recording_Status>
+<ND_StockNumber> none</ND_StockNumber>
+<HeartName>Abau</HeartName>
+<ISO>aau</ISO>
+<Licensor>SIL</Licensor>
+<Copyrightc>© 2006 Wycliffe Bible Translators, Inc.</Copyrightc>
+<Copyrightp>℗ 201_ Hosanna</Copyrightp>
+<DBP_Equivalent>AAUWBT</DBP_Equivalent>
+<Volumne_Name>2006 Edition</Volumne_Name>
+<Country>Papua New Guinea</Country>
+<DBPText>-1</DBPText>
+<DBPTextOT>0</DBPTextOT>
+<DBPAudio>-1</DBPAudio>
+<DBPMobile>-1</DBPMobile>
+<DBPWebHub>-1</DBPWebHub>
+<Download>-1</Download>
+<Streaming>-1</Streaming>
+<MobileText>-1</MobileText>
+<HubText>-1</HubText>
+<APIDevText>-1</APIDevText>
+<APIDevAudio>-1</APIDevAudio>
+<FairUseLimit>0</FairUseLimit>
+<EthName>Abau</EthName>
+<CreativeCommonsAudioWaiver>0</CreativeCommonsAudioWaiver>
+<ItunesPodcast>-1</ItunesPodcast>
+<Reg_NTTextDamID1>AAUWBTN2ET</Reg_NTTextDamID1>
+<Reg_NTTextDamIDStatus1>Live</Reg_NTTextDamIDStatus1>
+<WebHubVideo>0</WebHubVideo>
+<Copyright_Video>Courtesy of LUMO Project Films</Copyright_Video>
+<DBPFont>Charis SIL</DBPFont>
+<_x0031_Orthography>Latin (PNG)</_x0031_Orthography>
+<PostedToServer>1</PostedToServer>
+<Version>2006 Wycliffe Bible Translators, Inc.</Version>
+<APIDevVideo>0</APIDevVideo>
+</qry_dbp4_Regular_and_NonDrama>
+<qry_dbp4_Regular_and_NonDrama>
+<LangName>Abaza</LangName>
+<Reg_StockNumber>N2ABQ/TMP</Reg_StockNumber>
+<Reg_Recording_Status>Unknown</Reg_Recording_Status>
+<ND_StockNumber> none</ND_StockNumber>
+<ISO>abq</ISO>
+<Copyrightc>©</Copyrightc>
+<Copyrightp>℗</Copyrightp>
+<DBP_Equivalent>N/A</DBP_Equivalent>
+<Volumne_Name>IBTR - SILB Version</Volumne_Name>
+<Country>Russia</Country>
+<CountryAdditional>Germany, Turkey</CountryAdditional>
+<DBPText>0</DBPText>
+<DBPTextOT>0</DBPTextOT>
+<DBPAudio>0</DBPAudio>
+<DBPMobile>0</DBPMobile>
+<DBPWebHub>0</DBPWebHub>
+<Download>0</Download>
+<Streaming>0</Streaming>
+<MobileText>0</MobileText>
+<HubText>0</HubText>
+<APIDevText>0</APIDevText>
+<APIDevAudio>0</APIDevAudio>
+<FairUseLimit>0</FairUseLimit>
+<EthName>Abaza</EthName>
+<AltName>Abazin, Abazintsy, Ashuwa</AltName>
+<CreativeCommonsAudioWaiver>0</CreativeCommonsAudioWaiver>
+<ItunesPodcast>0</ItunesPodcast>
+<WebHubVideo>0</WebHubVideo>
+<Copyright_Video>Courtesy of LUMO Project Films</Copyright_Video>
+<PostedToServer>0</PostedToServer>
+<Version>IBTR - SILB</Version>
+<APIDevVideo>0</APIDevVideo>
+</qry_dbp4_Regular_and_NonDrama>
+<qry_dbp4_Regular_and_NonDrama>
+<LangName>Abidji</LangName>
+<Reg_StockNumber>N2ABI/WBT</Reg_StockNumber>
+<Reg_Recording_Status>Completed</Reg_Recording_Status>
+<ND_StockNumber>N1ABI/WBT</ND_StockNumber>
+<ND_Recording_Status>Completed</ND_Recording_Status>
+<HeartName>Abiji</HeartName>
+<ISO>abi</ISO>
+<Licensor>SIL</Licensor>
+<Copyrightc>© 2001 Wycliffe Bible Translators, Inc.</Copyrightc>
+<Copyrightp>℗ 2018 Hosanna</Copyrightp>
+<DBP_Equivalent>ABIWBT</DBP_Equivalent>
+<Volumne_Name>2001 Edition</Volumne_Name>
+<Country>Cote d&apos;Ivoire</Country>
+<DBPText>-1</DBPText>
+<DBPTextOT>0</DBPTextOT>
+<DBPAudio>-1</DBPAudio>
+<DBPMobile>-1</DBPMobile>
+<DBPWebHub>-1</DBPWebHub>
+<Download>-1</Download>
+<Streaming>-1</Streaming>
+<MobileText>-1</MobileText>
+<HubText>-1</HubText>
+<APIDevText>-1</APIDevText>
+<APIDevAudio>-1</APIDevAudio>
+<FairUseLimitValue>0</FairUseLimitValue>
+<FairUseLimit>0</FairUseLimit>
+<EthName>Abidji</EthName>
+<AltName>Abiji</AltName>
+<CreativeCommonsAudioWaiver>0</CreativeCommonsAudioWaiver>
+<ItunesPodcast>-1</ItunesPodcast>
+<Reg_NTTextDamID1>ABIWBTN2ET</Reg_NTTextDamID1>
+<Reg_NTTextDamIDStatus1>Live</Reg_NTTextDamIDStatus1>
+<Reg_NTAudioDamID1>ABIWBTN2DA</Reg_NTAudioDamID1>
+<Reg_NTAudioDamIDStatus1>Live</Reg_NTAudioDamIDStatus1>
+<ND_NTTextDamID1>ABIWBTN1ET</ND_NTTextDamID1>
+<ND_NTTextDamIDStatus1>Live</ND_NTTextDamIDStatus1>
+<ND_NTAudioDamID1>ABIWBTN1DA</ND_NTAudioDamID1>
+<ND_NTAudioDamIDStatus1>Live</ND_NTAudioDamIDStatus1>
+<WebHubVideo>-1</WebHubVideo>
+<Copyright_Video>Courtesy of LUMO Project Films</Copyright_Video>
+<Video_Mark_DamStockNo>ABIWBTP2DV</Video_Mark_DamStockNo>
+<Video_Mark_DamStatus>Live</Video_Mark_DamStatus>
+<DBPFont>Cambria</DBPFont>
+<_x0031_Orthography>Latin (African)</_x0031_Orthography>
+<USX_Date1>2018-11-02T00:00:00</USX_Date1>
+<PostedToServer>0</PostedToServer>
+<DBPDate>2018-11-08T00:00:00</DBPDate>
+<Version>Wycliffe Bible Translators 2001</Version>
+<NTAudioDamLoad>2018-01-10T00:00:00</NTAudioDamLoad>
+<APIDevVideo>-1</APIDevVideo>
+</qry_dbp4_Regular_and_NonDrama>
+<qry_dbp4_Regular_and_NonDrama>
+<LangName>Abkhaz</LangName>
+<Reg_StockNumber>N2ABK/TMP</Reg_StockNumber>
+<Reg_Recording_Status>Unknown</Reg_Recording_Status>
+<ND_StockNumber> none</ND_StockNumber>
+<ISO>abk</ISO>
+<Copyrightc>© 2004</Copyrightc>
+<Copyrightp>℗</Copyrightp>
+<DBP_Equivalent>#N/A</DBP_Equivalent>
+<Volumne_Name>2004 Edition</Volumne_Name>
+<Country>Georgia</Country>
+<CountryAdditional>Russian Federation, Turkey, Ukraine</CountryAdditional>
+<DBPText>0</DBPText>
+<DBPTextOT>0</DBPTextOT>
+<DBPAudio>0</DBPAudio>
+<DBPMobile>0</DBPMobile>
+<DBPWebHub>0</DBPWebHub>
+<Download>0</Download>
+<Streaming>0</Streaming>
+<MobileText>0</MobileText>
+<HubText>0</HubText>
+<APIDevText>0</APIDevText>
+<APIDevAudio>0</APIDevAudio>
+<FairUseLimit>0</FairUseLimit>
+<EthName>Abkhaz</EthName>
+<AltName>Abxazo</AltName>
+<CreativeCommonsAudioWaiver>0</CreativeCommonsAudioWaiver>
+<ItunesPodcast>0</ItunesPodcast>
+<WebHubVideo>0</WebHubVideo>
+<Copyright_Video>Courtesy of LUMO Project Films</Copyright_Video>
+<PostedToServer>0</PostedToServer>
+<Version>2004 IBTR</Version>
+<APIDevVideo>0</APIDevVideo>
+</qry_dbp4_Regular_and_NonDrama>
+<qry_dbp4_Regular_and_NonDrama>
+<LangName>Abun</LangName>
+<Reg_StockNumber>N2KGR/LAI</Reg_StockNumber>
+<Reg_Recording_Status>Delayed</Reg_Recording_Status>
+<ND_StockNumber>N1KGR/LAI</ND_StockNumber>
+<ND_Recording_Status>Delayed</ND_Recording_Status>
+<ISO>kgr</ISO>
+<Licensor>Indonesian Bible Society</Licensor>
+<Copyrightc>© 2004 LAI</Copyrightc>
+<Copyrightp>℗</Copyrightp>
+<DBP_Equivalent>KGRLAI</DBP_Equivalent>
+<Volumne_Name>2004 Edition</Volumne_Name>
+<Country>Indonesia</Country>
+<DBPText>-1</DBPText>
+<DBPTextOT>0</DBPTextOT>
+<DBPAudio>-1</DBPAudio>
+<DBPMobile>-1</DBPMobile>
+<DBPWebHub>-1</DBPWebHub>
+<Download>-1</Download>
+<Streaming>-1</Streaming>
+<MobileText>-1</MobileText>
+<HubText>-1</HubText>
+<APIDevText>-1</APIDevText>
+<APIDevAudio>-1</APIDevAudio>
+<FairUseLimit>0</FairUseLimit>
+<EthName>Abun</EthName>
+<AltName>A Nden, Karon, Manif, Yimbun</AltName>
+<CreativeCommonsAudioWaiver>0</CreativeCommonsAudioWaiver>
+<ItunesPodcast>-1</ItunesPodcast>
+<Reg_NTTextDamID1>KGRLAIN2ET</Reg_NTTextDamID1>
+<Reg_NTTextDamIDStatus1>Live</Reg_NTTextDamIDStatus1>
+<WebHubVideo>0</WebHubVideo>
+<Copyright_Video>Courtesy of LUMO Project Films</Copyright_Video>
+<DBPFont>Charis SIL</DBPFont>
+<_x0031_Orthography>Latin</_x0031_Orthography>
+<PostedToServer>1</PostedToServer>
+<DBPDate>2014-08-05T00:00:00</DBPDate>
+<APIDevVideo>0</APIDevVideo>
+</qry_dbp4_Regular_and_NonDrama>
+<qry_dbp4_Regular_and_NonDrama>
+<LangName>Acateco</LangName>
+<Reg_StockNumber>N2KNJ/SBI</Reg_StockNumber>
+<Reg_Recording_Status>Completed</Reg_Recording_Status>
+<ND_StockNumber> none</ND_StockNumber>
+<HeartName>Acateco</HeartName>
+<ISO>knj</ISO>
+<Licensor>SIL</Licensor>
+<Copyrightc>© 2001 Wycliffe Bible Translators, Inc.</Copyrightc>
+<Copyrightp>℗ 2001 Hosanna Grabado por Asociacion Vina</Copyrightp>
+<DBP_Equivalent>KNJSBI</DBP_Equivalent>
+<Volumne_Name>2001 Edition</Volumne_Name>
+<Country>Guatemala</Country>
+<CountryAdditional>Mexico: United States</CountryAdditional>
+<DBPText>-1</DBPText>
+<DBPTextOT>0</DBPTextOT>
+<DBPAudio>-1</DBPAudio>
+<DBPMobile>-1</DBPMobile>
+<DBPWebHub>-1</DBPWebHub>
+<Download>-1</Download>
+<Streaming>-1</Streaming>
+<MobileText>-1</MobileText>
+<HubText>-1</HubText>
+<APIDevText>-1</APIDevText>
+<APIDevAudio>-1</APIDevAudio>
+<FairUseLimit>0</FairUseLimit>
+<EthName>Akateko</EthName>
+<AltName>Kanjobal Western: Acatec: Conob: San Miguel Acatán Kanjobal: Western Kanjobal: Western Q&apos;anjob&apos;al</AltName>
+<CreativeCommonsAudioWaiver>0</CreativeCommonsAudioWaiver>
+<ItunesPodcast>-1</ItunesPodcast>
+<Reg_NTTextDamID1>KNJSBIN2ET</Reg_NTTextDamID1>
+<Reg_NTTextDamIDStatus1>Live</Reg_NTTextDamIDStatus1>
+<Reg_NTAudioDamID1>KNJSBIN2DA</Reg_NTAudioDamID1>
+<Reg_NTAudioDamIDStatus1>Live</Reg_NTAudioDamIDStatus1>
+<Reg_OTTextDamID3>KNJSBIO2ET</Reg_OTTextDamID3>
+<Reg_OTTextDamIDStatus3>No DBP</Reg_OTTextDamIDStatus3>
+<WebHubVideo>-1</WebHubVideo>
+<Copyright_Video>Courtesy of LUMO Project Films</Copyright_Video>
+<DBPFont>Charis SIL</DBPFont>
+<_x0031_Orthography>Latin</_x0031_Orthography>
+<PostedToServer>1</PostedToServer>
+<Version>2001 Wycliffe Bible Translators Inc.</Version>
+<NTAudioDamLoad>2012-03-23T00:00:00</NTAudioDamLoad>
+<APIDevVideo>-1</APIDevVideo>
+</qry_dbp4_Regular_and_NonDrama>
+<qry_dbp4_Regular_and_NonDrama>
+<LangName>Aceh</LangName>
+<Reg_StockNumber>N2ACE/IBS</Reg_StockNumber>
+<Reg_Recording_Status>Completed</Reg_Recording_Status>
+<ND_StockNumber> none</ND_StockNumber>
+<HeartName>Aceh</HeartName>
+<ISO>ace</ISO>
+<Licensor>Indonesian Bible Society</Licensor>
+<Copyrightc>© Lembaga Alkitab Indonesia 1997</Copyrightc>
+<Copyrightp>℗ 2007 Hosanna</Copyrightp>
+<DBP_Equivalent>ACEIBS</DBP_Equivalent>
+<Volumne_Name>Today&apos;s Aceh Version, 1997</Volumne_Name>
+<Country>Indonesia</Country>
+<DBPText>-1</DBPText>
+<DBPTextOT>-1</DBPTextOT>
+<DBPAudio>-1</DBPAudio>
+<DBPMobile>-1</DBPMobile>
+<DBPWebHub>-1</DBPWebHub>
+<Download>-1</Download>
+<Streaming>-1</Streaming>
+<MobileText>-1</MobileText>
+<HubText>-1</HubText>
+<APIDevText>-1</APIDevText>
+<APIDevAudio>-1</APIDevAudio>
+<FairUseLimit>0</FairUseLimit>
+<EthName>Aceh</EthName>
+<AltName>Achehnese: Achinese</AltName>
+<CreativeCommonsAudioWaiver>0</CreativeCommonsAudioWaiver>
+<ItunesPodcast>-1</ItunesPodcast>
+<Reg_NTTextDamID1>AC1IBSN2ET</Reg_NTTextDamID1>
+<Reg_NTTextDamIDStatus1>Live</Reg_NTTextDamIDStatus1>
+<Reg_OTTextDamID1>AC1IBSO2ET</Reg_OTTextDamID1>
+<Reg_OTTextDamIDStatus1>Live</Reg_OTTextDamIDStatus1>
+<Reg_NTAudioDamID1>AC1IBSN2DA</Reg_NTAudioDamID1>
+<Reg_NTAudioDamIDStatus1>Live</Reg_NTAudioDamIDStatus1>
+<WebHubVideo>0</WebHubVideo>
+<Copyright_Video>Courtesy of LUMO Project Films</Copyright_Video>
+<DBPFont>Charis SIL</DBPFont>
+<_x0031_Orthography>Latin</_x0031_Orthography>
+<DBPFont2>Charis SIL</DBPFont2>
+<DBPFont3>Charis SIL</DBPFont3>
+<USX_Date1>2019-04-29T00:00:00</USX_Date1>
+<USX_Date2>2018-08-29T00:00:00</USX_Date2>
+<PostedToServer>1</PostedToServer>
+<DBPDate>2019-05-02T00:00:00</DBPDate>
+<DBPDate2>2018-08-30T00:00:00</DBPDate2>
+<Version>Today&apos;s Aceh Version, 1997</Version>
+<NTAudioDamLoad>2012-08-13T00:00:00</NTAudioDamLoad>
+<APIDevVideo>0</APIDevVideo>
+</qry_dbp4_Regular_and_NonDrama>
+<qry_dbp4_Regular_and_NonDrama>
+<LangName>Achagua</LangName>
+<Reg_StockNumber>P2ACA/WBT</Reg_StockNumber>
+<Reg_Recording_Status>Completed</Reg_Recording_Status>
+<ND_StockNumber>P1ACA/WBT</ND_StockNumber>
+<HeartName>Achagua</HeartName>
+<ISO>aca</ISO>
+<Licensor>SIL</Licensor>
+<Copyrightc>© 2013 The Bible League</Copyrightc>
+<Copyrightp>℗ 2013 Francisco Garcia</Copyrightp>
+<DBP_Equivalent>ACAWBT</DBP_Equivalent>
+<Volumne_Name>2013 Edition</Volumne_Name>
+<Country>Colombia</Country>
+<CountryAdditional>Venezuela</CountryAdditional>
+<DBPText>-1</DBPText>
+<DBPTextOT>-1</DBPTextOT>
+<DBPAudio>-1</DBPAudio>
+<DBPMobile>-1</DBPMobile>
+<DBPWebHub>-1</DBPWebHub>
+<Download>-1</Download>
+<Streaming>-1</Streaming>
+<MobileText>-1</MobileText>
+<HubText>-1</HubText>
+<APIDevText>-1</APIDevText>
+<APIDevAudio>-1</APIDevAudio>
+<FairUseLimit>0</FairUseLimit>
+<EthName>Achagua</EthName>
+<AltName>Ajagua: Xagua</AltName>
+<CreativeCommonsAudioWaiver>0</CreativeCommonsAudioWaiver>
+<ItunesPodcast>-1</ItunesPodcast>
+<Reg_NTTextDamID1>ACAWBTP2ET</Reg_NTTextDamID1>
+<Reg_NTTextDamIDStatus1>Live</Reg_NTTextDamIDStatus1>
+<Reg_NTAudioDamID1>ACAWBTP2DA</Reg_NTAudioDamID1>
+<Reg_NTAudioDamIDStatus1>Live</Reg_NTAudioDamIDStatus1>
+<WebHubVideo>-1</WebHubVideo>
+<Copyright_Video>Courtesy of LUMO Project Films</Copyright_Video>
+<DBPFont>Charis SIL</DBPFont>
+<_x0031_Orthography>Latin</_x0031_Orthography>
+<PostedToServer>1</PostedToServer>
+<DBPDate>2015-06-05T00:00:00</DBPDate>
+<NTAudioDamLoad>2015-11-16T00:00:00</NTAudioDamLoad>
+<APIDevVideo>-1</APIDevVideo>
+</qry_dbp4_Regular_and_NonDrama>
+<qry_dbp4_Regular_and_NonDrama>
+<LangName>Ache</LangName>
+<Reg_StockNumber>N2GUQ/LPY</Reg_StockNumber>
+<Reg_Recording_Status>Completed</Reg_Recording_Status>
+<ND_StockNumber>N1GUQ/LPY</ND_StockNumber>
+<ND_Recording_Status>Completed</ND_Recording_Status>
+<HeartName>Aché</HeartName>
+<ISO>guq</ISO>
+<Licensor>LETRA Paraguay</Licensor>
+<Copyrightc>© LETRA Paraguay</Copyrightc>
+<Copyrightp>℗ 2014 Hosanna</Copyrightp>
+<DBP_Equivalent>GUQLPY</DBP_Equivalent>
+<Volumne_Name>LETRA Version</Volumne_Name>
+<Country>Paraguay</Country>
+<DBPText>-1</DBPText>
+<DBPTextOT>0</DBPTextOT>
+<DBPAudio>-1</DBPAudio>
+<DBPMobile>-1</DBPMobile>
+<DBPWebHub>-1</DBPWebHub>
+<Download>-1</Download>
+<Streaming>-1</Streaming>
+<MobileText>-1</MobileText>
+<HubText>-1</HubText>
+<APIDevText>-1</APIDevText>
+<APIDevAudio>-1</APIDevAudio>
+<FairUseLimit>0</FairUseLimit>
+<EthName>Ache</EthName>
+<AltName>Axe: Guayaki-Ache: Guaiaqui: Guayakí: Guoyagui</AltName>
+<CreativeCommonsAudioWaiver>0</CreativeCommonsAudioWaiver>
+<ItunesPodcast>-1</ItunesPodcast>
+<Reg_NTTextDamID1>GUQLPYN2ET</Reg_NTTextDamID1>
+<Reg_NTTextDamIDStatus1>Live</Reg_NTTextDamIDStatus1>
+<Reg_NTAudioDamID1>GUQLPYN2DA</Reg_NTAudioDamID1>
+<Reg_NTAudioDamIDStatus1>Live</Reg_NTAudioDamIDStatus1>
+<ND_NTTextDamID1>GUQLPYN1ET</ND_NTTextDamID1>
+<ND_NTTextDamIDStatus1>Live</ND_NTTextDamIDStatus1>
+<ND_NTAudioDamID1>GUQLPYN1DA</ND_NTAudioDamID1>
+<ND_NTAudioDamIDStatus1>Live</ND_NTAudioDamIDStatus1>
+<WebHubVideo>0</WebHubVideo>
+<Copyright_Video>Courtesy of LUMO Project Films</Copyright_Video>
+<DBPFont>Charis SIL</DBPFont>
+<_x0031_Orthography>Latin</_x0031_Orthography>
+<PostedToServer>1</PostedToServer>
+<DBPDate>2014-01-08T00:00:00</DBPDate>
+<Version>LETRA</Version>
+<NTAudioDamLoad>2014-02-12T00:00:00</NTAudioDamLoad>
+<APIDevVideo>0</APIDevVideo>
+</qry_dbp4_Regular_and_NonDrama>
+<qry_dbp4_Regular_and_NonDrama>
+<LangName>Achi</LangName>
+<Reg_StockNumber>N2ACR/WBT</Reg_StockNumber>
+<Reg_Recording_Status>Completed</Reg_Recording_Status>
+<ND_StockNumber> none</ND_StockNumber>
+<HeartName>Achí</HeartName>
+<ISO>acr</ISO>
+<Licensor>SIL</Licensor>
+<Copyrightc>© 2009 Wycliffe Bible Translators, Inc.</Copyrightc>
+<Copyrightp>℗ 2009 Hosanna</Copyrightp>
+<DBP_Equivalent>ACRNNT</DBP_Equivalent>
+<Volumne_Name>2009 Edition</Volumne_Name>
+<Country>Guatemala</Country>
+<DBPText>-1</DBPText>
+<DBPTextOT>0</DBPTextOT>
+<DBPAudio>-1</DBPAudio>
+<DBPMobile>-1</DBPMobile>
+<DBPWebHub>-1</DBPWebHub>
+<Download>-1</Download>
+<Streaming>-1</Streaming>
+<MobileText>-1</MobileText>
+<HubText>-1</HubText>
+<APIDevText>-1</APIDevText>
+<APIDevAudio>-1</APIDevAudio>
+<FairUseLimit>0</FairUseLimit>
+<EthName>Achi</EthName>
+<AltName>Achi Rabinal; Qach’a’teem; Achi de Baja Verapaz</AltName>
+<CreativeCommonsAudioWaiver>0</CreativeCommonsAudioWaiver>
+<ItunesPodcast>-1</ItunesPodcast>
+<Reg_NTTextDamID1>ACRWBTN2ET</Reg_NTTextDamID1>
+<Reg_NTTextDamIDStatus1>Live</Reg_NTTextDamIDStatus1>
+<Reg_NTAudioDamID1>ACRWBTN2DA</Reg_NTAudioDamID1>
+<Reg_NTAudioDamIDStatus1>Live</Reg_NTAudioDamIDStatus1>
+<Reg_NTTextDamID2>ACRWB1N2ET</Reg_NTTextDamID2>
+<Reg_NTTextDamIDStatus2>Live</Reg_NTTextDamIDStatus2>
+<Reg_NTAudioDamID2>ACRWB1N2DA</Reg_NTAudioDamID2>
+<Reg_NTAudioDamIDStatus2>Live</Reg_NTAudioDamIDStatus2>
+<WebHubVideo>-1</WebHubVideo>
+<Copyright_Video>Courtesy of LUMO Project Films</Copyright_Video>
+<Video_Mark_DamLoad>2019-01-24T00:00:00</Video_Mark_DamLoad>
+<Video_Mark_DamStockNo>ACRWBTP2DV</Video_Mark_DamStockNo>
+<Video_Mark_DamStatus>Live</Video_Mark_DamStatus>
+<DBPFont>Charis SIL</DBPFont>
+<_x0031_Orthography>Latin</_x0031_Orthography>
+<PostedToServer>1</PostedToServer>
+<Version>2009 Wycliffe Bible Translators Inc.</Version>
+<NTAudioDamLoad>2011-05-18T00:00:00</NTAudioDamLoad>
+<APIDevVideo>-1</APIDevVideo>
+</qry_dbp4_Regular_and_NonDrama>
+<qry_dbp4_Regular_and_NonDrama>
+<LangName>Achi</LangName>
+<Reg_StockNumber>P2ACR/AEM</Reg_StockNumber>
+<Reg_Recording_Status>Completed</Reg_Recording_Status>
+<ND_StockNumber>P1ACR/AEM</ND_StockNumber>
+<ND_Recording_Status>Completed</ND_Recording_Status>
+<HeartName>Achí</HeartName>
+<ISO>acr</ISO>
+<Licensor>Asociación Educativa y Cultural Maya</Licensor>
+<Copyrightc>© Asociación Educativa y Cultural Maya</Copyrightc>
+<Copyrightp>℗ 2016 Hosanna</Copyrightp>
+<DBP_Equivalent>ACRAEM</DBP_Equivalent>
+<Volumne_Name>AECM Version</Volumne_Name>
+<Country>Guatemala</Country>
+<DBPText>-1</DBPText>
+<DBPTextOT>-1</DBPTextOT>
+<DBPAudio>-1</DBPAudio>
+<DBPMobile>-1</DBPMobile>
+<DBPWebHub>-1</DBPWebHub>
+<Download>-1</Download>
+<Streaming>-1</Streaming>
+<MobileText>-1</MobileText>
+<HubText>-1</HubText>
+<APIDevText>-1</APIDevText>
+<APIDevAudio>-1</APIDevAudio>
+<FairUseLimitValue>0</FairUseLimitValue>
+<FairUseLimit>0</FairUseLimit>
+<EthName>Achi</EthName>
+<AltName>Achi Rabinal; Qach’a’teem; Achi de Baja Verapaz</AltName>
+<CreativeCommonsAudioWaiver>0</CreativeCommonsAudioWaiver>
+<ItunesPodcast>-1</ItunesPodcast>
+<Reg_OTTextDamID1>ACRAEMP2ET</Reg_OTTextDamID1>
+<Reg_OTTextDamIDStatus1>Live</Reg_OTTextDamIDStatus1>
+<Reg_OTAudioDamID1>ACRAEMP2DA</Reg_OTAudioDamID1>
+<Reg_OTAudioDamIDStatus1>Live</Reg_OTAudioDamIDStatus1>
+<ND_OTTextDamID1>ACRAEMP1ET</ND_OTTextDamID1>
+<ND_OTTextDamIDStatus1>Live</ND_OTTextDamIDStatus1>
+<ND_OTAudioDamID1>ACRAEMP1DA</ND_OTAudioDamID1>
+<ND_OTAudioDamIDStatus1>Live</ND_OTAudioDamIDStatus1>
+<WebHubVideo>0</WebHubVideo>
+<Copyright_Video>Courtesy of LUMO Project Films</Copyright_Video>
+<DBPFont>Charis SIL</DBPFont>
+<_x0031_Orthography>Latin</_x0031_Orthography>
+<USX_Date1>2018-11-02T00:00:00</USX_Date1>
+<PostedToServer>0</PostedToServer>
+<DBPDate>2018-11-08T00:00:00</DBPDate>
+<APIDevVideo>0</APIDevVideo>
+</qry_dbp4_Regular_and_NonDrama>
+<qry_dbp4_Regular_and_NonDrama>
+<LangName>Achi de Cubulco</LangName>
+<Reg_StockNumber>N1ACC/IBS</Reg_StockNumber>
+<Reg_Recording_Status>Completed</Reg_Recording_Status>
+<ND_StockNumber> none</ND_StockNumber>
+<HeartName>Achí, Cubulco</HeartName>
+<ISO>acr</ISO>
+<Licensor>Viña</Licensor>
+<Copyrightc>© 1992 Wycliffe Bible Translators, Inc.</Copyrightc>
+<Copyrightp>℗ Producciones Cristianas Viña 1993</Copyrightp>
+<DBP_Equivalent>ACCIBS</DBP_Equivalent>
+<Volumne_Name>1992 Edition</Volumne_Name>
+<Country>Guatemala</Country>
+<DBPText>-1</DBPText>
+<DBPTextOT>0</DBPTextOT>
+<DBPAudio>-1</DBPAudio>
+<DBPMobile>-1</DBPMobile>
+<DBPWebHub>-1</DBPWebHub>
+<Download>-1</Download>
+<Streaming>-1</Streaming>
+<MobileText>-1</MobileText>
+<HubText>-1</HubText>
+<APIDevText>-1</APIDevText>
+<APIDevAudio>-1</APIDevAudio>
+<FairUseLimit>0</FairUseLimit>
+<EthName>Achi</EthName>
+<CreativeCommonsAudioWaiver>0</CreativeCommonsAudioWaiver>
+<ItunesPodcast>-1</ItunesPodcast>
+<Reg_NTTextDamID1>ACCIBSN1ET</Reg_NTTextDamID1>
+<Reg_NTTextDamIDStatus1>Live</Reg_NTTextDamIDStatus1>
+<Reg_NTAudioDamID1>ACCIBSN1DA</Reg_NTAudioDamID1>
+<Reg_NTAudioDamIDStatus1>Live</Reg_NTAudioDamIDStatus1>
+<WebHubVideo>-1</WebHubVideo>
+<Copyright_Video>Courtesy of LUMO Project Films</Copyright_Video>
+<DBPFont>Charis SIL</DBPFont>
+<_x0031_Orthography>Latin</_x0031_Orthography>
+<PostedToServer>1</PostedToServer>
+<Version>1992 Wycliffe Bible Translators Inc.</Version>
+<NTAudioDamLoad>2011-05-24T00:00:00</NTAudioDamLoad>
+<APIDevVideo>-1</APIDevVideo>
+</qry_dbp4_Regular_and_NonDrama>
+<qry_dbp4_Regular_and_NonDrama>
+<LangName>Achi de Cubulco</LangName>
+<Reg_StockNumber>N2ACC/IBS</Reg_StockNumber>
+<Reg_Recording_Status>Unknown</Reg_Recording_Status>
+<ND_StockNumber> none</ND_StockNumber>
+<ISO>acr</ISO>
+<Licensor>Biblica</Licensor>
+<Copyrightc>© 2009 IBS</Copyrightc>
+<Copyrightp>℗ </Copyrightp>
+<DBP_Equivalent>#N/A</DBP_Equivalent>
+<Volumne_Name>2009 Edition</Volumne_Name>
+<Country>Guatemala</Country>
+<DBPText>0</DBPText>
+<DBPTextOT>0</DBPTextOT>
+<DBPAudio>0</DBPAudio>
+<DBPMobile>0</DBPMobile>
+<DBPWebHub>0</DBPWebHub>
+<Download>0</Download>
+<Streaming>0</Streaming>
+<MobileText>0</MobileText>
+<HubText>0</HubText>
+<APIDevText>0</APIDevText>
+<APIDevAudio>0</APIDevAudio>
+<FairUseLimit>0</FairUseLimit>
+<EthName>Achi</EthName>
+<CreativeCommonsAudioWaiver>0</CreativeCommonsAudioWaiver>
+<ItunesPodcast>0</ItunesPodcast>
+<WebHubVideo>0</WebHubVideo>
+<Copyright_Video>Courtesy of LUMO Project Films</Copyright_Video>
+<DBPFont>Charis SIL</DBPFont>
+<PostedToServer>0</PostedToServer>
+<APIDevVideo>0</APIDevVideo>
+</qry_dbp4_Regular_and_NonDrama>
+</dataroot>
