@@ -16,6 +16,7 @@ class Transform:
 		self.database = database
 
 	def process(self):
+		sqlResult = []
 		for tbl in self.database.tables:
 			if tbl.name in ["bibles", "bible_filesets", "bible_fileset_connections", "bible_fileset_copyrights",
 					"bible_fileset_copyright_organizations", "bible_fileset_tags", "access_group_filesets"]: # Limit processing
@@ -26,8 +27,10 @@ class Transform:
 						col.values = func(col)
 						#print "len col val", len(col.values), col.values
 				sqlList = tbl.insertSQL()
+				sqlResult += sqlList
 				for sql in sqlList:
 					print(sql)
+		return sqlResult
 
 ## Transform Functions
 

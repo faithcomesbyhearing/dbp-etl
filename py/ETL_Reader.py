@@ -3,16 +3,17 @@
 # This program reads the ETL_Model.xml file and builds a tree of objects
 #
 
+import io
 import sys
+import os
 from xml.dom import minidom
 from ETL_Model import Database, Table, Column, Parameter
 from Transform import *
 
-
-
-ETL_MODEL_PATH = "input/ETL_Model.xml"
-LPTS_EXTRACT_FILE = "input/qry_dbp4_Regular_and_NonDrama_10rec.xml"
-CONFIG_FILE = "input/config.xml"
+ETL_MODEL_PATH = os.path.join("input", "ETL_Model.xml")
+LPTS_EXTRACT_FILE = os.path.join("input", "qry_dbp4_Regular_and_NonDrama_10rec.xml")
+CONFIG_FILE = os.path.join("input", "config.xml")
+SQL_OUTPUT = os.path.join("output", "output.sql")
 
 def ETLModelReader():
 	doc = minidom.parse(ETL_MODEL_PATH)
@@ -75,11 +76,15 @@ transform = Transform(database)
 
 resultSet = LPTSExtractReader()
 #print "Length extract", len(resultSet)
+sqlOutput = io.open(SQL_OUTPUT, mode="w", encoding="utf-8")
 for row in resultSet:
 	database.setLPTSValues(row)
-	transform.process()
+	sqlResult = transform.process()
+	for sql in sqlResult:
+		sqlOutput.write("%s\n" % (sql))
 	#for key in row.keys():
 		#print "%s -> %s" % (key, row[key])
+sqlOutput.close()
 
 
 """
