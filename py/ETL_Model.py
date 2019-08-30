@@ -154,7 +154,7 @@ class Parameter:
 		self.value = None
 		if self.type == "lptsXML":
 			self.validate = node.getAttribute("validate")
-			self.clean = node.getAttribute("clean")
+			self.clean = node.getAttribute("clean") if node.hasAttribute("clean") else None
 		elif self.type == "constant":
 			self.value = node.firstChild.nodeValue
 		elif self.type == "variable":

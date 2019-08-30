@@ -1,12 +1,12 @@
 <ETL1>
 	<table name="bibles" pkey="id" trans="I">
 		<column name="id" transform="getBibleId">
-			<lptsXML name="DBP_Equivalent" validate="tbd">lptsBlog line 40,41</lptsXML>
-			<lptsXML name="DBP_Equivalent2" validate="tbd"/>
+			<lptsXML name="DBP_Equivalent" validate="tbd" clean="nullify1">lptsBlog line 40,41</lptsXML>
+			<lptsXML name="DBP_Equivalent2" validate="tbd" clean="nullify1"/>
 		</column>
 		<column name="language_id" transform="getLanguageId">
-			<lptsXML name="ISO" validate="tbd" clean="tbd">lptsBlog line 44-46</lptsXML>
-			<lptsXML name="langName" validate="tbd"/>
+			<lptsXML name="ISO" validate="tbd" clean="nullify1">lptsBlog line 44-46</lptsXML>
+			<lptsXML name="langName" validate="tbd" clean="nullify1"/>
 			<!-- Env.getLanguageId() is the correct transform, which is a database lookup -->
 			<!-- An iso-3 language code can have multiple scripts.
 				Is that true of a FCBH language_id also. -->
@@ -18,48 +18,57 @@
 			<constant name="western-arabic">western-arabic</constant>
 		</column>
 		<column name="script" transform="assign">
-			<lptsXML name="_x0031_Orthography" validate="tbd" clean="tbd"/>
-			<lptsXML name="_x0032_Orthography" validate="tbd" clean="tbd"/>
-			<lptsXML name="_x0033_Orthography" validate="tbd" clean="tbd"/>
+			<lptsXML name="_x0031_Orthography" validate="tbd" clean="nullify1"/>
+			<lptsXML name="_x0032_Orthography" validate="tbd" clean="nullify1"/>
+			<lptsXML name="_x0033_Orthography" validate="tbd" clean="nullify1"/>
 			<!-- lptsBlog 66, 65 and Env line 53 -->
 			<!-- code translation will be done in clean -->
 		</column>
 		<!-- other columns date, scope, derived, copyright, priority, reviewed, notes ?? -->
 	</table>
-		<!--
-		INSERT INTO `bible_translations` (language_id,bible_id,name) VALUES ('6414','"+self.bibleId+"','"+self.title.replace('\'','\\\'')+"');"
-		from lptsBlob
-		-->
+	<table name="bible_translations" pkey="bible_id, language_id" trans="?">
+		<!-- real key is surrugate id key.  There might not be a logical pkey. -->
+		<column name="language_id" transform="assign">
+			<constant name="english">6414</constant>
+		</column>
+		<column name="bible_id" transform="copyValues">
+			<variable name="id" table="bibles"/>
+		</column>
+		<column name="name" transform="assign">
+			<lptsXML name="Volumne_Name" validate="tbd" clean="nullify1"/>
+		</column>
+		<!-- other columns: vernacular, vernacular_trade, description, background, notes -->
+	</table>
 	<table name="bible_filesets" pkey="hash_id" idkey="id, asset_id, set_type_code" trans="I,U">
 		<column name="id" transform="getDamIds">
-			<lptsXML name="Reg_NTAudioDamID1" validate="tbd" clean="tbd"/>
-			<lptsXML name="Reg_NTAudioDamID2" validate="tbd" clean="tbd"/>
-			<lptsXML name="ND_NTAudioDamID1" validate="tbd" clean="tbd"/>
-			<lptsXML name="ND_NTAudioDamID2" validate="tbd" clean="tbd"/>
-			<lptsXML name="ND_NTAudioDamID3" validate="tbd" clean="tbd"/>
-			<lptsXML name="Reg_OTAudioDamID1" validate="tbd" clean="tbd"/>
-			<lptsXML name="Reg_OTAudioDamID2" validate="tbd" clean="tbd"/>
-			<lptsXML name="CAudioDAMID1" validate="tbd" clean="tbd"/>
-			<lptsXML name="CAudioDamStockNo" validate="tbd" clean="tbd"/>
-			<lptsXML name="ND_OTAudioDamID1" validate="tbd" clean="tbd"/>
-			<lptsXML name="ND_OTAudioDamID2" validate="tbd" clean="tbd"/>
-			<lptsXML name="ND_OTAudioDamID3" validate="tbd" clean="tbd"/>
-			<lptsXML name="Reg_NTTextDamID1" validate="tbd" clean="tbd"/>
-			<lptsXML name="Reg_NTTextDamID2" validate="tbd" clean="tbd"/>
-			<lptsXML name="Reg_NTTextDamID3" validate="tbd" clean="tbd"/>
-			<lptsXML name="ND_NTTextDamID1" validate="tbd" clean="tbd"/>
-			<lptsXML name="ND_NTTextDamID2" validate="tbd" clean="tbd"/>
-			<lptsXML name="ND_NTTextDamID3" validate="tbd" clean="tbd"/>
-			<lptsXML name="Reg_OTTextDamID1" validate="tbd" clean="tbd"/>
-			<lptsXML name="Reg_OTTextDamID2" validate="tbd" clean="tbd"/>
-			<lptsXML name="Reg_OTTextDamID3" validate="tbd" clean="tbd"/>
-			<lptsXML name="ND_OTTextDamID1" validate="tbd" clean="tbd"/>
-			<lptsXML name="ND_OTTextDamID2" validate="tbd" clean="tbd"/>
-			<lptsXML name="ND_OTTextDamID3" validate="tbd" clean="tbd"/>
-			<lptsXML name="Video_Matthew_DamStockNo" validate="tbd" clean="tbd"/>
-			<lptsXML name="Video_Mark_DamStockNo" validate="tbd" clean="tbd"/>
-			<lptsXML name="Video_Luke_DamStockNo" validate="tbd" clean="tbd"/>
-			<lptsXML name="Video_John_DamStockNo" validate="tbd" clean="tbd"/>
+			<lptsXML name="Reg_NTAudioDamID1" validate="tbd" clean="nullify1"/>
+			<lptsXML name="Reg_NTAudioDamID2" validate="tbd" clean="nullify1"/>
+			<lptsXML name="ND_NTAudioDamID1" validate="tbd" clean="nullify1"/>
+			<lptsXML name="ND_NTAudioDamID2" validate="tbd" clean="nullify1"/>
+			<lptsXML name="ND_NTAudioDamID3" validate="tbd" clean="nullify1"/>
+			<lptsXML name="Reg_OTAudioDamID1" validate="tbd" clean="nullify1"/>
+			<lptsXML name="Reg_OTAudioDamID2" validate="tbd" clean="nullify1"/>
+			<lptsXML name="CAudioDAMID1" validate="tbd" clean="nullify1"/>
+			<lptsXML name="CAudioDamStockNo" validate="tbd" clean="nullify1"/>
+			<lptsXML name="ND_OTAudioDamID1" validate="tbd" clean="nullify1"/>
+			<lptsXML name="ND_OTAudioDamID2" validate="tbd" clean="nullify1"/>
+			<lptsXML name="ND_OTAudioDamID3" validate="tbd" clean="nullify1"/>
+			<lptsXML name="Reg_NTTextDamID1" validate="tbd" clean="nullify1"/>
+			<lptsXML name="Reg_NTTextDamID2" validate="tbd" clean="nullify1"/>
+			<lptsXML name="Reg_NTTextDamID3" validate="tbd" clean="nullify1"/>
+			<lptsXML name="ND_NTTextDamID1" validate="tbd" clean="nullify1"/>
+			<lptsXML name="ND_NTTextDamID2" validate="tbd" clean="nullify1"/>
+			<lptsXML name="ND_NTTextDamID3" validate="tbd" clean="nullify1"/>
+			<lptsXML name="Reg_OTTextDamID1" validate="tbd" clean="nullify1"/>
+			<lptsXML name="Reg_OTTextDamID2" validate="tbd" clean="nullify1"/>
+			<lptsXML name="Reg_OTTextDamID3" validate="tbd" clean="nullify1"/>
+			<lptsXML name="ND_OTTextDamID1" validate="tbd" clean="nullify1"/>
+			<lptsXML name="ND_OTTextDamID2" validate="tbd" clean="nullify1"/>
+			<lptsXML name="ND_OTTextDamID3" validate="tbd" clean="nullify1"/>
+			<lptsXML name="Video_Matthew_DamStockNo" validate="tbd" clean="nullify1"/>
+			<lptsXML name="Video_Mark_DamStockNo" validate="tbd" clean="nullify1"/>
+			<lptsXML name="Video_Luke_DamStockNo" validate="tbd" clean="nullify1"/>
+			<lptsXML name="Video_John_DamStockNo" validate="tbd" clean="nullify1"/>
 		</column>
 		<column name="set_type_code" transform="getTypeCode">
 			<variable name="id"/>
@@ -79,6 +88,7 @@
 		</column>
 	</table>
 	<table name="bible_fileset_connections" pkey="hash_id, bible_id" trans="I">
+		<!-- mostly hash_id is unique, there are only 2 cases where hash_id has 2 bible_ids -->
 		<column name="hash_id" transform="copyValues">
 			<variable name="hash_id" table="bible_filesets"/>
 		</column>
@@ -91,9 +101,9 @@
 			<variable name="hash_id" table="bible_filesets"/>
 		</column>
 		<column name="copyright" transform="getCopyright">
-			<lptsXML name="Copyrightc" validate="tbd"/>
-			<lptsXML name="Copyrightp" validate="tbd"/>
-			<lptsXML name="Copyright_Video" validate="tbd"/>
+			<lptsXML name="Copyrightc" validate="tbd" clean="nullify1"/>
+			<lptsXML name="Copyrightp" validate="tbd" clean="nullify1"/>
+			<lptsXML name="Copyright_Video" validate="tbd" clean="nullify1"/>
 			<variable name="set_type_code" table="bible_filesets"/>
 		</column>
 		<column name="copyright_description" transform="copyValues">
@@ -101,13 +111,14 @@
 		</column>
 	</table>
 	<table name="bible_fileset_copyright_organizations" pkey="hash_id, organization_id" trans="I,I,I,U">
-		<!-- update uses hash_id, organization_role as key -->
+		<!-- There are 937 hash_id's that have multiple rows -->
+		<!-- update uses hash_id, organization_role as key. ?? This is not a unique key -->
 		<column name="hash_id" transform="copyValues">
 			<variable name="hash_id" table="bible_filesets"/>
 		</column>
 		<column name="organization_id" transform="getOrganizationId">
-			<lptsXML name="copyrightOrganizationLicensor" validate="tbd"/>
-			<lptsXML name="Copyrightp" validate="tbd"/>
+			<lptsXML name="copyrightOrganizationLicensor" validate="tbd" clean="nullify1"/>
+			<lptsXML name="Copyrightp" validate="tbd" clean="nullify1"/>
 			<variable name="set_type_code" table="bible_filesets"/>
 			<!-- <lptsXML name="copyrightLicensorAudioList" validate="tbd"/>
 			<lptsXML name="copyrightLicensorTextList" validate="tbd"/>
@@ -122,7 +133,7 @@
 		</column>
 	</table>
 	<table name="bible_fileset_tags" pkey="hash_id, name, language_id" trans="I,U,I,U,I,U">
-		<!-- ? Updates are being performed using hash_id, name as key ? -->
+		<!-- ? Updates are being performed using hash_id, name as key ?, language_id always 6414 -->
 		<column name="hash_id" transform="copyValues">
 			<variable name="hash_id" table="bible_filesets"/>
 		</column>
@@ -136,8 +147,8 @@
 		<column name="description" transform="getFilesetTag">
 			<variable name="hash_id"/>
 			<variable name="id" table="bible_filesets"/>
-			<lptsXML name="Reg_StockNumber"/>
-			<lptsXML name="Volumne_Name" validate="tbd" clean="tbd">lptsBlob 106-107</lptsXML>
+			<lptsXML name="Reg_StockNumber" validate="tbd" clean="nullify1"/>
+			<lptsXML name="Volumne_Name" validate="tbd" clean="nullify1">lptsBlob 106-107</lptsXML>
 			<!-- The getFilesetTags function has side effect to update the hash_id, and name columns -->
 			<!-- main line 947-972 -->
 		</column>
@@ -160,31 +171,31 @@
 		</column>
 		<column name="access_group_id" transform="getAccessGroups">
 			<variable name="hash_id"/>	
-			<lptsXML name="DBPText" validate="tbd" clean="tbd"/>
-			<lptsXML name="DBPTextOT" validate="tbd"/>
-			<lptsXML name="DBPAudio" validate="tbd"/>
-			<lptsXML name="DBPMobile" validate="tbd"/>
-			<lptsXML name="DBPWebHub" validate="tbd"/>
-			<lptsXML name="GBN_Text" validate="tbd"/>
-			<lptsXML name="GBN_Audio" validate="tbd"/>
-			<lptsXML name="Download" validate="tbd"/>
-			<lptsXML name="Streaming" validate="tbd"/>
-			<lptsXML name="FCBHStore" validate="tbd"/>
-			<lptsXML name="ItunesPodcast" validate="tbd"/>
-			<lptsXML name="APIDevText" validate="tbd"/>
-			<lptsXML name="APIDevAudio" validate="tbd"/>
-			<lptsXML name="MobileText" validate="tbd"/>
-			<lptsXML name="HubText" validate="tbd"/>
-			<lptsXML name="MobileVideo" validate="tbd"/>
-			<lptsXML name="WebHubVideo" validate="tbd"/>
-			<lptsXML name="APIDevVideo" validate="tbd"/>
-			<lptsXML name="GBN_Video" validate="tbd"/>
-			<lptsXML name="DownloadVideo" validate="tbd"/>
-			<lptsXML name="StreamingVideo" validate="tbd"/>
-			<lptsXML name="FCBHStoreVideo" validate="tbd"/>
-			<lptsXML name="ItunesPodcastVideo" validate="tbd"/>
+			<lptsXML name="DBPText" validate="tbd" clean="nullify1"/>
+			<lptsXML name="DBPTextOT" validate="tbd" clean="nullify1"/>
+			<lptsXML name="DBPAudio" validate="tbd" clean="nullify1"/>
+			<lptsXML name="DBPMobile" validate="tbd" clean="nullify1"/>
+			<lptsXML name="DBPWebHub" validate="tbd" clean="nullify1"/>
+			<lptsXML name="GBN_Text" validate="tbd" clean="nullify1"/>
+			<lptsXML name="GBN_Audio" validate="tbd" clean="nullify1"/>
+			<lptsXML name="Download" validate="tbd" clean="nullify1"/>
+			<lptsXML name="Streaming" validate="tbd" clean="nullify1"/>
+			<lptsXML name="FCBHStore" validate="tbd" clean="nullify1"/>
+			<lptsXML name="ItunesPodcast" validate="tbd" clean="nullify1"/>
+			<lptsXML name="APIDevText" validate="tbd" clean="nullify1"/>
+			<lptsXML name="APIDevAudio" validate="tbd" clean="nullify1"/>
+			<lptsXML name="MobileText" validate="tbd" clean="nullify1"/>
+			<lptsXML name="HubText" validate="tbd" clean="nullify1"/>
+			<lptsXML name="MobileVideo" validate="tbd" clean="nullify1"/>
+			<lptsXML name="WebHubVideo" validate="tbd" clean="nullify1"/>
+			<lptsXML name="APIDevVideo" validate="tbd" clean="nullify1"/>
+			<lptsXML name="GBN_Video" validate="tbd" clean="nullify1"/>
+			<lptsXML name="DownloadVideo" validate="tbd" clean="nullify1"/>
+			<lptsXML name="StreamingVideo" validate="tbd" clean="nullify1"/>
+			<lptsXML name="FCBHStoreVideo" validate="tbd" clean="nullify1"/>
+			<lptsXML name="ItunesPodcastVideo" validate="tbd" clean="nullify1"/>
 			<!-- below here is not used in current transform -->
-			<lptsXML name="Licensor" validate="tbd"/>
+			<lptsXML name="Licensor" validate="tbd" clean="nullify1"/>
 			<constant name="access_granted">9</constant>
 			<constant name="access_restricted">7</constant>
 			<constant name="access_video">4</constant>
@@ -194,12 +205,29 @@
 			<!-- getAccessGroups has a side effect or updating the hash_id column. -->
 		</column>
 	</table>
-	<!-- 
-		insertSql="INSERT INTO bible_books (bible_id,book_id,name,name_short,chapters) VALUES('"+resource+"','"+book+"','"+bookNameDic[book]+"','"+bookNameDic[book]+"','"+chapterString+"');"
-		from lptsBlob
-	-->
+	<table name="bible_books" pkey="bible_id, book_id" trans="I,U">
+		<!-- bible_id, book_id is unique even though there is not table constraint -->
+		<column name="bible_id" transform="copyValues">
+			<variable name="id" table="bibles"/>
+		</column>
+		<column name="book_id" transform="tbd">
+			<!-- main.py 469 - 496 -->
+		</column>
+		<column name="name" transform="tbd">
+			<!-- main.py 469 - 496 -->
+		</column>
+		<column name="name_short" transform="tbd">
+			<!-- main.py 469 - 496 -->
+		</column>
+		<column name="chapters" transform="tbd">
+			<!-- main.py 469 - 496 -->
+		</column>
+	</table>
 	<table name="bible_files" pkey="hash_id, book_id, chapter_start, verse_start" idkey="id" trans="I,I,I,U,U,S,S">
-		<!-- check and see if file_name is unique? -->
+		<!-- There are 37 cases where hash_id, book_id, chapter_start, verse_start is not unique -->
+		<!-- There are 127,907 files_names that have more than 1 record -->
+		<!-- hash_id, file_name is nearly unique  -->
+		<!-- there are 4 cases where hash_id, file_name is not unique -->
 		<column name="hash_id" transform="tbd">
 			<variable name="hash_id"/>
 		</column>
@@ -251,7 +279,8 @@
 	</table>
 	<table name="bible_file_video_resolutions" pkey="file_name" idkey="id" trans="I,S">
 		<column name="bible_file_id" transform="tbd">
-			<variable name="fileId">Same as bible_file_tags.file_id</variable>
+			<variable name="file_id" table="bible_files"/>
+			<!-- requires a lookup in db -->
 		</column>
 		<column name="file_name" transform="tbd">
 			<config name="upload_path"/>

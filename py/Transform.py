@@ -18,7 +18,8 @@ class Transform:
 	def process(self):
 		sqlResult = []
 		for tbl in self.database.tables:
-			if tbl.name in ["bibles", "bible_filesets", "bible_fileset_connections", "bible_fileset_copyrights",
+			if tbl.name in ["bibles", "bible_translations", "bible_filesets", "bible_fileset_connections", 
+					"bible_fileset_copyrights",
 					"bible_fileset_copyright_organizations", "bible_fileset_tags", "access_group_filesets"]: # Limit processing
 				for col in tbl.columns:
 					if col.transform != None:

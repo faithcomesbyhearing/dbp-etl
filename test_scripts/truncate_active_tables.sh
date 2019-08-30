@@ -47,3 +47,6 @@ truncate table bibles;
 set foreign_key_checks = 1;
 
 SQL_END1
+
+mysqldump -uroot -p$MYSQL_PASSWD  dbp > test_dbp.sql
+

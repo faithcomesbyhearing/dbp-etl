@@ -9,6 +9,7 @@ import os
 from xml.dom import minidom
 from ETL_Model import Database, Table, Column, Parameter
 from Transform import *
+from Clean import *
 
 ETL_MODEL_PATH = os.path.join("input", "ETL_Model.xml")
 LPTS_EXTRACT_FILE = os.path.join("input", "qry_dbp4_Regular_and_NonDrama_10rec.xml")
@@ -73,12 +74,14 @@ print config
 database = ETLModelReader()
 #print(database.toXML())
 transform = Transform(database)
+cleaner = Clean(database)
 
 resultSet = LPTSExtractReader()
 #print "Length extract", len(resultSet)
 sqlOutput = io.open(SQL_OUTPUT, mode="w", encoding="utf-8")
 for row in resultSet:
 	database.setLPTSValues(row)
+	cleaner.process()
 	sqlResult = transform.process()
 	for sql in sqlResult:
 		sqlOutput.write("%s\n" % (sql))
