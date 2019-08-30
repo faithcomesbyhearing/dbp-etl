@@ -26,6 +26,10 @@
 		</column>
 		<!-- other columns date, scope, derived, copyright, priority, reviewed, notes ?? -->
 	</table>
+		<!--
+		INSERT INTO `bible_translations` (language_id,bible_id,name) VALUES ('6414','"+self.bibleId+"','"+self.title.replace('\'','\\\'')+"');"
+		from lptsBlob
+		-->
 	<table name="bible_filesets" pkey="hash_id" idkey="id, asset_id, set_type_code" trans="I,U">
 		<column name="id" transform="getDamIds">
 			<lptsXML name="Reg_NTAudioDamID1" validate="tbd" clean="tbd"/>
@@ -190,6 +194,10 @@
 			<!-- getAccessGroups has a side effect or updating the hash_id column. -->
 		</column>
 	</table>
+	<!-- 
+		insertSql="INSERT INTO bible_books (bible_id,book_id,name,name_short,chapters) VALUES('"+resource+"','"+book+"','"+bookNameDic[book]+"','"+bookNameDic[book]+"','"+chapterString+"');"
+		from lptsBlob
+	-->
 	<table name="bible_files" pkey="hash_id, book_id, chapter_start, verse_start" idkey="id" trans="I,I,I,U,U,S,S">
 		<!-- check and see if file_name is unique? -->
 		<column name="hash_id" transform="tbd">
@@ -276,4 +284,13 @@
 			<!-- parsed from video upload file Fileset lines 569-592 -->
 		</column>
 	</table>
+	<!--
+		These table look like they are updated by lpts, but I can't find them.
+		bible_equivalents
+		bible_file_timestamps
+		bible_file_titles
+		bible_links
+		bible_organizations
+		bible_verses
+	-->
 </ETL1>

@@ -28,8 +28,8 @@ class Transform:
 						#print "len col val", len(col.values), col.values
 				sqlList = tbl.insertSQL()
 				sqlResult += sqlList
-				for sql in sqlList:
-					print(sql)
+				#for sql in sqlList:
+				#	print(sql)
 		return sqlResult
 
 ## Transform Functions
