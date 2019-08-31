@@ -26,8 +26,8 @@ class Config:
 
 		self.database_host = self.get("database.host")
 		self.database_user = self.get("database.user")
-		self.database_db = self.get("database.db_name")
-		self.database_port = self.get("database.port")
+		self.database_db_name = self.get("database.db_name")
+		self.database_port = self.getInt("database.port")
 		self.s3_bucket = self.get("s3.bucket")
 		self.s3_vid_bucket = self.get("s3.vid_bucket")
 		self.s3_profile = self.get("s3.aws_profile") ## is this used
@@ -54,5 +54,12 @@ class Config:
 		parts = value.split("/")
 		return os.path.sep.join(parts)
 
-config = Config()
+	def getInt(self, name):
+		return int(self.get(name))
 
+
+"""
+# Unit Test
+config = Config()
+print config
+"""
