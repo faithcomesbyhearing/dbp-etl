@@ -144,7 +144,7 @@ class Parameter:
 # self.clean - The clean function from the ETL Model for this parameter
 # self.value - The value of the parameter as taken from the source
 	def __init__(self, column, node):
-		checkElementName(["lptsXML", "constant", "variable", "config", "sql", "external"], node)
+		checkElementName(["lptsXML", "awsFile", "constant", "variable", "config", "sql", "external"], node)
 		self.column = column
 		self.type = node.nodeName
 		self.name = node.getAttribute("name")
@@ -161,7 +161,7 @@ class Parameter:
 			self.table = node.getAttribute("table") if node.hasAttribute("table") else None
 		elif self.type == "sql":
 			self.value = node.firstChild.nodeValue
-		elif self.type not in ["config", "external"]:
+		elif self.type not in ["awsFile", "config", "external"]:
 			print "invalid type %s" % (self.type)
 			sys.exit()
 		column.parameters.append(self)

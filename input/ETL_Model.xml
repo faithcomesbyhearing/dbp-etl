@@ -3,6 +3,7 @@
 		<column name="id" transform="getBibleId">
 			<lptsXML name="DBP_Equivalent" validate="tbd" clean="nullify1">lptsBlog line 40,41</lptsXML>
 			<lptsXML name="DBP_Equivalent2" validate="tbd" clean="nullify1"/>
+			<!-- There needs to a verification that id is not null, we should not create a record if null -->
 		</column>
 		<column name="language_id" transform="getLanguageId">
 			<lptsXML name="ISO" validate="tbd" clean="nullify1">lptsBlog line 44-46</lptsXML>
@@ -206,21 +207,23 @@
 		</column>
 	</table>
 	<table name="bible_books" pkey="bible_id, book_id" trans="I,U">
-		<!-- bible_id, book_id is unique even though there is not table constraint -->
+		<!-- bible_id, book_id is unique even though there is no table constraint -->
+		<!-- main.py 469 - 496 -->
 		<column name="bible_id" transform="copyValues">
 			<variable name="id" table="bibles"/>
 		</column>
 		<column name="book_id" transform="tbd">
-			<!-- main.py 469 - 496 -->
+			<!-- <bookNameXML name="code" validate="tbd" clean="tbd"/> -->
 		</column>
 		<column name="name" transform="tbd">
-			<!-- main.py 469 - 496 -->
+			<!-- <bookNameXML name="long" validate="tbd" clean="tbd"/>
+			<bookNameXML name="header" validate="tbd" clean="tbd"/>
+			<bookNameXML name="short" validate="tbd" clean="tbd"/> -->
 		</column>
 		<column name="name_short" transform="tbd">
-			<!-- main.py 469 - 496 -->
+			<!-- <bookNameXML name="short" validate="tbd" clean="tbd"/> -->
 		</column>
 		<column name="chapters" transform="tbd">
-			<!-- main.py 469 - 496 -->
 		</column>
 	</table>
 	<table name="bible_files" pkey="hash_id, book_id, chapter_start, verse_start" idkey="id" trans="I,I,I,U,U,S,S">
@@ -232,17 +235,18 @@
 			<variable name="hash_id"/>
 		</column>
 		<column name="book_id" transform="tbd">
-			<variable name="damId"/>
+			<awsFile name="config.xml"/>
 			<!-- main.py line 735, 740-748 -->
 		</column>
 		<column name="chapter_start" transform="tbd">
-			<variable name="damId"/>
+			<awsFile name="?"/>
 			<constant name="21">21</constant>
 			<constant name="24">24</constant>
 			<constant name="28">28</constant>
 			<!-- main.py line 736 -->
 		</column>
 		<column name="verse_start" transform="tbd">
+			<awsFile name="?"/>
 			<constant name="1">1</constant>
 			<constant name="21">21</constant>
 			<constant name="26">26</constant>
@@ -253,7 +257,7 @@
 			<constant name="null">NULL</constant>
 		</column>
 		<column name="file_name" transform="tbd">
-			<variable name="damId"/>
+			<awsFile name="?"/>
 		</column>
 		<column name="duration" transform="tbd">
 			<external name="main">main.py 373-384 audio/video files in directory</external>
@@ -265,13 +269,13 @@
 		<column name="file_id" transform="tbd">
 			<!-- Select id from bible_files where hash_id={hash_id} -->
 			<!-- In current database this cannot be computed until after bible_files are inserted -->
+			<!-- consider making this a stored procedure call, not an insert, so it can lookup id -->
 		</column>
 		<column name="tag" transform="assign">
 			<constant name="duration">duration</constant>
 		</column>
 		<column name="value" transform="tbd">
-			<variable name="duration"></variable>
-			<!-- Same as bible_files.duration -->
+			<variable name="duration" table="bible_files"/>
 		</column>
 		<column name="admin_only" transform="assign">
 			<constant name="0">0</constant>
@@ -281,36 +285,38 @@
 		<column name="bible_file_id" transform="tbd">
 			<variable name="file_id" table="bible_files"/>
 			<!-- requires a lookup in db -->
+			<!-- parsed from video upload file Fileset lines 493-539 -->
 		</column>
 		<column name="file_name" transform="tbd">
 			<config name="upload_path"/>
-			<!-- path found in config.xml Fileset lines 493-539 -->
+			<awsFile name="ts"/>
 		</column>
 		<column name="bandwidth" transform="tbd">
-			<!-- parsed from video upload file Fileset lines 493-539 -->
+			<awsFile name="ts"/>
 		</column>
 		<column name="resolution_width" transform="tbd">
-			<!-- parsed from video upload file Fileset lines 493-539 -->
+			<awsFile name="ts"/>
 		</column>
 		<column name="resolution_height" transform="tbd">
-			<!-- parsed from video upload file Fileset lines 493-539 -->
+			<awsFile name="ts"/>
 		</column>
 		<column name="codec" transform="tbd">
-			<!-- parsed from video upload file Fileset lines 493-539 -->
+			<awsFile name="ts"/>
 		</column>
 		<column name="stream" transform="assign">
 			<constant name="1">1</constant>
 		</column>
 	</table>
 	<table name="bible_file_video_transport_stream" pkey="file_name" idkey="id" trans="I">
+		<!-- parsed from video upload file Fileset lines 569-592 -->
 		<column name="video_resolution_id" transform="tbd">
-			<!-- parsed from video upload file Fileset lines 569-592 -->
+			<awsFile name="ts"/>
 		</column>
 		<column name="file_name" transform="tbd">
-			<!-- parsed from video upload file Fileset lines 569-592 -->
+			<awsFile name="ts"/>
 		</column>
 		<column name="runtime" transform="tbd">
-			<!-- parsed from video upload file Fileset lines 569-592 -->
+			<awsFile name="ts"/>
 		</column>
 	</table>
 	<!--
