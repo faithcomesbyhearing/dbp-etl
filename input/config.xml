@@ -1,9 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<config>
+<dbp_etl>
+ <database>
+  <host>127.0.0.1</host>
+  <user>root</user>
+  <db_name>test_dbp</db_name>
+  <port>3306</port>
+ </database>
  <s3>		
-  <bucket>dbp-prod</bucket>
-  <vid_bucket>dbp-vid</vid_bucket>
-  <aws_profile>dbp-prod</aws_profile>
+  <bucket>test_dbp_etl</bucket>
+  <vid_bucket>test_dbp_vid_etl</vid_bucket>
+  <aws_profile>dbp-prod</aws_profile> <!-- what is this? -->
  </s3>
  <permissions>
   <access_restricted>7</access_restricted>
@@ -11,7 +17,12 @@
   <access_video>4</access_video>
  </permissions>
  <directory>
-  <upload_path>/home/parallels/FCBH_uploader/</upload_path>
-  <lpts_xml>qry_dbp4_Regular_and_NonDrama.xml</lpts_xml>
+  <etl_model_xml>input/ETL_Model.xml</etl_model_xml>
+  <lpts_xml>input/qry_dbp4_Regular_and_NonDrama_10rec.xml</lpts_xml>
+  <validate>$HOME/FCBH/files/validate</validate>
+  <upload>$HOME/FCBH/files/upload</upload>
+  <database>$HOME/FCBH/files/database</database>
+  <complete>$HOME/FCBH/files/completed</complete>
+  <sql_output>output/output.sql</sql_output>
  </directory>
-</config>
+</dbp_etl>

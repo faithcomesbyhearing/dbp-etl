@@ -10,14 +10,10 @@ from xml.dom import minidom
 from ETL_Model import Database, Table, Column, Parameter
 from Transform import *
 from Clean import *
+from Config import *
 
-ETL_MODEL_PATH = os.path.join("input", "ETL_Model.xml")
-LPTS_EXTRACT_FILE = os.path.join("input", "qry_dbp4_Regular_and_NonDrama_10rec.xml")
-CONFIG_FILE = os.path.join("input", "config.xml")
-SQL_OUTPUT = os.path.join("output", "output.sql")
-
-def ETLModelReader():
-	doc = minidom.parse(ETL_MODEL_PATH)
+def ETLModelReader(config):
+	doc = minidom.parse(config.directory_etl_model_xml)
 	for root in doc.childNodes:
 		if root.nodeType == 1:
 			database = Database(root)
@@ -32,19 +28,9 @@ def ETLModelReader():
 									param = Parameter(column, parmNode)
 	return database
 
-def ConfigReader():
-	result = {}
-	doc = minidom.parse(CONFIG_FILE)
-	for root in doc.childNodes:
-		#if root.nodeType == 1:
-		for fldNode in root.childNodes:
-			if fldNode.nodeType == 1:
-				print fldNode.nodeName
-
-
-def LPTSExtractReader():
+def LPTSExtractReader(config):
 	resultSet = []
-	doc = minidom.parse(LPTS_EXTRACT_FILE)
+	doc = minidom.parse(config.directory_lpts_xml)
 	root = doc.childNodes
 	if len(root) != 1 or root[0].nodeName != "dataroot":
 		print ("ERROR: First node of LPTS Export must be <docroot>")
@@ -66,19 +52,17 @@ def LPTSExtractReader():
 					resultSet.append(resultRow)
 	return resultSet
 
-config = ConfigReader()
-print config
+config = Config()
 
-
-
-database = ETLModelReader()
+database = ETLModelReader(config)
 #print(database.toXML())
+
 transform = Transform(database)
 cleaner = Clean(database)
 
-resultSet = LPTSExtractReader()
+resultSet = LPTSExtractReader(config)
 #print "Length extract", len(resultSet)
-sqlOutput = io.open(SQL_OUTPUT, mode="w", encoding="utf-8")
+sqlOutput = io.open(config.directory_sql_output, mode="w", encoding="utf-8")
 for row in resultSet:
 	database.setLPTSValues(row)
 	cleaner.process()
@@ -90,22 +74,6 @@ for row in resultSet:
 sqlOutput.close()
 
 
-"""
-config file elements
-database.host
-database.user
-database.password
-database.db_name
-database.db_text
-database.port
-s3.bucket
-s3.vid_bucket
-s3.aws_profile
-permissions.access_restricted
-permissions.access_granted
-permissions.access_video
-directory.upload_path
-directory.lpts_xml
-"""
+
 
 
