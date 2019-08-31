@@ -23,13 +23,10 @@ truncate table bible_translations;
 
 set foreign_key_checks = 0;
 
--- not updated by lptsmanager, has foreign key to bible_files
-truncate table bible_file_video_resolutions;
-
 -- not updated by lptsmanager, has foreign key to empty table bible_verse_concordance
 truncate table bible_verses;
 
--- bible_file_video_resolutions has reference to bible_file_video_transport_stream
+-- bible_file_video_resolutions has reference to bible_files, bible_file_video_transport_stream
 truncate table bible_file_video_resolutions;
 
 -- has foreign keys: bible_file_tags, bible_file_timestamps, bible_file_titles, bible_file_video_resolutions
