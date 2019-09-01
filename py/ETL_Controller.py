@@ -1,6 +1,6 @@
-# ETL_Reader
+# ETL_Controller
 #
-# This program reads the ETL_Model.xml file and builds a tree of objects
+# This is the main controller code for the dbp-etl project
 #
 
 import io
