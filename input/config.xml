@@ -6,9 +6,10 @@
   <db_name>test_dbp</db_name>
   <port>3306</port>
  </database>
- <s3>		
-  <bucket>test_dbp_etl</bucket>
-  <vid_bucket>test_dbp_vid_etl</vid_bucket>
+ <s3>
+  <!-- changing bucket names will affect calculation of hash_id, and require DBP total reload, GNG 9/1/19 -->
+  <bucket>dbp-prod</bucket>
+  <vid_bucket>dbp-vid</vid_bucket>
   <aws_profile>Gary</aws_profile>
  </s3>
  <permissions>

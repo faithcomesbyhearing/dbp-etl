@@ -80,8 +80,8 @@ class Transform:
 		damIds = col.getVariable("id")
 		types = col.getVariable("set_type_code")
 		bucket = self.config.s3_bucket ## Need to consider video bucket here?
-		md5 = hashlib.md5()
 		for index in range(len(damIds)):
+			md5 = hashlib.md5()
 			damId = damIds[index]
 			fsType = types[index]
 			#md5.update((damId + bucket + fsType).encode("latin1"))
