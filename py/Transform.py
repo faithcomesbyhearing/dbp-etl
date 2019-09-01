@@ -12,7 +12,8 @@ import hashlib
 
 class Transform:
 
-	def __init__(self, database):
+	def __init__(self, config, database):
+		self.config = config
 		self.database = database
 
 	def process(self):
@@ -23,10 +24,10 @@ class Transform:
 					"bible_fileset_copyright_organizations", "bible_fileset_tags", "access_group_filesets"]: # Limit processing
 				for col in tbl.columns:
 					if col.transform != None:
-						#print "doCol", tbl.name, col.name, col.transform
+						#print("doCol", tbl.name, col.name, col.transform)
 						func = getattr(self, col.transform)
 						col.values = func(col)
-						#print "len col val", len(col.values), col.values
+						#print("len col val", len(col.values), col.values)
 				sqlList = tbl.insertSQL()
 				sqlResult += sqlList
 				#for sql in sqlList:
@@ -58,7 +59,7 @@ class Transform:
 		for fld in col.parameters:
 			if fld.value is not None:
 				damIds.append(fld.value)
-		print "damIds", damIds
+		print("damIds", damIds)
 		return damIds
 
 	def getTypeCode(self, col):
@@ -78,12 +79,16 @@ class Transform:
 		ids = []
 		damIds = col.getVariable("id")
 		types = col.getVariable("set_type_code")
-		bucket = "dbp-prod" ### This needs to be read in from a config file
+		bucket = self.config.s3_bucket ## Need to consider video bucket here?
 		md5 = hashlib.md5()
 		for index in range(len(damIds)):
 			damId = damIds[index]
 			fsType = types[index]
-			md5.update(damId + bucket + fsType)
+			#md5.update((damId + bucket + fsType).encode("latin1"))
+			#md5.update(damId.encode("utf-8") + bucket.encode("latin1") + fsType.encode("utf-8"))
+			md5.update(damId.encode("latin1"))
+			md5.update(bucket.encode("latin1"))
+			md5.update(fsType.encode("latin1"))
 			hash_id = md5.hexdigest()
 			ids.append(hash_id[:12])
 		return ids
@@ -228,7 +233,7 @@ class Transform:
 		for hashId in hashIds:
 			for param in col.parameters:
 				if param.type == "lptsXML":
-					#print param.type, param.name, param.value
+					#print(param.type, param.name, param.value)
 					if param.value == "-1":
 						resultHashIds.append(hashId)
 						resultAccess.append(param.name)

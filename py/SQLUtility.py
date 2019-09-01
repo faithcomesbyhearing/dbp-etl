@@ -100,12 +100,12 @@ class SQLUtility:
 config = Config()
 sql = SQLUtility(config)
 count = sql.selectScalar("select count(*) from language_status", None)
-print count
+print(count)
 lista = sql.selectList("select title from language_status", None)
-print lista
+print(lista)
 mapa = sql.selectMap("select id, title from language_status", None)
-print mapa
+print(mapa)
 mapb = sql.selectMapList("select id, title from language_status", None)
-print mapb
+print(mapb)
 sql.close()
 """

@@ -108,7 +108,7 @@ class Column:
 		if par.type != "variable":
 			return par.value
 		else:
-			print "ERROR: Use getVariable on parameter %s in %s.%s" % (parm, self.table.name, self.name)
+			print("ERROR: Use getVariable on parameter %s in %s.%s" % (parm, self.table.name, self.name))
 			sys.exit()
 	def getVariable(self, parm):
 		if isinstance(parm, int):
@@ -121,7 +121,7 @@ class Column:
 			else:
 				return self.table.database.tableMap[par.table].columnMap[par.name].values
 		else:
-			print "ERROR: Use getParamValue on parameter %s in %s.%s" % (parm, self.table.name, self.name)
+			print("ERROR: Use getParamValue on parameter %s in %s.%s" % (parm, self.table.name, self.name))
 	def toXML(self):
 		xml = self.startElement()
 		for param in self.parameters:
@@ -162,7 +162,7 @@ class Parameter:
 		elif self.type == "sql":
 			self.value = node.firstChild.nodeValue
 		elif self.type not in ["awsFile", "config", "external"]:
-			print "invalid type %s" % (self.type)
+			print("invalid type %s" % (self.type))
 			sys.exit()
 		column.parameters.append(self)
 		column.parameterMap[self.name] = self

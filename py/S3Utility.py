@@ -68,7 +68,7 @@ class S3Utility:
 config = Config()
 s3 = S3Utility(config)
 result = s3.upload("audio/ACFWBT/DOMBEC/info.json")
-print result
+print(result)
 
 
 

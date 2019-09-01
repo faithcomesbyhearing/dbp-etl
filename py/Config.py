@@ -45,7 +45,7 @@ class Config:
 	def get(self, name):
 		value = self.hashMap.get(name)
 		if value == None:
-			print "ERROR: Config entry '%s' is missing." % (name)
+			print("ERROR: Config entry '%s' is missing." % (name))
 			sys.exit()
 		return value
 
@@ -56,6 +56,7 @@ class Config:
 
 	def getInt(self, name):
 		return int(self.get(name))
+
 
 
 """

@@ -11,7 +11,7 @@ class Clean:
 			for col in tbl.columns:
 				for parm in col.parameters:
 					if parm.clean != None:
-						#print tbl.name, col.name, parm.name, parm.clean
+						#print(tbl.name, col.name, parm.name, parm.clean)
 						func = getattr(self, parm.clean)
 						parm.value = func(parm.value)
 

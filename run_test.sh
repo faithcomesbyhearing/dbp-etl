@@ -1,3 +1,3 @@
 #!/bin/sh -v
 
-python py/ETL_Reader.py
+python3 py/ETL_Reader.py

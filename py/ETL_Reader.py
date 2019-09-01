@@ -40,13 +40,13 @@ def LPTSExtractReader(config):
 		for recNode in root[0].childNodes:
 			if recNode.nodeType == 1:
 				if recNode.nodeName != "qry_dbp4_Regular_and_NonDrama":
-					print "ERROR: Child nodes in LPTS Export must be 'qry_dbp4_Regular_and_NonDrama'"
+					print("ERROR: Child nodes in LPTS Export must be 'qry_dbp4_Regular_and_NonDrama'")
 					sys.exit()
 				else:
 					resultRow = {}
 					for fldNode in recNode.childNodes:
 						if fldNode.nodeType == 1:
-							#print fldNode.nodeName + " = " + fldNode.firstChild.nodeValue
+							#print(fldNode.nodeName + " = " + fldNode.firstChild.nodeValue)
 							resultRow[fldNode.nodeName] = fldNode.firstChild.nodeValue
 
 					resultSet.append(resultRow)
@@ -57,11 +57,11 @@ config = Config()
 database = ETLModelReader(config)
 #print(database.toXML())
 
-transform = Transform(database)
+transform = Transform(config, database)
 cleaner = Clean(database)
 
 resultSet = LPTSExtractReader(config)
-#print "Length extract", len(resultSet)
+#print("Length extract", len(resultSet))
 sqlOutput = io.open(config.directory_sql_output, mode="w", encoding="utf-8")
 for row in resultSet:
 	database.setLPTSValues(row)
@@ -70,7 +70,7 @@ for row in resultSet:
 	for sql in sqlResult:
 		sqlOutput.write("%s\n" % (sql))
 	#for key in row.keys():
-		#print "%s -> %s" % (key, row[key])
+		#print("%s -> %s" % (key, row[key]))
 sqlOutput.close()
 
 
