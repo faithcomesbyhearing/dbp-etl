@@ -30,7 +30,7 @@ class SQLUtility:
 			cursor.execute(statement, values)
 			self.conn.commit()
 			cursor.close()
-		except Exception, err:
+		except Exception as err:
 			self.error(cursor, statement, err)
 
 
@@ -46,7 +46,7 @@ class SQLUtility:
 			resultSet = cursor.fetchall()
 			cursor.close()
 			return resultSet
-		except Exception, err:
+		except Exception as err:
 			self.error(cursor, statment, err)
 
 
@@ -57,7 +57,7 @@ class SQLUtility:
 			result = cursor.fetchone()
 			cursor.close()
 			return result[0]
-		except Exception, err:
+		except Exception as err:
 			self.error(cursor, statement, err)			
 
 
