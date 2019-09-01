@@ -4,6 +4,7 @@
 #
 
 import sys
+from xml.dom import minidom
 
 def checkElementName(expectNames, node):
 	if node.nodeName not in expectNames:
@@ -13,9 +14,21 @@ def checkElementName(expectNames, node):
 class Database:
 # self.tables - array of table objects from ETL Model
 # self.tableMap - hash map (name:Table) of table objects from ETL Model
-	def __init__(self, node):
+	def __init__(self, config):
 		self.tables = []
 		self.tableMap = {}
+		doc = minidom.parse(config.directory_etl_model_xml)
+		root = doc.childNodes[0]
+		checkElementName(["database"], root)
+		for tblNode in root.childNodes:
+			if tblNode.nodeType == 1:
+				table = Table(self, tblNode)
+				for colNode in tblNode.childNodes:
+					if colNode.nodeType == 1:
+						column = Column(table, colNode)
+						for parmNode in colNode.childNodes:
+							if parmNode.nodeType == 1:
+								param = Parameter(column, parmNode)
 	def toXML(self):
 		xml = self.startElement()
 		for tbl in self.tables:

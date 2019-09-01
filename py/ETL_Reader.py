@@ -12,22 +12,6 @@ from Transform import *
 from Clean import *
 from Config import *
 
-def ETLModelReader(config):
-	doc = minidom.parse(config.directory_etl_model_xml)
-	for root in doc.childNodes:
-		if root.nodeType == 1:
-			database = Database(root)
-			for tblNode in root.childNodes:
-				if tblNode.nodeType == 1:
-					table = Table(database, tblNode)
-					for colNode in tblNode.childNodes:
-						if colNode.nodeType == 1:
-							column = Column(table, colNode)
-							for parmNode in colNode.childNodes:
-								if parmNode.nodeType == 1:
-									param = Parameter(column, parmNode)
-	return database
-
 def LPTSExtractReader(config):
 	resultSet = []
 	doc = minidom.parse(config.directory_lpts_xml)
@@ -53,8 +37,7 @@ def LPTSExtractReader(config):
 	return resultSet
 
 config = Config()
-
-database = ETLModelReader(config)
+database = Database(config)
 #print(database.toXML())
 
 transform = Transform(config, database)

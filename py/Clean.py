@@ -4,7 +4,6 @@ class Clean:
 
 	def __init__(self, database):
 		self.database = database
-		#messages = []
 
 	def process(self):
 		for tbl in self.database.tables:

@@ -1,4 +1,4 @@
-<ETL1>
+<database>
 	<table name="bibles" pkey="id" trans="I">
 		<column name="id" transform="getBibleId">
 			<lptsXML name="DBP_Equivalent" validate="tbd" clean="nullify1">lptsBlog line 40,41</lptsXML>
@@ -328,4 +328,4 @@
 		bible_organizations
 		bible_verses
 	-->
-</ETL1>
+</database>
