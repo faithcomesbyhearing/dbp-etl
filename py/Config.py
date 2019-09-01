@@ -30,7 +30,7 @@ class Config:
 		self.database_port = self.getInt("database.port")
 		self.s3_bucket = self.get("s3.bucket")
 		self.s3_vid_bucket = self.get("s3.vid_bucket")
-		self.s3_profile = self.get("s3.aws_profile") ## is this used
+		self.s3_aws_profile = self.get("s3.aws_profile")
 		self.permissions_restricted = self.get("permissions.access_restricted")
 		self.permissions_granted = self.get("permissions.access_granted")
 		self.permissions_video = self.get("permissions.access_video")

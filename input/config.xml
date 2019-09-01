@@ -9,7 +9,7 @@
  <s3>		
   <bucket>test_dbp_etl</bucket>
   <vid_bucket>test_dbp_vid_etl</vid_bucket>
-  <aws_profile>dbp-prod</aws_profile> <!-- what is this? -->
+  <aws_profile>Gary</aws_profile>
  </s3>
  <permissions>
   <access_restricted>7</access_restricted>

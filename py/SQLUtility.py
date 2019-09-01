@@ -35,7 +35,7 @@ class SQLUtility:
 
 
 	#def executeBatch(self, [statements]):
-	# There needs to be some kind of batch object, which contain a list of statements,
+	# There needs to be some kind of batch object, which contains a list of statements,
 	# and each statement has a list of values
 
 
