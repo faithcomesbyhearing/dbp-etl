@@ -10,6 +10,10 @@ import os
 import boto3
 from Config import *
 
+## The config buckets must not be changed in config.  These buckets must be used instead.
+TEST_BUCKET = "test-dbp"
+TEST_VID_BUCKET = "test-dbp-vid"
+
 class S3Utility:
 
 	def __init__(self, config):

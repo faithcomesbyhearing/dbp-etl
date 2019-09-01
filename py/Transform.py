@@ -84,8 +84,6 @@ class Transform:
 			md5 = hashlib.md5()
 			damId = damIds[index]
 			fsType = types[index]
-			#md5.update((damId + bucket + fsType).encode("latin1"))
-			#md5.update(damId.encode("utf-8") + bucket.encode("latin1") + fsType.encode("utf-8"))
 			md5.update(damId.encode("latin1"))
 			md5.update(bucket.encode("latin1"))
 			md5.update(fsType.encode("latin1"))
