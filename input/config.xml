@@ -20,10 +20,10 @@
  <directory>
   <etl_model_xml>input/ETL_Model.xml</etl_model_xml>
   <lpts_xml>input/qry_dbp4_Regular_and_NonDrama_10rec.xml</lpts_xml>
-  <validate>$HOME/FCBH/files/validate</validate>
-  <upload>$HOME/FCBH/files/upload</upload>
-  <database>$HOME/FCBH/files/database</database>
-  <complete>$HOME/FCBH/files/completed</complete>
+  <validate>/Users/garygriswold/FCBH/files/validate</validate>
+  <upload>/Users/garygriswold/FCBH/files/upload</upload>
+  <database>/Users/garygriswold/FCBH/files/database</database>
+  <complete>/Users/garygriswold/FCBH/files/completed</complete>
   <sql_output>output/output.sql</sql_output>
  </directory>
 </dbp_etl>

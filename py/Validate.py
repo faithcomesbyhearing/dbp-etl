@@ -4,7 +4,7 @@ class Validate:
 
 	def __init__(self, database):
 		self.database = database
-		messages = []
+		self.messages = []
 
 	def process(self):
 		for tbl in self.database.tables:
@@ -16,6 +16,6 @@ class Validate:
 						# read value from hash map
 						message = func(value)
 						if message != None:
-							messages.append([tbl.name, col.name, parm.type, parm.name, message])
+							self.messages.append([tbl.name, col.name, parm.type, parm.name, message])
 
 	## All Validate functions go here.
