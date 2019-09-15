@@ -25,7 +25,11 @@
 			<!-- lptsBlog 66, 65 and Env line 53 -->
 			<!-- code translation will be done in clean -->
 		</column>
-		<!-- other columns date, scope, derived, copyright, priority, reviewed, notes ?? -->
+		<!-- 
+			The following columns are not populated by the current lptsmanager,
+			but where populated by some earlier program.
+			date, scope, derived, copyright, priority, reviewed, notes 
+		-->
 	</table>
 	<table name="bible_translations" pkey="bible_id, language_id" trans="?">
 		<!-- real key is surrugate id key.  There might not be a logical pkey. -->
@@ -38,7 +42,11 @@
 		<column name="name" transform="assign">
 			<lptsXML name="Volumne_Name" validate="tbd" clean="nullify1"/>
 		</column>
-		<!-- other columns: vernacular, vernacular_trade, description, background, notes -->
+		<!-- 
+			The following columns are not populated by the current lptsmanager,
+			but where populated by some earlier program.
+			vernacular, vernacular_trade, description, background, notes 
+		-->
 	</table>
 	<table name="bible_filesets" pkey="hash_id" idkey="id, asset_id, set_type_code" trans="I,U">
 		<column name="id" transform="getDamIds">
@@ -87,6 +95,9 @@
 		<column name="set_size_code" transform="assign">
 			<constant name="P">P</constant>
 		</column>
+		<!--
+			the column hidden is always the default 0
+		-->
 	</table>
 	<table name="bible_fileset_connections" pkey="hash_id, bible_id" trans="I">
 		<!-- mostly hash_id is unique, there are only 2 cases where hash_id has 2 bible_ids -->
@@ -131,6 +142,7 @@
 			<constant name="1">1</constant>
 			<constant name="2">2</constant>
 			<!-- assign is not correct, it has to choose correct value -->
+			<!-- 14 rows in this table have a value of 3, but lptsmanager does not do this -->
 		</column>
 	</table>
 	<table name="bible_fileset_tags" pkey="hash_id, name, language_id" trans="I,U,I,U,I,U">
@@ -264,6 +276,9 @@
 			<external name="elastictranscoder"/>
 			<!-- main.py 115-120 (audio) and 429-443 (video) -->
 		</column>
+		<!--
+			is not being updated file_size
+		-->
 	</table>
 	<table name="bible_file_tags" pkey="file_id, tag" trans="I">
 		<column name="file_id" transform="tbd">
@@ -321,11 +336,11 @@
 	</table>
 	<!--
 		These table look like they are updated by lpts, but I can't find them.
-		bible_equivalents
-		bible_file_timestamps
-		bible_file_titles
-		bible_links
-		bible_organizations
-		bible_verses
+		bible_equivalents, last updated 2018-11-21 17:07:08 
+		bible_file_timestamps, last updated 2018-11-08 11:34:25
+		bible_file_titles, last updated 2018-03-05 03:32:33
+		bible_links, last updated 2019-04-26 15:48:17
+		bible_organizations, last updated 2019-04-30 10:49:05
+		bible_verses, no last updated date column
 	-->
 </database>
