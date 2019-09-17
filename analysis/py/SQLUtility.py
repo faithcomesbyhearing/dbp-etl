@@ -35,9 +35,17 @@ class SQLUtility:
 			self.error(cursor, statement, err)
 
 
-	#def executeBatch(self, [statements]):
-	# There needs to be some kind of batch object, which contains a list of statements,
-	# and each statement has a list of values
+	def executeBatch(self, statement, valuesList):
+		cursor = self.conn.cursor()
+		try:
+			cursor.execute("BEGIN", None)
+			for value in valuesList:
+				#print("values", len(value), value)
+				cursor.execute(statement, value)
+			self.conn.commit()
+			cursor.close()
+		except Exception as err:
+			self.error(cursor, statement, err)
 
 
 	def select(self, statement, values):
