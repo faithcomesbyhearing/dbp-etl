@@ -26,20 +26,11 @@ class Config:
 
 		self.database_host = self.get("database.host")
 		self.database_user = self.get("database.user")
-		self.database_db_name = self.get("database.db_name")
+		self.database_input_db_name = self.get("database.input_db_name")
+		self.database_output_db_name = self.get("database.output_db_name")
 		self.database_port = self.getInt("database.port")
-		self.s3_bucket = self.get("s3.bucket")
-		self.s3_vid_bucket = self.get("s3.vid_bucket")
-		self.s3_aws_profile = self.get("s3.aws_profile")
-		self.permissions_restricted = self.get("permissions.access_restricted")
-		self.permissions_granted = self.get("permissions.access_granted")
-		self.permissions_video = self.get("permissions.access_video")
-		self.directory_etl_model_xml = self.getPath("directory.etl_model_xml")
 		self.directory_lpts_xml = self.getPath("directory.lpts_xml")
-		self.directory_validate = self.getPath("directory.validate")
-		self.directory_upload = self.getPath("directory.upload")
-		self.directory_database = self.getPath("directory.database")
-		self.directory_complete = self.getPath("directory.complete")
+		self.directory_main_bucket = self.getPath("directory.main_bucket")
 		self.directory_sql_output = self.getPath("directory.sql_output")
 
 	def get(self, name):
