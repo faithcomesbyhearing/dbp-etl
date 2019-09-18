@@ -103,10 +103,12 @@ class LPTSExtractReader:
 		for row in self.resultSet:
 			for damIdKey in damIdMap.keys():
 				if damIdKey in row:
+					damId = row[damIdKey]
 					statusName = damIdMap[damIdKey]
-					if row.get(statusName) == "Live":
-						print(damIdKey, statusName, row)
-						resultMap[damIdKey] = row
+					status = row.get(statusName)
+					if status == "Live":
+						#print(damIdKey, damId, statusName, status)
+						resultMap[damId] = row
 		return resultMap	
 
 
