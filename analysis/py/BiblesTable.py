@@ -23,6 +23,7 @@ import io
 import os
 import sys
 from Config import *
+from BucketReader import *
 from LPTSExtractReader import *
 from SQLUtility import *
 from LookupTables import *
@@ -30,17 +31,8 @@ from LookupTables import *
 class BiblesTable:
 
 	def __init__(self, config):
-		ids = set()
-		files = io.open(config.directory_main_bucket, mode="r", encoding="utf-8")
-		for line in files:
-			parts = line.split("/")
-			if parts[0] in ["audio", "text", "video"]:
-				if len(parts) > 3:
-					bibleId = parts[1]
-					#print(bibleId)
-					ids.add(bibleId)
-		files.close()
-		self.bibleIds = sorted(list(ids))
+		bucket = BucketReader(config)
+		self.bibleIds = bucket.bibleIds()
 		self.inputDB = SQLUtility(config.database_host, config.database_port,
 			config.database_user, config.database_input_db_name)
 		reader = LPTSExtractReader(config)
@@ -50,14 +42,13 @@ class BiblesTable:
 
 	def languageId(self, bible):
 		result = 7946 # Null is not allowed THIS SHOULD BE A VALIDATION WARNING
-		if bible != None:
-			iso = bible['ISO']
-			langName = bible['LangName']
-			#print("doing languageId", bibleId, iso, langName)
-			#result = self.inputDB.selectScalar("SELECT l.id FROM languages l,language_translations t WHERE l.iso=%s AND t.name=%s AND l.id=t.language_source_id", (iso, langName))
-			result = self.inputDB.selectScalar("SELECT id FROM languages WHERE iso=%s AND name=%s", (iso, langName))
-			if result == None:
-				result = self.inputDB.selectScalar("SELECT id FROM languages WHERE iso=%s", (iso))
+		iso = bible['ISO']
+		langName = bible['LangName']
+		#print("doing languageId", bibleId, iso, langName)
+		#result = self.inputDB.selectScalar("SELECT l.id FROM languages l,language_translations t WHERE l.iso=%s AND t.name=%s AND l.id=t.language_source_id", (iso, langName))
+		result = self.inputDB.selectScalar("SELECT id FROM languages WHERE iso=%s AND name=%s", (iso, langName))
+		if result == None:
+			result = self.inputDB.selectScalar("SELECT id FROM languages WHERE iso=%s", (iso))
 		return result
 
 
@@ -65,34 +56,32 @@ class BiblesTable:
 		#print("versification")
 		result = 'protestant'
 		return result
-		# ask alan for source
+		# ask alan for source 9/16/19
 
 
 	def numeralSystemId(self, bible):
 		# associating this with Bible is incorrect, because there could be multiple
 		# damIds with different scripts
 		result = 'western-arabic' # this default value is not found in the alphabet_numeral_systems table
-		if bible != None:
-			script = bible.get('_x0031_Orthography') # really there is supposed to be a linkage
+		script = bible.get('_x0031_Orthography') # really there is supposed to be a linkage
+		if script == None:
+			script = bible.get('_x0032_Orthography')
 			if script == None:
-				script = bible.get('_x0032_Orthography')
-				if script == None:
-					script = bible.get('_x0033_Orthography')
-			if script != None:
-				lookup = LookupTables()
-				scriptCode = lookup.scriptCode(script)
-				if scriptCode == None:
-					print("ERROR: missing script code for %s" % scriptCode)
-					sys.exit()
-				ans = self.inputDB.selectScalar("SELECT numeral_system_id FROM alphabet_numeral_systems WHERE script_id=%s", (scriptCode))
-				result = ans if ans != None else 'western-arabic'
-				# note this query returns multiple rows for Arab and Deva, I dont know which is correct
+				script = bible.get('_x0033_Orthography')
+		if script != None:
+			lookup = LookupTables()
+			scriptCode = lookup.scriptCode(script)
+			if scriptCode == None:
+				print("ERROR: missing script code for %s" % scriptCode)
+				sys.exit()
+			ans = self.inputDB.selectScalar("SELECT numeral_system_id FROM alphabet_numeral_systems WHERE script_id=%s", (scriptCode))
+			result = ans if ans != None else 'western-arabic'
+			# note this query returns multiple rows for Arab and Deva, I dont know which is correct
 		return result
 
 
 	def date(self, bible):
 		result = None
-		#if bible != None:
 		#print("this appears to be a copyright date") # need correct source from 
 		return result
 
@@ -105,15 +94,14 @@ class BiblesTable:
 
 	def script(self, bible):
 		result = 'Zzzz' # cannot be null, THIS SHOULD BE A VALIDATION WARNING
-		if bible != None:
-			script = bible.get('_x0031_Orthography') # really there is supposed to be a linkage
+		script = bible.get('_x0031_Orthography') # really there is supposed to be a linkage
+		if script == None:
+			script = bible.get('_x0032_Orthography')
 			if script == None:
-				script = bible.get('_x0032_Orthography')
-				if script == None:
-					script = bible.get('_x0033_Orthography')
-			if script != None:
-				lookup = LookupTables()
-				result = lookup.scriptCode(script)
+				script = bible.get('_x0033_Orthography')
+		if script != None:
+			lookup = LookupTables()
+			result = lookup.scriptCode(script)
 		return result
 
 
@@ -125,13 +113,12 @@ class BiblesTable:
 
 	def copyright(self, bible):
 		result = None
-		if bible != None:
-			copyc = bible.get('Copyrightc')
-			if len(copyc) > 191:
-				result = copyc[:190]
-				print("WARNING: Copyright truncated for %s" % (bible.get("DBP_Equivalent")))
-			else:
-				result = copyc
+		copyc = bible.get('Copyrightc')
+		if len(copyc) > 191:
+			result = copyc[:190]
+			print("WARNING: Copyright truncated for %s" % (bible.get("DBP_Equivalent")))
+		else:
+			result = copyc
 		return result
 
 
@@ -157,24 +144,23 @@ bibles = BiblesTable(config)
 print("num bibles in dbp-prod", len(bibles.bibleIds))
 results = []
 for bibleId in bibles.bibleIds:
-	if "delete" not in bibleId:
-		bible = bibles.bibleMap.get(bibleId)
-		if bible != None:
-			lang = bibles.languageId(bible)
-			verse = bibles.versification(bible)
-			numeral = bibles.numeralSystemId(bible)
-			date = bibles.date(bible)
-			scope = bibles.scope(bible)
-			script = bibles.script(bible)
-			derived = bibles.derived(bible)
-			copyright = bibles.copyright(bible)
-			priority = bibles.priority(bible)
-			reviewed = bibles.reviewed(bible)
-			notes = bibles.notes(bible)
-			results.append((bibleId, lang, verse, numeral, date, scope, script, derived, copyright, 
-				priority, reviewed, notes))
-		else:
-			print("WARNING LPTS has no record for %s" % (bibleId))
+	bible = bibles.bibleMap.get(bibleId)
+	if bible != None:
+		lang = bibles.languageId(bible)
+		verse = bibles.versification(bible)
+		numeral = bibles.numeralSystemId(bible)
+		date = bibles.date(bible)
+		scope = bibles.scope(bible)
+		script = bibles.script(bible)
+		derived = bibles.derived(bible)
+		copyright = bibles.copyright(bible)
+		priority = bibles.priority(bible)
+		reviewed = bibles.reviewed(bible)
+		notes = bibles.notes(bible)
+		results.append((bibleId, lang, verse, numeral, date, scope, script, derived, copyright, 
+			priority, reviewed, notes))
+	else:
+		print("WARNING LPTS has no record for %s" % (bibleId))
 
 bibles.inputDB.close()
 outputDB = SQLUtility(config.database_host, config.database_port,

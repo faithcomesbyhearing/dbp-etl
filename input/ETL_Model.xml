@@ -31,7 +31,7 @@
 			date, scope, derived, copyright, priority, reviewed, notes 
 		-->
 	</table>
-	<table name="bible_translations" pkey="bible_id, language_id" trans="?">
+	<table name="bible_translations" pkey="bible_id, language_id, vernacular" trans="?">
 		<!-- real key is surrugate id key.  There might not be a logical pkey. -->
 		<column name="language_id" transform="assign">
 			<constant name="english">6414</constant>
