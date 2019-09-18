@@ -29,6 +29,8 @@ class Config:
 		self.database_input_db_name = self.get("database.input_db_name")
 		self.database_output_db_name = self.get("database.output_db_name")
 		self.database_port = self.getInt("database.port")
+		self.s3_bucket = self.get("s3.bucket")
+		self.s3_vid_bucket = self.get("s3.vid_bucket")
 		self.directory_lpts_xml = self.getPath("directory.lpts_xml")
 		self.directory_main_bucket = self.getPath("directory.main_bucket")
 		self.directory_sql_output = self.getPath("directory.sql_output")

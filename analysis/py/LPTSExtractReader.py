@@ -86,7 +86,17 @@ class LPTSExtractReader:
 			"Reg_OTTextDamID1": "Reg_OTTextDamIDStatus1", 
 			"Reg_OTTextDamID2": "Reg_OTTextDamIDStatus2",  
 			"Reg_OTTextDamID3": "Reg_OTTextDamIDStatus3"}
-		return self.isInMap(textDic)
+		resultMap = {}
+		for row in self.resultSet:
+			for damIdKey in textDic.keys():
+				if damIdKey in row:
+					damId = row[damIdKey]
+					statusName = textDic[damIdKey]
+					status = row.get(statusName)
+					if status == "Live":
+						#print(damIdKey, damId, statusName, status)
+						resultMap[damId[:6]] = row
+		return resultMap	
 	
 
 	def getVideoMap(self):

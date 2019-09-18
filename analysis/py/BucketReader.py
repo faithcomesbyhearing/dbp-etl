@@ -14,7 +14,9 @@ class BucketReader:
 	def __init__(self, config):
 		self.config = config
 		self.bibleIdList = None
-		self.filesetIdList = None
+		self.audioIdList = None
+		self.textIdList = None
+		self.videoIdList = None
 
 
 	def bibleIds(self):
@@ -35,22 +37,30 @@ class BucketReader:
 
 
 	def filesetIds(self):
-		db = SQLUtility(self.config.database_host, self.config.database_port,
-			self.config.database_user, self.config.database_output_db_name)
-		bibleIds = db.selectList("SELECT id FROM bibles", None)
-		db.close()
-		if self.filesetIdList == None:
-			ids = set()
+		if self.audioIdList == None:
+			db = SQLUtility(self.config.database_host, self.config.database_port,
+				self.config.database_user, self.config.database_output_db_name)
+			bibleIds = db.selectList("SELECT id FROM bibles", None)
+			db.close()
+			audIds = set()
+			txtIds = set()
+			vidIds = set()
 			files = io.open(self.config.directory_main_bucket, mode="r", encoding="utf-8")
 			for line in files:
 				parts = line.split("/")
-				if parts[0] in ["audio", "text"]:
-					if parts[1] in bibleIds:
-						#print("found", parts[0], parts[1], parts[2])
-						ids.add(parts[2])
+				if len(parts) > 3 and parts[1] in bibleIds:
+					#print("found", parts[0], parts[1], parts[2])
+					if parts[0] == "audio":
+						audIds.add(parts[2])
+					elif parts[0] == "text":
+						txtIds.add(parts[2])
+					elif parts[0] == "video":
+						vidIds.add(parts[2])
 			files.close()
-			self.filesetIdList = sorted(list(ids))
-		return self.filesetIdList
+			self.audioIdList = sorted(list(audIds))
+			self.textIdList = sorted(list(txtIds))
+			self.videoIdList = sorted(list(vidIds))
+			print("num in bucket audio=%d  text=%d  video=%d" % (len(audIds), len(txtIds), len(vidIds)))
 
 				
 
