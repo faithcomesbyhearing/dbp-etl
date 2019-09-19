@@ -42,8 +42,8 @@ class BiblesTable:
 
 	def languageId(self, bible):
 		result = 7946 # Null is not allowed THIS SHOULD BE A VALIDATION WARNING
-		iso = bible['ISO']
-		langName = bible['LangName']
+		iso = bible.ISO()
+		langName = bible.LangName()
 		#print("doing languageId", bibleId, iso, langName)
 		#result = self.inputDB.selectScalar("SELECT l.id FROM languages l,language_translations t WHERE l.iso=%s AND t.name=%s AND l.id=t.language_source_id", (iso, langName))
 		result = self.inputDB.selectScalar("SELECT id FROM languages WHERE iso=%s AND name=%s", (iso, langName))
@@ -63,11 +63,11 @@ class BiblesTable:
 		# associating this with Bible is incorrect, because there could be multiple
 		# damIds with different scripts
 		result = 'western-arabic' # this default value is not found in the alphabet_numeral_systems table
-		script = bible.get('_x0031_Orthography') # really there is supposed to be a linkage
+		script = bible.x0031_Orthography()
 		if script == None:
-			script = bible.get('_x0032_Orthography')
+			script = bible.x0032_Orthography()
 			if script == None:
-				script = bible.get('_x0033_Orthography')
+				script = bible.x0033_Orthography()
 		if script != None:
 			lookup = LookupTables()
 			scriptCode = lookup.scriptCode(script)
@@ -94,11 +94,11 @@ class BiblesTable:
 
 	def script(self, bible):
 		result = 'Zzzz' # cannot be null, THIS SHOULD BE A VALIDATION WARNING
-		script = bible.get('_x0031_Orthography') # really there is supposed to be a linkage
+		script = bible.x0031_Orthography()
 		if script == None:
-			script = bible.get('_x0032_Orthography')
+			script = bible.x0032_Orthography()
 			if script == None:
-				script = bible.get('_x0033_Orthography')
+				script = bible.x0033_Orthography()
 		if script != None:
 			lookup = LookupTables()
 			result = lookup.scriptCode(script)
@@ -113,10 +113,10 @@ class BiblesTable:
 
 	def copyright(self, bible):
 		result = None
-		copyc = bible.get('Copyrightc')
+		copyc = bible.Copyrightc()
 		if len(copyc) > 191:
 			result = copyc[:190]
-			print("WARNING: Copyright truncated for %s" % (bible.get("DBP_Equivalent")))
+			print("WARNING: Copyright truncated for %s" % (bible.DBP_Equivalent()))
 		else:
 			result = copyc
 		return result

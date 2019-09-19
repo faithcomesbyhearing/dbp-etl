@@ -44,8 +44,8 @@ class BibleTranslationsTable:
 
 	def languageId(self, bible):
 		result = 7946 # Null is not allowed THIS SHOULD BE A VALIDATION WARNING
-		iso = bible['ISO']
-		langName = bible['LangName']
+		iso = bible.ISO()
+		langName = bible.LangName()
 		#print("doing languageId", bibleId, iso, langName)
 		#result = self.inputDB.selectScalar("SELECT l.id FROM languages l,language_translations t WHERE l.iso=%s AND t.name=%s AND l.id=t.language_source_id", (iso, langName))
 		result = self.inputDB.selectScalar("SELECT id FROM languages WHERE iso=%s AND name=%s", (iso, langName))
@@ -73,7 +73,7 @@ class BibleTranslationsTable:
 
 	def name(self, bible):
 		#result = None
-		result = bible.get("HeartName")
+		result = bible.HeartName()
 		#if result == None:
 		#	result = bible.get("Volumne_Name") # lptsmanager used this column
 		if result == None:

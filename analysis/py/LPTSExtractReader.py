@@ -31,29 +31,26 @@ class LPTSExtractReader:
 								#print(fldNode.nodeName + " = " + fldNode.firstChild.nodeValue)
 								resultRow[fldNode.nodeName] = fldNode.firstChild.nodeValue
 
-						self.resultSet.append(resultRow)
+						self.resultSet.append(LPTSRecord(resultRow))
 
 
 	def getStockNoMap(self):
 		stockNoMap = {}
-		for row in self.resultSet:
-			stockNum = row[u'Reg_StockNumber']
-			#print(stockNum)
-			stockNoMap[stockNum] = row
+		for rec in self.resultSet:
+			stockNum = rec.Reg_StockNumber()
+			stockNoMap[stockNum] = rec
 		return stockNoMap
 
 
 	def getBibleIdMap(self):
 		bibleIdMap = {}
-		for row in self.resultSet:
-			bibleId = row.get(u'DBP_Equivalent')
-			if bibleId != None and bibleId != "N/A" and bibleId != "#N/A":
-				#print(bibleId)
-				bibleIdMap[bibleId] = row
-			bibleId2 = row.get(u'DBP_Equivalent2')
+		for rec in self.resultSet:
+			bibleId = rec.DBP_Equivalent()
+			if bibleId != None:
+				bibleIdMap[bibleId] = rec
+			bibleId2 = rec.DBP_Equivalent2()
 			if bibleId2 != None:
-				#print bibleId2
-				bibleIdMap[bibleId2] = row
+				bibleIdMap[bibleId2] = rec
 		return bibleIdMap
 
 
@@ -87,7 +84,8 @@ class LPTSExtractReader:
 			"Reg_OTTextDamID2": "Reg_OTTextDamIDStatus2",  
 			"Reg_OTTextDamID3": "Reg_OTTextDamIDStatus3"}
 		resultMap = {}
-		for row in self.resultSet:
+		for rec in self.resultSet:
+			row = rec.record # get hashtable inside record
 			for damIdKey in textDic.keys():
 				if damIdKey in row:
 					damId = row[damIdKey]
@@ -95,8 +93,8 @@ class LPTSExtractReader:
 					status = row.get(statusName)
 					if status == "Live":
 						#print(damIdKey, damId, statusName, status)
-						resultMap[damId[:6]] = row
-		return resultMap	
+						resultMap[damId[:6]] = rec
+		return resultMap
 	
 
 	def getVideoMap(self):
@@ -110,7 +108,8 @@ class LPTSExtractReader:
 
 	def isInMap(self, damIdMap):
 		resultMap = {}
-		for row in self.resultSet:
+		for rec in self.resultSet:
+			row = rec.record # get hashtable inside record
 			for damIdKey in damIdMap.keys():
 				if damIdKey in row:
 					damId = row[damIdKey]
@@ -118,8 +117,158 @@ class LPTSExtractReader:
 					status = row.get(statusName)
 					if status == "Live":
 						#print(damIdKey, damId, statusName, status)
-						resultMap[damId] = row
+						resultMap[damId] = rec
 		return resultMap	
+
+
+class LPTSRecord:
+
+	def __init__(self, record):
+		self.record = record
+
+	def recordLen(self):
+		return len(self.record.keys())
+
+	def LangName(self):
+		return self.record.get("LangName")
+
+	def Reg_StockNumber(self):
+		return self.record.get("Reg_StockNumber")
+
+	def Reg_Recording_Status(self):
+		return self.record.get("Reg_Recording_Status")
+
+	def ND_StockNumber(self):
+		return self.record.get("ND_StockNumber")
+
+	def HeartName(self):
+		return self.record.get("HeartName")
+
+	def ISO(self):
+		return self.record.get("ISO")
+
+	def Licensor(self):
+		return self.record.get("Licensor")
+
+	def Copyrightc(self):
+		return self.record.get("Copyrightc")
+
+	def Copyrightp(self):
+		return self.record.get("Copyrightp")
+
+	def DBP_Equivalent(self):
+		result = self.record.get("DBP_Equivalent")
+		if result == "N/A" or result == "#N/A":
+			return None
+		else:
+			return result
+
+	def Volumne_Name(self):
+		result = self.record.get("Volumne_Name")
+		if result == "N/A" or result == "#N/A":
+			return None
+		else:
+			return result
+
+	def Country(self):
+		return self.record.get("Country")
+
+	def DBPText(self):
+		return self.record.get("DBPText")
+
+	def DBPTextOT(self):
+		return self.record.get("DBPTextOT")
+
+	def DBPAudio(self):
+		return self.record.get("DBPAudio")
+
+	def DBPMobile(self):
+		return self.record.get("DBPMobile")
+
+	def DBPWebHub(self):
+		return self.record.get("DBPWebHub")
+
+	def Download(self):
+		return self.record.get("Download")
+
+	def Streaming(self):
+		return self.record.get("Streaming")
+
+	def MobileText(self):
+		return self.record.get("MobileText")
+
+	def HubText(self):
+		return self.record.get("HubText")
+
+	def APIDevText(self):
+		return self.record.get("APIDevText")
+
+	def APIDevAudio(self):
+		return self.record.get("APIDevAudio")
+
+	def FairUseLimitValue(self):
+		return self.record.get("FairUseLimitValue")
+
+	def FairUseLimit(self):
+		return self.record.get("FairUseLimit")
+
+	def EthName(self):
+		return self.record.get("EthName")
+
+	def AltName(self):
+		result = self.record.get("AltName")
+		if result == "N/A" or result == "#N/A":
+			return None
+		else:
+			return result
+
+	def CreativeCommonsAudioWaiver(self):
+		return self.record.get("CreativeCommonsAudioWaiver")
+
+	def ItunesPodcast(self):
+		return self.record.get("ItunesPodcast")
+	
+	def WebHubVideo(self):
+		return self.record.get("WebHubVideo")
+
+	def Copyright_Video(self):
+		return self.record.get("Copyright_Video")
+
+	def x0031_Orthography(self):
+		return self.record.get("_x0031_Orthography")
+
+	def x0032_Orthography(self):
+		return self.record.get("_x0032_Orthography")
+
+	def x0033_Orthography(self):
+		return self.record.get("_x0033_Orthography")
+
+	def DBPFont2(self):
+		return self.record.get("DBPFont2")
+
+	def DBPFont3(self):
+		return self.record.get("DBPFont3")
+
+	def DBP_Equivalent2(self):
+		return self.record.get("DBP_Equivalent2")
+
+	def USX_Date1(self):
+		return self.record.get("USX_Date1")
+
+	def PostedToServer(self):
+		return self.record.get("PostedToServer")
+
+	def DBPDate(self):
+		return self.record.get("DBPDate")
+
+	def DBPDate2(self):
+		return self.record.get("DBPDate2")
+
+	def Version(self):
+		return self.record.get("Version")
+
+	def APIDevVideo(self):
+		return self.record.get("APIDevVideo")
 
 
 

@@ -42,14 +42,14 @@ class BibleFilesetConnectionsTable:
 			print("ERROR: invalid typeCode %s in %s" % (typeCode, filesetId))
 			sys.exit()
 		results = []
-		id1 = lookup[filesetId[:10]].get('DBP_Equivalent')
-		if id1 != None and id1 != "N/A" and id1 != "#N/A":
+		id1 = lookup[filesetId[:10]].DBP_Equivalent()
+		if id1 != None:
 			if id1 in self.bibleIdList:
 				results.append(id1)
 			else:
 				print("WARNING: filesetId %s not added, because bibleId %s not known" % (filesetId, id1))
-		id2 = lookup[filesetId[:10]].get('DBP_Equivalent2')
-		if id2 != None and id1 != "N/A" and id1 != "#N/A":
+		id2 = lookup[filesetId[:10]].DBP_Equivalent2()
+		if id2 != None:
 			if id2 in self.bibleIdList:
 				results.append(id2)
 			else:
