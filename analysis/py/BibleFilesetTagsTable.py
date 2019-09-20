@@ -25,7 +25,6 @@ class BibleFilesetTagsTable:
 		self.validDB = SQLUtility(config.database_host, config.database_port,
 			config.database_user, config.database_output_db_name)
 		self.filesetList = self.validDB.select("SELECT id, set_type_code, hash_id FROM bible_filesets", None)
-		#self.orgNameMap = self.validDB.selectMap("SELECT name, organization_id FROM organization_translations", None)
 		reader = LPTSExtractReader(config)
 		self.audioMap = reader.getAudioMap()
 		print("num audio filesets in LPTS", len(self.audioMap.keys()))
