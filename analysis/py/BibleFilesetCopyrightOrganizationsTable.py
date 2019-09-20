@@ -21,6 +21,7 @@ class BibleFilesetCopyrightOrganizationsTable:
 		self.validDB = SQLUtility(config.database_host, config.database_port,
 			config.database_user, config.database_output_db_name)
 		self.filesetList = self.validDB.select("SELECT id, set_type_code, hash_id FROM bible_filesets", None)
+		self.orgNameMap = self.validDB.selectMap("SELECT name, organization_id FROM organization_translations", None)
 		reader = LPTSExtractReader(config)
 		self.audioMap = reader.getAudioMap()
 		print("num audio filesets in LPTS", len(self.audioMap.keys()))
@@ -29,29 +30,31 @@ class BibleFilesetCopyrightOrganizationsTable:
 		self.videoMap = reader.getVideoMap()
 		print("num video filesets in LPTS", len(self.videoMap.keys()))
 
-	def organizationId(self, fileset):
+	def organization(self, filesetId, typeCode):
 		result = []
-		# See main 281-289
-		# build map of names from organization_translations, with name as key, and id as value
-		# lookup name from Copyrightc (text) Copyrightp (audio), etc
-		# These are the copyright holders.  They get a organization_role of 1
-
-		# In order to figure out roles 2 and 3 do a join of this table to oranization_translations
-		# in order to get the role associated with the name.
-
-		#if fileset.Copyrightc() != None:
-		#	result.append("Text: %s" % (fileset.Copyrightc()))
-		#if fileset.Copyrightp() != None:
-		#	result.append("Audio: %s" % (fileset.Copyrightp()))
-		#if fileset.Copyright_Video() != None:
-		#	result.append("Video: %s" % (fileset.Copyright_Video()))
-
-		return "\n".join(result)
-
-
-	def organizationRole(self, copyright):		
-		result = None # 1, 2, 3
-		return result
+		# problem: self.orgNameMap can have multiple id's for the same name, but they differ in languageId
+		if typeCode == "aud":
+			copyright = self.audioMap[filesetId[:10]].Copyrightp()
+		elif typeCode == "tex":
+			copyright = self.textMap[filesetId].Copyrightc()
+		elif typeCode == "vid":
+			copyright = self.videoMap[filesetId].Copyright_Video()
+		else:
+			sys.exit()
+		if copyright != None:
+			orgId = self.orgNameMap.get(copyright)
+			if orgId != None:
+				return (orgId, 1)
+			elif copyright.count("Hosanna")>0:
+				return (9, 1)
+			elif copyright.count("Mitla Studio")>0:
+				return (238, 1)
+			elif copyright.count("Wycliffe")>0:
+				return (30, 1)
+			else:
+				print("ERROR: filesetId %s has name %s, but there is no id match" % (filesetId, copyright))
+		return (1152, 3) # These must really be null
+		# There is much more to do for role 2 and role 3
 
 
 config = Config()
@@ -62,18 +65,7 @@ for fileset in filesets.filesetList:
 	filesetId = fileset[0]
 	typeCode = fileset[1][0:3]
 	hashId = fileset[2]
-	if typeCode == "aud":
-		lookup = filesets.audioMap[filesetId[:10]]
-	elif typeCode == "tex":
-		lookup = filesets.textMap[filesetId]
-	elif typeCode == "vid":
-		lookup = filesets.videoMap[filesetId]
-	else:
-		print("ERROR: fileset %s has unknown type %s" % (filesetId, typeCode))
-		sys.exit()
-
-	oganizationId = filesets.organizationId(lookup)
-	organizationRole = filesets.organizationRole(copyright)
+	(organizationId, organizationRole) = filesets.organization(filesetId, typeCode)
 	results.append((hashId, organizationId, organizationRole))
 
 print("num records to insert %d" % (len(results)))
