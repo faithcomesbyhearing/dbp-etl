@@ -13,7 +13,6 @@ import os
 import sys
 import hashlib
 from Config import *
-from LPTSExtractReader import *
 from SQLUtility import *
 from LookupTables import *
 from BucketReader import *
@@ -23,21 +22,13 @@ class BibleFilesetsTable:
 	def __init__(self, config):
 		self.config = config
 		bucket = BucketReader(config)
-		bucket.filesetIds()
-		self.audioIds = bucket.audioIdList
-		self.textIds = bucket.textIdList
-		self.videoIds = bucket.videoIdList
+		self.appIds = bucket.filesetIds("app")
+		self.audioIds = bucket.filesetIds("audio")
+		self.textIds = bucket.filesetIds("text")
+		self.videoIds = bucket.filesetIds("video")
 		## I might not need the DB ??
 		self.inputDB = SQLUtility(config.database_host, config.database_port,
 			config.database_user, config.database_input_db_name)
-		## I might not need the Extract ??
-		reader = LPTSExtractReader(config)
-		self.audioMap = reader.getAudioMap()
-		print("num audio filesets in list", len(self.audioMap.keys()))
-		self.textMap = reader.getTextMap()
-		#print(self.textMap.keys())
-		print("num text filesets in list", len(self.textMap.keys()))
-		## We also need to read the video bucket here !!!!
 
 
 	def assetIdAudioText(self, damId):
@@ -96,60 +87,46 @@ results = []
 
 """
 for appId in filesets.appIds:
-	print(appId)
-	app = filesets.audioMap.get(appId)
-	if app != None:
-		print("app", appId)
-		assetId = fileset.assetIdAudioText(appId)
-		setTypeCode = fileset.setAudioTypeCode(appId)
-		hashId = fileset.hashId(appId, assetId, setTypeCode)
-		setSizeCode = fileset.setSizeCode(appId)
-		hidden = fileset.hidden(appId)
-		results.append((appId, hashId, assetId, setTypeCode, setSizeCode, hidden))
-	else:
-		print("WARNING LPTS has no record for app %s" % (appId))
+	#print(appId)
+	#app = filesets.audioMap.get(appId)
+	#if app != None:
+	#print("app", appId)
+	assetId = filesets.assetIdAudioText(appId)
+	setTypeCode = filesets.setAudioTypeCode(appId)
+	hashId = filesets.hashId(appId, assetId, setTypeCode)
+	setSizeCode = filesets.setSizeCode(appId)
+	hidden = filesets.hidden(appId)
+	results.append((appId, hashId, assetId, setTypeCode, setSizeCode, hidden))
+	#else:
+	#	print("WARNING LPTS has no record for app %s" % (appId))
 """
+
 for audioId in filesets.audioIds:
 	#print(audioId)
-	audio = filesets.audioMap.get(audioId[:10])
-	if audio != None:
-		#print("audio", audioId)
-		assetId = filesets.assetIdAudioText(audioId)
-		setTypeCode = filesets.setAudioTypeCode(audioId)
-		hashId = filesets.hashId(audioId, assetId, setTypeCode)
-		setSizeCode = filesets.setSizeCode(audioId)
-		hidden = filesets.hidden(audioId)
-		results.append((audioId, hashId, assetId, setTypeCode, setSizeCode, hidden))
-	else:
-		print("WARNING LPTS has no record for audio %s" % (audioId))
+	assetId = filesets.assetIdAudioText(audioId)
+	setTypeCode = filesets.setAudioTypeCode(audioId)
+	hashId = filesets.hashId(audioId, assetId, setTypeCode)
+	setSizeCode = filesets.setSizeCode(audioId)
+	hidden = filesets.hidden(audioId)
+	results.append((audioId, hashId, assetId, setTypeCode, setSizeCode, hidden))
 
 for textId in filesets.textIds:
 	#print(textId)
-	text = filesets.textMap.get(textId)
-	if text != None:
-		#print("text", textId)
-		assetId = filesets.assetIdAudioText(textId)
-		setTypeCode = filesets.setTextTypeCode(textId)
-		hashId = filesets.hashId(textId, assetId, setTypeCode)
-		setSizeCode = filesets.setSizeCode(textId)
-		hidden = filesets.hidden(textId)
-		results.append((textId, hashId, assetId, setTypeCode, setSizeCode, hidden))
-	else:
-		print("WARNING LPTS has no record for text %s" % (textId))
+	assetId = filesets.assetIdAudioText(textId)
+	setTypeCode = filesets.setTextTypeCode(textId)
+	hashId = filesets.hashId(textId, assetId, setTypeCode)
+	setSizeCode = filesets.setSizeCode(textId)
+	hidden = filesets.hidden(textId)
+	results.append((textId, hashId, assetId, setTypeCode, setSizeCode, hidden))
 
 for videoId in filesets.videoIds:
 	#print(videoId)
-	video = filesets.videoMap.get(videoId)
-	if video != None:
-		#print("video", videoId)
-		assetId = filesets.assetIdVideo(videoId)
-		setTypeCode = filesets.setVideoTypeCode(videoId)
-		hashId = filesets.hashId(videoId, assetId, setTypeCode)
-		setSizeCode = filesets.setSizeCode(videoId)
-		hidden = filesets.hidden(videoId)
-		results.append((videoId, hashId, assetId, setTypeCode, setSizeCode, hidden))
-	else:
-		print("WARNING LPTS has no record for video %s" % (videoId))
+	assetId = filesets.assetIdVideo(videoId)
+	setTypeCode = filesets.setVideoTypeCode(videoId)
+	hashId = filesets.hashId(videoId, assetId, setTypeCode)
+	setSizeCode = filesets.setSizeCode(videoId)
+	hidden = filesets.hidden(videoId)
+	results.append((videoId, hashId, assetId, setTypeCode, setSizeCode, hidden))
 
 
 filesets.inputDB.close()

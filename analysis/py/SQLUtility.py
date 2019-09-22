@@ -56,7 +56,7 @@ class SQLUtility:
 			cursor.close()
 			return resultSet
 		except Exception as err:
-			self.error(cursor, statment, err)
+			self.error(cursor, statement, err)
 
 
 	def selectScalar(self, statement, values):

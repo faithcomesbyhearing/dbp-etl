@@ -47,13 +47,13 @@ class BibleFilesetConnectionsTable:
 			if id1 in self.bibleIdList:
 				results.append(id1)
 			else:
-				print("WARNING: filesetId %s not added, because bibleId %s not known" % (filesetId, id1))
+				print("WARNING: filesetId %s not added, because bibleId %s not in Bibles" % (filesetId, id1))
 		id2 = lookup[filesetId[:10]].DBP_Equivalent2()
 		if id2 != None:
 			if id2 in self.bibleIdList:
 				results.append(id2)
 			else:
-				print("WARNING: filesetId %s not added, because bibleId %s not known" % (filesetId, id2))
+				print("WARNING: filesetId %s not added, because bibleId %s in Bibles" % (filesetId, id2))
 		return results
 
 

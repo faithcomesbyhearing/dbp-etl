@@ -19,6 +19,7 @@ import os
 import sys
 import hashlib
 from Config import *
+#from LookupTables import *
 from BucketReader import *
 from SQLUtility import *
 
@@ -29,15 +30,22 @@ class BibleFilesTable:
 		self.validDB = SQLUtility(config.database_host, config.database_port,
 			config.database_user, config.database_output_db_name)
 		self.filesetList = self.validDB.select("SELECT id, set_type_code, hash_id FROM bible_filesets", None)
-		self.bookIdList = self.validDB.select("SELECT id FROM books", None)
+		#self.bookIdList = self.validDB.select("SELECT id FROM books", None)
 		bucket = BucketReader(config)
-		self.filenames = bucket.filenames2()
+		self.filenames = bucket.filenames()
+
+		self.myset = set()
 
 
 	def bookId(self, typeCode, fileName):
 		bookCode = None
 		if typeCode == "aud":
-			bookCode = fileName[0:5].strip('_')
+			bookCode = fileName[0:3]
+			chapter = fileName[5:8].strip("_")
+			name = fileName[9:21].strip()
+			print(bookCode, chapter, name)
+			#print(bookCode, fileName)
+			self.myset.add(bookCode + "|" + name)
 		"""
 		elif typeCode == "tex":
 			parts = fileName.split('.')[0].split('_')
@@ -106,18 +114,20 @@ for fileset in filesets.filesetList:
 		#print(filesetId, fileName)
 
 		bookId = filesets.bookId(typeCode, fileName)
-		if bookId in filesets.bookIdList:
-			chapterStart = filesets.chapterStart(typeCode, fileName)
-			chapterEnd = filesets.chapterEnd(typeCode, fileName)
-			verseStart = filesets.verseStart(typeCode, fileName)
-			verseEnd = filesets.verseEnd(typeCode, fileName)
-			fileSize = filesets.fileSize(typeCode, fileName)
-			duration = filesets.duration(typeCode, fileName)
-			results.append((hashId, bookId, chapterStart, chapterEnd, verseStart, verseEnd, fileName, fileSize, duration))
-		else:
-			print("WARNING: Invalid bookId %s in %s" % (bookId, fileName, typeCode))
+		#if bookId in filesets.bookIdList:
+		chapterStart = filesets.chapterStart(typeCode, fileName)
+		chapterEnd = filesets.chapterEnd(typeCode, fileName)
+		verseStart = filesets.verseStart(typeCode, fileName)
+		verseEnd = filesets.verseEnd(typeCode, fileName)
+		fileSize = filesets.fileSize(typeCode, fileName)
+		duration = filesets.duration(typeCode, fileName)
+		results.append((hashId, bookId, chapterStart, chapterEnd, verseStart, verseEnd, fileName, fileSize, duration))
+		#else:
+		#	print("WARNING: Invalid bookId %s in %s" % (bookId, fileName, typeCode))
 
 print("num records to insert %d" % (len(results)))
+for item in filesets.myset:
+	print(item)
 
 filesets.validDB.close()
 outputDB = SQLUtility(config.database_host, config.database_port,
