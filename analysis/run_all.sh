@@ -1,7 +1,5 @@
 #!/bin/sh -v -e
 
-
-#must revised to run
 python3 py/BucketListingTable.py
 
 python3 py/BiblesTable.py
