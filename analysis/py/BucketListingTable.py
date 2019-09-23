@@ -14,7 +14,7 @@ class BucketListingTable:
 
 	def __init__(self, config):
 		self.config = config
-		
+
 
 	def createBucketTable(self):
 		db = SQLUtility(self.config.database_host, self.config.database_port,
@@ -22,15 +22,11 @@ class BucketListingTable:
 		sql = "DROP TABLE IF EXISTS bucket_listing"
 		db.execute(sql, None)
 		sql = ("CREATE TABLE bucket_listing ("
-			+ " num_parts int,"
+			+ " bucket varchar(255) not null,"
 			+ " type_code varchar(255) not null,"
-			+ " bible_id varchar(255) null,"
-			+ " fileset_id varchar(255) null,"
-			+ " part_3 varchar(255) null,"
-			+ " part_4 varchar(255) null,"
-			+ " part_5 varchar(255) null,"
-			+ " part_6 varchar(255) null,"
-			+ " part_7 varchar(255) null)")
+			+ " bible_id varchar(255) not null,"
+			+ " fileset_id varchar(255) not null,"
+			+ " file_name varchar(255) not null)")
 		db.execute(sql, None)
 		reader = LPTSExtractReader(self.config)
 		bibleIdMap = reader.getBibleIdMap()
@@ -52,36 +48,39 @@ class BucketListingTable:
 		for line in files:
 			if "delete" not in line:
 				parts = line.strip().split("/")
-				typeCode = parts[0]
-				bibleId = parts[1] if len(parts) > 1 else None
-				filesetId = parts[2] if len(parts) > 2 else None
-				if typeCode in ["app", "audio", "text", "video"] and bibleId in bibleIdMap:
-					if typeCode == "app":
-						if filesetId in audioMap:
-							self.privateAddRow(results, parts)
+				if len(parts) == 4:
+					typeCode = parts[0]
+					bibleId = parts[1]
+					filesetId = parts[2]
+					fileName = parts[3]
+					#if typeCode in ["app", "audio", "text", "video"]:
+					if bibleId in bibleIdMap:
+						if typeCode == "app":
+							if filesetId in audioMap:
+								self.privateAddRow(results, parts)
+							else:
+								dropAppIds.add("app/%s/%s" % (bibleId, filesetId))
+						elif typeCode == "audio":
+							if filesetId[:10] in audioMap:
+								self.privateAddRow(results, parts)
+							else:
+								dropAudioIds.add("audio/%s/%s" % (bibleId, filesetId))
+						elif typeCode == "text":
+							if filesetId in textMap:
+								self.privateAddRow(results, parts)
+							else:
+								dropTextIds.add("text/%s/%s" % (bibleId, filesetId))
+						elif typeCode == "video":
+							if filesetId in videoMap:
+								self.privateAddRow(results, parts)
+							else:
+								dropVideoIds.add("video/%s/%s" % (bibleId, filesetId))
+						#elif typeCode in ["bibles.json", "fonts", "languages"]:
+						#	self.privateAddRow(results, parts)
 						else:
-							dropAppIds.add("app/%s/%s" % (bibleId, filesetId))
-					elif typeCode == "audio":
-						if filesetId[:10] in audioMap:
-							self.privateAddRow(results, parts)
-						else:
-							dropAudioIds.add("audio/%s/%s" % (bibleId, filesetId))
-					elif typeCode == "text":
-						if filesetId in textMap:
-							self.privateAddRow(results, parts)
-						else:
-							dropTextIds.add("text/%s/%s" % (bibleId, filesetId))
-					elif typeCode == "video":
-						if filesetId in videoMap:
-							self.privateAddRow(results, parts)
-						else:
-							dropVideoIds.add("video/%s/%s" % (bibleId, filesetId))
-					elif typeCode in ["bibles.json", "fonts", "languages"]:
-						self.privateAddRow(results, parts)
+							dropTypes.add(typeCode)
 					else:
-						dropTypes.add(typeCode)
-				else:
-					dropBibleIds.add("%s/%s" % (typeCode, bibleId))
+						dropBibleIds.add("%s/%s" % (typeCode, bibleId))
 		self.privateDrop("WARNING: type_code %s is excluded", dropTypes)
 		self.privateDrop("WARNING: bible_id %s was not found in LPTS", dropBibleIds)
 		self.privateDrop("WARNING: app_id %s was not found in LPTS", dropAppIds)
@@ -89,13 +88,13 @@ class BucketListingTable:
 		self.privateDrop("WARNING: text_id %s was not found in LPTS", dropTextIds)
 		self.privateDrop("WARNING: video_id %s was not found in LPTS", dropVideoIds)
 		print("%d rows to insert" % (len(results)))
-		db.executeBatch("INSERT INTO bucket_listing VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)", results)
+		db.executeBatch("INSERT INTO bucket_listing VALUES (%s, %s, %s, %s, %s)", results)
 		db.close()
 
 
 	def privateAddRow(self, results, parts):
-		row = [None] * 9
-		row[0] = len(parts)
+		row = [None] * 5
+		row[0] = "dbp-prod"
 		for index in range(len(parts)):
 			row[index + 1] = parts[index]
 		results.append(row)

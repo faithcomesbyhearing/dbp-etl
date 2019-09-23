@@ -29,10 +29,11 @@ class BibleFilesTable:
 		self.config = config
 		self.validDB = SQLUtility(config.database_host, config.database_port,
 			config.database_user, config.database_output_db_name)
-		self.filesetList = self.validDB.select("SELECT id, set_type_code, hash_id FROM bible_filesets", None)
-		#self.bookIdList = self.validDB.select("SELECT id FROM books", None)
+		self.filesetList = self.validDB.select("SELECT id, set_type_code, asset_id, hash_id FROM bible_filesets", None)
+		print("num %d filesets in bible_filesets table" % (len(self.filesetList)))
 		bucket = BucketReader(config)
 		self.filenames = bucket.filenames()
+		print("num %d files in bucket by" % (len(self.filenames)))
 
 		self.myset = set()
 
@@ -107,9 +108,10 @@ results = []
 for fileset in filesets.filesetList:
 	filesetId = fileset[0]
 	typeCode = fileset[1][0:3]
-	hashId = fileset[2]
+	bucket = fileset[2]
+	hashId = fileset[3]
 
-	files = filesets.filenames[filesetId]
+	files = filesets.filenames[filesetId] # this assumes that type_codes match.
 	for fileName in files:
 		#print(filesetId, fileName)
 

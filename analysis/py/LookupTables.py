@@ -4,6 +4,7 @@
 
 class LookupTables:
 
+"""
 	def __init__(self):
 		self.otBooks=[	"GEN", "EXO", "LEV", "NUM", "DEU", "JOS", "JDG", "RUT",
 			"1SA", "2SA", "1KI", "2KI", "1CH", "2CH", "EZR", "NEH",
@@ -19,7 +20,7 @@ class LookupTables:
 			"ENO", "ESG", "EZA", "JDT", "JUB", "LAO", "LBA", "LJE",
 			"MAN", "ODA", "PS2", "PS3", "PSS", "REP", "S3Y", "SIR",
 			"SUS", "TOB", "WIS"]
-
+"""
 
 	def scriptCode(self, script):
 		scriptDic = {
