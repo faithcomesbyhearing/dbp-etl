@@ -91,8 +91,6 @@ class SQLUtility:
 		results = {}
 		for row in resultSet:
 			values = results.get(row[0], [])
-			#if value == None:
-			#	results[row[0]] = []
 			values.append(row[1])
 			results[row[0]] = values
 		return results

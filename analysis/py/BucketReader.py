@@ -25,7 +25,7 @@ class BucketReader:
 		if self.bibleIdList == None:
 			db = SQLUtility(self.config.database_host, self.config.database_port,
 				self.config.database_user, self.config.database_output_db_name)
-			bibleList = db.selectList("SELECT distinct bible_id FROM bucket_listing WHERE type_code IN ('app', 'audio', 'text', 'video') ORDER BY bible_id", None)
+			bibleList = db.selectList("SELECT distinct bible_id FROM bucket_listing ORDER BY bible_id", None)
 			self.bibleIdList = bibleList
 		return self.bibleIdList
 
@@ -38,20 +38,20 @@ class BucketReader:
 		return ids
 
 
-	def filenames(self):
+	def filenames(self, typeCode):
 		if self.filenameList == None:
 			db = SQLUtility(self.config.database_host, self.config.database_port,
 				self.config.database_user, self.config.database_output_db_name)
-			hashMap = {}
-			files = db.select("SELECT type_code, bible_id, fileset_id, part_3, part_4, part_5, part_6 FROM bucket_listing WHERE num_parts = 4 AND type_code IN ('app', 'audio', 'text', 'video')", None)
-			for parts in files:
-				if parts[2] not in hashMap:
-					hashMap[parts[2]] = [parts[3]]
-				else:
-					hashMap[parts[2]].append(parts[3])
+			#hashMap = {}
+			self.filenameList = db.selectMapList("SELECT fileset_id, file_name FROM bucket_listing WHERE length(file_name) > 16 and type_code = %s", (typeCode))
+			#for parts in files:
+			#	if parts[0] not in hashMap:
+			#		hashMap[parts[0]] = [parts[1]]
+			#	else:
+			#		hashMap[parts[0]].append(parts[1])
 			db.close()
-			self.filenameList = hashMap
-			print("num in bucket %s" % (len(hashMap.keys())))
+			#self.filenameList = hashMap
+			print("num in bucket %s" % (len(self.filenameList.keys())))
 		return self.filenameList
 
 
