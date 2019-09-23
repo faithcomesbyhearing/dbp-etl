@@ -2,7 +2,7 @@
 
 
 #must revised to run
-#python3 py/BucketReader.py
+python3 py/BucketListingTable.py
 
 python3 py/BiblesTable.py
 
