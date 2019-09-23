@@ -15,10 +15,9 @@ class BucketReader:
 	def __init__(self, config):
 		self.config = config
 		self.bibleIdList = None
-		self.audioIdList = None
-		self.textIdList = None
-		self.videoIdList = None
-		self.filenameList = None
+		#self.audioIdList = None
+		#self.textIdList = None
+		#self.videoIdList = None
 
 
 	def bibleIds(self):
@@ -39,20 +38,12 @@ class BucketReader:
 
 
 	def filenames(self, typeCode):
-		if self.filenameList == None:
-			db = SQLUtility(self.config.database_host, self.config.database_port,
+		db = SQLUtility(self.config.database_host, self.config.database_port,
 				self.config.database_user, self.config.database_output_db_name)
-			#hashMap = {}
-			self.filenameList = db.selectMapList("SELECT fileset_id, file_name FROM bucket_listing WHERE length(file_name) > 16 and type_code = %s", (typeCode))
-			#for parts in files:
-			#	if parts[0] not in hashMap:
-			#		hashMap[parts[0]] = [parts[1]]
-			#	else:
-			#		hashMap[parts[0]].append(parts[1])
-			db.close()
-			#self.filenameList = hashMap
-			print("num in bucket %s" % (len(self.filenameList.keys())))
-		return self.filenameList
+		filenameList = db.selectMapList("SELECT fileset_id, file_name FROM bucket_listing WHERE length(file_name) > 16 and type_code = %s", (typeCode))
+		db.close()
+		print("num in bucket %s" % (len(filenameList.keys())))
+		return filenameList
 
 
 """

@@ -40,15 +40,10 @@ class BibleFilesTable:
 		if typeCode == "aud":
 			seqCode = fileName[0:3]
 			bookCode = self.lookup.bookIdBySequence(seqCode)
-
-			#print(bookCode, chapter, name)
-			#print(bookCode, fileName)
-			#self.myset.add(bookCode + "|" + name)
-		"""
 		elif typeCode == "tex":
 			parts = fileName.split('.')[0].split('_')
 			if len(parts) > 2:
-				bookCode = parts[-2]
+				bookCode = parts[2]
 		elif typeCode == "vid":
 			parts = filename.split("_")
 			for part in parts:
@@ -58,32 +53,27 @@ class BibleFilesTable:
 					bookCode = part
 		else:
 			sys.exit()
-		"""
 		return bookCode
 
 
 	def chapterStart(self, typeCode, filename):
-		chapter = None
+		chapter = 0
 		if typeCode == "aud":
 			parts = filename.split("_")
 			for part in parts:
 				if part.isdigit():
-					chapter = part
+					chapter = int(part)
 					break
 		elif typeCode == "tex":
 			parts = filename.split('.')[0].split('_')
-			if len(parts) > 2:
-				if parts[-1].isdigit():
-					chapter = parts[-1]
+			if len(parts) > 3:
+				if parts[3].isdigit():
+					chapter = int(parts[3])
 		elif typeCode == "vid":
-			chapter = None # TBD
+			chapter = 0 # TBD
 		else:
 			sys.exit()
-		try:
-			return int(chapter)
-		except:
-			print("ERROR converting chapter to Int %s in %s" % (chapter, fileName))
-			sys.exit()
+		return int(chapter)
 
 
 	def chapterEnd(self, typeCode, filename):
@@ -113,6 +103,7 @@ config = Config()
 filesets = BibleFilesTable(config) 
 results = []
 bookIdErrorCount = 0
+bookIdNotExistCount = 0
 dupErrorCount = 0
 chapterErrorCount = 0
 uniqueSet = set()
@@ -120,7 +111,9 @@ uniqueSet = set()
 bookIdList = filesets.validDB.selectList("SELECT id FROM books", None)
 
 audioFilenames = filesets.bucket.filenames("audio")
-print("num %d audio files in bucket by" % (len(audioFilenames)))
+print("num %d audio files in bucket" % (len(audioFilenames)))
+textFilenames = filesets.bucket.filenames("text")
+print("num %d text files in bucket" % (len(textFilenames)))
 
 for fileset in filesets.filesetList:
 	filesetId = fileset[0]
@@ -130,38 +123,42 @@ for fileset in filesets.filesetList:
 
 	if typeCode == "aud":
 		files = audioFilenames.get(filesetId, [])
+		#files = []
+	elif typeCode == "tex":
+		files = textFilenames.get(filesetId, [])
 	else:
 		files = []
 	for fileName in files:
-		#print(filesetId, fileName)
 
-		bookId = filesets.bookId(typeCode, fileName) # should be type specific?
+		bookId = filesets.bookId(typeCode, fileName)
 		if bookId != None:
-			if bookId not in bookIdList:
-				print("ERROR in bookId %s in %s" % (bookId, fileName))
-				sys.exit()
-			chapterStart = filesets.chapterStart(typeCode, fileName)
-			if chapterStart < 152:
-				chapterEnd = filesets.chapterEnd(typeCode, fileName)
-				verseStart = filesets.verseStart(typeCode, fileName)
-				verseEnd = filesets.verseEnd(typeCode, fileName)
-				fileSize = filesets.fileSize(typeCode, fileName)
-				duration = filesets.duration(typeCode, fileName)
-				key = "%s-%s-%s-%s" % (hashId, bookId, chapterStart, verseStart)
-				if key in uniqueSet:
-					print("ERROR: duplicate key %s in %s/?/%s/%s" % (key, typeCode, filesetId, fileName))
-					dupErrorCount += 1
+			if bookId in bookIdList:
+				chapterStart = filesets.chapterStart(typeCode, fileName)
+				if chapterStart < 152:
+					chapterEnd = filesets.chapterEnd(typeCode, fileName)
+					verseStart = filesets.verseStart(typeCode, fileName)
+					verseEnd = filesets.verseEnd(typeCode, fileName)
+					fileSize = filesets.fileSize(typeCode, fileName)
+					duration = filesets.duration(typeCode, fileName)
+					key = "%s-%s-%s-%s" % (hashId, bookId, chapterStart, verseStart)
+					if key in uniqueSet:
+						print("WARNING: duplicate key %s in %s/?/%s/%s" % (key, typeCode, filesetId, fileName))
+						dupErrorCount += 1
+					else:
+						uniqueSet.add(key)
+						results.append((hashId, bookId, chapterStart, chapterEnd, verseStart, verseEnd, fileName, fileSize, duration))
 				else:
-					uniqueSet.add(key)
-					results.append((hashId, bookId, chapterStart, chapterEnd, verseStart, verseEnd, fileName, fileSize, duration))
+					print("WARNING in chapterStart %d in %s" % (chapterStart, fileName))
+					chapterErrorCount += 1
 			else:
-				print("WARNING in chapterStart %d in %s" % (chapterStart, fileName))
-				chapterErrorCount += 1
+				print("WARNING: bookId %s in %s is not in books table" % (bookId, fileName))
+				bookIdNotExistCount += 1				
 		else:
 			print("WARNING: Invalid bookId in %s  %s" % (fileName, typeCode))
 			bookIdErrorCount += 1
 
 print("num invalid bookId errors dropped %d" % (bookIdErrorCount))
+print("num bookId not in books table dropped %d" % (bookIdNotExistCount))
 print("num duplicate records dropped %d" % (dupErrorCount))
 print("num invalid chapter numbers dropped %d" % (chapterErrorCount))
 print("num records to insert %d" % (len(results)))
