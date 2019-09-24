@@ -11,7 +11,7 @@
 import io
 import os
 import sys
-import hashlib
+#import hashlib
 from Config import *
 from LPTSExtractReader import *
 from SQLUtility import *

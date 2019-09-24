@@ -13,9 +13,8 @@
 import io
 import os
 import sys
-import hashlib
 from Config import *
-from LPTSExtractReader import *
+#from LPTSExtractReader import *
 from SQLUtility import *
 
 class BibleFilesetTagsTable:

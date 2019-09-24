@@ -10,6 +10,8 @@
  <s3>
   <bucket>dbp-prod</bucket>
   <vid_bucket>dbp-vid</vid_bucket>
+  <aws_profile>Gary</aws_profile>
+  <!-- <aws_profile>FCBH_BibleApp</aws_profile> -->
 </s3>
  <directory>
   <lpts_xml>../input/qry_dbp4_Regular_and_NonDrama.xml</lpts_xml>

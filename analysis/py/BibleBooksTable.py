@@ -12,7 +12,7 @@
 import io
 import os
 import sys
-import hashlib
+#import hashlib
 from Config import *
 from BucketReader import *
 from SQLUtility import *
