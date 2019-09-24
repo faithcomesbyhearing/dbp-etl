@@ -14,7 +14,7 @@ import io
 import os
 import sys
 from Config import *
-#from LPTSExtractReader import *
+from LPTSExtractReader import *
 from SQLUtility import *
 
 class BibleFilesetTagsTable:

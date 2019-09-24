@@ -1,6 +1,6 @@
-# BucketReader
+# BucketListingTable
 #
-# This table has various ways to read a bucket listing.
+# This program populates bucket_list from a text listing of the buckets
 
 import io
 import os
@@ -53,30 +53,31 @@ class BucketListingTable:
 					bibleId = parts[1]
 					filesetId = parts[2]
 					fileName = parts[3]
-					#if typeCode in ["app", "audio", "text", "video"]:
 					if bibleId in bibleIdMap:
 						if typeCode == "app":
-							if filesetId in audioMap:
-								self.privateAddRow(results, parts)
-							else:
-								dropAppIds.add("app/%s/%s" % (bibleId, filesetId))
+							if fileName.endswith(".apk"):
+								if filesetId in audioMap:
+									self.privateAddRow(results, parts)
+								else:
+									dropAppIds.add("app/%s/%s" % (bibleId, filesetId))
 						elif typeCode == "audio":
-							if filesetId[:10] in audioMap:
-								self.privateAddRow(results, parts)
-							else:
-								dropAudioIds.add("audio/%s/%s" % (bibleId, filesetId))
+							if fileName.endswith(".mp3"):
+								if filesetId[:10] in audioMap:
+									self.privateAddRow(results, parts)
+								else:
+									dropAudioIds.add("audio/%s/%s" % (bibleId, filesetId))
 						elif typeCode == "text":
-							if filesetId in textMap:
-								self.privateAddRow(results, parts)
-							else:
-								dropTextIds.add("text/%s/%s" % (bibleId, filesetId))
+							if fileName.endswith(".html"):
+								if filesetId in textMap:
+									self.privateAddRow(results, parts)
+								else:
+									dropTextIds.add("text/%s/%s" % (bibleId, filesetId))
 						elif typeCode == "video":
+							# if fileName.endswith ???
 							if filesetId in videoMap:
 								self.privateAddRow(results, parts)
 							else:
 								dropVideoIds.add("video/%s/%s" % (bibleId, filesetId))
-						#elif typeCode in ["bibles.json", "fonts", "languages"]:
-						#	self.privateAddRow(results, parts)
 						else:
 							dropTypes.add(typeCode)
 					else:
