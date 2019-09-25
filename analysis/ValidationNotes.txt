@@ -1,0 +1,41 @@
+ValidationNotes.txt
+
+
+Garys-MacBook-Pro-2:analysis garygriswold$ python3 py/CompareTable.py 
+table bibles counts: production=3683, test=1398, ratio=38
+num match = 1020
+Garys-MacBook-Pro-2:analysis garygriswold$ python3 py/CompareTable.py 
+table bibles counts: production=3683, test=1398, ratio=38
+num match = 1020, prod mismatch = 2663,  test mismatch = 378
+Garys-MacBook-Pro-2:analysis garygriswold$ python3 py/CompareTable.py 
+table bibles counts: production=3683, test=1398, ratio=38
+num match = 1020, prod mismatch = 2663,  test mismatch = 378
+prod mismatch: AIWANT
+prod mismatch: ABIANT
+prod mismatch: ABKYAY
+prod mismatch: ABNOOIA
+prod mismatch: KGRKGR
+prod mismatch: KGRLAI
+prod mismatch: ACNCLB
+prod mismatch: ACRCBL
+prod mismatch: ACRWB1
+prod mismatch: ACRWBT
+test mismatch: ACCIBS
+test mismatch: ACRNNT
+test mismatch: ACUTBL
+test mismatch: ADYIBT
+test mismatch: AGXIBT
+test mismatch: AGUNVS
+test mismatch: AGRTBL
+test mismatch: AGNWPS
+test mismatch: AKEBSS
+test mismatch: BSSWBT
+
+Solution: It might be that the extra bible_ids in production are coming from video.
+Or, it might be that they are orphin
+
+The test mismatch might be bibles that were deleted for participation in dbs.
+But, they also had participation in dbp.
+
+
+

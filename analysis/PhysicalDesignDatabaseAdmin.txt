@@ -1,0 +1,38 @@
+Physical Design Database Admin Notes:
+
+table bibles
+1) Primary key has a redundant index
+UNIQUE KEY `bibles_id_unique` (`id`) - is redundant the primary key has already created an index
+2) Secondary indexes might be useful, but the three indexes appear to have been created one for each constraint,
+which was not necessary.  Their presence does slow insertion.
+2a) I doubt that queries are ever done on this table by script or numeral_systems, but they will occur by
+language_id.
+3) the three constraints are marked ON DELETE CASCADE, ON UPDATE CASCADE. This means that if rows in
+the languages, alphabets, and numeral_systems tables are deleted, the bibles will be deleted.
+The correct constraint is ON DELETE RESTRICT, ON UPDATE RESTRICT (which is also th default when no restriction is listed)
+
+table bible_translations
+1) there is no redundant index on the primary key
+2) there are two indexes on foreign key values: language_id, bible_id.  These are both likely search values and are good keys.
+3) ON DELETE CASCADE ON UPDATE CASCADE is correct for the foreign key to bibles.  It means that the deletion of a bible will 
+delete the bible_translations
+4) ON DELETE CASCADE ON UPDATE CASCADE is not correct for the languages foreig key, that should be changed to RESTRICT.
+5) Because bible_translations has no unique key other than the auto-generated id, there are 14 duplicated records in the table.
+The table needs a unique index to prevent this, but I don't know what the index should be
+
+table bible_filesets
+1) there is already a primary key on hash_id.  The second key is redundant
+  KEY `bible_filesets_hash_id_index` (`hash_id`),
+2) There is already a unique key where id is first.  The key on id alone is redundant.
+  KEY `bible_filesets_id_index` (`id`),
+3) The unique key is very important
+  UNIQUE KEY `unique_prefix_for_s3` (`id`,`asset_id`,`set_type_code`),
+4) the non-unique key might be valuable, but they seem to have been created to simply correspond to each foreigh key
+  KEY `bible_filesets_bucket_id_foreign` (`asset_id`),
+  KEY `bible_filesets_set_type_code_foreign` (`set_type_code`),
+  KEY `bible_filesets_set_size_code_foreign` (`set_size_code`),
+5) all of the foregin keys should be changed from CASCADE to RESTRICT.  The current state means that whenever a row is deleted
+from tables: assets, bible_fileset_sizes, bible_fileset_types rows in this table will be deleted
+
+
+
