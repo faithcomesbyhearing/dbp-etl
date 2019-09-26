@@ -14,12 +14,13 @@ class CompareTable:
 		self.test_db = "valid_dbp"
 		self.db = SQLUtility("localhost", 3306, "root", self.prod_db)
 		self.tables = {}
-		self.tables["bibles"] = [("id"),("language_id", "versification", "numeral_system_id", "date", "scope", 
-			"script", "derived", "copyright", "priority", "reviewed", "notes")]
+		self.tables["bibles"] = [["id"],["language_id", "versification", "numeral_system_id", "date", "scope", 
+			"script", "derived", "copyright", "priority", "reviewed", "notes"]]
+		self.tables["bible_filesets"] = [["hash_id"], []]
 
 	def comparePkey(self, table):
 		tableDef = self.tables[table]
-		pkey = tableDef[0] # this needs to be fixed for concatenated key
+		pkey = tableDef[0][0] # this needs to be fixed for concatenated key
 		sqlCount = "SELECT count(*) FROM %s.%s"
 		prodCount = self.db.selectScalar(sqlCount % (self.prod_db, table), None)
 		testCount = self.db.selectScalar(sqlCount % (self.test_db, table), None)
@@ -31,13 +32,22 @@ class CompareTable:
 		prodMismatchCount = self.db.selectScalar(sqlMismatchCount % (pkey, self.prod_db, table, pkey, pkey, self.test_db, table), None)
 		testMismatchCount = self.db.selectScalar(sqlMismatchCount % (pkey, self.test_db, table, pkey, pkey, self.prod_db, table), None)
 		print("num match = %d, prod mismatch = %d,  test mismatch = %d" % (matchCount, prodMismatchCount, testMismatchCount))
-		sqlMismatch = "SELECT %s FROM %s.%s WHERE %s NOT IN (SELECT %s FROM %s.%s) limit 10"
-		prodMismatches = self.db.selectList(sqlMismatch % (pkey, self.prod_db, table, pkey, pkey, self.test_db, table), None)
-		testMismatches = self.db.selectList(sqlMismatch % (pkey, self.test_db, table, pkey, pkey, self.prod_db, table), None)
+		sqlMismatch = "SELECT * FROM %s.%s WHERE %s NOT IN (SELECT %s FROM %s.%s) limit 10"
+		prodMismatches = self.db.select(sqlMismatch % (self.prod_db, table, pkey, pkey, self.test_db, table), None)
+		testMismatches = self.db.select(sqlMismatch % (self.test_db, table, pkey, pkey, self.prod_db, table), None)
 		for prodMismatch in prodMismatches:
-			print("prod mismatch: %s" % (prodMismatch))
+			print("prod mismatch: ", prodMismatch)
 		for testMismatch in testMismatches:
-			print("test mismatch: %s" % (testMismatch))
+			print("test mismatch: ", testMismatch)
+
+	def biblesPkey(self):
+		sqlMismatch = ("SELECT id FROM dbp_only.bibles WHERE id IN " +
+			" (select bible_id from dbp_only.bible_fileset_connections) " +
+			" AND id NOT IN (SELECT id FROM valid_dbp.bibles)")
+		prodMismatches = self.db.selectList(sqlMismatch, None)
+		for prodMismatch in prodMismatches:
+			print("prod mismatch2: %s" % (prodMismatch))
+
 
 
 
@@ -46,7 +56,9 @@ class CompareTable:
 
 
 compare = CompareTable()
-compare.comparePkey("bibles")
+#compare.comparePkey("bibles")
+#compare.biblesPkey()
+compare.comparePkey("bible_filesets")
 compare.close()
 
 
