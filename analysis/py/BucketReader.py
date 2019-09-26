@@ -7,7 +7,6 @@ import os
 import sys
 from Config import *
 from SQLUtility import *
-from LPTSExtractReader import *
 
 
 class BucketReader:
