@@ -90,10 +90,11 @@ class LPTSExtractReader:
 				if damIdKey in row:
 					damId = row[damIdKey]
 					statusName = textDic[damIdKey]
-					status = row.get(statusName)
-					if status == "Live":
-						#print(damIdKey, damId, statusName, status)
-						resultMap[damId[:6]] = rec
+					#status = row.get(statusName)
+					rec.record["THIS_DAMID_STATUS"] = row.get(statusName)
+					#if status == "Live":
+					#print(damIdKey, damId, statusName, status)
+					resultMap[damId[:6]] = rec # Why is this truncated to 6 characters
 		return resultMap
 	
 
@@ -114,10 +115,11 @@ class LPTSExtractReader:
 				if damIdKey in row:
 					damId = row[damIdKey]
 					statusName = damIdMap[damIdKey]
-					status = row.get(statusName)
-					if status == "Live":
-						#print(damIdKey, damId, statusName, status)
-						resultMap[damId] = rec
+					#status = row.get(statusName)
+					rec.record["THIS_DAMID_STATUS"] = row.get(statusName)
+					#if status == "Live":
+					#print(damIdKey, damId, statusName, status)
+					resultMap[damId] = rec
 		return resultMap	
 
 
@@ -128,6 +130,10 @@ class LPTSRecord:
 
 	def recordLen(self):
 		return len(self.record.keys())
+
+	# This field was added to record when indexed by damId.  It is the status associated with that damId
+	def thisDamIdStatus(self):
+		return self.record.get("THIS_DAMID_STATUS")
 
 	def LangName(self):
 		return self.record.get("LangName")

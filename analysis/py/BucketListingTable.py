@@ -14,6 +14,8 @@ class BucketListingTable:
 
 	def __init__(self, config):
 		self.config = config
+		self.output = io.open("output/BucketLisingWarnings.text", mode="w", encoding="utf-8")
+
 
 
 	def createBucketTable(self):
@@ -88,6 +90,7 @@ class BucketListingTable:
 		self.privateDrop("WARNING: audio_id %s was not found in LPTS", dropAudioIds)
 		self.privateDrop("WARNING: text_id %s was not found in LPTS", dropTextIds)
 		self.privateDrop("WARNING: video_id %s was not found in LPTS", dropVideoIds)
+		self.output.close()
 		print("%d rows to insert" % (len(results)))
 		db.executeBatch("INSERT INTO bucket_listing VALUES (%s, %s, %s, %s, %s)", results)
 		db.close()
@@ -102,8 +105,11 @@ class BucketListingTable:
 
 
 	def privateDrop(self, message, dropIds):
-		for dropId in dropIds:
-			print(message % (dropId))
+		print("num %d:  %s" % (len(dropIds), message))
+		message += "\n"
+		sortedIds = sorted(list(dropIds))
+		for dropId in sortedIds:
+			self.output.write(message % (dropId))
 
 
 config = Config()

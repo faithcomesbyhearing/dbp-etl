@@ -9,8 +9,9 @@ import io
 import os
 import sys
 
-BUCKET_NAME = "dbp-vid"
 #BUCKET_NAME = "dbp-prod"
+#BUCKET_NAME = "dbp-vid"
+BUCKET_NAME = "dbs-web"
 
 filename = "new_%s.txt" % (BUCKET_NAME.replace("-", "_"))
 pathname = "%s/FCBH/bucket_data/%s" % (os.environ['HOME'], filename)
@@ -18,7 +19,8 @@ print(pathname)
 
 out = io.open(pathname, mode="w", encoding="utf-8")
 
-session = boto3.Session(profile_name='FCBH_Gary')
+#session = boto3.Session(profile_name='FCBH_Gary')
+session = boto3.Session(profile_name='FCBH_DBS')
 client = session.client('s3')
 
 request = { 'Bucket':BUCKET_NAME, 'MaxKeys':1000 }

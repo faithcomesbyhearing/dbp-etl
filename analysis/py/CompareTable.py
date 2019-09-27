@@ -56,9 +56,9 @@ class CompareTable:
 
 
 compare = CompareTable()
-#compare.comparePkey("bibles")
+compare.comparePkey("bibles")
 #compare.biblesPkey()
-compare.comparePkey("bible_filesets")
+#compare.comparePkey("bible_filesets")
 compare.close()
 
 
