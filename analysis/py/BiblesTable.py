@@ -24,6 +24,7 @@ import os
 import sys
 from Config import *
 from BucketReader import *
+from VersesReader import *
 from LPTSExtractReader import *
 from SQLUtility import *
 from LookupTables import *
@@ -32,7 +33,11 @@ class BiblesTable:
 
 	def __init__(self, config):
 		bucket = BucketReader(config)
-		self.bibleIds = bucket.bibleIds()
+		#self.bibleIds = bucket.bibleIds()
+		bucketBibleIds = set(bucket.bibleIds())
+		verse = VersesReader(config)
+		verseBibleIds = set(verse.bibleIds())
+		self.bibleIds = sorted(list(bucketBibleIds.union(verseBibleIds)))
 		self.inputDB = SQLUtility(config.database_host, config.database_port,
 			config.database_user, config.database_input_db_name)
 		reader = LPTSExtractReader(config)

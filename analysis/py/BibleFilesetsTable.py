@@ -13,9 +13,9 @@ import os
 import sys
 import hashlib
 from Config import *
-from SQLUtility import *
 from LookupTables import *
 from BucketReader import *
+from VersesReader import *
 
 class BibleFilesetsTable:
 
@@ -26,10 +26,8 @@ class BibleFilesetsTable:
 		self.audioIds = bucket.filesetIds("audio")
 		self.textIds = bucket.filesetIds("text")
 		self.videoIds = bucket.filesetIds("video")
-		## I might not need the DB ??
-		self.inputDB = SQLUtility(config.database_host, config.database_port,
-			config.database_user, config.database_input_db_name)
-
+		verseReader = VersesReader(config)
+		self.verseFilesets = verseReader.filesetIds()
 
 	def assetIdAudioText(self, damId):
 		return config.s3_bucket
@@ -60,6 +58,10 @@ class BibleFilesetsTable:
 
 	def setVideoTypeCode(self, damId):
 		return "video_stream"
+
+
+	def setTextPlainTypeCode(self, damId):
+		return "text_plain"
 
 
 	def hashId(self, damId, bucket, typeCode):
@@ -128,8 +130,16 @@ for videoId in filesets.videoIds:
 	hidden = filesets.hidden(videoId)
 	results.append((videoId, hashId, assetId, setTypeCode, setSizeCode, hidden))
 
+for filesetId in filesets.verseFilesets:
+	#print(filesetId)
+	assetId = filesets.assetIdAudioText(filesetId)
+	setTypeCode = filesets.setTextPlainTypeCode(filesetId)
+	hashId = filesets.hashId(filesetId, assetId, setTypeCode)
+	setSizeCode = filesets.setSizeCode(filesetId)
+	hidden = filesets.hidden(filesetId)
+	results.append((filesetId, hashId, assetId, setTypeCode, setSizeCode, hidden))
 
-filesets.inputDB.close()
+print("num records to insert %d" % (len(results)))
 outputDB = SQLUtility(config.database_host, config.database_port,
 			config.database_user, config.database_output_db_name)
 outputDB.executeBatch("INSERT INTO bible_filesets (id, hash_id, asset_id, set_type_code, set_size_code, hidden) VALUES (%s, %s, %s, %s, %s, %s)", results)

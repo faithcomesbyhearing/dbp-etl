@@ -1,52 +1,62 @@
 ValidationNotes.txt
 
 Bibles
-table bibles counts: production=1821, test=1398, ratio=77
-num match = 1395, prod mismatch = 426,  test mismatch = 3
-prod mismatch: AAUWBT
-prod mismatch: KGRLAI
-prod mismatch: ACRTNT
-prod mismatch: ADZAMV
-prod mismatch: AFRLPF
-prod mismatch: AFRNVV
-prod mismatch: AGDPNG
-prod mismatch: MSMWPS
-prod mismatch: AEUWBT
-prod mismatch: AHKBIV
-test mismatch: KIKKGV
-test mismatch: PORNLH
-test mismatch: MAMSBG
+table bibles counts: production=1821, test=1710, ratio=94
+num match = 1707, prod mismatch = 114,  test mismatch = 3
+prod mismatch:  ('ACRTNT', 34, 'protestant', 'western-arabic', '2009', 'NT', 'Latn', '', 'BY-NC-ND', 0, 1, None, datetime.datetime(2018, 2, 12, 14, 36, 20), datetime.datetime(2018, 10, 9, 18, 11, 26))
+prod mismatch:  ('AEUWBT', 131, 'protestant', 'western-arabic', None, '', 'Latn', '', '', 0, 1, None, datetime.datetime(2018, 3, 22, 12, 21, 46), datetime.datetime(2018, 11, 15, 11, 34, 30))
+prod mismatch:  ('AFRLPF', 68, 'protestant', 'western-arabic', None, None, 'Latn', None, None, 0, 0, None, datetime.datetime(2018, 12, 19, 12, 33, 3), datetime.datetime(2018, 12, 19, 12, 33, 3))
+prod mismatch:  ('AFRNVV', 68, 'protestant', 'western-arabic', None, 'NT', 'Latn', None, None, 0, 1, None, datetime.datetime(2018, 9, 10, 15, 50, 3), datetime.datetime(2018, 11, 15, 11, 41, 10))
+prod mismatch:  ('AMPSTY', 156, 'protestant', 'western-arabic', '2018', None, 'Latn', None, None, 0, 1, None, datetime.datetime(2018, 4, 2, 14, 22, 31), datetime.datetime(2018, 11, 15, 11, 41, 10))
+prod mismatch:  ('ARBAKI', 7892, 'protestant', 'eastern-arabic', None, 'P', 'Arab', '', '', 0, 1, None, datetime.datetime(2018, 2, 12, 14, 36, 21), datetime.datetime(2018, 11, 15, 11, 34, 30))
+prod mismatch:  ('ASABST', 391, 'protestant', 'western-arabic', '2018', 'NT', 'Latn', None, None, 0, 1, None, datetime.datetime(2018, 3, 29, 15, 8, 50), datetime.datetime(2018, 11, 15, 11, 41, 10))
+prod mismatch:  ('ASMSER', 379, 'protestant', 'bengali', '1832', 'NT', 'Beng', '', 'Public Domain', 0, 1, None, datetime.datetime(2018, 2, 12, 14, 36, 21), datetime.datetime(2018, 10, 9, 18, 11, 26))
+prod mismatch:  ('ATBWBT', 7830, 'protestant', 'western-arabic', '2009', 'NT', 'Latn', '', 'BY-NC-ND', 0, 1, None, datetime.datetime(2018, 2, 12, 14, 36, 21), datetime.datetime(2018, 10, 9, 18, 11, 26))
+prod mismatch:  ('AZAATT', 473, 'protestant', 'western-arabic', '2014', 'P', 'Hans', '', '', 0, 1, None, datetime.datetime(2018, 2, 12, 14, 36, 21), datetime.datetime(2019, 1, 24, 13, 54, 37))
+test mismatch:  ('KIKKGV', 3135, 'protestant', 'western-arabic', None, None, 'Zzzz', None, 'The Kiugo Githeru (Kikuyu Bible) text may be quoted in any form (written, visual, electronic or audio), up to and inclusive of five hundred (500) verses without the express written permissio', 0, None, None, datetime.datetime(2019, 9, 26, 22, 54, 53), datetime.datetime(2019, 9, 26, 22, 54, 53))
+test mismatch:  ('MAMSBG', 8121, 'protestant', 'western-arabic', None, None, 'Zzzz', None, '© 2000 Wycliffe Bible Translators, Inc.', 0, None, None, datetime.datetime(2019, 9, 26, 22, 54, 53), datetime.datetime(2019, 9, 26, 22, 54, 53))
+test mismatch:  ('PORNLH', 5598, 'protestant', 'western-arabic', None, None, 'Zzzz', None, '© 2000 Sociedade Bíblica do Brasil', 0, None, None, datetime.datetime(2019, 9, 26, 22, 54, 53), datetime.datetime(2019, 9, 26, 22, 54, 53))
 
-Solution: The production 1395 mismatch seem to be partly explained by 2412 dbp.bibles that do not exist
-in bibles_fileset_connections.  But, it can also be dbp bibles that have a 'text-plain' type listed
-as being in dbp-prod.
+There are three test mismatches:
+MAMSBG is mis-labeled dbs-dbp, but is located in dbp-prod
+KIKKGV and PORNLH do not exist in dbs.
+
+production mismatches:
+ACRTNT exists, but the corresponding damId's have ACRNNT as DBP_Equivalent
+AEUWBT exists, but corresponding damId's have AEUBSMN as DBP_Equivalent
+AFRLPF is solely video
+AFRNVV has damId's with discontinued status
+AMPSTY has audios in bucket, but not bible content
+ARBAKI is audio content, that is not bible books, but special.  In files it is marked as all MAT.
+ASABST is has damId's that are no dbp status
+
 
 -----
 
-table bible_filesets counts: production=5812, test=3749, ratio=65
-num match = 3727, prod mismatch = 2085,  test mismatch = 22
-prod mismatch:  ('SUZWBT', '00182926eb78', 'dbp-prod', 'text_plain', 'C', 0, datetime.datetime(2018, 3, 22, 11, 6, 11), datetime.datetime(2018, 9, 7, 13, 39, 24))
-prod mismatch:  ('KOGWBT', '008b08f2741e', 'dbp-prod', 'text_plain', 'NT', 0, datetime.datetime(2018, 4, 4, 15, 7, 50), datetime.datetime(2018, 9, 7, 13, 39, 24))
+table bible_filesets counts: production=5812, test=5158, ratio=89
+num match = 5136, prod mismatch = 676,  test mismatch = 22
 prod mismatch:  ('EUSEABP2DV', '00e73e02c791', 'dbp-vid', 'video_stream', 'NTP', 0, datetime.datetime(2018, 9, 25, 16, 56, 53), datetime.datetime(2019, 8, 1, 9, 51, 52))
-prod mismatch:  ('MEJTBL', '01180d592c41', 'dbp-prod', 'text_plain', 'NT', 0, datetime.datetime(2018, 3, 22, 11, 2, 48), datetime.datetime(2018, 9, 7, 13, 39, 24))
-prod mismatch:  ('BEFWBT', '011a63025482', 'dbp-prod', 'text_plain', 'NT', 0, datetime.datetime(2018, 3, 22, 10, 56, 48), datetime.datetime(2018, 9, 7, 13, 39, 24))
-prod mismatch:  ('NTPTBL', '01338c72be9b', 'dbp-prod', 'text_plain', 'NT', 0, datetime.datetime(2018, 4, 13, 10, 42, 37), datetime.datetime(2018, 9, 7, 13, 39, 24))
 prod mismatch:  ('AUCWBTN1DA', '01493ac23d87', 'dbp-prod', 'audio', 'NT', 0, datetime.datetime(2018, 2, 13, 5, 27, 4), datetime.datetime(2018, 9, 7, 13, 39, 24))
-prod mismatch:  ('ESENTM', '01a393ec486a', 'dbp-prod', 'text_plain', 'NT', 0, datetime.datetime(2018, 3, 22, 10, 59, 17), datetime.datetime(2018, 9, 7, 13, 39, 24))
-prod mismatch:  ('IFUWPS', '01b78f6e6c04', 'dbp-prod', 'text_plain', 'NT', 0, datetime.datetime(2018, 4, 4, 15, 5, 41), datetime.datetime(2018, 9, 7, 13, 39, 24))
-prod mismatch:  ('BCHWBT', '01c7d4619401', 'dbp-prod', 'text_plain', 'NTOTP', 0, datetime.datetime(2018, 5, 15, 14, 4, 57), datetime.datetime(2018, 9, 7, 13, 39, 24))
-test mismatch:  ('SDMSGVP2DA', '19590853c8b6', 'dbp-prod', 'audio_drama', 'S', 0, datetime.datetime(2019, 9, 25, 17, 16, 38), datetime.datetime(2019, 9, 25, 17, 16, 38))
-test mismatch:  ('MAMSBG', '23ac7e80f4a5', 'dbp-prod', 'text_format', 'S', 0, datetime.datetime(2019, 9, 25, 17, 16, 38), datetime.datetime(2019, 9, 25, 17, 16, 38))
-test mismatch:  ('SDMSGVP1DA16', '2d0f6e54838c', 'dbp-prod', 'audio', 'S', 0, datetime.datetime(2019, 9, 25, 17, 16, 38), datetime.datetime(2019, 9, 25, 17, 16, 38))
-test mismatch:  ('KIKKGVN1DA16', '2f36351f6179', 'dbp-prod', 'audio', 'S', 0, datetime.datetime(2019, 9, 25, 17, 16, 38), datetime.datetime(2019, 9, 25, 17, 16, 38))
-test mismatch:  ('NODWBTN1DA16', '343269895ee5', 'dbp-prod', 'audio', 'S', 0, datetime.datetime(2019, 9, 25, 17, 16, 38), datetime.datetime(2019, 9, 25, 17, 16, 38))
-test mismatch:  ('RONWTC', '3ff6545926f8', 'dbp-prod', 'text_format', 'S', 0, datetime.datetime(2019, 9, 25, 17, 16, 38), datetime.datetime(2019, 9, 25, 17, 16, 38))
-test mismatch:  ('NEBWYI', '547c85727530', 'dbp-prod', 'text_format', 'S', 0, datetime.datetime(2019, 9, 25, 17, 16, 38), datetime.datetime(2019, 9, 25, 17, 16, 38))
-test mismatch:  ('SDMSGVP2DA16', '5530e3333f5c', 'dbp-prod', 'audio_drama', 'S', 0, datetime.datetime(2019, 9, 25, 17, 16, 38), datetime.datetime(2019, 9, 25, 17, 16, 38))
-test mismatch:  ('KIKKGVN1DA', '6699a200a810', 'dbp-prod', 'audio', 'S', 0, datetime.datetime(2019, 9, 25, 17, 16, 38), datetime.datetime(2019, 9, 25, 17, 16, 38))
-test mismatch:  ('KM2IBTP1DA16', '79a35b4c39d5', 'dbp-prod', 'audio', 'S', 0, datetime.datetime(2019, 9, 25, 17, 16, 38), datetime.datetime(2019, 9, 25, 17, 16, 38))
+prod mismatch:  ('KAOABMP2DV', '033f00fbfb75', 'dbp-vid', 'video_stream', 'NTP', 0, datetime.datetime(2019, 4, 2, 20, 1, 48), datetime.datetime(2019, 8, 2, 14, 38, 31))
+prod mismatch:  ('SHUABTP2DV', '0387597ccf86', 'dbp-vid', 'video_stream', 'NTP', 0, datetime.datetime(2019, 1, 24, 16, 20, 7), datetime.datetime(2019, 8, 8, 11, 29, 55))
+prod mismatch:  ('KUMIBTP2DV', '038ba2f6b48e', 'dbp-vid', 'video_stream', 'NTP', 0, datetime.datetime(2019, 5, 4, 2, 58, 17), datetime.datetime(2019, 8, 1, 9, 56, 6))
+prod mismatch:  ('CEVNANN2DA', '0445b3746aa4', 'dbp-prod', 'audio_drama', 'NT', 0, datetime.datetime(2018, 2, 13, 5, 27, 5), datetime.datetime(2018, 9, 7, 13, 39, 24))
+prod mismatch:  ('CNMRGBO2DA', '0466b4bce5bc', 'dbp-prod', 'audio_drama', 'OT', 0, datetime.datetime(2018, 2, 13, 5, 27, 4), datetime.datetime(2018, 9, 7, 13, 39, 24))
+prod mismatch:  ('TRKWTCN2DA', '0632954ea118', 'dbp-prod', 'app', 'NTP', 0, datetime.datetime(2018, 3, 23, 8, 2, 23), datetime.datetime(2018, 12, 27, 17, 29, 50))
+prod mismatch:  ('QVWTBLP2DV', '074210f5f463', 'dbp-vid', 'video_stream', 'NTP', 0, datetime.datetime(2019, 3, 5, 10, 33, 32), datetime.datetime(2019, 8, 1, 10, 5, 52))
+prod mismatch:  ('AVAIBTN2DA', '07700551e2d8', 'dbp-prod', 'app', 'NTP', 0, datetime.datetime(2018, 3, 23, 6, 50, 45), datetime.datetime(2018, 12, 27, 16, 28, 30))
+test mismatch:  ('SDMSGVP2DA', '19590853c8b6', 'dbp-prod', 'audio_drama', 'S', 0, datetime.datetime(2019, 9, 27, 0, 22, 1), datetime.datetime(2019, 9, 27, 0, 22, 1))
+test mismatch:  ('MAMSBG', '23ac7e80f4a5', 'dbp-prod', 'text_format', 'S', 0, datetime.datetime(2019, 9, 27, 0, 22, 1), datetime.datetime(2019, 9, 27, 0, 22, 1))
+test mismatch:  ('SDMSGVP1DA16', '2d0f6e54838c', 'dbp-prod', 'audio', 'S', 0, datetime.datetime(2019, 9, 27, 0, 22, 1), datetime.datetime(2019, 9, 27, 0, 22, 1))
+test mismatch:  ('KIKKGVN1DA16', '2f36351f6179', 'dbp-prod', 'audio', 'S', 0, datetime.datetime(2019, 9, 27, 0, 22, 1), datetime.datetime(2019, 9, 27, 0, 22, 1))
+test mismatch:  ('NODWBTN1DA16', '343269895ee5', 'dbp-prod', 'audio', 'S', 0, datetime.datetime(2019, 9, 27, 0, 22, 1), datetime.datetime(2019, 9, 27, 0, 22, 1))
+test mismatch:  ('RONWTC', '3ff6545926f8', 'dbp-prod', 'text_format', 'S', 0, datetime.datetime(2019, 9, 27, 0, 22, 1), datetime.datetime(2019, 9, 27, 0, 22, 1))
+test mismatch:  ('NEBWYI', '547c85727530', 'dbp-prod', 'text_format', 'S', 0, datetime.datetime(2019, 9, 27, 0, 22, 1), datetime.datetime(2019, 9, 27, 0, 22, 1))
+test mismatch:  ('SDMSGVP2DA16', '5530e3333f5c', 'dbp-prod', 'audio_drama', 'S', 0, datetime.datetime(2019, 9, 27, 0, 22, 1), datetime.datetime(2019, 9, 27, 0, 22, 1))
+test mismatch:  ('KIKKGVN1DA', '6699a200a810', 'dbp-prod', 'audio', 'S', 0, datetime.datetime(2019, 9, 27, 0, 22, 1), datetime.datetime(2019, 9, 27, 0, 22, 1))
+test mismatch:  ('KM2IBTP1DA16', '79a35b4c39d5', 'dbp-prod', 'audio', 'S', 0, datetime.datetime(2019, 9, 27, 0, 22, 1), datetime.datetime(2019, 9, 27, 0, 22, 1))
 
-Diagnosis: The biggest problem is that I am missing text_plain fileset records.
+Diagnosis: 
 
 
 
