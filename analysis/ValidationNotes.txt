@@ -1,24 +1,23 @@
 ValidationNotes.txt
 
 Bibles
-table bibles counts: production=1821, test=1780, ratio=98
-num match = 1775, prod mismatch = 46,  test mismatch = 5
+table bibles counts: production=1821, test=1792, ratio=98
+num match = 1787, prod mismatch = 34,  test mismatch = 5
 prod mismatch:  ('ACRTNT', 34, 'protestant', 'western-arabic', '2009', 'NT', 'Latn', '', 'BY-NC-ND', 0, 1, None, datetime.datetime(2018, 2, 12, 14, 36, 20), datetime.datetime(2018, 10, 9, 18, 11, 26))
 prod mismatch:  ('AEUWBT', 131, 'protestant', 'western-arabic', None, '', 'Latn', '', '', 0, 1, None, datetime.datetime(2018, 3, 22, 12, 21, 46), datetime.datetime(2018, 11, 15, 11, 34, 30))
-prod mismatch:  ('AFRLPF', 68, 'protestant', 'western-arabic', None, None, 'Latn', None, None, 0, 0, None, datetime.datetime(2018, 12, 19, 12, 33, 3), datetime.datetime(2018, 12, 19, 12, 33, 3))
 prod mismatch:  ('AMPSTY', 156, 'protestant', 'western-arabic', '2018', None, 'Latn', None, None, 0, 1, None, datetime.datetime(2018, 4, 2, 14, 22, 31), datetime.datetime(2018, 11, 15, 11, 41, 10))
 prod mismatch:  ('ATBWBT', 7830, 'protestant', 'western-arabic', '2009', 'NT', 'Latn', '', 'BY-NC-ND', 0, 1, None, datetime.datetime(2018, 2, 12, 14, 36, 21), datetime.datetime(2018, 10, 9, 18, 11, 26))
-prod mismatch:  ('BENLPF', 748, 'protestant', 'western-arabic', None, None, 'Latn', None, None, 0, 0, None, datetime.datetime(2019, 6, 7, 13, 14, 1), datetime.datetime(2019, 6, 7, 13, 14, 1))
 prod mismatch:  ('CJBCB2', 5003, 'protestant', 'western-arabic', '2008', 'NTP', 'Latn', '', '', 0, 1, None, datetime.datetime(2018, 2, 12, 14, 36, 22), datetime.datetime(2018, 10, 9, 18, 11, 26))
 prod mismatch:  ('FRAOST', 6413, 'protestant', 'western-arabic', '1724', 'FB', 'Latn', '', 'Public Domain', 0, 1, None, datetime.datetime(2018, 2, 12, 14, 36, 23), datetime.datetime(2018, 10, 9, 18, 11, 26))
 prod mismatch:  ('GAGIBT', 1982, 'protestant', 'western-arabic', None, '', 'Latn', '', '', 0, 1, None, datetime.datetime(2018, 3, 22, 16, 8, 35), datetime.datetime(2018, 11, 15, 11, 34, 30))
-prod mismatch:  ('GRCKGV', 8177, 'protestant', 'western-arabic', None, None, 'Latn', None, None, 0, 0, None, datetime.datetime(2019, 5, 24, 13, 18, 8), datetime.datetime(2019, 5, 24, 13, 18, 8))
-test mismatch:  ('KIKKGV', 3135, 'protestant', 'western-arabic', None, None, 'Zzzz', None, 'The Kiugo Githeru (Kikuyu Bible) text may be quoted in any form (written, visual, electronic or audio), up to and inclusive of five hundred (500) verses without the express written permissio', 0, None, None, datetime.datetime(2019, 9, 27, 14, 31, 33), datetime.datetime(2019, 9, 27, 14, 31, 33))
-test mismatch:  ('KRSWYI', 2053, 'protestant', 'western-arabic', None, None, 'Latn', None, '© Wycliffe Bible Translators, Inc.', 0, None, None, datetime.datetime(2019, 9, 27, 14, 31, 33), datetime.datetime(2019, 9, 27, 14, 31, 33))
-test mismatch:  ('MAMSBG', 8121, 'protestant', 'western-arabic', None, None, 'Zzzz', None, '© 2000 Wycliffe Bible Translators, Inc.', 0, None, None, datetime.datetime(2019, 9, 27, 14, 31, 33), datetime.datetime(2019, 9, 27, 14, 31, 33))
-test mismatch:  ('MBJWBT', 4607, 'protestant', 'western-arabic', None, None, 'Latn', None, '© 2011 Wycliffe Bible Translators, Inc. All rights reserved.', 0, None, None, datetime.datetime(2019, 9, 27, 14, 31, 33), datetime.datetime(2019, 9, 27, 14, 31, 33))
-test mismatch:  ('PORNLH', 5598, 'protestant', 'western-arabic', None, None, 'Zzzz', None, '© 2000 Sociedade Bíblica do Brasil', 0, None, None, datetime.datetime(2019, 9, 27, 14, 31, 33), datetime.datetime(2019, 9, 27, 14, 31, 33))
-Gary
+prod mismatch:  ('GWIG11', 2257, 'protestant', 'western-arabic', '2010', 'NT', 'Latn', '', 'BY-NC-ND', 0, 1, None, datetime.datetime(2018, 2, 12, 14, 36, 24), datetime.datetime(2018, 10, 9, 18, 11, 26))
+prod mismatch:  ('HNDOVV', 2355, 'protestant', 'western-arabic', '2018', 'NT', 'Latn', None, None, 0, 1, None, datetime.datetime(2018, 4, 3, 15, 31, 12), datetime.datetime(2018, 11, 15, 11, 41, 10))
+prod mismatch:  ('HUNLPF', 2438, 'protestant', 'western-arabic', None, None, 'Latn', None, None, 0, 0, None, datetime.datetime(2019, 7, 24, 10, 57, 38), datetime.datetime(2019, 7, 24, 10, 57, 38))
+test mismatch:  ('KIKKGV', 3135, 'protestant', 'western-arabic', None, None, 'Zzzz', None, 'The Kiugo Githeru (Kikuyu Bible) text may be quoted in any form (written, visual, electronic or audio), up to and inclusive of five hundred (500) verses without the express written permissio', 0, None, None, datetime.datetime(2019, 9, 27, 20, 37, 17), datetime.datetime(2019, 9, 27, 20, 37, 17))
+test mismatch:  ('KRSWYI', 2053, 'protestant', 'western-arabic', None, None, 'Latn', None, '© Wycliffe Bible Translators, Inc.', 0, None, None, datetime.datetime(2019, 9, 27, 20, 37, 17), datetime.datetime(2019, 9, 27, 20, 37, 17))
+test mismatch:  ('MAMSBG', 8121, 'protestant', 'western-arabic', None, None, 'Zzzz', None, '© 2000 Wycliffe Bible Translators, Inc.', 0, None, None, datetime.datetime(2019, 9, 27, 20, 37, 17), datetime.datetime(2019, 9, 27, 20, 37, 17))
+test mismatch:  ('MBJWBT', 4607, 'protestant', 'western-arabic', None, None, 'Latn', None, '© 2011 Wycliffe Bible Translators, Inc. All rights reserved.', 0, None, None, datetime.datetime(2019, 9, 27, 20, 37, 17), datetime.datetime(2019, 9, 27, 20, 37, 17))
+test mismatch:  ('PORNLH', 5598, 'protestant', 'western-arabic', None, None, 'Zzzz', None, '© 2000 Sociedade Bíblica do Brasil', 0, None, None, datetime.datetime(2019, 9, 27, 20, 37, 17), datetime.datetime(2019, 9, 27, 20, 37, 17))
 
 There are three test mismatches:
 MAMSBG is mis-labeled dbs-dbp, but is located in dbp-prod
@@ -34,28 +33,28 @@ AMPSTY has audios in bucket, but not bible content
 
 -----
 
-table bible_filesets counts: production=5812, test=5327, ratio=92
-num match = 5298, prod mismatch = 514,  test mismatch = 29
-prod mismatch:  ('EUSEABP2DV', '00e73e02c791', 'dbp-vid', 'video_stream', 'NTP', 0, datetime.datetime(2018, 9, 25, 16, 56, 53), datetime.datetime(2019, 8, 1, 9, 51, 52))
-prod mismatch:  ('KAOABMP2DV', '033f00fbfb75', 'dbp-vid', 'video_stream', 'NTP', 0, datetime.datetime(2019, 4, 2, 20, 1, 48), datetime.datetime(2019, 8, 2, 14, 38, 31))
-prod mismatch:  ('SHUABTP2DV', '0387597ccf86', 'dbp-vid', 'video_stream', 'NTP', 0, datetime.datetime(2019, 1, 24, 16, 20, 7), datetime.datetime(2019, 8, 8, 11, 29, 55))
-prod mismatch:  ('KUMIBTP2DV', '038ba2f6b48e', 'dbp-vid', 'video_stream', 'NTP', 0, datetime.datetime(2019, 5, 4, 2, 58, 17), datetime.datetime(2019, 8, 1, 9, 56, 6))
-prod mismatch:  ('TRKWTCN2DA', '0632954ea118', 'dbp-prod', 'app', 'NTP', 0, datetime.datetime(2018, 3, 23, 8, 2, 23), datetime.datetime(2018, 12, 27, 17, 29, 50))
-prod mismatch:  ('QVWTBLP2DV', '074210f5f463', 'dbp-vid', 'video_stream', 'NTP', 0, datetime.datetime(2019, 3, 5, 10, 33, 32), datetime.datetime(2019, 8, 1, 10, 5, 52))
-prod mismatch:  ('AVAIBTN2DA', '07700551e2d8', 'dbp-prod', 'app', 'NTP', 0, datetime.datetime(2018, 3, 23, 6, 50, 45), datetime.datetime(2018, 12, 27, 16, 28, 30))
+table bible_filesets counts: production=5812, test=5696, ratio=98
+num match = 5665, prod mismatch = 147,  test mismatch = 31
 prod mismatch:  ('NSEBSZN1DA16', '07acdef90172', 'dbp-prod', 'audio', 'NTP', 0, datetime.datetime(2019, 8, 21, 17, 41, 59), datetime.datetime(2019, 8, 21, 17, 41, 59))
-prod mismatch:  ('LOBBSBP2DV', '08dcca14c9e5', 'dbp-vid', 'video_stream', 'NTP', 0, datetime.datetime(2019, 3, 4, 19, 52, 51), datetime.datetime(2019, 8, 1, 9, 56, 27))
 prod mismatch:  ('NEPNRVP2DV', '08fe49950338', 'dbp-vid', 'video_stream', 'NTP', 0, datetime.datetime(2019, 7, 18, 18, 35, 46), datetime.datetime(2019, 8, 1, 10, 4, 16))
-test mismatch:  ('TIHBSMN2DA16', '06da4c02a8d9', 'dbp-prod', 'audio_drama', 'S', 0, datetime.datetime(2019, 9, 27, 14, 29, 19), datetime.datetime(2019, 9, 27, 14, 29, 19))
-test mismatch:  ('KRSWYIN2DA', '0e7a4df547ad', 'dbp-prod', 'audio_drama', 'S', 0, datetime.datetime(2019, 9, 27, 14, 29, 19), datetime.datetime(2019, 9, 27, 14, 29, 19))
-test mismatch:  ('KM2IBTP2DA', '10cf532af801', 'dbp-prod', 'audio_drama', 'S', 0, datetime.datetime(2019, 9, 27, 14, 29, 19), datetime.datetime(2019, 9, 27, 14, 29, 19))
-test mismatch:  ('TGLMBB', '18a256817363', 'dbp-prod', 'text_format', 'S', 0, datetime.datetime(2019, 9, 27, 14, 29, 19), datetime.datetime(2019, 9, 27, 14, 29, 19))
-test mismatch:  ('SDMSGVP2DA', '19590853c8b6', 'dbp-prod', 'audio_drama', 'S', 0, datetime.datetime(2019, 9, 27, 14, 29, 19), datetime.datetime(2019, 9, 27, 14, 29, 19))
-test mismatch:  ('MAMSBG', '23ac7e80f4a5', 'dbp-prod', 'text_format', 'S', 0, datetime.datetime(2019, 9, 27, 14, 29, 19), datetime.datetime(2019, 9, 27, 14, 29, 19))
-test mismatch:  ('SDMSGVP1DA16', '2d0f6e54838c', 'dbp-prod', 'audio', 'S', 0, datetime.datetime(2019, 9, 27, 14, 29, 19), datetime.datetime(2019, 9, 27, 14, 29, 19))
-test mismatch:  ('KIKKGVN1DA16', '2f36351f6179', 'dbp-prod', 'audio', 'S', 0, datetime.datetime(2019, 9, 27, 14, 29, 19), datetime.datetime(2019, 9, 27, 14, 29, 19))
-test mismatch:  ('NODWBTN1DA16', '343269895ee5', 'dbp-prod', 'audio', 'S', 0, datetime.datetime(2019, 9, 27, 14, 29, 19), datetime.datetime(2019, 9, 27, 14, 29, 19))
-test mismatch:  ('RONWTC', '3ff6545926f8', 'dbp-prod', 'text_format', 'S', 0, datetime.datetime(2019, 9, 27, 14, 29, 19), datetime.datetime(2019, 9, 27, 14, 29, 19))
+prod mismatch:  ('CMOWBTP2DV', '09a17a8958a4', 'dbp-vid', 'video_stream', 'NTP', 0, datetime.datetime(2019, 7, 19, 10, 7, 29), datetime.datetime(2019, 8, 1, 9, 51, 13))
+prod mismatch:  ('TNATBLN2DA', '0b4561854b6a', 'dbp-prod', 'audio_drama', 'NT', 0, datetime.datetime(2018, 2, 13, 5, 27, 5), datetime.datetime(2018, 9, 7, 13, 39, 24))
+prod mismatch:  ('TELGMIN2DA', '0bd2846a65e6', 'dbp-prod', 'audio_drama', 'NTP', 0, datetime.datetime(2019, 8, 22, 17, 37, 44), datetime.datetime(2019, 8, 22, 17, 37, 44))
+prod mismatch:  ('MVJWBTN2DA', '0be1ea75b730', 'dbp-prod', 'audio_drama', 'NT', 0, datetime.datetime(2018, 2, 13, 5, 27, 5), datetime.datetime(2018, 9, 7, 13, 39, 24))
+prod mismatch:  ('SNPWBTP2DA16', '0d59bbecc256', 'dbp-prod', 'audio_drama', 'NTP', 0, datetime.datetime(2019, 8, 21, 17, 42, 7), datetime.datetime(2019, 8, 21, 17, 42, 7))
+prod mismatch:  ('ATBBSMN2DA', '0e267671d6f7', 'dbp-prod', 'audio_drama', 'NT', 0, datetime.datetime(2018, 2, 13, 5, 27, 5), datetime.datetime(2018, 9, 7, 13, 39, 24))
+prod mismatch:  ('FFMTBLN2DA', '19a5b8ef3b7c', 'dbp-prod', 'audio_drama', 'NT', 0, datetime.datetime(2018, 2, 13, 5, 27, 2), datetime.datetime(2018, 9, 7, 13, 39, 24))
+prod mismatch:  ('KHKMUVP1DV', '1b65259d4d27', 'dbp-vid', 'video_stream', 'NTP', 0, datetime.datetime(2019, 8, 14, 16, 8, 17), datetime.datetime(2019, 8, 14, 16, 8, 17))
+test mismatch:  ('TIHBSMN2DA16', '06da4c02a8d9', 'dbp-prod', 'audio_drama', 'S', 0, datetime.datetime(2019, 9, 28, 1, 51, 55), datetime.datetime(2019, 9, 28, 1, 51, 55))
+test mismatch:  ('KRSWYIN2DA', '0e7a4df547ad', 'dbp-prod', 'audio_drama', 'S', 0, datetime.datetime(2019, 9, 28, 1, 51, 55), datetime.datetime(2019, 9, 28, 1, 51, 55))
+test mismatch:  ('KM2IBTP2DA', '10cf532af801', 'dbp-prod', 'audio_drama', 'S', 0, datetime.datetime(2019, 9, 28, 1, 51, 55), datetime.datetime(2019, 9, 28, 1, 51, 55))
+test mismatch:  ('TGLMBB', '18a256817363', 'dbp-prod', 'text_format', 'S', 0, datetime.datetime(2019, 9, 28, 1, 51, 56), datetime.datetime(2019, 9, 28, 1, 51, 56))
+test mismatch:  ('SDMSGVP2DA', '19590853c8b6', 'dbp-prod', 'audio_drama', 'S', 0, datetime.datetime(2019, 9, 28, 1, 51, 55), datetime.datetime(2019, 9, 28, 1, 51, 55))
+test mismatch:  ('MAMSBG', '23ac7e80f4a5', 'dbp-prod', 'text_format', 'S', 0, datetime.datetime(2019, 9, 28, 1, 51, 56), datetime.datetime(2019, 9, 28, 1, 51, 56))
+test mismatch:  ('MAWWBTP2DV', '23d8a85bdcea', 'dbp-vid', 'video_stream', 'S', 0, datetime.datetime(2019, 9, 28, 1, 51, 56), datetime.datetime(2019, 9, 28, 1, 51, 56))
+test mismatch:  ('SDMSGVP1DA16', '2d0f6e54838c', 'dbp-prod', 'audio', 'S', 0, datetime.datetime(2019, 9, 28, 1, 51, 55), datetime.datetime(2019, 9, 28, 1, 51, 55))
+test mismatch:  ('KIKKGVN1DA16', '2f36351f6179', 'dbp-prod', 'audio', 'S', 0, datetime.datetime(2019, 9, 28, 1, 51, 55), datetime.datetime(2019, 9, 28, 1, 51, 55))
+test mismatch:  ('NODWBTN1DA16', '343269895ee5', 'dbp-prod', 'audio', 'S', 0, datetime.datetime(2019, 9, 28, 1, 51, 55), datetime.datetime(2019, 9, 28, 1, 51, 55))
 
 
 Diagnosis:

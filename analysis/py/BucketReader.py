@@ -35,6 +35,13 @@ class BucketReader:
 		db.close()
 		return ids
 
+	def filesets(self):
+		db = SQLUtility(self.config.database_host, self.config.database_port,
+			self.config.database_user, self.config.database_output_db_name)
+		fileset = db.select("SELECT distinct fileset_id, bucket, type_code FROM bucket_listing", None)
+		db.close()
+		return fileset		
+
 
 	def filenames(self, typeCode):
 		db = SQLUtility(self.config.database_host, self.config.database_port,

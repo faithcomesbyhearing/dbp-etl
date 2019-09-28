@@ -13,7 +13,6 @@ import os
 import sys
 import hashlib
 from Config import *
-from LookupTables import *
 from BucketReader import *
 from VersesReader import *
 
@@ -22,121 +21,83 @@ class BibleFilesetsTable:
 	def __init__(self, config):
 		self.config = config
 		bucket = BucketReader(config)
-		self.appIds = bucket.filesetIds("app")
-		self.audioIds = bucket.filesetIds("audio")
-		self.textIds = bucket.filesetIds("text")
-		self.videoIds = bucket.filesetIds("video")
+		self.filesets = bucket.filesets()
+		print("num filesets %d" % (len(self.filesets)))
 		verseReader = VersesReader(config)
 		self.verseFilesets = verseReader.filesetIds()
-
-	def assetIdAudioText(self, damId):
-		return config.s3_bucket
+		print("num verse filesets %d" % (len(self.verseFilesets)))
 
 
-	def assetIdVideo(self, damId):
-		return config.s3_vid_bucket
+	def assetId(self, fileset):
+		return fileset[1]
 
 
-	def appTypeCode(self, damId):
-		return "app"
-
-
-	def setAudioTypeCode(self, damId):
-		code = damId[7:10]
-		if code == "1DA":
-			return "audio"
-		elif code == "2DA":
-			return "audio_drama"
+	def setTypeCode(self, fileset):
+		typeCode = fileset[2]
+		if typeCode == "app":
+			return "app"
+		elif typeCode == "audio":
+			damId = fileset[0]
+			code = damId[7:10]
+			if code == "1DA":
+				return "audio"
+			elif code == "2DA":
+				return "audio_drama"
+			else:
+				print("WARNING: file type not known for %s" % damId)
+				return "unknown"
+		elif typeCode == "text":
+			return "text_format"
+		elif typeCode == "video":
+			return "video_stream"
+		elif typeCode == "verse":
+			return "text_plain"
 		else:
-			print("WARNING: file type not known for %s" % damId)
-			return "unknown"
+			print("ERROR typeCode '%s' is not known" % (typeCode))
+			sys.exit()		
 
 
-	def setTextTypeCode(self, damId):
-		return "text_format"
 
-
-	def setVideoTypeCode(self, damId):
-		return "video_stream"
-
-
-	def setTextPlainTypeCode(self, damId):
-		return "text_plain"
-
-
-	def hashId(self, damId, bucket, typeCode):
+	def hashId(self, bucket, filesetId, typeCode):
 		md5 = hashlib.md5()
-		md5.update(damId.encode("latin1"))
+		md5.update(filesetId.encode("latin1"))
 		md5.update(bucket.encode("latin1"))
 		md5.update(typeCode.encode("latin1"))
 		hash_id = md5.hexdigest()
 		return hash_id[:12]
 
 
-	def setSizeCode(self, damId):
+	def setSizeCode(self):
 		# This must be set by query of bible_files
 		# S is used here, because a valid size code is required.
 		return "S"
 
 
-	def hidden(self, damId):
+	def hidden(self):
 		return 0
 
 
 config = Config()
-filesets = BibleFilesetsTable(config) 
+bible = BibleFilesetsTable(config) 
 results = []
 
-"""
-for appId in filesets.appIds:
-	#print(appId)
-	#app = filesets.audioMap.get(appId)
-	#if app != None:
-	#print("app", appId)
-	assetId = filesets.assetIdAudioText(appId)
-	setTypeCode = filesets.setAudioTypeCode(appId)
-	hashId = filesets.hashId(appId, assetId, setTypeCode)
-	setSizeCode = filesets.setSizeCode(appId)
-	hidden = filesets.hidden(appId)
-	results.append((appId, hashId, assetId, setTypeCode, setSizeCode, hidden))
-	#else:
-	#	print("WARNING LPTS has no record for app %s" % (appId))
-"""
-
-for audioId in filesets.audioIds:
-	#print(audioId)
-	assetId = filesets.assetIdAudioText(audioId)
-	setTypeCode = filesets.setAudioTypeCode(audioId)
-	hashId = filesets.hashId(audioId, assetId, setTypeCode)
-	setSizeCode = filesets.setSizeCode(audioId)
-	hidden = filesets.hidden(audioId)
-	results.append((audioId, hashId, assetId, setTypeCode, setSizeCode, hidden))
-
-for textId in filesets.textIds:
-	#print(textId)
-	assetId = filesets.assetIdAudioText(textId)
-	setTypeCode = filesets.setTextTypeCode(textId)
-	hashId = filesets.hashId(textId, assetId, setTypeCode)
-	setSizeCode = filesets.setSizeCode(textId)
-	hidden = filesets.hidden(textId)
-	results.append((textId, hashId, assetId, setTypeCode, setSizeCode, hidden))
-
-for videoId in filesets.videoIds:
-	#print(videoId)
-	assetId = filesets.assetIdVideo(videoId)
-	setTypeCode = filesets.setVideoTypeCode(videoId)
-	hashId = filesets.hashId(videoId, assetId, setTypeCode)
-	setSizeCode = filesets.setSizeCode(videoId)
-	hidden = filesets.hidden(videoId)
-	results.append((videoId, hashId, assetId, setTypeCode, setSizeCode, hidden))
-
-for filesetId in filesets.verseFilesets:
+for fileset in bible.filesets:
+	filesetId = fileset[0]
 	#print(filesetId)
-	assetId = filesets.assetIdAudioText(filesetId)
-	setTypeCode = filesets.setTextPlainTypeCode(filesetId)
-	hashId = filesets.hashId(filesetId, assetId, setTypeCode)
-	setSizeCode = filesets.setSizeCode(filesetId)
-	hidden = filesets.hidden(filesetId)
+	assetId = bible.assetId(fileset)
+	setTypeCode = bible.setTypeCode(fileset)
+	hashId = bible.hashId(assetId, filesetId, setTypeCode)
+	setSizeCode = bible.setSizeCode()
+	hidden = bible.hidden()
+	results.append((filesetId, hashId, assetId, setTypeCode, setSizeCode, hidden))
+
+for filesetId in bible.verseFilesets:
+	#print(filesetId)
+	assetId = config.s3_bucket
+	setTypeCode = "text_plain"
+	hashId = bible.hashId(assetId, filesetId, setTypeCode)
+	setSizeCode = bible.setSizeCode()
+	hidden = bible.hidden()
 	results.append((filesetId, hashId, assetId, setTypeCode, setSizeCode, hidden))
 
 print("num records to insert %d" % (len(results)))

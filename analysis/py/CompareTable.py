@@ -49,16 +49,14 @@ class CompareTable:
 			print("prod mismatch2: %s" % (prodMismatch))
 
 
-
-
 	def close(self):
 		self.db.close()
 
 
 compare = CompareTable()
-compare.comparePkey("bibles")
+#compare.comparePkey("bibles")
 #compare.biblesPkey()
-#compare.comparePkey("bible_filesets")
+compare.comparePkey("bible_filesets")
 compare.close()
 
 

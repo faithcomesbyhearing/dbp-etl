@@ -15,7 +15,7 @@
 </s3>
  <directory>
   <lpts_xml>../input/qry_dbp4_Regular_and_NonDrama.xml</lpts_xml>
-  <main_bucket>/Users/garygriswold/FCBH/bucket_data/dbp_prod.txt</main_bucket>
+  <bucket_list>/Users/garygriswold/FCBH/bucket_data/%s.txt</bucket_list>
   <sql_output>output/output.sql</sql_output>
  </directory>
 </dbp_etl>
