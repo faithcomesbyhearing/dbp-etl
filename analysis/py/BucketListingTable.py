@@ -77,7 +77,7 @@ class BucketListingTable:
 								else:
 									dropTextIds.add("text/%s/%s" % (bibleId, filesetId))
 						elif typeCode == "video":
-							if fileName.endswith(".ts"):
+							if fileName.endswith(".m3u8"):
 								if filesetId in videoMap:
 									self.privateAddRow(results, parts, bucketName)
 								else:
