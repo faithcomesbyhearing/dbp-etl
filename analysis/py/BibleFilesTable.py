@@ -17,7 +17,6 @@
 import io
 import os
 import sys
-#import hashlib
 from Config import *
 from LookupTables import *
 from BucketReader import *

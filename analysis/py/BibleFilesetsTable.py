@@ -44,8 +44,8 @@ class BibleFilesetsTable:
 			elif code == "2DA":
 				return "audio_drama"
 			else:
-				print("WARNING: file type not known for %s" % damId)
-				return "unknown"
+				print("WARNING: file type not known for %s fileset is dropped" % (damId))
+				return None
 		elif typeCode == "text":
 			return "text_format"
 		elif typeCode == "video":
@@ -86,10 +86,11 @@ for fileset in bible.filesets:
 	#print(filesetId)
 	assetId = bible.assetId(fileset)
 	setTypeCode = bible.setTypeCode(fileset)
-	hashId = bible.hashId(assetId, filesetId, setTypeCode)
-	setSizeCode = bible.setSizeCode()
-	hidden = bible.hidden()
-	results.append((filesetId, hashId, assetId, setTypeCode, setSizeCode, hidden))
+	if setTypeCode != None:
+		hashId = bible.hashId(assetId, filesetId, setTypeCode)
+		setSizeCode = bible.setSizeCode()
+		hidden = bible.hidden()
+		results.append((filesetId, hashId, assetId, setTypeCode, setSizeCode, hidden))
 
 for filesetId in bible.verseFilesets:
 	#print(filesetId)

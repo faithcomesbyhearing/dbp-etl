@@ -6,17 +6,19 @@
 # It should also be possible to generate results over a wide variety of tables and columns
 #
 from SQLUtility import *
+from LPTSExtractReader import *
 
 class CompareTable:
 
-	def __init__(self):
+	def __init__(self, config):
+		self.config = config
 		self.prod_db = "dbp_only"
 		self.test_db = "valid_dbp"
 		self.db = SQLUtility("localhost", 3306, "root", self.prod_db)
 		self.tables = {}
 		self.tables["bibles"] = [["id"],["language_id", "versification", "numeral_system_id", "date", "scope", 
 			"script", "derived", "copyright", "priority", "reviewed", "notes"]]
-		self.tables["bible_filesets"] = [["hash_id"], []]
+		self.tables["bible_filesets"] = [["hash_id"], ["id", "asset_id", "set_type_code", "hidden"]] # check set_size_code after bible_files  
 
 	def comparePkey(self, table):
 		tableDef = self.tables[table]
@@ -40,6 +42,24 @@ class CompareTable:
 		for testMismatch in testMismatches:
 			print("test mismatch: ", testMismatch)
 
+	def compareColumns(self, table):
+		tableDef = self.tables[table]
+		pkey = tableDef[0][0]
+		columns = tableDef[1]
+		colStr = ",".join(columns)
+		sql = "SELECT %s FROM %s.%s WHERE %s IN (SELECT %s FROM %s.%s)"
+		prodMatch = self.db.select(sql % (colStr, self.prod_db, table, pkey, pkey, self.test_db, table), None)
+		testMatch = self.db.select(sql % (colStr, self.test_db, table, pkey, pkey, self.prod_db, table), None)
+		print("num matches: prod: %d, test: %d" % (len(prodMatch), len(testMatch)))
+		for rowIndex in range(len(prodMatch)):
+			prodRow = prodMatch[rowIndex]
+			testRow = testMatch[rowIndex]
+			for col in range(len(columns)):
+				#print("compare %s  %s  %s"  % (columns[col], prodRow[col], testRow[col]))
+				if prodRow[col] != testRow[col]:
+					print("DIFF: %s  prod: %s  test: %s  At Row: %s" % (columns[col], prodRow[col], testRow[col], testRow))
+
+
 	def biblesPkey(self):
 		sqlMismatch = ("SELECT id FROM dbp_only.bibles WHERE id IN " +
 			" (select bible_id from dbp_only.bible_fileset_connections) " +
@@ -48,15 +68,35 @@ class CompareTable:
 		for prodMismatch in prodMismatches:
 			print("prod mismatch2: %s" % (prodMismatch))
 
+	def filesetId(self):
+		reader = LPTSExtractReader(self.config)
+		audioSet = set(reader.getAudioMap().keys())
+		textSet = set(reader.getTextMap().keys())
+		videoSet = set(reader.getVideoMap().keys())
+		allSet = audioSet.union(textSet, videoSet)
+		sqlMismatch = ("SELECT id FROM dbp_only.bible_filesets WHERE id NOT IN" +
+			" (select id from valid_dbp.bible_filesets)")
+		prodMismatches = self.db.selectList(sqlMismatch, None)
+		for prodMismatch in prodMismatches:
+			if prodMismatch[:10] in allSet:
+				print("Found in fileId %s" % (prodMismatch))
+
+	
+
+
+
 
 	def close(self):
 		self.db.close()
 
 
-compare = CompareTable()
+config = Config()
+compare = CompareTable(config)
 #compare.comparePkey("bibles")
 #compare.biblesPkey()
 compare.comparePkey("bible_filesets")
+compare.compareColumns("bible_filesets")
+#compare.filesetId()
 compare.close()
 
 
