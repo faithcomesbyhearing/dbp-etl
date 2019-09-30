@@ -72,13 +72,20 @@ class CompareTable:
 		prodMatch = self.db.select(sql % (selectList, self.prod_db, table, self.test_db, table, onClause, orderBy), None)
 		testMatch = self.db.select(sql % (selectList, self.test_db, table, self.prod_db, table, onClause, orderBy), None)
 		print("num matches: prod: %d, test: %d" % (len(prodMatch), len(testMatch)))
-		for rowIndex in range(len(prodMatch)):
-			prodRow = prodMatch[rowIndex]
-			testRow = testMatch[rowIndex]
-			for col in range(len(columns)):
+		for col in range(len(columns)):
+			prodEmptyCount = 0
+			prodTestDiffCount = 0
+			for rowIndex in range(len(prodMatch)):
+				prodRow = prodMatch[rowIndex]
+				testRow = testMatch[rowIndex]
 				#print("compare %s  %s  %s"  % (columns[col], prodRow[col], testRow[col]))
 				if prodRow[col] != testRow[col]:
-					print("DIFF: %s  prod: %s  test: %s  At Prod Row: %s" % (columns[col], prodRow[col], testRow[col], prodRow))
+					if prodRow[col] == None or prodRow[col] == '':
+						prodEmptyCount += 1
+					else:
+						print("DIFF: %s  prod: %s  test: %s  At Prod Row: %s" % (columns[col], prodRow[col], testRow[col], prodRow))
+						prodTestDiffCount += 1
+			print("COUNTS: %s  prod empty: %d  different: %d" % (col, prodEmptyCount, prodTestDiffCount))
 
 
 	def privateOnPhrase(self, pkey):
