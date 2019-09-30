@@ -134,7 +134,7 @@ class BiblesTable:
 
 
 	def reviewed(self, bible):
-		result = None
+		result = 1
 		# This is a boolean 0 or 1. 1 is by far the most common
 		return result
 

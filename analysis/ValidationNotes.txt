@@ -62,6 +62,34 @@ DIFF: id  prod: SDMSGVP2DA16  test: SDMSGVS2DA16  At Row: ('SDMSGVS2DA16', 'dbp-
 DIFF: id  prod: SDMSGVP1DA  test: SDMSGVS1DA  At Row: ('SDMSGVS1DA', 'dbp-prod', 'audio', 0)
 DIFF: id  prod: SDMSGVP1DA16  test: SDMSGVS1DA16  At Row: ('SDMSGVS1DA16', 'dbp-prod', 'audio', 0)
 
+-------
+
+BIBLE_FILES
+pKey: ['hash_id', 'book_id', 'chapter_start', 'verse_start']
+table bible_files counts: production=1153005, test=1584300, ratio=137
+num match = 1124811, prod mismatch = 28194,  test mismatch = 459489
+prod mismatch:  ('0fc06eaffe06', 'LAM', 1, 1, None, None, 'GILBSP_26_LAM_1.html', None, None)
+prod mismatch:  ('0fc06eaffe06', 'LAM', 2, 1, None, None, 'GILBSP_26_LAM_2.html', None, None)
+prod mismatch:  ('0fc06eaffe06', 'LAM', 3, 1, None, None, 'GILBSP_26_LAM_3.html', None, None)
+prod mismatch:  ('0fc06eaffe06', 'LAM', 4, 1, None, None, 'GILBSP_26_LAM_4.html', None, None)
+prod mismatch:  ('0fc06eaffe06', 'LAM', 5, 1, None, None, 'GILBSP_26_LAM_5.html', None, None)
+prod mismatch:  ('0fc06eaffe06', 'EZK', 1, 1, None, None, 'GILBSP_27_EZK_1.html', None, None)
+prod mismatch:  ('0fc06eaffe06', 'EZK', 10, 1, None, None, 'GILBSP_27_EZK_10.html', None, None)
+prod mismatch:  ('0fc06eaffe06', 'EZK', 11, 1, None, None, 'GILBSP_27_EZK_11.html', None, None)
+prod mismatch:  ('0fc06eaffe06', 'EZK', 12, 1, None, None, 'GILBSP_27_EZK_12.html', None, None)
+prod mismatch:  ('0fc06eaffe06', 'EZK', 13, 1, None, None, 'GILBSP_27_EZK_13.html', None, None)
+test mismatch:  ('06eec467a3ef', 'GEN', 0, 1, None, None, 'AAZANT_2_GEN.html', None, None)
+test mismatch:  ('06eec467a3ef', 'GEN', 1, 1, None, None, 'AAZANT_2_GEN_1.html', None, None)
+test mismatch:  ('06eec467a3ef', 'GEN', 10, 1, None, None, 'AAZANT_2_GEN_10.html', None, None)
+test mismatch:  ('06eec467a3ef', 'GEN', 11, 1, None, None, 'AAZANT_2_GEN_11.html', None, None)
+test mismatch:  ('06eec467a3ef', 'GEN', 12, 1, None, None, 'AAZANT_2_GEN_12.html', None, None)
+test mismatch:  ('06eec467a3ef', 'GEN', 13, 1, None, None, 'AAZANT_2_GEN_13.html', None, None)
+test mismatch:  ('06eec467a3ef', 'GEN', 14, 1, None, None, 'AAZANT_2_GEN_14.html', None, None)
+test mismatch:  ('06eec467a3ef', 'GEN', 15, 1, None, None, 'AAZANT_2_GEN_15.html', None, None)
+test mismatch:  ('06eec467a3ef', 'GEN', 16, 1, None, None, 'AAZANT_2_GEN_16.html', None, None)
+test mismatch:  ('06eec467a3ef', 'GEN', 17, 1, None, None, 'AAZANT_2_GEN_17.html', None, None)
+
+
 
 
 

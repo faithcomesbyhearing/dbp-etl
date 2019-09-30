@@ -25,14 +25,11 @@ class CompareTable:
 
 
 	def comparePkey(self, table):
+		print(table.upper())
 		tableDef = self.tables[table]
-		#if len(tableDef[0]) == 1:
-		#	pkey = tableDef[0][0]
-		#else:
-		#	#pkey = "concat(" + ",".join(tableDef[0]) + ")"
-		#	p
-		pkey = tableDef[0][0]
+		pkey = tableDef[0]		
 		print("pKey: %s" % (pkey))
+		columns = tableDef[1]
 
 		sqlCount = "SELECT count(*) FROM %s.%s"
 		prodCount = self.db.selectScalar(sqlCount % (self.prod_db, table), None)
@@ -40,30 +37,40 @@ class CompareTable:
 		countRatio = int(round(100.0 * testCount / prodCount))
 		print("table %s counts: production=%d, test=%d, ratio=%d" % (table, prodCount, testCount, countRatio))
 	
-		sqlMatchCount = "SELECT count(distinct %s) FROM %s.%s p WHERE %s IN (SELECT %s FROM %s.%s)"
-		matchCount = self.db.selectScalar(sqlMatchCount % (pkey, self.prod_db, table, pkey, pkey, self.test_db, table), None)
-		sqlMismatchCount = "SELECT count(distinct %s) FROM %s.%s WHERE %s NOT IN (SELECT %s FROM %s.%s)"
-		prodMismatchCount = self.db.selectScalar(sqlMismatchCount % (pkey, self.prod_db, table, pkey, pkey, self.test_db, table), None)
-		testMismatchCount = self.db.selectScalar(sqlMismatchCount % (pkey, self.test_db, table, pkey, pkey, self.prod_db, table), None)
+		onClause = self.privateOnPhrase(pkey)
+		sqlMatchCount = "SELECT count(*) FROM %s.%s p JOIN %s.%s t ON %s"
+		matchCount = self.db.selectScalar(sqlMatchCount % (self.prod_db, table, self.test_db, table, onClause), None)
+		sqlMismatchCount = "SELECT count(*) FROM %s.%s p WHERE NOT EXISTS (SELECT 1 FROM %s.%s t WHERE %s)"
+		prodMismatchCount = self.db.selectScalar(sqlMismatchCount % (self.prod_db, table, self.test_db, table, onClause), None)
+		testMismatchCount = self.db.selectScalar(sqlMismatchCount % (self.test_db, table, self.prod_db, table, onClause), None)
 		print("num match = %d, prod mismatch = %d,  test mismatch = %d" % (matchCount, prodMismatchCount, testMismatchCount))
 	
-		sqlMismatch = "SELECT * FROM %s.%s WHERE %s NOT IN (SELECT %s FROM %s.%s) limit 10"
-		prodMismatches = self.db.select(sqlMismatch % (self.prod_db, table, pkey, pkey, self.test_db, table), None)
-		testMismatches = self.db.select(sqlMismatch % (self.test_db, table, pkey, pkey, self.prod_db, table), None)
+		selectList = ",".join(pkey) + "," + ",".join(columns)
+		sqlMismatch = "SELECT %s FROM %s.%s p WHERE NOT EXISTS (SELECT 1 FROM %s.%s t WHERE %s) limit 10"
+		prodMismatches = self.db.select(sqlMismatch % (selectList, self.prod_db, table, self.test_db, table, onClause), None)
+		testMismatches = self.db.select(sqlMismatch % (selectList, self.test_db, table, self.prod_db, table, onClause), None)
 		for prodMismatch in prodMismatches:
-			print("prod mismatch: ", prodMismatch)
+			print("In prod not test: ", prodMismatch)
 		for testMismatch in testMismatches:
-			print("test mismatch: ", testMismatch)
+			print("In test not prod: ", testMismatch)
 
 
 	def compareColumns(self, table):
 		tableDef = self.tables[table]
-		pkey = tableDef[0][0]
+		pkey = tableDef[0]
 		columns = tableDef[1]
-		colStr = ",".join(columns)
-		sql = "SELECT %s FROM %s.%s WHERE %s IN (SELECT %s FROM %s.%s)"
-		prodMatch = self.db.select(sql % (colStr, self.prod_db, table, pkey, pkey, self.test_db, table), None)
-		testMatch = self.db.select(sql % (colStr, self.test_db, table, pkey, pkey, self.prod_db, table), None)
+		fields = []
+		for col in columns:
+			fields.append("p.%s" % (col))
+		selectList = ", ".join(fields)
+		onClause = self.privateOnPhrase(pkey)
+		fields = []
+		for key in pkey:
+			fields.append("p.%s" % (key))
+		orderBy = ", ".join(fields)
+		sql = "SELECT %s FROM %s.%s p JOIN %s.%s t ON %s ORDER BY %s"
+		prodMatch = self.db.select(sql % (selectList, self.prod_db, table, self.test_db, table, onClause, orderBy), None)
+		testMatch = self.db.select(sql % (selectList, self.test_db, table, self.prod_db, table, onClause, orderBy), None)
 		print("num matches: prod: %d, test: %d" % (len(prodMatch), len(testMatch)))
 		for rowIndex in range(len(prodMatch)):
 			prodRow = prodMatch[rowIndex]
@@ -71,8 +78,14 @@ class CompareTable:
 			for col in range(len(columns)):
 				#print("compare %s  %s  %s"  % (columns[col], prodRow[col], testRow[col]))
 				if prodRow[col] != testRow[col]:
-					print("DIFF: %s  prod: %s  test: %s  At Row: %s" % (columns[col], prodRow[col], testRow[col], testRow))
+					print("DIFF: %s  prod: %s  test: %s  At Prod Row: %s" % (columns[col], prodRow[col], testRow[col], prodRow))
 
+
+	def privateOnPhrase(self, pkey):
+		onPhases = []
+		for key in pkey:
+			onPhases.append("p.%s=t.%s" % (key, key))
+		return " AND ".join(onPhases)
 
 
 	def biblesPkey(self):
@@ -96,10 +109,6 @@ class CompareTable:
 			if prodMismatch[:10] in allSet:
 				print("Found in fileId %s" % (prodMismatch))
 
-	
-
-
-
 
 	def close(self):
 		self.db.close()
@@ -107,45 +116,16 @@ class CompareTable:
 
 config = Config()
 compare = CompareTable(config)
-#compare.comparePkey("bibles")
+compare.comparePkey("bibles")
+compare.compareColumns("bibles")
 #compare.biblesPkey()
-compare.comparePkey("bible_filesets")
+#compare.comparePkey("bible_filesets")
 #compare.compareColumns("bible_filesets")
 #compare.filesetId()
 #compare.comparePkey("bible_files")
 
+
 compare.close()
-
-
-
-
-"""
-Rewrite the comparePkey using this syntax
-SELECT a.x, a.y FROM a JOIN b ON a.x = b.x AND a.y = b.y;
-SELECT p.hash_id FROM dbp p JOIN valid_dbp t ON p.hash_id = t.hash_id
-Except:
-
-SELECT a.* FROM a WHERE NOT EXISTS (SELECT 1 FROM b WHERE b.x = a.x)
-
-match 1 pKey
-SELECT p.hash_id FROM dbp.bible_filesets p JOIN valid_dbp.bible_filesets t ON p.hash_id = t.hash_id;
-count 1 pkey on match
-SELECT count( distinct p.hash_id) FROM dbp.bible_filesets p JOIN valid_dbp.bible_filesets t ON p.hash_id = t.hash_id;
-
-SELECT p.hash_id, p.book_id, p.chapter_start, p.verse_start FROM dbp.bible_files p JOIN valid_dbp.bible_files t ON p.hash_id=t.hash_id AND p.book_id=t.book_id AND p.chapter_start=t.chapter_start AND p.verse_start=t.verse_start;
-match many
-
-SELECT count(distinct p.hash_id, p.book_id, p.chapter_start, p.verse_start) FROM dbp.bible_files p JOIN valid_dbp.bible_files t ON p.hash_id=t.hash_id AND p.book_id=t.book_id AND p.chapter_start=t.chapter_start AND p.verse_start=t.verse_start;
-match count
-
-SELECT count(*) FROM dbp.bible_files p JOIN valid_dbp.bible_files t ON p.hash_id=t.hash_id AND p.book_id=t.book_id AND p.chapter_start=t.chapter_start AND p.verse_start=t.verse_start;
-match count with count(*)
-
-SELECT p.hash_id FROM dbp_only.bible_filesets p WHERE NOT EXISTS (SELECT 1 FROM valid_dbp.bible_filesets t WHERE p.hash_id = t.hash_id);
-
-SELECT p.hash_id, p.book_id, p.chapter_start, p.verse_start FROM dbp_only.bible_files p WHERE NOT EXISTS (SELECT 1 FROM valid_dbp.bible_files t WHERE p.hash_id=t.hash_id AND p.book_id=t.book_id AND p.chapter_start=t.chapter_start AND p.verse_start=t.verse_start );
-difference with multi columns
-"""
 
 
 

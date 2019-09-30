@@ -40,7 +40,6 @@ class SQLUtility:
 		try:
 			cursor.execute("BEGIN", None)
 			for value in valuesList:
-				#print("values", len(value), value)
 				cursor.execute(statement, value)
 			self.conn.commit()
 			cursor.close()
@@ -49,7 +48,7 @@ class SQLUtility:
 
 
 	def select(self, statement, values):
-		print("SQL:", statement, values)
+		#print("SQL:", statement, values)
 		cursor = self.conn.cursor()
 		try:
 			cursor.execute(statement, values)
@@ -61,7 +60,7 @@ class SQLUtility:
 
 
 	def selectScalar(self, statement, values):
-		print("SQL:", statement, values)
+		#print("SQL:", statement, values)
 		cursor = self.conn.cursor()
 		try:
 			cursor.execute(statement, values)
