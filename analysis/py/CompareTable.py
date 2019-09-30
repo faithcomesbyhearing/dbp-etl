@@ -85,7 +85,8 @@ class CompareTable:
 					else:
 						print("DIFF: %s  prod: %s  test: %s  At Prod Row: %s" % (columns[col], prodRow[col], testRow[col], prodRow))
 						prodTestDiffCount += 1
-			print("COUNTS: %s  prod empty: %d  different: %d" % (col, prodEmptyCount, prodTestDiffCount))
+			numMatch = len(prodMatch) - prodEmptyCount - prodTestDiffCount
+			print("COUNTS: %s  match: %d  prod empty: %d  different: %d\n" % (columns[col], numMatch, prodEmptyCount, prodTestDiffCount))
 
 
 	def privateOnPhrase(self, pkey):
