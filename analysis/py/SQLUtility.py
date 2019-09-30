@@ -49,6 +49,7 @@ class SQLUtility:
 
 
 	def select(self, statement, values):
+		print("SQL:", statement, values)
 		cursor = self.conn.cursor()
 		try:
 			cursor.execute(statement, values)
@@ -60,6 +61,7 @@ class SQLUtility:
 
 
 	def selectScalar(self, statement, values):
+		print("SQL:", statement, values)
 		cursor = self.conn.cursor()
 		try:
 			cursor.execute(statement, values)

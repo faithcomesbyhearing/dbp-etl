@@ -7,7 +7,7 @@ import os
 import sys
 from Config import *
 from SQLUtility import *
-from LPTSExtractReader import *
+#from LPTSExtractReader import *
 
 
 class BucketListingTable:
@@ -31,15 +31,6 @@ class BucketListingTable:
 		db.close()
 
 	def insertBucketList(self, bucketName):
-		reader = LPTSExtractReader(self.config)
-		bibleIdMap = reader.getBibleIdMap()
-		print("num bible ids in LPTS", len(bibleIdMap.keys()))
-		audioMap = reader.getAudioMap()
-		print("num audio filesets in LPTS", len(audioMap.keys()))
-		textMap = reader.getTextMap()
-		print("num text filesets in LPTS", len(textMap.keys()))
-		videoMap = reader.getVideoMap()
-		print("num video filesets in LPTS", len(videoMap.keys()))
 		results = []
 		dropTypes = set()
 		dropBibleIds = set()
@@ -57,28 +48,28 @@ class BucketListingTable:
 					bibleId = parts[1]
 					filesetId = parts[2]
 					fileName = parts[3]
-					if bibleId in bibleIdMap:
+					if bibleId.isupper():
 						if typeCode == "app":
 							if fileName.endswith(".apk"):
-								if filesetId in audioMap:
+								if filesetId.isupper():
 									self.privateAddRow(results, parts, bucketName)
 								else:
 									dropAppIds.add("app/%s/%s" % (bibleId, filesetId))
 						elif typeCode == "audio":
 							if fileName.endswith(".mp3"):
-								if filesetId[:10] in audioMap:
+								if filesetId.isupper():
 									self.privateAddRow(results, parts, bucketName)
 								else:
 									dropAudioIds.add("audio/%s/%s" % (bibleId, filesetId))
 						elif typeCode == "text":
 							if fileName.endswith(".html"):
-								if filesetId in textMap:
+								if filesetId.isupper():
 									self.privateAddRow(results, parts, bucketName)
 								else:
 									dropTextIds.add("text/%s/%s" % (bibleId, filesetId))
 						elif typeCode == "video":
 							if fileName.endswith(".m3u8"):
-								if filesetId in videoMap:
+								if filesetId.isupper():
 									self.privateAddRow(results, parts, bucketName)
 								else:
 									dropVideoIds.add("video/%s/%s" % (bibleId, filesetId))
@@ -88,12 +79,12 @@ class BucketListingTable:
 						dropBibleIds.add("%s/%s" % (typeCode, bibleId))
 		warningPathName = "output/BucketListing_%s.text" % (bucketName)
 		output = io.open(warningPathName, mode="w", encoding="utf-8")
-		self.privateDrop(output, "WARNING: type_code %s is excluded", dropTypes)
-		self.privateDrop(output, "WARNING: bible_id %s was not found in LPTS", dropBibleIds)
-		self.privateDrop(output, "WARNING: app_id %s was not found in LPTS", dropAppIds)
-		self.privateDrop(output, "WARNING: audio_id %s was not found in LPTS", dropAudioIds)
-		self.privateDrop(output, "WARNING: text_id %s was not found in LPTS", dropTextIds)
-		self.privateDrop(output, "WARNING: video_id %s was not found in LPTS", dropVideoIds)
+		self.privateDrop(output, "WARNING: type_code %s was excluded", dropTypes)
+		self.privateDrop(output, "WARNING: bible_id %s was excluded", dropBibleIds)
+		self.privateDrop(output, "WARNING: app_id %s was excluded", dropAppIds)
+		self.privateDrop(output, "WARNING: audio_id %s was excluded", dropAudioIds)
+		self.privateDrop(output, "WARNING: text_id %s was excluded", dropTextIds)
+		self.privateDrop(output, "WARNING: video_id %s was excluded", dropVideoIds)
 		output.close()
 		print("%d rows to insert" % (len(results)))
 		db = SQLUtility(self.config.database_host, self.config.database_port,

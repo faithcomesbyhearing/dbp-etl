@@ -11,7 +11,9 @@ import sys
 
 #BUCKET_NAME = "dbp-prod"
 #BUCKET_NAME = "dbp-vid"
-BUCKET_NAME = "dbs-web"
+#BUCKET_NAME = "dbs-web"
+#BUCKET_NAME = "bibles.dbs.org"
+BUCKET_NAME = "downloads.dbs.org"
 
 filename = "new_%s.txt" % (BUCKET_NAME.replace("-", "_"))
 pathname = "%s/FCBH/bucket_data/%s" % (os.environ['HOME'], filename)
@@ -22,6 +24,10 @@ out = io.open(pathname, mode="w", encoding="utf-8")
 #session = boto3.Session(profile_name='FCBH_Gary')
 session = boto3.Session(profile_name='FCBH_DBS')
 client = session.client('s3')
+
+s3 = session.resource('s3')
+for bucket in s3.buckets.all():
+	print("bucket", bucket.name)
 
 request = { 'Bucket':BUCKET_NAME, 'MaxKeys':1000 }
 # Bucket, Delimiter, EncodingType, Market, MaxKeys, Prefix
@@ -45,4 +51,3 @@ while hasMore:
 		request['ContinuationToken'] = response['NextContinuationToken']
 
 out.close()
-
