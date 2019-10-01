@@ -32,36 +32,42 @@ AMPSTY has audios in bucket, but not bible content
 
 
 -----
-Bible Filesets
+BIBLE_FILESETS
+pKey: ['hash_id']
+table bible_filesets counts: production=5812, test=6480, ratio=111
+num match = 5799, prod mismatch = 13,  test mismatch = 681
+In prod not test:  ('35838441410c', 'LBWLAIN2DA16', 'dbp-prod', 'audio', 0)
+In prod not test:  ('3ed925033072', 'LIDWBTN2DA', 'dbp-prod', 'audio', 0)
+In prod not test:  ('49a6d0c3d5df', 'EWOABCN2DA', 'dbp-prod', 'audio_drama', 0)
+In prod not test:  ('5a821f490d7d', 'LBWLAIN2DA', 'dbp-prod', 'audio', 0)
+In prod not test:  ('695d7e7cdd50', 'ONBLTCP2DV', 'dbp-vid', 'video_stream', 0)
+In prod not test:  ('6a7933f10057', 'INZSHL', 'dbp-prod', 'text_plain', 0)
+In prod not test:  ('7b06dad2b125', 'HNDOVVN2DA', 'dbp-prod', 'audio_drama', 0)
+In prod not test:  ('80a41880949b', 'KMAWBTN2DA16', 'dbp-prod', 'audio_drama', 0)
+In prod not test:  ('88332d06311f', 'EWOABCN1DA', 'dbp-prod', 'audio', 0)
+In prod not test:  ('959b56792c6a', 'LIDWBTN2DA16', 'dbp-prod', 'audio', 0)
+In test not prod:  ('0131152bd4c5', 'MHMBSB', 'dbp-prod', 'text_format', 0)
+In test not prod:  ('013887aa7382', 'NHEWBT', 'dbp-prod', 'text_format', 0)
+In test not prod:  ('0141a3343ee8', 'LEUPNG', 'dbp-prod', 'text_format', 0)
+In test not prod:  ('014616e8b67c', 'RA1TBLP2DA', 'dbp-prod', 'audio_drama', 0)
+In test not prod:  ('0152e4347074', 'BUAIBT', 'dbp-prod', 'text_format', 0)
+In test not prod:  ('01e198d58cbc', 'KANERV', 'dbp-prod', 'text_format', 0)
+In test not prod:  ('024defd09272', 'BFZBHM', 'dbp-prod', 'text_format', 0)
+In test not prod:  ('02b752965d11', 'TGLAB1', 'dbp-prod', 'text_format', 0)
+In test not prod:  ('02d88f2694b7', 'CEBMBB', 'dbp-prod', 'text_format', 0)
+In test not prod:  ('02ddb03d4702', 'VIFBSCN1DA16', 'dbp-prod', 'audio', 0)
+num matches: prod: 5799, test: 5799
+DIFF: id  prod: SDMSGVP2DA  test: SDMSGVS2DA  At Prod Row: ('SDMSGVP2DA', 'dbp-prod', 'audio_drama', 0)
+DIFF: id  prod: SDMSGVP2DA16  test: SDMSGVS2DA16  At Prod Row: ('SDMSGVP2DA16', 'dbp-prod', 'audio_drama', 0)
+DIFF: id  prod: SDMSGVP1DA  test: SDMSGVS1DA  At Prod Row: ('SDMSGVP1DA', 'dbp-prod', 'audio', 0)
+DIFF: id  prod: SDMSGVP1DA16  test: SDMSGVS1DA16  At Prod Row: ('SDMSGVP1DA16', 'dbp-prod', 'audio', 0)
+COUNTS: id  match: 5795  prod empty: 0  different: 4
 
-table bible_filesets counts: production=5812, test=5696, ratio=98
-num match = 5665, prod mismatch = 147,  test mismatch = 31
-prod mismatch:  ('NSEBSZN1DA16', '07acdef90172', 'dbp-prod', 'audio', 'NTP', 0, datetime.datetime(2019, 8, 21, 17, 41, 59), datetime.datetime(2019, 8, 21, 17, 41, 59))
-prod mismatch:  ('NEPNRVP2DV', '08fe49950338', 'dbp-vid', 'video_stream', 'NTP', 0, datetime.datetime(2019, 7, 18, 18, 35, 46), datetime.datetime(2019, 8, 1, 10, 4, 16))
-prod mismatch:  ('CMOWBTP2DV', '09a17a8958a4', 'dbp-vid', 'video_stream', 'NTP', 0, datetime.datetime(2019, 7, 19, 10, 7, 29), datetime.datetime(2019, 8, 1, 9, 51, 13))
-prod mismatch:  ('TNATBLN2DA', '0b4561854b6a', 'dbp-prod', 'audio_drama', 'NT', 0, datetime.datetime(2018, 2, 13, 5, 27, 5), datetime.datetime(2018, 9, 7, 13, 39, 24))
-prod mismatch:  ('TELGMIN2DA', '0bd2846a65e6', 'dbp-prod', 'audio_drama', 'NTP', 0, datetime.datetime(2019, 8, 22, 17, 37, 44), datetime.datetime(2019, 8, 22, 17, 37, 44))
-prod mismatch:  ('MVJWBTN2DA', '0be1ea75b730', 'dbp-prod', 'audio_drama', 'NT', 0, datetime.datetime(2018, 2, 13, 5, 27, 5), datetime.datetime(2018, 9, 7, 13, 39, 24))
-prod mismatch:  ('SNPWBTP2DA16', '0d59bbecc256', 'dbp-prod', 'audio_drama', 'NTP', 0, datetime.datetime(2019, 8, 21, 17, 42, 7), datetime.datetime(2019, 8, 21, 17, 42, 7))
-prod mismatch:  ('ATBBSMN2DA', '0e267671d6f7', 'dbp-prod', 'audio_drama', 'NT', 0, datetime.datetime(2018, 2, 13, 5, 27, 5), datetime.datetime(2018, 9, 7, 13, 39, 24))
-prod mismatch:  ('FFMTBLN2DA', '19a5b8ef3b7c', 'dbp-prod', 'audio_drama', 'NT', 0, datetime.datetime(2018, 2, 13, 5, 27, 2), datetime.datetime(2018, 9, 7, 13, 39, 24))
-prod mismatch:  ('KHKMUVP1DV', '1b65259d4d27', 'dbp-vid', 'video_stream', 'NTP', 0, datetime.datetime(2019, 8, 14, 16, 8, 17), datetime.datetime(2019, 8, 14, 16, 8, 17))
-test mismatch:  ('TIHBSMN2DA16', '06da4c02a8d9', 'dbp-prod', 'audio_drama', 'S', 0, datetime.datetime(2019, 9, 28, 22, 19, 52), datetime.datetime(2019, 9, 28, 22, 19, 52))
-test mismatch:  ('KRSWYIN2DA', '0e7a4df547ad', 'dbp-prod', 'audio_drama', 'S', 0, datetime.datetime(2019, 9, 28, 22, 19, 51), datetime.datetime(2019, 9, 28, 22, 19, 51))
-test mismatch:  ('KM2IBTP2DA', '10cf532af801', 'dbp-prod', 'audio_drama', 'S', 0, datetime.datetime(2019, 9, 28, 22, 19, 51), datetime.datetime(2019, 9, 28, 22, 19, 51))
-test mismatch:  ('TGLMBB', '18a256817363', 'dbp-prod', 'text_format', 'S', 0, datetime.datetime(2019, 9, 28, 22, 19, 52), datetime.datetime(2019, 9, 28, 22, 19, 52))
-test mismatch:  ('SDMSGVP2DA', '19590853c8b6', 'dbp-prod', 'audio_drama', 'S', 0, datetime.datetime(2019, 9, 28, 22, 19, 52), datetime.datetime(2019, 9, 28, 22, 19, 52))
-test mismatch:  ('MAMSBG', '23ac7e80f4a5', 'dbp-prod', 'text_format', 'S', 0, datetime.datetime(2019, 9, 28, 22, 19, 52), datetime.datetime(2019, 9, 28, 22, 19, 52))
-test mismatch:  ('MAWWBTP2DV', '23d8a85bdcea', 'dbp-vid', 'video_stream', 'S', 0, datetime.datetime(2019, 9, 28, 22, 19, 52), datetime.datetime(2019, 9, 28, 22, 19, 52))
-test mismatch:  ('SDMSGVP1DA16', '2d0f6e54838c', 'dbp-prod', 'audio', 'S', 0, datetime.datetime(2019, 9, 28, 22, 19, 52), datetime.datetime(2019, 9, 28, 22, 19, 52))
-test mismatch:  ('KIKKGVN1DA16', '2f36351f6179', 'dbp-prod', 'audio', 'S', 0, datetime.datetime(2019, 9, 28, 22, 19, 51), datetime.datetime(2019, 9, 28, 22, 19, 51))
-test mismatch:  ('NODWBTN1DA16', '343269895ee5', 'dbp-prod', 'audio', 'S', 0, datetime.datetime(2019, 9, 28, 22, 19, 51), datetime.datetime(2019, 9, 28, 22, 19, 51))
-num matches: prod: 5665, test: 5665
-DIFF: id  prod: SDMSGVP2DA  test: SDMSGVS2DA  At Row: ('SDMSGVS2DA', 'dbp-prod', 'audio_drama', 0)
-DIFF: id  prod: SDMSGVP2DA16  test: SDMSGVS2DA16  At Row: ('SDMSGVS2DA16', 'dbp-prod', 'audio_drama', 0)
-DIFF: id  prod: SDMSGVP1DA  test: SDMSGVS1DA  At Row: ('SDMSGVS1DA', 'dbp-prod', 'audio', 0)
-DIFF: id  prod: SDMSGVP1DA16  test: SDMSGVS1DA16  At Row: ('SDMSGVS1DA16', 'dbp-prod', 'audio', 0)
+COUNTS: asset_id  match: 5799  prod empty: 0  different: 0
 
+COUNTS: set_type_code  match: 5799  prod empty: 0  different: 0
+
+COUNTS: hidden  match: 5799  prod empty: 0  different: 0
 -------
 
 BIBLE_FILES

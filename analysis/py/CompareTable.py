@@ -124,11 +124,11 @@ class CompareTable:
 
 config = Config()
 compare = CompareTable(config)
-compare.comparePkey("bibles")
-compare.compareColumns("bibles")
+#compare.comparePkey("bibles")
+#compare.compareColumns("bibles")
 #compare.biblesPkey()
-#compare.comparePkey("bible_filesets")
-#compare.compareColumns("bible_filesets")
+compare.comparePkey("bible_filesets")
+compare.compareColumns("bible_filesets")
 #compare.filesetId()
 #compare.comparePkey("bible_files")
 

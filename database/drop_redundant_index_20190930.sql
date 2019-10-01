@@ -1,0 +1,28 @@
+
+
+
+DROP INDEX alphabet_numeral_systems_numeral_system_id_index ON alphabet_numeral_systems;
+DROP INDEX buckets_id_unique ON assets;
+DROP INDEX bible_books_bible_id_foreign ON bible_books;
+DROP INDEX unique_bible_file_tag ON bible_file_tags;
+DROP INDEX bible_fileset_connections_hash_id_foreign ON bible_fileset_connections;
+DROP INDEX bible_fileset_tags_hash_id_index ON bible_fileset_tags;
+DROP INDEX bible_filesets_id_index ON bible_filesets;
+DROP INDEX bible_filesets_hash_id_index ON bible_filesets;
+DROP INDEX bible_text_hash_id_index ON bible_verses;
+DROP INDEX bibles_id_unique ON bibles;
+DROP INDEX book_translations_language_id_foreign ON book_translations;
+DROP INDEX country_economy_country_id_foreign ON country_economy;
+DROP INDEX country_energy_country_id_foreign ON country_energy;
+DROP INDEX country_geography_country_id_foreign ON country_geography;
+DROP INDEX country_government_country_id_foreign ON country_government;
+DROP INDEX country_issues_country_id_foreign ON country_issues;
+DROP INDEX country_joshua_project_country_id_foreign ON country_joshua_project;
+DROP INDEX country_people_country_id_foreign ON country_people;
+DROP INDEX numeral_system_glyphs_numeral_system_id_index ON numeral_system_glyphs;
+DROP INDEX organization_logos_organization_id_foreign ON organization_logos;
+DROP INDEX organization_relationships_organization_parent_id_foreign ON organization_relationships;
+DROP INDEX organization_translations_language_id_foreign ON organization_translations;
+DROP INDEX resource_translations_language_id_foreign ON resource_translations;
+
+
