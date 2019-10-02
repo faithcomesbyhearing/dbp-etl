@@ -14,9 +14,6 @@ class BucketReader:
 	def __init__(self, config):
 		self.config = config
 		self.bibleIdList = None
-		#self.audioIdList = None
-		#self.textIdList = None
-		#self.videoIdList = None
 
 
 	def bibleIds(self):
@@ -25,6 +22,7 @@ class BucketReader:
 				self.config.database_user, self.config.database_output_db_name)
 			bibleList = db.selectList("SELECT distinct bible_id FROM bucket_listing ORDER BY bible_id", None)
 			self.bibleIdList = bibleList
+			db.close()
 		return self.bibleIdList
 
 
@@ -35,12 +33,13 @@ class BucketReader:
 		db.close()
 		return ids
 
+
 	def filesets(self):
 		db = SQLUtility(self.config.database_host, self.config.database_port,
 			self.config.database_user, self.config.database_output_db_name)
 		fileset = db.select("SELECT distinct fileset_id, bucket, type_code FROM bucket_listing", None)
 		db.close()
-		return fileset		
+		return fileset	
 
 
 	def filenames(self, typeCode):

@@ -90,11 +90,9 @@ class LPTSExtractReader:
 				if damIdKey in row:
 					damId = row[damIdKey]
 					statusName = textDic[damIdKey]
-					#status = row.get(statusName)
+					rec.record["THIS_DAMID"] = damId
 					rec.record["THIS_DAMID_STATUS"] = row.get(statusName)
-					#if status == "Live":
-					#print(damIdKey, damId, statusName, status)
-					resultMap[damId[:6]] = rec # Why is this truncated to 6 characters
+					resultMap[damId[:6]] = rec # Truncated to 6 chars to match bucket
 		return resultMap
 	
 
@@ -115,10 +113,8 @@ class LPTSExtractReader:
 				if damIdKey in row:
 					damId = row[damIdKey]
 					statusName = damIdMap[damIdKey]
-					#status = row.get(statusName)
+					rec.record["THIS_DAMID"] = damId
 					rec.record["THIS_DAMID_STATUS"] = row.get(statusName)
-					#if status == "Live":
-					#print(damIdKey, damId, statusName, status)
 					resultMap[damId] = rec
 		return resultMap	
 

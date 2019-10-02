@@ -53,6 +53,8 @@ class VersesReader:
 			self.filesetBibleIdList = sorted(list(filesets))
 		return self.filesetBibleIdList
 
+
+
 """
 config = Config()
 reader = VersesReader(config)
