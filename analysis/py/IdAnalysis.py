@@ -156,14 +156,24 @@ class IdAnalysis:
 				setTypeCode = "app"
 			elif typeCode == "audio":
 				filesetId = row[0]
-				code = filesetId[7:10]
-				if code == "1DA":
+				code = filesetId[7:9]
+				if code == "1D":
 					setTypeCode = "audio"
-				elif code == "2DA":
+				elif code == "2D":
 					setTypeCode = "audio_drama"
 				else:
-					print("WARNING: file type not known for %s, set_type_code set to 'unknown'" % (filesetId))
-					setTypeCode = "unknown"
+					code = filesetId[8:10]
+					if code == "1D":
+						setTypeCode = "audio"
+					elif code == "2D":
+						setTypeCode = "audio_drama"
+					elif filesetId == "N1TUVDPI":
+						setTypeCode = "audio"
+					elif filesetId == "O1TUVDPI":
+						setTypeCode = "audio"
+					else:
+						print("WARNING: file type not known for %s, set_type_code set to 'unknown'" % (filesetId))
+						setTypeCode = "unknown"
 			elif typeCode == "text":
 				setTypeCode = "text_format"
 			elif typeCode == "video":
@@ -250,18 +260,17 @@ class IdAnalysis:
 			biblesCount = len(bibles)
 			biblesCon = self.out.select("SELECT * FROM dbp.bible_fileset_connections WHERE bible_id=%s", (bibleId))
 			biblesConCount = len(biblesCon)
-			if biblesCount == 0 and biblesConCount == 0:
-				bibleMsg = "not in DBP"
-			elif biblesCount == 0 and biblesConCount > 0:
-				bibleMsg = "in bible_fileset_connections, not bibles"
-			elif biblesCount > 0 and biblesConCount == 0:
-				bibleMsg = "in bibles, not in bible_fileset_connections"
-			else:
-				bibleMsg = ""
+			biblesTblMsg = "absent" if biblesCount == 0 else ""
+			biblesConnTblMsg = "absent" if biblesConCount == 0 else ""
+			filesetTblMsg = ""
+			filesetBktMsg = ""
+			filesetTypeMsg = ""
+			filesetConnBibleIdMsg = ""
 			filesetIds = self.out.select("SELECT * FROM dbp.bible_filesets WHERE id=%s", (filesetId))
 			filesetIdCount = len(filesetIds)
 			if filesetIdCount == 0:
 				filesetMsg = "not in DBP"
+				filesetTblMsg = "absent"
 			else:
 				filesetType = self.out.select("SELECT * FROM dbp.bible_filesets WHERE id=%s AND set_type_code=%s", (filesetId, typeCode))
 				filesetTypeCount = len(filesetType)
@@ -274,11 +283,13 @@ class IdAnalysis:
 					for row in filesetType:
 						buckets.append(row[2])
 					filesetMsg = "DBP has fileset in %s" % (",".join(buckets))
+					filesetBktMsg = ",".join(buckets)
 				elif filesetTypeCount == 0 and filesetBktCount > 0:
 					types = []
 					for row in filesetBkt:
 						types.append(row[3])
 					filesetMsg = "DBP has fileset as %s" % (",".join(types))
+					filesetTypeMsg = ",".join(types)
 				elif filesetAllCount > 0:
 					hashId = filesetAll[0][1]
 					matchBibles = self.out.select("SELECT * from dbp.bible_fileset_connections WHERE hash_id=%s", (hashId))
@@ -287,23 +298,28 @@ class IdAnalysis:
 					for row in matchBibles:
 						mismatchBibles.append(row[1])
 					filesetMsg = "bible_fileset_connections has bible_id %s" % (",".join(mismatchBibles))
+					filesetConnBibleIdMsg = ", ".join(mismatchBibles)
 				else:
 					filesetMsg = "PUNT"
 				#print(bucket, typeCode, bibleId, filesetId, "%s  filesetType: %d  filesetBkt: %d  filesetAll: %d" % (bibleMsg, filesetTypeCount, filesetBktCount, filesetAllCount))
 				#filesetConCount = self.out.selectScalar("SELECT count(*) FROM dbp.bible_fileset_connections WHERE")
-			print(bucket, typeCode, bibleId, filesetId, "%s  %s" % (bibleMsg, filesetMsg))
-			finalResults.append([filesetId, bibleId, typeCode, bucket, bibleMsg, filesetMsg])
+			print(bucket, typeCode, bibleId, filesetId, "%s  %s  %s  %s  %s  %s" % (biblesTblMsg, biblesConnTblMsg, filesetTblMsg, filesetBktMsg, filesetTypeMsg, filesetConnBibleIdMsg))
+			finalResults.append([filesetId, bibleId, typeCode, bucket, biblesTblMsg, biblesConnTblMsg, filesetTblMsg, filesetBktMsg, filesetTypeMsg, filesetConnBibleIdMsg])
 		self.out.execute("DROP TABLE IF EXISTS dbp_errors", None)
 		sql = ("CREATE TABLE dbp_errors ("
 				+ " fileset_id varchar(255) not null,"
 				+ " bible_id varchar(255) not null,"
 				+ " type_code varchar(255) not null,"	
 				+ " bucket varchar(255) not null,"
-				+ " bible_id_error varchar(255) null,"
-				+ " fileset_id_error varchar(255) null,"
+				+ " dbp_bibles varchar(255) null,"
+				+ " dbp_bible_fileset_cons varchar(255) null,"
+				+ " dbp_bible_filesets varchar(255) null,"
+				+ " dbp_asset_id varchar(255) null,"
+				+ " dbp_set_type_code varchar(255) null,"
+				+ " dbp_conn_bible_id varchar(255) null,"
 				+ " PRIMARY KEY(fileset_id, bible_id, type_code, bucket))")
 		self.out.execute(sql, None)
-		self.out.executeBatch("INSERT INTO dbp_errors VALUES (%s, %s, %s, %s, %s, %s)", finalResults)
+		self.out.executeBatch("INSERT INTO dbp_errors VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", finalResults)
 
 
 
@@ -315,13 +331,13 @@ class IdAnalysis:
 
 config = Config()
 analysis = IdAnalysis(config)
-#analysis.createAnalysisBucket()
-#analysis.createAnalysisBucketNo16()
-#analysis.createAnalysisLPTS()
-#analysis.createAnalysisDBPOnly()
-#analysis.createAnalysisDBP()
-#analysis.createDiffViews()
-#analysis.analyzeLPTSMismatches()
+analysis.createAnalysisBucket()
+analysis.createAnalysisBucketNo16()
+analysis.createAnalysisLPTS()
+analysis.createAnalysisDBPOnly()
+analysis.createAnalysisDBP()
+analysis.createDiffViews()
+analysis.analyzeLPTSMismatches()
 analysis.analyzeDBPMismatches()
 analysis.close()
 
