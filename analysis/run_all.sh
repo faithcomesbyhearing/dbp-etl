@@ -5,18 +5,22 @@ python3 py/BucketListingTable.py
 # 1114097 9/24
 # 1157283 9/27
 # 30698082 9/27
+# 1626574 10/1
 
 python3 py/BiblesTable.py
 # 1397 9/24
 # 1398 9/24
+# 1797 10/1
 
 python3 py/BibleTranslationsTable.py
 # 1397 9/24
 # 1398 9/24
+# ? 10/1
 
 python3 py/BibleFilesetsTable.py
 # 3728 9/24
 # 3749 9/24
+# 6480 10/1
 
 python3 py/BibleFilesetConnectionsTable.py
 # 3779 9/24

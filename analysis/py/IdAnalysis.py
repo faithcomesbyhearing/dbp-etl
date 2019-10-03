@@ -6,6 +6,7 @@
 # 4) build table of bucket/type/bible/fileset from dbp call it analysis.dbp
 
 
+import sys
 from SQLUtility import *
 from LPTSExtractReader import *
 from VersesReader import *
@@ -197,14 +198,53 @@ class IdAnalysis:
 		return results
 
 
+	def analyzeLPTSMismatches(self):
+		lpts = LPTSExtractReader(self.config)
+		bibleMap = lpts.getBibleIdMap()
+		print("num bibleIds: %d" % (len(bibleMap.keys())))
+		filesetMap = lpts.getAllFilesetMap()
+		print("num filesetIds: %d" % (len(filesetMap.keys())))
+		finalResults = []
+		results = self.out.select("SELECT * FROM in_buckets_not_in_lpts_diff_bible_fileset", None)
+		for row in results:
+			filesetId = row[0]
+			bibleId = row[1]
+			typeCode = row[2]
+			bucket = row[3]
+			bibleLPTS = bibleMap.get(bibleId)
+			filesetLPTS = filesetMap.get(filesetId)
+			if bibleLPTS != None:
+				bibleStockNum = bibleLPTS.Reg_StockNumber()
+			else:
+				bibleStockNum = None
+			if filesetLPTS != None:
+				filesetStockNum = filesetLPTS.Reg_StockNumber()
+			else:
+				filesetStockNum = None
+			finalResults.append([filesetId, bibleId, typeCode, bucket, filesetStockNum, bibleStockNum])
+			print(row, "filesetId StockNum: %s,  bibleId StockNum: %s" % (filesetStockNum, bibleStockNum))
+		self.out.execute("DROP TABLE IF EXISTS lpts_errors", None)
+		sql = ("CREATE TABLE lpts_errors ("
+				+ " fileset_id varchar(255) not null,"
+				+ " bible_id varchar(255) not null,"
+				+ " type_code varchar(255) not null,"	
+				+ " bucket varchar(255) not null,"
+				+ " fileset_stock_num varchar(255) null,"
+				+ " bible_stock_num varchar(255) null,"
+				+ " PRIMARY KEY(fileset_id, bible_id, type_code, bucket))")
+		self.out.execute(sql, None)
+		self.out.executeBatch("INSERT INTO lpts_errors VALUES (%s, %s, %s, %s, %s, %s)", finalResults)
+
+
 config = Config()
 analysis = IdAnalysis(config)
-analysis.createAnalysisBucket()
-analysis.createAnalysisBucketNo16()
-analysis.createAnalysisLPTS()
-analysis.createAnalysisDBPOnly()
-analysis.createAnalysisDBP()
-analysis.createDiffViews()
+#analysis.createAnalysisBucket()
+#analysis.createAnalysisBucketNo16()
+#analysis.createAnalysisLPTS()
+#analysis.createAnalysisDBPOnly()
+#analysis.createAnalysisDBP()
+#analysis.createDiffViews()
+analysis.analyzeLPTSMismatches()
 analysis.close()
 
 

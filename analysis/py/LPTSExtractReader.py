@@ -105,6 +105,24 @@ class LPTSExtractReader:
 		return self.isInMap(videoDic)
 
 
+	def getAllFilesetMap(self):
+		hashMap = {}
+		audioMap = self.getAudioMap()
+		for key in audioMap.keys():
+			hashMap[key] = audioMap[key]
+
+		textMap = self.getTextMap()
+		for key in textMap.keys():
+			hashMap[key] = textMap[key]
+
+		videoMap = self.getVideoMap()
+		for key in videoMap.keys():
+			hashMap[key] = videoMap[key]
+			
+		return hashMap
+
+
+
 	def isInMap(self, damIdMap):
 		resultMap = {}
 		for rec in self.resultSet:
