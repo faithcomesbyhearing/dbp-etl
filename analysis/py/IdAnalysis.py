@@ -236,6 +236,48 @@ class IdAnalysis:
 		self.out.executeBatch("INSERT INTO lpts_errors VALUES (%s, %s, %s, %s, %s, %s)", finalResults)
 
 
+	def analyzeDBPMismatches(self):
+		dbpAbsentees = self.out.select("SELECT * FROM in_buckets_not_in_dbp_diff_bible_fileset", None)
+		for dbpAbsent in dbpAbsentees:
+			filesetId = dbpAbsent[0]
+			bibleId = dbpAbsent[1]
+			typeCode = dbpAbsent[2]
+			bucket = dbpAbsent[3]
+			typeCd = typeCode.split("_")[0]
+			#print(bucket, "%s/%s/%s/" % (typeCd, bibleId, filesetId)) # manually check in buckets
+			biblesCount = self.out.selectScalar("SELECT count(*) FROM dbp.bibles WHERE id=%s", (bibleId))
+			biblesConCount = self.out.selectScalar("SELECT count(*) FROM dbp.bible_fileset_connections WHERE bible_id=%s", (bibleId))
+			if biblesCount == 0 and biblesConCount == 0:
+				bibleMsg = "bible_id not in DBP"
+			elif biblesCount == 0 and biblesConCount > 0:
+				bibleMsg = "bible_id in connections, not bibles"
+			elif biblesCount > 0 and biblesConCount == 0:
+				bibleMsg = "bible_id not in connections"
+			else:
+				bibleMsg = ""
+			filesetIdCount = self.out.selectScalar("SELECT count(*) FROM dbp.bible_filesets WHERE id=%s", (filesetId))
+			if filesetIdCount == 0:
+				filesetMsg = "fileset_id not in DBP"
+			else:
+				filesetMsg = ""
+				filesetTypeCount = self.out.selectScalar("SELECT count(*) FROM dbp.bible_filesets WHERE id=%s AND set_type_code=%s", (filesetId, typeCode))
+				filesetBktCount = self.out.selectScalar("SELECT count(*) FROM dbp.bible_filesets WHERE id=%s AND asset_id=%s", (filesetId, bucket))
+				filesetAllCount = self.out.selectScalar("SELECT count(*) FROM dbp.bible_filesets WHERE id=%s AND asset_id=%s AND set_type_code=%s", (filesetId, bucket, typeCode))
+				if filesetTypeCount > 0 and filesetBktCount == 0:
+					filesetMsg = "fileset in wrong bucket"
+				elif filesetTypeCount == 0 and filesetBktCount > 0:
+					filesetMsg = "fileset has wrong type"
+				elif filesetAllCount > 0:
+					filesetMsg = "fileset/connections mismatch"
+				else:
+					"PUNT"
+				print(bucket, typeCode, bibleId, filesetId, "%s  filesetType: %d  filesetBkt: %d  filesetAll: %d" % (bibleMsg, filesetTypeCount, filesetBktCount, filesetAllCount))
+				#filesetConCount = self.out.selectScalar("SELECT count(*) FROM dbp.bible_fileset_connections WHERE")
+			print(bucket, typeCode, bibleId, filesetId, "%s  %s" % (bibleMsg, filesetMsg))
+			#manually verify the remaining extras.  But, document somehow
+
+
+
 config = Config()
 analysis = IdAnalysis(config)
 #analysis.createAnalysisBucket()
@@ -244,7 +286,8 @@ analysis = IdAnalysis(config)
 #analysis.createAnalysisDBPOnly()
 #analysis.createAnalysisDBP()
 #analysis.createDiffViews()
-analysis.analyzeLPTSMismatches()
+#analysis.analyzeLPTSMismatches()
+analysis.analyzeDBPMismatches()
 analysis.close()
 
 
