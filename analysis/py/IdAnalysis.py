@@ -237,6 +237,7 @@ class IdAnalysis:
 
 
 	def analyzeDBPMismatches(self):
+		finalResults = []
 		dbpAbsentees = self.out.select("SELECT * FROM in_buckets_not_in_dbp_diff_bible_fileset", None)
 		for dbpAbsent in dbpAbsentees:
 			filesetId = dbpAbsent[0]
@@ -245,35 +246,69 @@ class IdAnalysis:
 			bucket = dbpAbsent[3]
 			typeCd = typeCode.split("_")[0]
 			#print(bucket, "%s/%s/%s/" % (typeCd, bibleId, filesetId)) # manually check in buckets
-			biblesCount = self.out.selectScalar("SELECT count(*) FROM dbp.bibles WHERE id=%s", (bibleId))
-			biblesConCount = self.out.selectScalar("SELECT count(*) FROM dbp.bible_fileset_connections WHERE bible_id=%s", (bibleId))
+			bibles = self.out.select("SELECT * FROM dbp.bibles WHERE id=%s", (bibleId))
+			biblesCount = len(bibles)
+			biblesCon = self.out.select("SELECT * FROM dbp.bible_fileset_connections WHERE bible_id=%s", (bibleId))
+			biblesConCount = len(biblesCon)
 			if biblesCount == 0 and biblesConCount == 0:
-				bibleMsg = "bible_id not in DBP"
+				bibleMsg = "not in DBP"
 			elif biblesCount == 0 and biblesConCount > 0:
-				bibleMsg = "bible_id in connections, not bibles"
+				bibleMsg = "in bible_fileset_connections, not bibles"
 			elif biblesCount > 0 and biblesConCount == 0:
-				bibleMsg = "bible_id not in connections"
+				bibleMsg = "in bibles, not in bible_fileset_connections"
 			else:
 				bibleMsg = ""
-			filesetIdCount = self.out.selectScalar("SELECT count(*) FROM dbp.bible_filesets WHERE id=%s", (filesetId))
+			filesetIds = self.out.select("SELECT * FROM dbp.bible_filesets WHERE id=%s", (filesetId))
+			filesetIdCount = len(filesetIds)
 			if filesetIdCount == 0:
-				filesetMsg = "fileset_id not in DBP"
+				filesetMsg = "not in DBP"
 			else:
-				filesetMsg = ""
-				filesetTypeCount = self.out.selectScalar("SELECT count(*) FROM dbp.bible_filesets WHERE id=%s AND set_type_code=%s", (filesetId, typeCode))
-				filesetBktCount = self.out.selectScalar("SELECT count(*) FROM dbp.bible_filesets WHERE id=%s AND asset_id=%s", (filesetId, bucket))
-				filesetAllCount = self.out.selectScalar("SELECT count(*) FROM dbp.bible_filesets WHERE id=%s AND asset_id=%s AND set_type_code=%s", (filesetId, bucket, typeCode))
+				filesetType = self.out.select("SELECT * FROM dbp.bible_filesets WHERE id=%s AND set_type_code=%s", (filesetId, typeCode))
+				filesetTypeCount = len(filesetType)
+				filesetBkt = self.out.select("SELECT * FROM dbp.bible_filesets WHERE id=%s AND asset_id=%s", (filesetId, bucket))
+				filesetBktCount = len(filesetBkt)
+				filesetAll = self.out.select("SELECT * FROM dbp.bible_filesets WHERE id=%s AND asset_id=%s AND set_type_code=%s", (filesetId, bucket, typeCode))
+				filesetAllCount = len(filesetAll)
 				if filesetTypeCount > 0 and filesetBktCount == 0:
-					filesetMsg = "fileset in wrong bucket"
+					buckets = []
+					for row in filesetType:
+						buckets.append(row[2])
+					filesetMsg = "DBP has fileset in %s" % (",".join(buckets))
 				elif filesetTypeCount == 0 and filesetBktCount > 0:
-					filesetMsg = "fileset has wrong type"
+					types = []
+					for row in filesetBkt:
+						types.append(row[3])
+					filesetMsg = "DBP has fileset as %s" % (",".join(types))
 				elif filesetAllCount > 0:
-					filesetMsg = "fileset/connections mismatch"
+					hashId = filesetAll[0][1]
+					matchBibles = self.out.select("SELECT * from dbp.bible_fileset_connections WHERE hash_id=%s", (hashId))
+					#print(matchBibles)
+					mismatchBibles = []
+					for row in matchBibles:
+						mismatchBibles.append(row[1])
+					filesetMsg = "bible_fileset_connections has bible_id %s" % (",".join(mismatchBibles))
 				else:
-					"PUNT"
-				print(bucket, typeCode, bibleId, filesetId, "%s  filesetType: %d  filesetBkt: %d  filesetAll: %d" % (bibleMsg, filesetTypeCount, filesetBktCount, filesetAllCount))
+					filesetMsg = "PUNT"
+				#print(bucket, typeCode, bibleId, filesetId, "%s  filesetType: %d  filesetBkt: %d  filesetAll: %d" % (bibleMsg, filesetTypeCount, filesetBktCount, filesetAllCount))
 				#filesetConCount = self.out.selectScalar("SELECT count(*) FROM dbp.bible_fileset_connections WHERE")
 			print(bucket, typeCode, bibleId, filesetId, "%s  %s" % (bibleMsg, filesetMsg))
+			finalResults.append([filesetId, bibleId, typeCode, bucket, bibleMsg, filesetMsg])
+		self.out.execute("DROP TABLE IF EXISTS dbp_errors", None)
+		sql = ("CREATE TABLE dbp_errors ("
+				+ " fileset_id varchar(255) not null,"
+				+ " bible_id varchar(255) not null,"
+				+ " type_code varchar(255) not null,"	
+				+ " bucket varchar(255) not null,"
+				+ " bible_id_error varchar(255) null,"
+				+ " fileset_id_error varchar(255) null,"
+				+ " PRIMARY KEY(fileset_id, bible_id, type_code, bucket))")
+		self.out.execute(sql, None)
+		self.out.executeBatch("INSERT INTO dbp_errors VALUES (%s, %s, %s, %s, %s, %s)", finalResults)
+
+
+
+
+
 			#manually verify the remaining extras.  But, document somehow
 
 
