@@ -28,24 +28,28 @@ class BibleFilesetsTable:
 		print("num verse filesets %d" % (len(self.verseFilesets)))
 
 
-	def assetId(self, fileset):
-		return fileset[1]
-
-
-	def setTypeCode(self, fileset):
-		typeCode = fileset[2]
+	def setTypeCode(self, filesetId, typeCode):
 		if typeCode == "app":
 			return "app"
 		elif typeCode == "audio":
-			damId = fileset[0]
-			code = damId[7:10]
-			if code == "1DA":
+			code = filesetId[7:9]
+			if code == "1D":
 				return "audio"
-			elif code == "2DA":
+			elif code == "2D":
 				return "audio_drama"
 			else:
-				print("WARNING: file type not known for %s fileset is dropped" % (damId))
-				return None
+				code = filesetId[8:10]
+				if code == "1D":
+					return "audio"
+				elif code == "2D":
+					return "audio_drama"
+				elif filesetId == "N1TUVDPI":
+					return "audio"
+				elif filesetId == "O1TUVDPI":
+					return "audio"
+				else:
+					print("WARNING: file type not known for %s, set_type_code set to 'unknown'" % (filesetId))
+					return = "unknown"
 		elif typeCode == "text":
 			return "text_format"
 		elif typeCode == "video":
@@ -83,9 +87,11 @@ results = []
 
 for fileset in bible.filesets:
 	filesetId = fileset[0]
-	#print(filesetId)
-	assetId = bible.assetId(fileset)
-	setTypeCode = bible.setTypeCode(fileset)
+	bucket = fileset[1]
+	typeCode = fileset[2]
+
+	assetId = bucket
+	setTypeCode = bible.setTypeCode(filesetId, typeCode)
 	if setTypeCode != None:
 		hashId = bible.hashId(assetId, filesetId, setTypeCode)
 		setSizeCode = bible.setSizeCode()
@@ -94,7 +100,7 @@ for fileset in bible.filesets:
 
 for filesetId in bible.verseFilesets:
 	#print(filesetId)
-	assetId = config.s3_bucket
+	assetId = config.s3_bucket # This is not correct, but it is historically consistent
 	setTypeCode = "text_plain"
 	hashId = bible.hashId(assetId, filesetId, setTypeCode)
 	setSizeCode = bible.setSizeCode()
