@@ -25,19 +25,19 @@ import sys
 from Config import *
 from BucketReader import *
 from VersesReader import *
-from LPTSExtractReader import *
 from SQLUtility import *
+from LPTSExtractReader import *
 from LookupTables import *
 
 class BiblesTable:
 
 	def __init__(self, config):
 		bucket = BucketReader(config)
-		#self.bibleIds = bucket.bibleIds()
 		bucketBibleIds = set(bucket.bibleIds())
 		verse = VersesReader(config)
 		verseBibleIds = set(verse.bibleIds())
 		self.bibleIds = sorted(list(bucketBibleIds.union(verseBibleIds)))
+		print("num bibleIds  bucket: %d  verse: %d  verse+bucket: %d" % (len(bucketBibleIds), len(verseBibleIds), len(self.bibleIds)))
 		self.inputDB = SQLUtility(config.database_host, config.database_port,
 			config.database_user, config.database_input_db_name)
 		reader = LPTSExtractReader(config)
@@ -45,44 +45,40 @@ class BiblesTable:
 		print("num bibles in map", len(self.bibleMap.keys()))
 
 
-	def languageId(self, bible):
-		result = 7946 # Null is not allowed THIS SHOULD BE A VALIDATION WARNING
-		iso = bible.ISO()
-		langName = bible.LangName()
-		#print("doing languageId", bibleId, iso, langName)
-		#result = self.inputDB.selectScalar("SELECT l.id FROM languages l,language_translations t WHERE l.iso=%s AND t.name=%s AND l.id=t.language_source_id", (iso, langName))
-		result = self.inputDB.selectScalar("SELECT id FROM languages WHERE iso=%s AND name=%s", (iso, langName))
-		if result == None:
-			result = self.inputDB.selectScalar("SELECT id FROM languages WHERE iso=%s", (iso))
-		return result
+	def languageId(self, bibleId, bible):
+		result = None
+		if bible != None:
+			iso = bible.ISO()
+			langName = bible.LangName()
+			#result = self.inputDB.selectScalar("SELECT l.id FROM languages l,language_translations t WHERE l.iso=%s AND t.name=%s AND l.id=t.language_source_id", (iso, langName))
+			result = self.inputDB.selectScalar("SELECT id FROM languages WHERE iso=%s AND name=%s", (iso, langName))
+			if result != None:
+				return result
+		else:
+			iso = bibleId[:3].lower()
+		result = self.inputDB.selectScalar("SELECT id FROM languages WHERE iso=%s", (iso))
+		if result != None:
+			return result
+		else:
+			return "7946" # Null is not allowed THIS SHOULD BE A VALIDATION WARNING
 
 
 	def versification(self, bible):
-		#print("versification")
 		result = 'protestant'
 		return result
 		# ask alan for source 9/16/19
 
 
-	def numeralSystemId(self, bible):
-		# associating this with Bible is incorrect, because there could be multiple
-		# damIds with different scripts
-		result = 'western-arabic' # this default value is not found in the alphabet_numeral_systems table
-		script = bible.x0031_Orthography()
-		if script == None:
-			script = bible.x0032_Orthography()
-			if script == None:
-				script = bible.x0033_Orthography()
-		if script != None:
-			lookup = LookupTables()
-			scriptCode = lookup.scriptCode(script)
-			if scriptCode == None:
-				print("ERROR: missing script code for %s" % scriptCode)
-				sys.exit()
-			ans = self.inputDB.selectScalar("SELECT numeral_system_id FROM alphabet_numeral_systems WHERE script_id=%s", (scriptCode))
-			result = ans if ans != None else 'western-arabic'
-			# note this query returns multiple rows for Arab and Deva, I dont know which is correct
-		return result
+	def numeralSystemId(self, script):
+		## associating this with Bible is incorrect, because there could be multiple
+		## damIds with different scripts
+		result = None
+		result = self.inputDB.selectScalar("SELECT numeral_system_id FROM alphabet_numeral_systems WHERE script_id=%s", (script))
+		## note this query returns multiple rows for Arab and Deva, I dont know which is correct
+		if result != None:
+			return result
+		else:
+			return 'western-arabic' ## this default value is not found in the alphabet_numeral_systems table
 
 
 	def date(self, bible):
@@ -98,16 +94,20 @@ class BiblesTable:
 
 
 	def script(self, bible):
-		result = 'Zzzz' # cannot be null, THIS SHOULD BE A VALIDATION WARNING
-		script = bible.x0031_Orthography()
-		if script == None:
-			script = bible.x0032_Orthography()
+		result = None
+		if bible != None:
+			script = bible.x0031_Orthography()
 			if script == None:
-				script = bible.x0033_Orthography()
-		if script != None:
-			lookup = LookupTables()
-			result = lookup.scriptCode(script)
-		return result
+				script = bible.x0032_Orthography()
+				if script == None:
+					script = bible.x0033_Orthography()
+			if script != None:
+				lookup = LookupTables()
+				result = lookup.scriptCode(script)
+		if result != None:
+			return result
+		else:
+			return 'Zzzz' # cannot be null, THIS SHOULD BE A VALIDATION WARNING
 
 
 	def derived(self, bible):
@@ -118,12 +118,13 @@ class BiblesTable:
 
 	def copyright(self, bible):
 		result = None
-		copyc = bible.Copyrightc()
-		if len(copyc) > 191:
-			result = copyc[:190]
-			print("WARNING: Copyright truncated for %s" % (bible.DBP_Equivalent()))
-		else:
-			result = copyc
+		if bible != None:
+			copyc = bible.Copyrightc()
+			if len(copyc) > 191:
+				result = copyc[:190]
+				print("WARNING: Copyright truncated for %s" % (bible.DBP_Equivalent()))
+			else:
+				result = copyc
 		return result
 
 
@@ -146,28 +147,26 @@ class BiblesTable:
 
 config = Config()
 bibles = BiblesTable(config)
-print("num bibles in dbp-prod", len(bibles.bibleIds))
+print("num bibles in dbp-prod + verses", len(bibles.bibleIds))
 results = []
 for bibleId in bibles.bibleIds:
 	bible = bibles.bibleMap.get(bibleId)
-	if bible != None:
-		lang = bibles.languageId(bible)
-		verse = bibles.versification(bible)
-		numeral = bibles.numeralSystemId(bible)
-		date = bibles.date(bible)
-		scope = bibles.scope(bible)
-		script = bibles.script(bible)
-		derived = bibles.derived(bible)
-		copyright = bibles.copyright(bible)
-		priority = bibles.priority(bible)
-		reviewed = bibles.reviewed(bible)
-		notes = bibles.notes(bible)
-		results.append((bibleId, lang, verse, numeral, date, scope, script, derived, copyright, 
-			priority, reviewed, notes))
-	else:
-		print("WARNING LPTS has no record for %s" % (bibleId))
+	lang = bibles.languageId(bibleId, bible)
+	verse = bibles.versification(bible)
+	date = bibles.date(bible)
+	scope = bibles.scope(bible)
+	script = bibles.script(bible)
+	numeral = bibles.numeralSystemId(script)
+	derived = bibles.derived(bible)
+	copyright = bibles.copyright(bible)
+	priority = bibles.priority(bible)
+	reviewed = bibles.reviewed(bible)
+	notes = bibles.notes(bible)
+	results.append((bibleId, lang, verse, numeral, date, scope, script, derived, copyright, 
+		priority, reviewed, notes))
 
 bibles.inputDB.close()
+print("num bibles to be inserted: %d" % (len(results)))
 outputDB = SQLUtility(config.database_host, config.database_port,
 			config.database_user, config.database_output_db_name)
 outputDB.executeBatch("INSERT INTO bibles (id, language_id, versification, numeral_system_id, `date`, scope, script, derived, copyright, priority, reviewed, notes) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", results)
