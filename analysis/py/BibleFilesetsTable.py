@@ -49,7 +49,7 @@ class BibleFilesetsTable:
 					return "audio"
 				else:
 					print("WARNING: file type not known for %s, set_type_code set to 'unknown'" % (filesetId))
-					return = "unknown"
+					return "unknown"
 		elif typeCode == "text":
 			return "text_format"
 		elif typeCode == "video":
@@ -100,7 +100,7 @@ for fileset in bible.filesets:
 
 for filesetId in bible.verseFilesets:
 	#print(filesetId)
-	assetId = config.s3_bucket # This is not correct, but it is historically consistent
+	assetId = "dbp-verses" # Should this be in config.xml somewhere?
 	setTypeCode = "text_plain"
 	hashId = bible.hashId(assetId, filesetId, setTypeCode)
 	setSizeCode = bible.setSizeCode()
