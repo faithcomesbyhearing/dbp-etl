@@ -19,6 +19,8 @@
 # description      | text             | YES  |     | NULL              |                             |
 # background       | text             | YES  |     | NULL              |                             |
 # notes            | text             | YES  |     | NULL              |                             |
+#
+# This table has no unique logical key.  bible_id, language_id, vernacular is close to unique.
 
 
 import io
