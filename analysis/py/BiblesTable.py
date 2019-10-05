@@ -32,15 +32,18 @@ from LookupTables import *
 class BiblesTable:
 
 	def __init__(self, config):
-		bucket = BucketReader(config)
+		self.config = config
+
+	def readAll(self):
+		bucket = BucketReader(self.config)
 		bucketBibleIds = set(bucket.bibleIds())
-		verse = VersesReader(config)
+		verse = VersesReader(self.config)
 		verseBibleIds = set(verse.bibleIds())
 		self.bibleIds = sorted(list(bucketBibleIds.union(verseBibleIds)))
 		print("num bibleIds  bucket: %d  verse: %d  verse+bucket: %d" % (len(bucketBibleIds), len(verseBibleIds), len(self.bibleIds)))
-		self.inputDB = SQLUtility(config.database_host, config.database_port,
-			config.database_user, config.database_input_db_name)
-		reader = LPTSExtractReader(config)
+		self.inputDB = SQLUtility(self.config.database_host, self.config.database_port,
+			self.config.database_user, self.config.database_input_db_name)
+		reader = LPTSExtractReader(self.config)
 		self.bibleMap = reader.getBibleIdMap()
 		print("num bibles in map", len(self.bibleMap.keys()))
 
@@ -147,6 +150,7 @@ class BiblesTable:
 
 config = Config()
 bibles = BiblesTable(config)
+bibles.readAll()
 print("num bibles in dbp-prod + verses", len(bibles.bibleIds))
 results = []
 for bibleId in bibles.bibleIds:

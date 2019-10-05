@@ -20,10 +20,13 @@ class BibleFilesetsTable:
 
 	def __init__(self, config):
 		self.config = config
-		bucket = BucketReader(config)
+
+
+	def readAll(self):
+		bucket = BucketReader(self.config)
 		self.filesets = bucket.filesets()
 		print("num filesets %d" % (len(self.filesets)))
-		verseReader = VersesReader(config)
+		verseReader = VersesReader(self.config)
 		self.verseFilesets = verseReader.filesetIds()
 		print("num verse filesets %d" % (len(self.verseFilesets)))
 
@@ -83,6 +86,7 @@ class BibleFilesetsTable:
 
 config = Config()
 bible = BibleFilesetsTable(config) 
+bible.readAll()
 results = []
 
 for fileset in bible.filesets:

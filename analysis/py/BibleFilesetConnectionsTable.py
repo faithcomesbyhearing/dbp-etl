@@ -20,8 +20,10 @@ class BibleFilesetConnectionsTable:
 
 	def __init__(self, config):
 		self.config = config
-		validDB = SQLUtility(config.database_host, config.database_port,
-			config.database_user, config.database_output_db_name)
+
+	def readAll(self):
+		validDB = SQLUtility(self.config.database_host, self.config.database_port,
+			self.config.database_user, self.config.database_output_db_name)
 		self.filesetList = validDB.select("SELECT id, set_type_code, hash_id FROM bible_filesets", None)
 		print("num filesets in bible_filesets %d" % (len(self.filesetList)))
 		self.appMap = validDB.selectMapList("SELECT distinct fileset_id, bible_id FROM bucket_listing WHERE type_code = 'app'", None)
@@ -36,6 +38,7 @@ class BibleFilesetConnectionsTable:
 
 config = Config()
 connects = BibleFilesetConnectionsTable(config)
+connects.readAll()
 results = []
 
 for row in connects.filesetList:
