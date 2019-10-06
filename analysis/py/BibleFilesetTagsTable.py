@@ -21,8 +21,11 @@ class BibleFilesetTagsTable:
 
 	def __init__(self, config):
 		self.config = config
-		self.validDB = SQLUtility(config.database_host, config.database_port,
-			config.database_user, config.database_output_db_name)
+
+
+	def readAll(self):
+		self.validDB = SQLUtility(self.config.database_host, self.config.database_port,
+			self.config.database_user, self.config.database_output_db_name)
 		self.filesetList = self.validDB.select("SELECT id, set_type_code, hash_id FROM bible_filesets", None)
 		reader = LPTSExtractReader(config)
 		self.audioMap = reader.getAudioMap()
@@ -34,29 +37,28 @@ class BibleFilesetTagsTable:
 
 
 	def description(self, filesetId, typeCode, name):
-		if typeCode == "aud":
-			record = self.audioMap[filesetId[:10]]
+		result = None
+		if typeCode == "aud" or typeCode == "app":
+			record = self.audioMap.get(filesetId[:10])
 		elif typeCode == "tex":
-			record = self.textMap[filesetId]
+			record = self.textMap.get(filesetId)
 		elif typeCode == "vid":
-			record = self.videoMap[filesetId]
+			record = self.videoMap.get(filesetId)
 		else:
+			print("ERROR: Invalid type_code %s" % (typeCode))
 			sys.exit()
 
 		if name == "bitrate":
 			if typeCode == "aud":
 				if filesetId[-2:] == "16":
-					return "16kbps"
+					result = "16kbps"
 				else:
-					return "64kbps"
-			else:
-				return None
-		elif name == "sku":
-			return record.Reg_StockNumber()
-		elif name == "volume":
-			return record.Volumne_Name()
-		else:
-			sys.exit()
+					result = "64kbps"
+		elif name == "sku" and record != None:
+			result = record.Reg_StockNumber()
+		elif name == "volume" and record != None:
+			result = record.Volumne_Name()
+		return result
 
 
 	def adminOnly(self):
@@ -77,6 +79,7 @@ class BibleFilesetTagsTable:
 
 config = Config()
 filesets = BibleFilesetTagsTable(config) 
+filesets.readAll()
 results = []
 
 for fileset in filesets.filesetList:
