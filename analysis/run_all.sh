@@ -11,18 +11,18 @@ python3 py/BibleFilesetsTable.py
 # 3728 9/24
 # 3749 9/24
 # 6480 10/1
-# 6484 10/3 verified
+# 6484 10/3 verified count
 
 python3 py/BiblesTable.py
 # 1397 9/24
 # 1398 9/24
 # 1797 10/1
-# 2236 10/4 verified
+# 2236 10/4 verified count
 
 python3 py/BibleFilesetConnectionsTable.py
 # 3779 9/24
 # 3802 9/24
-# 6543 10/5 verified
+# 6543 10/5 verified count
 
 python3 py/BibleTranslationsTable.py
 # 1397 9/24
@@ -32,6 +32,7 @@ python3 py/BibleTranslationsTable.py
 python3 py/BibleFilesetCopyrightsTable.py
 # 3728 9/24
 # 3749 9/24
+# 6484 10/5 verified count
 
 python3 py/BibleFilesetCopyrightOrganizationsTable.py
 # 3728 9/24
