@@ -37,6 +37,7 @@ python3 py/BibleFilesetCopyrightsTable.py
 python3 py/BibleFilesetCopyrightOrganizationsTable.py
 # 3728 9/24
 # 3749 9/24
+# 6484 10/5 not correct, multiples expected.
 
 python3 py/BibleFilesetTagsTable.py
 # 10704 9/24

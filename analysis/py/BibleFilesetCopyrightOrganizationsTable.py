@@ -9,7 +9,6 @@
 import io
 import os
 import sys
-#import hashlib
 from Config import *
 from LPTSExtractReader import *
 from SQLUtility import *
@@ -18,8 +17,11 @@ class BibleFilesetCopyrightOrganizationsTable:
 
 	def __init__(self, config):
 		self.config = config
-		self.validDB = SQLUtility(config.database_host, config.database_port,
-			config.database_user, config.database_output_db_name)
+
+
+	def readAll(self):
+		self.validDB = SQLUtility(self.config.database_host, self.config.database_port,
+			self.config.database_user, self.config.database_output_db_name)
 		self.filesetList = self.validDB.select("SELECT id, set_type_code, hash_id FROM bible_filesets", None)
 		self.orgNameMap = self.validDB.selectMap("SELECT name, organization_id FROM organization_translations", None)
 		reader = LPTSExtractReader(config)
@@ -30,16 +32,25 @@ class BibleFilesetCopyrightOrganizationsTable:
 		self.videoMap = reader.getVideoMap()
 		print("num video filesets in LPTS", len(self.videoMap.keys()))
 
+
 	def organization(self, filesetId, typeCode):
 		result = []
+		copyright = None
 		# problem: self.orgNameMap can have multiple id's for the same name, but they differ in languageId
-		if typeCode == "aud":
-			copyright = self.audioMap[filesetId[:10]].Copyrightp()
+		if typeCode == "aud" or typeCode == "app":
+			record = self.audioMap.get(filesetId[:10])
+			if record != None:
+				copyright = record.Copyrightp()
 		elif typeCode == "tex":
-			copyright = self.textMap[filesetId].Copyrightc()
+			record = self.textMap.get(filesetId)
+			if record != None:
+				copyright = record.Copyrightc()
 		elif typeCode == "vid":
-			copyright = self.videoMap[filesetId].Copyright_Video()
+			record = self.videoMap.get(filesetId)
+			if record != None:
+				copyright = record.Copyright_Video()
 		else:
+			print("ERROR: Invalid type_code %s" % (typeCode))
 			sys.exit()
 		if copyright != None:
 			orgId = self.orgNameMap.get(copyright)
@@ -58,7 +69,8 @@ class BibleFilesetCopyrightOrganizationsTable:
 
 
 config = Config()
-filesets = BibleFilesetCopyrightOrganizationsTable(config) 
+filesets = BibleFilesetCopyrightOrganizationsTable(config)
+filesets.readAll()
 results = []
 
 for fileset in filesets.filesetList:
