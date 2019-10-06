@@ -42,6 +42,7 @@ python3 py/BibleFilesetCopyrightOrganizationsTable.py
 python3 py/BibleFilesetTagsTable.py
 # 10704 9/24
 # 10759 9/24
+# 15348 10/5 seems correct, but not proven
 
 python3 py/AccessGroupFilesetsTable.py
 # 3686 9/24
