@@ -2,10 +2,10 @@
 <dbp_etl>
  <database>
   <host>127.0.0.1</host>
-  <user>root</user>
-  <input_db_name>dbp</input_db_name>
+  <user>api_node_dbp</user>
+  <input_db_name>dev_190614</input_db_name>
   <output_db_name>valid_dbp</output_db_name>
-  <port>3306</port>
+  <port>3320</port>
  </database>
  <s3>
   <bucket>dbp-prod</bucket>
