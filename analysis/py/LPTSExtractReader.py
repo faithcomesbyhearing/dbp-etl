@@ -242,6 +242,9 @@ class LPTSRecord:
 		else:
 			return result
 
+	def CreativeCommonsText(self):
+		return self.record.get("CreativeCommonsText")
+
 	def CreativeCommonsAudioWaiver(self):
 		return self.record.get("CreativeCommonsAudioWaiver")
 

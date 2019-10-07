@@ -13,6 +13,17 @@
   <aws_profile>Gary</aws_profile>
   <!-- <aws_profile>FCBH_BibleApp</aws_profile> -->
 </s3>
+<permission>
+  <public_domain>2</public_domain>
+  <fcbh_general>3</fcbh_general>
+  <fcbh_web>4</fcbh_web>
+  <fcbh_general_exclude>5</fcbh_general_exclude>
+  <dbs_general>6</dbs_general>
+  <restricted>7</restricted>
+  <gideons_hide>8</gideons_hide>
+  <fcbh_hub>9</fcbh_hub>
+  <bibleis_hide>10</bibleis_hide>
+</permission>
  <directory>
   <lpts_xml>../input/qry_dbp4_Regular_and_NonDrama.xml</lpts_xml>
   <bucket_list>/Users/garygriswold/FCBH/bucket_data/%s.txt</bucket_list>

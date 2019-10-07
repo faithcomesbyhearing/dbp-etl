@@ -21,8 +21,11 @@ class BibleFileTagsTable:
 
 	def __init__(self, config):
 		self.config = config
-		self.validDB = SQLUtility(config.database_host, config.database_port,
-			config.database_user, config.database_output_db_name)
+
+
+	def readAll(self):
+		self.validDB = SQLUtility(self.config.database_host, self.config.database_port,
+			self.config.database_user, self.config.database_output_db_name)
 		sql = ("SELECT s.asset_id, b.bible_id, s.id, f.file_name, f.id" +
 			" FROM bible_files f, bible_filesets s, bible_fileset_connections b" +
 			" WHERE f.hash_id = s.hash_id" + 
@@ -31,7 +34,7 @@ class BibleFileTagsTable:
 			" AND s.set_type_code IN ('audio', 'audio_drama')")
 		self.filePathResults = self.validDB.select(sql, None)
 		print("num %d files in result table" % (len(self.filePathResults)))
-		self.s3 = S3Utility(config)
+		self.s3 = S3Utility(self.config)
 
 
 	def fileId(self, row):
@@ -64,6 +67,7 @@ class BibleFileTagsTable:
 
 config = Config()
 tags = BibleFileTagsTable(config) 
+tags.readAll()
 results = []
 
 for file in tags.filePathResults:
@@ -77,6 +81,7 @@ for file in tags.filePathResults:
 
 print("num records to insert %d" % (len(results)))
 tags.validDB.close()
+sys.exit()
 outputDB = SQLUtility(config.database_host, config.database_port,
 			config.database_user, config.database_output_db_name)
 outputDB.executeBatch("INSERT INTO bible_file_tags (file_id, tag, value, admin_only) VALUES (%s, %s, %s, %s)", results)
