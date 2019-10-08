@@ -5,7 +5,9 @@ import re
 from Config import *
 from SQLUtility import *
 import glob
+import subprocess
 import ffmpeg
+import ffmpy
 
 class dbConnection:
 
@@ -39,12 +41,15 @@ class hls:
 				"JOIN bible_filesets fs ON fs.hash_id=bf.hash_id " \
 				"WHERE fs.id=\'"+ self.filesetid +"\' " \
 				"AND book_id=\'"+ book +"\' AND chapter_start="+ chap
-			start_times = db.selectList(sql, None)
+			times = db.selectList(sql, None)
+			start_times = ','.join(map(str,times))
 			# TODO: sanity-check result, eg non-empty list, sequential verse numbers
 		return start_times
 
 ## initialize
 mp3Regex = re.compile('.*B\d+___(\d+)_([A-Za-z+]*)') # matches: chapter, bookname
+basenameRegex = re.compile('(.+)\.mp3') # matches: chapter, bookname
+bitrateRE = re.compile(".*bit_rate=(\d+)")
 books = { "Matthew" : "MAT"} # TODO: get full book list
 config = Config()
 db = dbConnection(config).cursor
@@ -57,14 +62,19 @@ inputBibles = [ hls('ENGESV','ENGESVN2DA') ]
 for bible in inputBibles:
 	## identify mp3s and timings (get from S3 and DB if needed?)
 	for mp3 in bible.get_mp3s():
-		try:
 			verse_start_times = bible.get_verse_start_times(mp3)
+			basename = basenameRegex.match(mp3).group(1)
 			## make HLS segments
-			foo = 'bar'
-			## generate SQL
+			for bitrate in ["16k", "32k", "64k"]:
+				s = subprocess.run("ffmpeg -i "+ mp3 +"-f segment -segment_times "+ verse_start_times +" -acodec aac -segment_list_type m3u8 -b:a "+ bitrate +" B01___01_Matthew_____ENGESVN2DA_"+ bitrate +"_%03d.ts", shell=True, capture_output=True)
+				# TODO: verify success
 
-		except Exception as err:
-			print("FAILED to process "+ mp3)
+				## generate SQL
+				for segment in glob.glob(basename +"_"+ bitrate +"_*.ts"):
+					s = subprocess.run("ffprobe -v error -select_streams a -show_entries stream=bit_rate -of default=noprint_wrappers=1 "+segment, shell=True, capture_output=True)
+					m = bitrateRE.match(str(s.stdout))
+					actual_bitrate = int(m.group(1))
+
 
 	## upload segments to S3
 	## insert into DB
