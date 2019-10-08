@@ -38,9 +38,10 @@ class SQLUtility:
 	def executeBatch(self, statement, valuesList):
 		cursor = self.conn.cursor()
 		try:
-			cursor.execute("BEGIN", None)
-			for value in valuesList:
-				cursor.execute(statement, value)
+			#cursor.execute("BEGIN", None)
+			#for value in valuesList:
+			#	cursor.execute(statement, value)
+			cursor.executemany(statement, valuesList)
 			self.conn.commit()
 			cursor.close()
 		except Exception as err:

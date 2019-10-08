@@ -45,7 +45,9 @@ class BucketReader:
 	def filenames(self, typeCode):
 		db = SQLUtility(self.config.database_host, self.config.database_port,
 				self.config.database_user, self.config.database_output_db_name)
-		filenameList = db.selectMapList("SELECT fileset_id, file_name FROM bucket_listing WHERE length(file_name) > 16 and type_code = %s", (typeCode))
+		#Can I control the order of the files?
+		#filenameList = db.selectMapList("SELECT fileset_id, file_name FROM bucket_listing WHERE length(file_name) > 16 and type_code = %s", (typeCode))
+		filenameList = db.selectMapList("SELECT fileset_id, file_name FROM bucket_listing WHERE type_code = %s", (typeCode))
 		db.close()
 		print("num in bucket %s" % (len(filenameList.keys())))
 		return filenameList
