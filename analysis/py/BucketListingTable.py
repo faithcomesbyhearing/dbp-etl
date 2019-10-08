@@ -165,7 +165,27 @@ bucket.insertBucketList("dbp-prod")
 bucket.insertBucketList("dbp-vid")
 #bucket.insertBucketList("dbs-web")
 
+"""
+AUDIO BOOK_ID ERRORS
+SNMNVSP1DA16 contain USFM code in 2nd term with underscore split
+Genesis only
 
+SNMNVSP1DA contains ‘Genesis in 4th term with underscore split
+Genesis only
+
+NHXNTVS1DA16 contains book names in spanish
+NHXNTVS1DA same
+
+KFTNIES2DA16 contains book name in english in 5th term
+
+ENGNABC1DA contains out of sequence Ann codes
+micah is A40, Malachi is A46
+has english names in 3rd term
+
+GRKEPTO1DA contains out of sequence Ann codes
+A51 is 4 Macabees, A40 is Haggai
+has english names in 3rd term
+"""
 
 
 				

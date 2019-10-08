@@ -91,9 +91,10 @@ class LookupTables:
 			"A39": "MAL"}
 		return seqDict.get(seqCode)
 
-
+	# This should replaced with a query to table books after more is added
 	def bookIdBy2Char(self, twoCharCode):
 		twoCharDict = {
+			# New Testament
 			"MT": "MAT",
 			"MK": "MRK",
 			"LK": "LUK",
@@ -121,6 +122,7 @@ class LookupTables:
 			"J3": "3JN",
 			"JD": "JUD",
 			"RV": "REV",
+			# Old Testament
 			"GN": "GEN",
 			"EX": "EXO",
 			"LV": "LEV",
@@ -159,8 +161,50 @@ class LookupTables:
 			"ZP": "ZEP",
 			"HG": "HAG",
 			"ZC": "ZEC",
-			"ML": "MAL"}
+			"ML": "MAL",
+			# Apocrypha
+			"E1": "1ES", # 3 Esdras
+			"E2": "2ES", # 4 Esdras
+			"M1": "1MA", # 1 Maccabees
+			"M2": "2MA", # 2 Maccabees
+			"M3": "3MA", # 3 Maccabees
+			"M4": "4MA", # 4 Maccabees
+			"BR": "BAR", # First book of Baruch
+			"BL": "BEL", # Rest of Daniel
+			"DG": "DAG", # Daniel 14
+			"EG": "ESG", # Greek Esther
+			"JT": "JDT", # Judith
+			#"LJ": None, # Apocryphal something
+			#"PA": None, # Apocryphal something
+			#"PN": None, # Apocryphal something
+			"PX": "PS2", # Psalms 152
+			"SR": "SIR", # Sirach
+			"SN": "SUS", # Greek Daniel
+			"TB": "TOB", # Tobit
+			"WS": "WIS", # Wisdom of Solomon
+			# USFM Peripheral Book Codes
+			"FR": "FRT", # Front Matter
+			"IN": "INT", # Introduction
+			"BK": "BAK", # Back Matter
+			"CN": "CNC", # Concordance
+			"GS": "GLO", # Glossary
+			"TX": "TDX", # Topical Index
+			"OH": "OTH", # Other
+			"XA": "XXA", #
+			"XB": "XXB", #
+			"XC": "XXC", #
+			"XD": "XXD", #
+			"XE": "XXE", #
+			"XF": "XXF", #
+			"XG": "XXG" #
+			}
 		return twoCharDict.get(twoCharCode)
+
+
+
+
+
+
 
 
 

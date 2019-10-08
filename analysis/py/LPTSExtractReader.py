@@ -137,6 +137,12 @@ class LPTSExtractReader:
 		return resultMap	
 
 
+#
+# Should rewrite this to hide LPTS details as much as possible
+# isDBPText() -> bool
+# isCatholic() -> looks for evidence of catholic in multiple sources
+# 
+
 class LPTSRecord:
 
 	def __init__(self, record):
