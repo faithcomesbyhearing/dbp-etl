@@ -29,8 +29,10 @@ class hls:
 		# get from DB if needed
 		timingfile = glob.glob(mp3 +".timing")
 		# TODO: if timingfile exists, simply read it into an array
-		if (len(timingfile) == 0):
-			m = mp3Regex.match(mp3)
+		if (len(timingfile) != 0):
+			foo = 1
+		else:
+			m = bookChapRegex.match(mp3)
 			# TODO: don't assume match
 			chap = str(int(m.group(1))) # omit leading 0's
 			book = books[m.group(2)] # TODO: verify dictionary match
@@ -40,11 +42,22 @@ class hls:
 				"WHERE fs.id=\'"+ self.filesetid +"\' " \
 				"AND book_id=\'"+ book +"\' AND chapter_start="+ chap
 			start_times = db.selectList(sql, None)
+			startStr = ','.join(map(str, start_times))
 			# TODO: sanity-check result, eg non-empty list, sequential verse numbers
-		return start_times
+			# TODO: write to file
+		return startStr
+
+	def segments(self, mp3, times, bitrate):
+		m = basenameRegex.match(mp3)
+		basename = m.group(1)
+		s = ffmpeg.input(mp3, "-segment -segment_times "+ times +
+			" -acodec aac -segment_list_type m3u8 -b:a "+ bitrate +
+			basename +"_"+ bitrate +"_%03d.ts")
+		print(s.compile) 
 
 ## initialize
-mp3Regex = re.compile('.*B\d+___(\d+)_([A-Za-z+]*)') # matches: chapter, bookname
+bookChapRegex = re.compile('.*B\d+___(\d+)_([A-Za-z+]*)') # matches: chapter, bookname
+basenameRegex = re.compile('(.+)\.mp3') # removes .mp3 suffix
 books = { "Matthew" : "MAT"} # TODO: get full book list
 config = Config()
 db = dbConnection(config).cursor
@@ -60,7 +73,7 @@ for bible in inputBibles:
 		try:
 			verse_start_times = bible.get_verse_start_times(mp3)
 			## make HLS segments
-			foo = 'bar'
+			segments = bible.segments(mp3, verse_start_times, "16k")
 			## generate SQL
 
 		except Exception as err:
