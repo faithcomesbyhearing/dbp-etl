@@ -5,6 +5,7 @@
 import io
 import os
 import sys
+import re
 from Config import *
 from LookupTables import *
 from SQLUtility import *
@@ -15,6 +16,8 @@ class BucketListingTable:
 	def __init__(self, config):
 		self.config = config
 		self.lookup = LookupTables()
+		self.VIDEO_BOOK_SET = {"MAT","MRK","LUK","JHN"}
+		self.VIDEO_BOOK_MAP = {"Mark": "MRK", "MRKZ": "MRK", "Luke": "LUK"}
 
 
 	def createBucketTable(self):
@@ -29,7 +32,9 @@ class BucketListingTable:
 			+ " fileset_id varchar(255) not null,"
 			+ " file_name varchar(255) not null,"
 			+ " book_id char(3) NULL,"
-			+ " chapter_start varchar(255) NULL)")
+			+ " chapter_start varchar(255) NULL,"
+			+ " chapter_end varchar(255) NULL,"
+			+ " verse_start varchar(255) NULL)")
 		db.execute(sql, None)
 		db.close()
 
@@ -99,7 +104,7 @@ class BucketListingTable:
 		print("%d rows to insert" % (len(results)))
 		db = SQLUtility(self.config.database_host, self.config.database_port,
 				self.config.database_user, self.config.database_output_db_name)
-		db.executeBatch("INSERT INTO bucket_listing VALUES (%s, %s, %s, %s, %s, %s, %s)", results)
+		db.executeBatch("INSERT INTO bucket_listing VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)", results)
 		db.close()
 
 
@@ -114,7 +119,9 @@ class BucketListingTable:
 	def parseAppFilename(self, fileName):
 		bookCode = None
 		chapterStart = None
-		return (bookCode, chapterStart)
+		chapterEnd = None
+		verseStart = None
+		return (bookCode, chapterStart, chapterEnd, verseStart)
 
 
 	def parseAudioFilename(self, fileName):
@@ -127,11 +134,12 @@ class BucketListingTable:
 			if not chapterStart.isdigit():
 				bookCode = None
 				chapterStart = None
-		return (bookCode, chapterStart)
+		chapterEnd = None
+		verseStart = 1
+		return (bookCode, chapterStart, chapterEnd, verseStart)
 
 
 	def parseTextFilenames(self, fileName):
-		#bookCode = None
 		parts = fileName.split("_")
 		if len(parts) > 2:
 			bookCode = parts[2]
@@ -144,41 +152,42 @@ class BucketListingTable:
 				chapterStart = fileName[2:].strip("_")
 				if chapterStart == "":
 					chapterStart = "0"
-		return (bookCode, chapterStart)
+		chapterEnd = None
+		verseStart = 1
+		return (bookCode, chapterStart, chapterEnd, verseStart)
 
 
 	def parseVideoFilenames(self, fileName):
 		seqCode = fileName[0:3]
 		bookCode = self.lookup.bookIdBySequence(seqCode)
-		chapterStart = fileName[5:8].strip("_")	
-		if bookCode == None:
-			parts = fileName.split("_")
+		if bookCode != None:
+			chapterStart = fileName[5:8].strip("_")	
+			chapterEnd = None
+			verseStart = None
+		else:
+			chapterStart = None
+			chapterEnd = None
+			verseStart = None
+			parts = re.split("[_-]", fileName)
 			for index in range(len(parts)):
 				part = parts[index]
-				if len(part) == 3 and part in {"MAT","MRK","LUK","JHN"}:
+				if len(part) == 3 and part in self.VIDEO_BOOK_SET:
 					bookCode = part
+				elif len(part) == 4 and part in self.VIDEO_BOOK_MAP.keys():
+					bookCode = self.VIDEO_BOOK_MAP[part]
+				if bookCode != None:
 					chapterStart = parts[index + 1]
+					if chapterStart.isdigit():
+						chapterEnd = parts[index + 2]
+						verseStart = parts[index + 3]
 					break
-				if len(part) == 4:
-					if part == "Mark":
-						bookCode = "MRK"
-						chapterStart = parts[index + 1]
-						break
-					elif part == "Luke":
-						bookCode = "LUK"
-						chapterStart = parts[index + 1]
-						break
-					elif part == "MRKZ":
-						bookCode = "MRK"
-						chapterStart = parts[index + 1]
-						break
-		return (bookCode, chapterStart)
+		return (bookCode, chapterStart, chapterEnd, verseStart)
 
 
 config = Config()
 bucket = BucketListingTable(config)
 bucket.createBucketTable()
-bucket.insertBucketList("dbp-prod")
+#bucket.insertBucketList("dbp-prod")
 bucket.insertBucketList("dbp-vid")
 
 """
