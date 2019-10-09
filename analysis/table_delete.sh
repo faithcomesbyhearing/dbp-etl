@@ -13,7 +13,7 @@ delete from bible_file_tags;
 
 delete from bible_files;
 
--- delete from bible_books;
+delete from bible_books;
 
 delete from access_group_filesets;
 

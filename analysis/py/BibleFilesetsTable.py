@@ -16,6 +16,9 @@ from Config import *
 from BucketReader import *
 from VersesReader import *
 
+# legacy_asset_id was added here temporarily, and ideally should be removed for deployment
+# it was needed in order that hash_id can match between this system and dbp. GNG 10/9/19
+
 class BibleFilesetsTable:
 
 	def __init__(self, config):
@@ -29,6 +32,12 @@ class BibleFilesetsTable:
 		verseReader = VersesReader(self.config)
 		self.verseFilesets = verseReader.filesetIds()
 		print("num verse filesets %d" % (len(self.verseFilesets)))
+		sqlUtility = SQLUtility(self.config.database_host, self.config.database_port,
+			self.config.database_user, self.config.database_input_db_name)
+		self.legacyFilesetMap = sqlUtility.selectMapList("SELECT concat(id, set_type_code), asset_id FROM bible_filesets", None)
+		sqlUtility.close()
+		print("num fileset/set_type_code in dbp %d" % (len(self.legacyFilesetMap.keys())))
+
 
 
 	def setTypeCode(self, filesetId, typeCode):
@@ -64,6 +73,18 @@ class BibleFilesetsTable:
 			sys.exit()		
 
 
+	def legacyAssetId(self, filesetId, setTypeCode, assetId):
+		key = filesetId + setTypeCode
+		legacyIds = self.legacyFilesetMap.get(key)
+		if legacyIds == None:
+			print("no legacy bucket found old one returned")
+			return assetId
+		elif len(legacyIds) == 1:
+			return legacyIds[0]
+		else:
+			print("multiple Ids %s  %s  %s" % (filesetId, setTypeCode, ",".join(legacyIds)))
+			return legacyIds[0]
+
 
 	def hashId(self, bucket, filesetId, typeCode):
 		md5 = hashlib.md5()
@@ -96,25 +117,28 @@ for fileset in bible.filesets:
 
 	assetId = bucket
 	setTypeCode = bible.setTypeCode(filesetId, typeCode)
-	if setTypeCode != None:
-		hashId = bible.hashId(assetId, filesetId, setTypeCode)
-		setSizeCode = bible.setSizeCode()
-		hidden = bible.hidden()
-		results.append((filesetId, hashId, assetId, setTypeCode, setSizeCode, hidden))
-
-for filesetId in bible.verseFilesets:
-	#print(filesetId)
-	assetId = "dbp-verses" # Should this be in config.xml somewhere?
-	setTypeCode = "text_plain"
-	hashId = bible.hashId(assetId, filesetId, setTypeCode)
+	if setTypeCode == None:
+		print("ERROR: No set_type_code assigned to %s" % (filesetId))
+		sys.exit()
+	legacyAssetId = bible.legacyAssetId(filesetId, setTypeCode, assetId)
+	hashId = bible.hashId(legacyAssetId, filesetId, setTypeCode)
 	setSizeCode = bible.setSizeCode()
 	hidden = bible.hidden()
-	results.append((filesetId, hashId, assetId, setTypeCode, setSizeCode, hidden))
+	results.append((filesetId, hashId, assetId, setTypeCode, setSizeCode, hidden, legacyAssetId))
+
+for filesetId in bible.verseFilesets:
+	assetId = "dbp-verses" # Should this be in config.xml somewhere?
+	setTypeCode = "text_plain"
+	legacyAssetId = bible.legacyAssetId(filesetId, setTypeCode, assetId)
+	hashId = bible.hashId(legacyAssetId, filesetId, setTypeCode)
+	setSizeCode = bible.setSizeCode()
+	hidden = bible.hidden()
+	results.append((filesetId, hashId, assetId, setTypeCode, setSizeCode, hidden, legacyAssetId))
 
 print("num records to insert %d" % (len(results)))
 outputDB = SQLUtility(config.database_host, config.database_port,
 			config.database_user, config.database_output_db_name)
-outputDB.executeBatch("INSERT INTO bible_filesets (id, hash_id, asset_id, set_type_code, set_size_code, hidden) VALUES (%s, %s, %s, %s, %s, %s)", results)
+outputDB.executeBatch("INSERT INTO bible_filesets (id, hash_id, asset_id, set_type_code, set_size_code, hidden, legacy_asset_id) VALUES (%s, %s, %s, %s, %s, %s, %s)", results)
 outputDB.close()
 
 

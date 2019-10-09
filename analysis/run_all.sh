@@ -51,10 +51,11 @@ python3 py/AccessGroupFilesetsTable.py
 
 # to be written possibly use info.json files
 # python3 py/BibleBooksTable.py
-# insert into valid_dbp.bible_books select * from dbp.bible_books where bible_id in (select id from valid_dbp.bibles);
+insert into valid_dbp.bible_books select * from dbp.bible_books where bible_id in (select id from valid_dbp.bibles);
 # 42925 9/24
 # 42991 9/24
 # 70504 10/6 better
+# 64490 10/9 ? I don't know
 
 python3 py/BibleFilesTable.py
 # 1086357 9/24
