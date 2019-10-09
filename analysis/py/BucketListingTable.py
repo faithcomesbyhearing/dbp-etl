@@ -34,7 +34,8 @@ class BucketListingTable:
 			+ " book_id char(3) NULL,"
 			+ " chapter_start varchar(255) NULL,"
 			+ " chapter_end varchar(255) NULL,"
-			+ " verse_start varchar(255) NULL)")
+			+ " verse_start varchar(255) NULL,"
+			+ " video_height varchar(255) NULL)")
 		db.execute(sql, None)
 		db.close()
 
@@ -104,7 +105,7 @@ class BucketListingTable:
 		print("%d rows to insert" % (len(results)))
 		db = SQLUtility(self.config.database_host, self.config.database_port,
 				self.config.database_user, self.config.database_output_db_name)
-		db.executeBatch("INSERT INTO bucket_listing VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)", results)
+		db.executeBatch("INSERT INTO bucket_listing VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", results)
 		db.close()
 
 
@@ -121,7 +122,8 @@ class BucketListingTable:
 		chapterStart = None
 		chapterEnd = None
 		verseStart = None
-		return (bookCode, chapterStart, chapterEnd, verseStart)
+		videoHeight = None
+		return (bookCode, chapterStart, chapterEnd, verseStart, videoHeight)
 
 
 	def parseAudioFilename(self, fileName):
@@ -136,7 +138,8 @@ class BucketListingTable:
 				chapterStart = None
 		chapterEnd = None
 		verseStart = 1
-		return (bookCode, chapterStart, chapterEnd, verseStart)
+		videoHeight = None
+		return (bookCode, chapterStart, chapterEnd, verseStart, videoHeight)
 
 
 	def parseTextFilenames(self, fileName):
@@ -154,10 +157,12 @@ class BucketListingTable:
 					chapterStart = "0"
 		chapterEnd = None
 		verseStart = 1
-		return (bookCode, chapterStart, chapterEnd, verseStart)
+		videoHeight = None
+		return (bookCode, chapterStart, chapterEnd, verseStart, videoHeight)
 
 
 	def parseVideoFilenames(self, fileName):
+		parts = re.split("[_-]", fileName)
 		seqCode = fileName[0:3]
 		bookCode = self.lookup.bookIdBySequence(seqCode)
 		if bookCode != None:
@@ -168,7 +173,6 @@ class BucketListingTable:
 			chapterStart = None
 			chapterEnd = None
 			verseStart = None
-			parts = re.split("[_-]", fileName)
 			for index in range(len(parts)):
 				part = parts[index]
 				if len(part) == 3 and part in self.VIDEO_BOOK_SET:
@@ -181,13 +185,18 @@ class BucketListingTable:
 						chapterEnd = parts[index + 2]
 						verseStart = parts[index + 3]
 					break
-		return (bookCode, chapterStart, chapterEnd, verseStart)
+		video = parts[-1]
+		if video[:2] == "av" and video[-1:] == "p":
+			videoHeight = video[2:-1]
+		else:
+			videoHeight = None
+		return (bookCode, chapterStart, chapterEnd, verseStart, videoHeight)
 
 
 config = Config()
 bucket = BucketListingTable(config)
 bucket.createBucketTable()
-#bucket.insertBucketList("dbp-prod")
+bucket.insertBucketList("dbp-prod")
 bucket.insertBucketList("dbp-vid")
 
 """
