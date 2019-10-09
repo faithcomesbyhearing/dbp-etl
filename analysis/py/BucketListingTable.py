@@ -28,9 +28,11 @@ class BucketListingTable:
 			+ " bible_id varchar(255) not null,"
 			+ " fileset_id varchar(255) not null,"
 			+ " file_name varchar(255) not null,"
-			+ " book_id char(3) NULL)")
+			+ " book_id char(3) NULL,"
+			+ " chapter_start varchar(255) NULL)")
 		db.execute(sql, None)
 		db.close()
+
 
 	def insertBucketList(self, bucketName):
 		results = []
@@ -40,7 +42,6 @@ class BucketListingTable:
 		dropAudioIds = set()
 		dropTextIds = set()
 		dropVideoIds = set()
-		dropFilenames = set()
 		bucketPath = self.config.directory_bucket_list % (bucketName.replace("-", "_"))
 		files = io.open(bucketPath, mode="r", encoding="utf-8")
 		for line in files:
@@ -51,41 +52,39 @@ class BucketListingTable:
 					bibleId = parts[1]
 					filesetId = parts[2]
 					fileName = parts[3]
+					fileNameSansExt = fileName.split(".")[0]
 					row = (bucketName, typeCode, bibleId, filesetId, fileName)
 					if bibleId.isupper():
-						if len(fileName) > 3:
-							if typeCode == "app":
-								if fileName.endswith(".apk"):
-									if filesetId.isupper():
-										fileParts = self.parseAppFilename(fileName)
-										results.append(row + fileParts)
-									else:
-										dropAppIds.add("app/%s/%s" % (bibleId, filesetId))
-							elif typeCode == "audio":
-								if fileName.endswith(".mp3"):
-									if filesetId.isupper():
-										fileParts = self.parseAudioFilename(fileName)
-										results.append(row + fileParts)
-									else:
-										dropAudioIds.add("audio/%s/%s" % (bibleId, filesetId))
-							elif typeCode == "text":
-								if fileName.endswith(".html"):
-									if filesetId.isupper():
-										fileParts = self.parseTextFilenames(fileName)
-										results.append(row + fileParts)
-									else:
-										dropTextIds.add("text/%s/%s" % (bibleId, filesetId))
-							elif typeCode == "video":
-								if fileName.endswith(".m3u8"):
-									if filesetId.isupper():
-										fileParts = self.parseVideoFilenames(fileName)
-										results.append(row + fileParts)
-									else:
-										dropVideoIds.add("video/%s/%s" % (bibleId, filesetId))
-							else:
-								dropTypes.add(typeCode)
+						if typeCode == "app":
+							if fileName.endswith(".apk"):
+								if filesetId.isupper():
+									fileParts = self.parseAppFilename(fileNameSansExt)
+									results.append(row + fileParts)
+								else:
+									dropAppIds.add("app/%s/%s" % (bibleId, filesetId))
+						elif typeCode == "audio":
+							if fileName.endswith(".mp3"):
+								if filesetId.isupper():
+									fileParts = self.parseAudioFilename(fileNameSansExt)
+									results.append(row + fileParts)
+								else:
+									dropAudioIds.add("audio/%s/%s" % (bibleId, filesetId))
+						elif typeCode == "text":
+							if fileName.endswith(".html"):
+								if filesetId.isupper():
+									fileParts = self.parseTextFilenames(fileNameSansExt)
+									results.append(row + fileParts)
+								else:
+									dropTextIds.add("text/%s/%s" % (bibleId, filesetId))
+						elif typeCode == "video":
+							if fileName.endswith(".m3u8"):
+								if filesetId.isupper():
+									fileParts = self.parseVideoFilenames(fileNameSansExt)
+									results.append(row + fileParts)
+								else:
+									dropVideoIds.add("video/%s/%s" % (bibleId, filesetId))
 						else:
-							dropFilenames.add("/".join(row))
+							dropTypes.add(typeCode)
 					else:
 						dropBibleIds.add("%s/%s" % (typeCode, bibleId))
 		warningPathName = "output/BucketListing_%s.text" % (bucketName)
@@ -96,12 +95,11 @@ class BucketListingTable:
 		self.privateDrop(output, "WARNING: audio_id %s was excluded", dropAudioIds)
 		self.privateDrop(output, "WARNING: text_id %s was excluded", dropTextIds)
 		self.privateDrop(output, "WARNING: video_id %s was excluded", dropVideoIds)
-		self.privateDrop(output, "WARNING: file_name %s is too short, was excluded", dropFilenames)
 		output.close()
 		print("%d rows to insert" % (len(results)))
 		db = SQLUtility(self.config.database_host, self.config.database_port,
 				self.config.database_user, self.config.database_output_db_name)
-		db.executeBatch("INSERT INTO bucket_listing VALUES (%s, %s, %s, %s, %s, %s)", results)
+		db.executeBatch("INSERT INTO bucket_listing VALUES (%s, %s, %s, %s, %s, %s, %s)", results)
 		db.close()
 
 
@@ -115,47 +113,66 @@ class BucketListingTable:
 
 	def parseAppFilename(self, fileName):
 		bookCode = None
-		return (bookCode,)
+		chapterStart = None
+		return (bookCode, chapterStart)
 
 
 	def parseAudioFilename(self, fileName):
 		seqCode = fileName[0:3]
 		bookCode = self.lookup.bookIdBySequence(seqCode)
-		return (bookCode,)
+		if bookCode == None:
+			chapterStart = None # might not be necessary
+		else:
+			chapterStart = fileName[5:8].strip("_")
+			if not chapterStart.isdigit():
+				bookCode = None
+				chapterStart = None
+		return (bookCode, chapterStart)
 
 
 	def parseTextFilenames(self, fileName):
-		bookCode = None
-		parts = fileName.split('.')[0].split('_')
+		#bookCode = None
+		parts = fileName.split("_")
 		if len(parts) > 2:
 			bookCode = parts[2]
+			chapterStart = parts[1]
 		else:
 			bookCode = self.lookup.bookIdBy2Char(fileName[:2])
-		return (bookCode,)
+			if bookCode == None:
+				chapterStart = None
+			else:
+				chapterStart = fileName[2:].strip("_")
+				if chapterStart == "":
+					chapterStart = "0"
+		return (bookCode, chapterStart)
 
 
 	def parseVideoFilenames(self, fileName):
-		bookCode = None
-		parts = fileName.split("_")
-		for index in range(len(parts)):
-			part = parts[index]
-			if len(part) == 3 and part in {"MAT","MRK","LUK","JHN"}:
-				bookCode = part
-				break
-			if len(part) == 4:
-				if part == "Mark":
-					bookCode = "MRK"
-					break
-				elif part == "Luke":
-					bookCode = "LUK"
-					break
-				elif part == "MRKZ":
-					bookCode = "MRK"
-					break
+		seqCode = fileName[0:3]
+		bookCode = self.lookup.bookIdBySequence(seqCode)
+		chapterStart = fileName[5:8].strip("_")	
 		if bookCode == None:
-			seqCode = fileName[0:3]
-			bookCode = self.lookup.bookIdBySequence(seqCode)			
-		return (bookCode,)
+			parts = fileName.split("_")
+			for index in range(len(parts)):
+				part = parts[index]
+				if len(part) == 3 and part in {"MAT","MRK","LUK","JHN"}:
+					bookCode = part
+					chapterStart = parts[index + 1]
+					break
+				if len(part) == 4:
+					if part == "Mark":
+						bookCode = "MRK"
+						chapterStart = parts[index + 1]
+						break
+					elif part == "Luke":
+						bookCode = "LUK"
+						chapterStart = parts[index + 1]
+						break
+					elif part == "MRKZ":
+						bookCode = "MRK"
+						chapterStart = parts[index + 1]
+						break
+		return (bookCode, chapterStart)
 
 
 config = Config()
@@ -163,7 +180,6 @@ bucket = BucketListingTable(config)
 bucket.createBucketTable()
 bucket.insertBucketList("dbp-prod")
 bucket.insertBucketList("dbp-vid")
-#bucket.insertBucketList("dbs-web")
 
 """
 AUDIO BOOK_ID ERRORS
