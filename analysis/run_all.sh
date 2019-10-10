@@ -60,6 +60,7 @@ insert into valid_dbp.bible_books select * from dbp.bible_books where bible_id i
 python3 py/BibleFilesTable.py
 # 1086357 9/24
 # 1096274 9/24
+# 1168389 10/9
 
 python3 py/BibleFileTagsTable.py
 # 0 9/24

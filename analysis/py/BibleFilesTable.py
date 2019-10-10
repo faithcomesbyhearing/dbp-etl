@@ -18,8 +18,6 @@ import io
 import os
 import sys
 from Config import *
-from LookupTables import *
-from BucketReader import *
 from SQLUtility import *
 
 class BibleFilesTable:
@@ -29,184 +27,57 @@ class BibleFilesTable:
 
 
 	def readAll(self):
-		# 1. read bucket listing in sequence
-		# cons: This solution will require comparison to determine when the filesetid or bibleid has changed
-		# cons: It will loose the first occurrance of a 2nd bible_id
-		# pros: It will guarantee that each line of the bucket is processed
-		# 2. read the fileset listing in sequence
-		# cons: requires building tables of the filenames
-		self.lookup = LookupTables()
 		validDB = SQLUtility(self.config.database_host, self.config.database_port,
 			self.config.database_user, self.config.database_output_db_name)
-		self.filesetList = validDB.select("SELECT id, set_type_code, asset_id, hash_id FROM bible_filesets WHERE set_type_code != 'text_plain'", None)
-		print("num %d filesets in bible_filesets table" % (len(self.filesetList)))
-		self.bookIdSet = set(validDB.selectList("SELECT id FROM books", None))
-		print("num %d books in bookList" % len(self.bookIdSet))
-		bucket = BucketReader(self.config)
-		self.appFilenames = bucket.filenames("app")
-		print("num %d app files in bucket" % (len(self.appFilenames)))
-		self.audioFilenames = bucket.filenames("audio")
-		print("num %d audio files in bucket" % (len(self.audioFilenames)))
-		self.textFilenames = bucket.filenames("text")
-		print("num %d text files in bucket" % (len(self.textFilenames)))
-		self.videoFilenames = bucket.filenames("video")
-		print("num %d video files in bucket" % (len(self.videoFilenames)))
+		sql = ("SELECT file_name, hash_id, book_id, chapter_start, verse_start, verse_end"
+			+ " FROM bucket_listing"
+			+ " WHERE book_id IS NOT NULL AND chapter_start is NOT NULL"
+			+ " AND book_id IN (SELECT id FROM books)"
+			+ " ORDER by hash_id, book_id, chapter_start, verse_start, length(file_name) DESC, file_name")
+		self.bucketList = validDB.select(sql, None)
+		print("num %d files rows in bucket_listing" % (len(self.bucketList)))
+		self.hashIdSet = validDB.selectSet("SELECT hash_id FROM bible_filesets", None)
 		validDB.close()
 
 
-	def bookId(self, typeCode, fileName):
-		bookCode = None
-		if typeCode == "app":
-			bookCode == "MAT" # Repeating a bug in current program
-		elif typeCode == "aud":
-			seqCode = fileName[0:3]
-			bookCode = self.lookup.bookIdBySequence(seqCode)
-		elif typeCode == "tex":
-			parts = fileName.split('.')[0].split('_')
-			if len(parts) > 2:
-				bookCode = parts[2]
-		elif typeCode == "vid":
-			print(fileName)
-			parts = fileName.split("_")
-			print(parts)
-			for part in parts:
-				print(len(part), part)
-				if len(part) == 3 and part in {"MAT","MRK","LUK","JHN"}:
-					bookCode = part
-					print(bookCode)
-		else:
-			print("ERROR: unknown typeCode %s in bookId()" % (typeCode))
-			sys.exit()
-		return bookCode
-
-
-	def chapterStart(self, typeCode, filename):
-		chapter = None
-		if typeCode == "app":
-			chapter = None
-		elif typeCode == "aud":
-			parts = filename.split("_")
-			for part in parts:
-				if part.isdigit():
-					chapter = (part)
-					break
-		elif typeCode == "tex":
-			parts = filename.split('.')[0].split('_')
-			if len(parts) > 3:
-				if parts[3].isdigit():
-					chapter = (parts[3])
-		elif typeCode == "vid":
-			parts = fileName.split("_")
-			for index in range(len(parts)):
-				part = parts[index]
-				if len(part) == 3 and part in {"MAT","MRK","LUK","JHN"}:
-					part = parts[index + 1]
-					pieces = part.split("-")
-					if len(pieces) == 3 and pieces[0].isdigit() and pieces[1].isdigit() and pieces[2].isdigit():
-						chapter = pieces
-		else:
-			sys.exit()
-		return chapter
-
-
-	def chapterEnd(self, typeCode, filename):
-		# null is intended
-		return None
-
-
-	def verseStart(self, typeCode, filename):
-		return "1"
-
-
-	def verseEnd(self, typeCode, filename):
-		return None
-
-
-	def fileSize(self, typeCode, filename):
-		# to be done
-		return None
-
-
-	def duration(self, typeCode, filename):
-		# to be done
-		return None
-
-
 config = Config()
-filesets = BibleFilesTable(config) 
-filesets.readAll()
+files = BibleFilesTable(config) 
+files.readAll()
+
 results = []
-bookIdErrorCount = 0
-bookIdNotExistCount = 0
-dupErrorCount = 0
-chapterErrorCount = 0
 uniqueSet = set()
 
-for fileset in filesets.filesetList:
-	filesetId = fileset[0]
-	typeCode = fileset[1][0:3]
-	bucket = fileset[2]
-	hashId = fileset[3]
+for fileset in files.bucketList:
+	fileName = fileset[0]
+	hashId = fileset[1]
+	bookId = fileset[2]
+	chapterStart = fileset[3]
+	if chapterStart == "End":
+		chapterStart = "0"
+	chapterEnd = None
+	verseStart = fileset[4]
+	if verseStart != None:
+		if "b" in verseStart:
+			verseStart = verseStart.replace("b", "")
+	verseEnd = fileset[5]
+	if verseEnd != None:
+		if "r" in verseEnd:
+			verseEnd = verseEnd.replace("r", "")
+		if "a" in verseEnd:
+			verseEnd = verseEnd.replace("a", "")
+	fileSize = None
+	duration = None
 
-	if typeCode == "app":
-		files = filesets.appFilenames.get(filesetId)
-	elif typeCode == "aud":
-		files = filesets.audioFilenames.get(filesetId)
-	elif typeCode == "tex":
-		files = filesets.textFilenames.get(filesetId)
-	elif typeCode == "vid":
-		files = filesets.videoFilenames.get(filesetId)
+	key = "%s-%s-%s-%s" % (hashId, bookId, chapterStart, verseStart)
+	if key in uniqueSet:
+		print("WARNING: dropping duplicate key ", fileset)
+	elif hashId not in files.hashIdSet:
+		print("WARNING: dropping hash_id mismatch ", fileset)
 	else:
-		print("ERROR: unknown typeCode %s" % (typeCode))
-		sys.exit()
+		uniqueSet.add(key)
+		results.append((hashId, bookId, chapterStart, chapterEnd, verseStart, verseEnd, fileName, fileSize, duration))
 
-	if files != None:
-		for fileName in files:
-
-			bookId = filesets.bookId(typeCode, fileName)
-			if bookId != None:
-				if bookId in filesets.bookIdSet:
-					chapterStart = filesets.chapterStart(typeCode, fileName)
-					if chapterStart != None and len(chapterStart) == 3:
-						verseStart = chapterStart[2]
-						chapterEnd = chapterStart[1]
-						chapterStart = chapterStart[0]
-						#if chapterStart < 152:
-					else:
-						if chapterStart != None:
-							chapterStart = chapterStart[0]
-						chapterEnd = filesets.chapterEnd(typeCode, fileName)
-						verseStart = filesets.verseStart(typeCode, fileName)
-					verseEnd = filesets.verseEnd(typeCode, fileName)
-					fileSize = filesets.fileSize(typeCode, fileName)
-					duration = filesets.duration(typeCode, fileName)
-					key = "%s-%s-%s-%s" % (hashId, bookId, chapterStart, verseStart)
-					if key in uniqueSet:
-						print("WARNING: duplicate key %s in %s/?/%s/%s" % (key, typeCode, filesetId, fileName))
-						dupErrorCount += 1
-					else:
-						uniqueSet.add(key)
-						results.append((hashId, bookId, chapterStart, chapterEnd, verseStart, verseEnd, fileName, fileSize, duration))
-				#else:
-				#	print("WARNING in chapterStart %d in %s" % (chapterStart, fileName))
-				#	chapterErrorCount += 1
-				else:
-					print("WARNING: bookId %s in %s is not in books table" % (bookId, fileName))
-					bookIdNotExistCount += 1				
-			else:
-				print("WARNING: Invalid bookId in %s  %s" % (fileName, typeCode))
-				bookIdErrorCount += 1
-	else:
-		print("ERROR: filenames not found for filesetId %s  type %s" % (filesetId, typeCode))
-		sys.exit()
-
-print("num invalid bookId errors dropped %d" % (bookIdErrorCount))
-print("num bookId not in books table dropped %d" % (bookIdNotExistCount))
-print("num duplicate records dropped %d" % (dupErrorCount))
-print("num invalid chapter numbers dropped %d" % (chapterErrorCount))
 print("num records to insert %d" % (len(results)))
-
-#filesets.validDB.close()
 outputDB = SQLUtility(config.database_host, config.database_port,
 			config.database_user, config.database_output_db_name)
 outputDB.executeBatch("INSERT INTO bible_files (hash_id, book_id, chapter_start, chapter_end, verse_start, verse_end, file_name, file_size, duration) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)", results)

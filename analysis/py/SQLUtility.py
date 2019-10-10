@@ -66,7 +66,15 @@ class SQLUtility:
 			cursor.close()
 			return result[0] if result != None else None
 		except Exception as err:
-			self.error(cursor, statement, err)			
+			self.error(cursor, statement, err)	
+
+
+	def selectSet(self, statement, values):
+		resultSet = self.select(statement, values)
+		results = set()
+		for row in resultSet:
+			results.add(row[0])
+		return results		
 
 
 	def selectList(self, statement, values):

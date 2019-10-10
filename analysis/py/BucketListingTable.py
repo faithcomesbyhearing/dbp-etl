@@ -6,6 +6,7 @@ import io
 import os
 import sys
 import re
+import hashlib
 from Config import *
 from LookupTables import *
 from SQLUtility import *
@@ -31,6 +32,9 @@ class BucketListingTable:
 			+ " bible_id varchar(255) not null,"
 			+ " fileset_id varchar(255) not null,"
 			+ " file_name varchar(255) not null,"
+			+ " set_type_code varchar(255) not null,"
+			+ " legacy_asset_id varchar(255) not null,"
+			+ " hash_id varchar(255) not null,"
 			+ " book_id char(3) NULL,"
 			+ " chapter_start varchar(255) NULL,"
 			+ " verse_start varchar(255) NULL,"
@@ -41,6 +45,11 @@ class BucketListingTable:
 
 
 	def insertBucketList(self, bucketName):
+		prodDB = SQLUtility(self.config.database_host, self.config.database_port,
+			self.config.database_user, self.config.database_input_db_name)
+		self.legacyFilesetMap = prodDB.selectMapList("SELECT concat(id, set_type_code), asset_id FROM bible_filesets", None)
+		prodDB.close()
+
 		results = []
 		dropTypes = set()
 		dropBibleIds = set()
@@ -64,29 +73,45 @@ class BucketListingTable:
 						if typeCode == "app":
 							if fileName.endswith(".apk"):
 								if filesetId.isupper():
+									setTypeCode = "app"
+									legacyAssetId = self.legacyAssetId(filesetId, setTypeCode, bucketName)
+									hashId = self.hashId(legacyAssetId, filesetId, setTypeCode)
+									extra = (setTypeCode, legacyAssetId, hashId)
 									fileParts = self.parseAppFilename(fileNameSansExt)
-									results.append(row + fileParts)
+									results.append(row + extra + fileParts)
 								else:
 									dropAppIds.add("app/%s/%s" % (bibleId, filesetId))
 						elif typeCode == "audio":
 							if fileName.endswith(".mp3"):
 								if filesetId.isupper():
+									setTypeCode = self.setTypeCode(filesetId)
+									legacyAssetId = self.legacyAssetId(filesetId, setTypeCode, bucketName)
+									hashId = self.hashId(legacyAssetId, filesetId, setTypeCode)
+									extra = (setTypeCode, legacyAssetId, hashId)
 									fileParts = self.parseAudioFilename(fileNameSansExt)
-									results.append(row + fileParts)
+									results.append(row + extra + fileParts)
 								else:
 									dropAudioIds.add("audio/%s/%s" % (bibleId, filesetId))
 						elif typeCode == "text":
 							if fileName.endswith(".html"):
 								if filesetId.isupper():
+									setTypeCode = "text_format"
+									legacyAssetId = self.legacyAssetId(filesetId, setTypeCode, bucketName)
+									hashId = self.hashId(legacyAssetId, filesetId, setTypeCode)
+									extra = (setTypeCode, legacyAssetId, hashId)
 									fileParts = self.parseTextFilenames(fileNameSansExt)
-									results.append(row + fileParts)
+									results.append(row + extra + fileParts)
 								else:
 									dropTextIds.add("text/%s/%s" % (bibleId, filesetId))
 						elif typeCode == "video":
 							if fileName.endswith(".m3u8"):
 								if filesetId.isupper():
+									setTypeCode = "video_stream"
+									legacyAssetId = self.legacyAssetId(filesetId, setTypeCode, bucketName)
+									hashId = self.hashId(legacyAssetId, filesetId, setTypeCode)
+									extra = (setTypeCode, legacyAssetId, hashId)
 									fileParts = self.parseVideoFilenames(fileNameSansExt)
-									results.append(row + fileParts)
+									results.append(row + extra + fileParts)
 								else:
 									dropVideoIds.add("video/%s/%s" % (bibleId, filesetId))
 						else:
@@ -105,7 +130,7 @@ class BucketListingTable:
 		print("%d rows to insert" % (len(results)))
 		db = SQLUtility(self.config.database_host, self.config.database_port,
 				self.config.database_user, self.config.database_output_db_name)
-		db.executeBatch("INSERT INTO bucket_listing VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", results)
+		db.executeBatch("INSERT INTO bucket_listing VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", results)
 		db.close()
 
 
@@ -115,6 +140,50 @@ class BucketListingTable:
 		sortedIds = sorted(list(dropIds))
 		for dropId in sortedIds:
 			output.write(message % (dropId))
+
+
+	def setTypeCode(self, filesetId):
+		code = filesetId[7:9]
+		if code == "1D":
+			return "audio"
+		elif code == "2D":
+			return "audio_drama"
+		else:
+			code = filesetId[8:10]
+			if code == "1D":
+				return "audio"
+			elif code == "2D":
+				return "audio_drama"
+			elif filesetId == "N1TUVDPI":
+				return "audio"
+			elif filesetId == "O1TUVDPI":
+				return "audio"
+			else:
+				print("WARNING: file type not known for %s, set_type_code set to 'unknown'" % (filesetId))
+				return "unknown"
+
+
+	def legacyAssetId(self, filesetId, setTypeCode, assetId):
+		key = filesetId + setTypeCode
+		legacyIds = self.legacyFilesetMap.get(key)
+		if legacyIds == None:
+			#print("no legacy bucket found actual one returned")
+			return assetId
+		elif len(legacyIds) == 1:
+			return legacyIds[0]
+		else:
+			#print("multiple Ids %s  %s  %s" % (filesetId, setTypeCode, ",".join(legacyIds)))
+			# When there are two the first is always dbp-prod, the second is dbp-dbs
+			return legacyIds[0]
+
+
+	def hashId(self, bucket, filesetId, typeCode):
+		md5 = hashlib.md5()
+		md5.update(filesetId.encode("latin1"))
+		md5.update(bucket.encode("latin1"))
+		md5.update(typeCode.encode("latin1"))
+		hash_id = md5.hexdigest()
+		return hash_id[:12]	
 
 
 	def parseAppFilename(self, fileName):
