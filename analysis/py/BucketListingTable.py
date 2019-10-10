@@ -33,8 +33,8 @@ class BucketListingTable:
 			+ " file_name varchar(255) not null,"
 			+ " book_id char(3) NULL,"
 			+ " chapter_start varchar(255) NULL,"
-			+ " chapter_end varchar(255) NULL,"
 			+ " verse_start varchar(255) NULL,"
+			+ " verse_end varchar(255) NULL,"
 			+ " video_height varchar(255) NULL)")
 		db.execute(sql, None)
 		db.close()
@@ -120,10 +120,10 @@ class BucketListingTable:
 	def parseAppFilename(self, fileName):
 		bookCode = None
 		chapterStart = None
-		chapterEnd = None
 		verseStart = None
+		verseEnd = None
 		videoHeight = None
-		return (bookCode, chapterStart, chapterEnd, verseStart, videoHeight)
+		return (bookCode, chapterStart, verseStart, verseEnd, videoHeight)
 
 
 	def parseAudioFilename(self, fileName):
@@ -136,10 +136,10 @@ class BucketListingTable:
 			if not chapterStart.isdigit():
 				bookCode = None
 				chapterStart = None
-		chapterEnd = None
 		verseStart = 1
+		verseEnd = None
 		videoHeight = None
-		return (bookCode, chapterStart, chapterEnd, verseStart, videoHeight)
+		return (bookCode, chapterStart, verseStart, verseEnd, videoHeight)
 
 
 	def parseTextFilenames(self, fileName):
@@ -155,10 +155,10 @@ class BucketListingTable:
 				chapterStart = fileName[2:].strip("_")
 				if chapterStart == "":
 					chapterStart = "0"
-		chapterEnd = None
 		verseStart = 1
+		verseEnd = None
 		videoHeight = None
-		return (bookCode, chapterStart, chapterEnd, verseStart, videoHeight)
+		return (bookCode, chapterStart, verseStart, verseEnd, videoHeight)
 
 
 	def parseVideoFilenames(self, fileName):
@@ -166,13 +166,13 @@ class BucketListingTable:
 		seqCode = fileName[0:3]
 		bookCode = self.lookup.bookIdBySequence(seqCode)
 		if bookCode != None:
-			chapterStart = fileName[5:8].strip("_")	
-			chapterEnd = None
+			chapterStart = fileName[5:8].strip("_")
 			verseStart = None
+			verseEnd = None
 		else:
 			chapterStart = None
-			chapterEnd = None
 			verseStart = None
+			verseEnd = None
 			for index in range(len(parts)):
 				part = parts[index]
 				if len(part) == 3 and part in self.VIDEO_BOOK_SET:
@@ -182,15 +182,15 @@ class BucketListingTable:
 				if bookCode != None:
 					chapterStart = parts[index + 1]
 					if chapterStart.isdigit():
-						chapterEnd = parts[index + 2]
-						verseStart = parts[index + 3]
+						verseStart = parts[index + 2]
+						verseEnd = parts[index + 3]
 					break
 		video = parts[-1]
 		if video[:2] == "av" and video[-1:] == "p":
 			videoHeight = video[2:-1]
 		else:
 			videoHeight = None
-		return (bookCode, chapterStart, chapterEnd, verseStart, videoHeight)
+		return (bookCode, chapterStart, verseStart, verseEnd, videoHeight)
 
 
 config = Config()

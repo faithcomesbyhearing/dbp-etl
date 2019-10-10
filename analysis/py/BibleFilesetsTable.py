@@ -77,12 +77,13 @@ class BibleFilesetsTable:
 		key = filesetId + setTypeCode
 		legacyIds = self.legacyFilesetMap.get(key)
 		if legacyIds == None:
-			print("no legacy bucket found old one returned")
+			print("no legacy bucket found actual one returned")
 			return assetId
 		elif len(legacyIds) == 1:
 			return legacyIds[0]
 		else:
 			print("multiple Ids %s  %s  %s" % (filesetId, setTypeCode, ",".join(legacyIds)))
+			# When there are two the first is always dbp-prod, the second is dbp-dbs
 			return legacyIds[0]
 
 
