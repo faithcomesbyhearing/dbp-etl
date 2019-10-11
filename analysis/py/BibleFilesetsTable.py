@@ -13,7 +13,7 @@ import os
 import sys
 import hashlib
 from Config import *
-from BucketReader import *
+from SQLUtility import *
 from VersesReader import *
 
 # legacy_asset_id was added here temporarily, and ideally should be removed for deployment
@@ -26,10 +26,14 @@ class BibleFilesetsTable:
 
 
 	def readAll(self):
-		bucket = BucketReader(self.config)
-		self.filesets = bucket.filesets()
+		db = SQLUtility(self.config.database_host, self.config.database_port,
+			self.config.database_user, self.config.database_output_db_name)
+		self.filesets = db.select("SELECT distinct bucket, fileset_id, set_type_code, hash_id, legacy_asset_id FROM bucket_listing", None)
+		db.close()
 		print("num filesets %d" % (len(self.filesets)))
 		verseReader = VersesReader(self.config)
+
+		## The following is a temporary solution for handling verses.  I need to study output
 		self.verseFilesets = verseReader.filesetIds()
 		print("num verse filesets %d" % (len(self.verseFilesets)))
 		sqlUtility = SQLUtility(self.config.database_host, self.config.database_port,
@@ -39,38 +43,13 @@ class BibleFilesetsTable:
 		print("num fileset/set_type_code in dbp %d" % (len(self.legacyFilesetMap.keys())))
 
 
-
-	def setTypeCode(self, filesetId, typeCode):
-		if typeCode == "app":
-			return "app"
-		elif typeCode == "audio":
-			code = filesetId[7:9]
-			if code == "1D":
-				return "audio"
-			elif code == "2D":
-				return "audio_drama"
-			else:
-				code = filesetId[8:10]
-				if code == "1D":
-					return "audio"
-				elif code == "2D":
-					return "audio_drama"
-				elif filesetId == "N1TUVDPI":
-					return "audio"
-				elif filesetId == "O1TUVDPI":
-					return "audio"
-				else:
-					print("WARNING: file type not known for %s, set_type_code set to 'unknown'" % (filesetId))
-					return "unknown"
-		elif typeCode == "text":
-			return "text_format"
-		elif typeCode == "video":
-			return "video_stream"
-		elif typeCode == "verse":
-			return "text_plain"
-		else:
-			print("ERROR typeCode '%s' is not known" % (typeCode))
-			sys.exit()		
+	def hashId(self, bucket, filesetId, typeCode):
+		md5 = hashlib.md5()
+		md5.update(filesetId.encode("latin1"))
+		md5.update(bucket.encode("latin1"))
+		md5.update(typeCode.encode("latin1"))
+		hash_id = md5.hexdigest()
+		return hash_id[:12]
 
 
 	def legacyAssetId(self, filesetId, setTypeCode, assetId):
@@ -87,24 +66,6 @@ class BibleFilesetsTable:
 			return legacyIds[0]
 
 
-	def hashId(self, bucket, filesetId, typeCode):
-		md5 = hashlib.md5()
-		md5.update(filesetId.encode("latin1"))
-		md5.update(bucket.encode("latin1"))
-		md5.update(typeCode.encode("latin1"))
-		hash_id = md5.hexdigest()
-		return hash_id[:12]
-
-
-	def setSizeCode(self):
-		# This must be set by query of bible_files
-		# S is used here, because a valid size code is required.
-		return "S"
-
-
-	def hidden(self):
-		return 0
-
 
 config = Config()
 bible = BibleFilesetsTable(config) 
@@ -112,28 +73,23 @@ bible.readAll()
 results = []
 
 for fileset in bible.filesets:
-	filesetId = fileset[0]
-	bucket = fileset[1]
-	typeCode = fileset[2]
+	bucket = fileset[0] 
+	filesetId = fileset[1]
+	setTypeCode = fileset[2]
+	hashId = fileset[3]
+	legacyAssetId = fileset[4]
 
-	assetId = bucket
-	setTypeCode = bible.setTypeCode(filesetId, typeCode)
-	if setTypeCode == None:
-		print("ERROR: No set_type_code assigned to %s" % (filesetId))
-		sys.exit()
-	legacyAssetId = bible.legacyAssetId(filesetId, setTypeCode, assetId)
-	hashId = bible.hashId(legacyAssetId, filesetId, setTypeCode)
-	setSizeCode = bible.setSizeCode()
-	hidden = bible.hidden()
-	results.append((filesetId, hashId, assetId, setTypeCode, setSizeCode, hidden, legacyAssetId))
+	setSizeCode = "S" # initial setting updated later
+	hidden = "0"
+	results.append((filesetId, hashId, bucket, setTypeCode, setSizeCode, hidden, legacyAssetId))
 
 for filesetId in bible.verseFilesets:
-	assetId = "dbp-verses" # Should this be in config.xml somewhere?
+	assetId = "db" # Should this be in config.xml somewhere?
 	setTypeCode = "text_plain"
 	legacyAssetId = bible.legacyAssetId(filesetId, setTypeCode, assetId)
 	hashId = bible.hashId(legacyAssetId, filesetId, setTypeCode)
-	setSizeCode = bible.setSizeCode()
-	hidden = bible.hidden()
+	setSizeCode = "S" # initial setting
+	hidden = "0"
 	results.append((filesetId, hashId, assetId, setTypeCode, setSizeCode, hidden, legacyAssetId))
 
 print("num records to insert %d" % (len(results)))
