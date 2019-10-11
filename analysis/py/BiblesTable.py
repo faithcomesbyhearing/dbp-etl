@@ -23,7 +23,6 @@ import io
 import os
 import sys
 from Config import *
-from BucketReader import *
 from VersesReader import *
 from SQLUtility import *
 from LPTSExtractReader import *
@@ -35,14 +34,15 @@ class BiblesTable:
 		self.config = config
 
 	def readAll(self):
-		bucket = BucketReader(self.config)
-		bucketBibleIds = set(bucket.bibleIds())
+		self.inputDB = SQLUtility(self.config.database_host, self.config.database_port,
+				self.config.database_user, self.config.database_output_db_name)
+		bucketBibleIds = self.inputDB.selectSet("SELECT distinct bible_id FROM bucket_listing ORDER BY bible_id", None)
+
 		verse = VersesReader(self.config)
 		verseBibleIds = set(verse.bibleIds())
 		self.bibleIds = sorted(list(bucketBibleIds.union(verseBibleIds)))
 		print("num bibleIds  bucket: %d  verse: %d  verse+bucket: %d" % (len(bucketBibleIds), len(verseBibleIds), len(self.bibleIds)))
-		self.inputDB = SQLUtility(self.config.database_host, self.config.database_port,
-			self.config.database_user, self.config.database_input_db_name)
+
 		reader = LPTSExtractReader(self.config)
 		self.bibleMap = reader.getBibleIdMap()
 		print("num bibles in map", len(self.bibleMap.keys()))

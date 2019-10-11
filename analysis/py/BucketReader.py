@@ -17,13 +17,13 @@ class BucketReader:
 
 
 	def bibleIds(self):
-		if self.bibleIdList == None:
-			db = SQLUtility(self.config.database_host, self.config.database_port,
-				self.config.database_user, self.config.database_output_db_name)
-			bibleList = db.selectList("SELECT distinct bible_id FROM bucket_listing ORDER BY bible_id", None)
-			self.bibleIdList = bibleList
-			db.close()
-		return self.bibleIdList
+#		if self.bibleIdList == None:
+#			db = SQLUtility(self.config.database_host, self.config.database_port,
+#				self.config.database_user, self.config.database_output_db_name)
+#			bibleList = db.selectList("SELECT distinct bible_id FROM bucket_listing ORDER BY bible_id", None)
+#			self.bibleIdList = bibleList
+#			db.close()
+#		return self.bibleIdList
 
 
 	def filesetIds(self, typeCode):
