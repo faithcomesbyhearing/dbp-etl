@@ -5,7 +5,7 @@
 import boto3
 import io
 import os 
-
+from Config import *
 
 class S3Utility:
 
@@ -26,6 +26,17 @@ class S3Utility:
 
 	def deleteFile(self, filename):
 		a=1
+
+"""
+config = Config()
+s3 = S3Utility(config)
+## The following is in DBP, and in valid_dbp
+s3.downloadFile("dbp-prod", "text/GILBSP/GILBSP/GILBSP_8_JDG_1.html", "text:GILBSP:GILBSP:GILBSP_8_JDG_1.html")
+## The following is in DBP, and not in valid_dbp
+s3.downloadFile("dbp-prod", "text/GILBSP/GILBSP/GILBSP_26_LAM_1.html", "text:GILBSP:GILBSP:GILBSP_26_LAM_1.html")
+"""
+
+
 
 
 

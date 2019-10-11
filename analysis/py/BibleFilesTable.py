@@ -53,7 +53,24 @@ for fileset in files.bucketList:
 	bookId = fileset[2]
 	chapterStart = fileset[3]
 	if chapterStart == "End":
-		chapterStart = "0"
+		if bookId == "MAT":
+			chapterStart = "28"
+			verseStart = "21"
+			verseEnd = "21"
+		elif bookId == "MRK":
+			chapterStart = "16"
+			verseStart = "21"
+			verseEnd = "21"
+		elif bookId == "LUK":
+			chapterStart = "24"
+			verseStart = "54"
+			verseEnd = "54"
+		elif bookId == "JHN":
+			chapterStart = "21"
+			verseStart = "26"
+			verseEnd = "26"
+		else:
+			chapterStart = "0"
 	chapterEnd = None
 	verseStart = fileset[4]
 	if verseStart != None:
@@ -73,6 +90,9 @@ for fileset in files.bucketList:
 		print("WARNING: dropping duplicate key ", fileset)
 	elif hashId not in files.hashIdSet:
 		print("WARNING: dropping hash_id mismatch ", fileset)
+	elif chapterStart == "0" and fileName[-5:] == ".html":
+		# This drop is probably not correct for production, correct feedback from App devs
+		print("WARNING: dropping zero chapter html files")
 	else:
 		uniqueSet.add(key)
 		results.append((hashId, bookId, chapterStart, chapterEnd, verseStart, verseEnd, fileName, fileSize, duration))

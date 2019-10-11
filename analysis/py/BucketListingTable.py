@@ -212,10 +212,12 @@ class BucketListingTable:
 
 
 	def parseTextFilenames(self, fileName):
+		#{fileset}_{seq}_{USFM3}_{chapter}.html (chapter optional)
+		#{USFM2}{chapter}.html (chapter optional)
 		parts = fileName.split("_")
 		if len(parts) > 2:
 			bookCode = parts[2]
-			chapterStart = parts[1]
+			chapterStart = parts[3] if len(parts) > 3 else "0"
 		else:
 			bookCode = self.lookup.bookIdBy2Char(fileName[:2])
 			if bookCode == None:
