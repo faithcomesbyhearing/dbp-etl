@@ -13,6 +13,7 @@ import os
 import sys
 import hashlib
 from Config import *
+from Legacy import *
 from SQLUtility import *
 from VersesReader import *
 
@@ -23,6 +24,7 @@ class BibleFilesetsTable:
 
 	def __init__(self, config):
 		self.config = config
+		self.legacy = Legacy(config)
 
 
 	def readAll(self):
@@ -36,35 +38,6 @@ class BibleFilesetsTable:
 		## The following is a temporary solution for handling verses.  I need to study output
 		self.verseFilesets = verseReader.filesetIds()
 		print("num verse filesets %d" % (len(self.verseFilesets)))
-		sqlUtility = SQLUtility(self.config.database_host, self.config.database_port,
-			self.config.database_user, self.config.database_input_db_name)
-		self.legacyFilesetMap = sqlUtility.selectMapList("SELECT concat(id, set_type_code), asset_id FROM bible_filesets", None)
-		sqlUtility.close()
-		print("num fileset/set_type_code in dbp %d" % (len(self.legacyFilesetMap.keys())))
-
-
-	def hashId(self, bucket, filesetId, typeCode):
-		md5 = hashlib.md5()
-		md5.update(filesetId.encode("latin1"))
-		md5.update(bucket.encode("latin1"))
-		md5.update(typeCode.encode("latin1"))
-		hash_id = md5.hexdigest()
-		return hash_id[:12]
-
-
-	def legacyAssetId(self, filesetId, setTypeCode, assetId):
-		key = filesetId + setTypeCode
-		legacyIds = self.legacyFilesetMap.get(key)
-		if legacyIds == None:
-			print("no legacy bucket found actual one returned")
-			return assetId
-		elif len(legacyIds) == 1:
-			return legacyIds[0]
-		else:
-			print("multiple Ids %s  %s  %s" % (filesetId, setTypeCode, ",".join(legacyIds)))
-			# When there are two the first is always dbp-prod, the second is dbp-dbs
-			return legacyIds[0]
-
 
 
 config = Config()
@@ -86,8 +59,8 @@ for fileset in bible.filesets:
 for filesetId in bible.verseFilesets:
 	assetId = "db" # Should this be in config.xml somewhere?
 	setTypeCode = "text_plain"
-	legacyAssetId = bible.legacyAssetId(filesetId, setTypeCode, assetId)
-	hashId = bible.hashId(legacyAssetId, filesetId, setTypeCode)
+	legacyAssetId = bible.legacy.legacyAssetId(filesetId, setTypeCode, assetId)
+	hashId = bible.legacy.hashId(legacyAssetId, filesetId, setTypeCode)
 	setSizeCode = "S" # initial setting
 	hidden = "0"
 	results.append((filesetId, hashId, assetId, setTypeCode, setSizeCode, hidden, legacyAssetId))
