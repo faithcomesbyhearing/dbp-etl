@@ -24,16 +24,13 @@ class BibleFilesetConnectionsTable:
 	def readAll(self):
 		validDB = SQLUtility(self.config.database_host, self.config.database_port,
 			self.config.database_user, self.config.database_output_db_name)
-		self.filesetList = validDB.select("SELECT id, set_type_code, hash_id FROM bible_filesets", None)
+		self.filesetList = validDB.select("SELECT distinct hash_id, bible_id FROM bucket_listing", None)
 		print("num filesets in bible_filesets %d" % (len(self.filesetList)))
-		self.appMap = validDB.selectMapList("SELECT distinct fileset_id, bible_id FROM bucket_listing WHERE type_code = 'app'", None)
-		self.audioMap = validDB.selectMapList("SELECT distinct fileset_id, bible_id FROM bucket_listing WHERE type_code = 'audio'", None)
-		self.textMap = validDB.selectMapList("SELECT distinct fileset_id, bible_id FROM bucket_listing WHERE type_code = 'text'", None)
-		self.videoMap = validDB.selectMapList("SELECT distinct fileset_id, bible_id FROM bucket_listing WHERE type_code = 'video'", None)
+		self.verseHashIds = validDB.selectMap("SELECT id, hash_id FROM bible_filesets WHERE set_type_code='text_plain'", None)
 		validDB.close()
 		verses = VersesReader(config)
-		self.verseMap = verses.filesetBibleMapList()
-		print("num filesets in app: %d,  audio: %d,  text: %d,  video: %d  verses: %d" % (len(self.appMap.keys()), len(self.audioMap.keys()), len(self.textMap.keys()), len(self.videoMap.keys()), len(self.verseMap.keys())))
+		self.verseBiblesFileset = verses.bibleIdFilesetId()
+		print("num verse filesets in verses %d" % (len(self.verseBiblesFileset)))
 
 
 config = Config()
@@ -42,28 +39,16 @@ connects.readAll()
 results = []
 
 for row in connects.filesetList:
-	filesetId = row[0]
-	typeCode = row[1]
-	hashId = row[2]
-	if typeCode == "app":
-		bibleIds = connects.appMap.get(filesetId)
-	elif typeCode == "audio" or typeCode == "audio_drama":
-		bibleIds = connects.audioMap.get(filesetId)
-	elif typeCode == "text_format":
-		bibleIds = connects.textMap.get(filesetId)
-	elif typeCode == "video_stream":
-		bibleIds = connects.videoMap.get(filesetId)
-	elif typeCode == "text_plain":
-		bibleIds = connects.verseMap.get(filesetId)
-	else:
-		print("ERROR: unknown type_code %s" % (typeCode))
-		sys.exit()
+	hashId = row[0]
+	bibleId = row[1]
+	results.append((hashId, bibleId))
 
-	if bibleIds != None:
-		for bibleId in bibleIds:
-			results.append((hashId, bibleId))
-	else:
-		print("WARNING: filesetId %s, type_code %s has no bibleIds" % (filesetId, typeCode))
+for row in connects.verseBiblesFileset:
+	parts = row.split("/")
+	bibleId = parts[0]
+	filesetId = parts[1]
+	hashId = connects.verseHashIds[filesetId]
+	results.append((hashId, bibleId))
 
 print("num records to insert %d" % (len(results)))
 

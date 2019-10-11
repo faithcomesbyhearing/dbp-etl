@@ -54,18 +54,18 @@ class VersesReader:
 		return self.filesetBibleIdList
 
 
-	def filesetBibleMapList(self):
-		filesets = {}
-		file = io.open(self.versesFilename, mode="r", encoding="utf-8")
-		for line in file:
-			parts = line.split("/")
-			bibleId = parts[1]
-			filesetId = parts[2]
-			ids = filesets.get(filesetId, [])
-			if bibleId not in ids:
-				ids.append(bibleId)
-				filesets[filesetId] = ids
-		return filesets
+#	def filesetBibleMapList(self):
+#		filesets = {}
+#		file = io.open(self.versesFilename, mode="r", encoding="utf-8")
+#		for line in file:
+#			parts = line.split("/")
+#			bibleId = parts[1]
+#			filesetId = parts[2]
+#			ids = filesets.get(filesetId, [])
+#			if bibleId not in ids:
+#				ids.append(bibleId)
+#				filesets[filesetId] = ids
+#		return filesets
 
 
 
