@@ -30,7 +30,6 @@ from Config import *
 from LPTSExtractReader import *
 from SQLUtility import *
 from VersesReader import *
-from BucketReader import *
 
 class BibleTranslationsTable:
 
@@ -38,13 +37,12 @@ class BibleTranslationsTable:
 		self.config = config
 
 	def readAll(self):
-		bucket = BucketReader(self.config)
-		bucketBibleIds = set(bucket.bibleIds())
+		self.db = SQLUtility(self.config.database_host, self.config.database_port,
+			self.config.database_user, self.config.database_output_db_name)
+		bucketBibleIds = self.db.selectSet("SELECT distinct bible_id FROM bucket_listing ORDER BY bible_id", None)
 		verse = VersesReader(self.config)
 		verseBibleIds = set(verse.bibleIds())
 		self.bibleIds = sorted(list(bucketBibleIds.union(verseBibleIds)))
-		self.inputDB = SQLUtility(self.config.database_host, self.config.database_port,
-			self.config.database_user, self.config.database_input_db_name)
 		reader = LPTSExtractReader(self.config)
 		self.bibleMap = reader.getBibleIdMap()
 		print("num bibles in map", len(self.bibleMap.keys()))
@@ -56,13 +54,13 @@ class BibleTranslationsTable:
 		if bible != None:
 			iso = bible.ISO()
 			langName = bible.LangName()
-			#result = self.inputDB.selectScalar("SELECT l.id FROM languages l,language_translations t WHERE l.iso=%s AND t.name=%s AND l.id=t.language_source_id", (iso, langName))
-			result = self.inputDB.selectScalar("SELECT id FROM languages WHERE iso=%s AND name=%s", (iso, langName))
+			#result = self.db.selectScalar("SELECT l.id FROM languages l,language_translations t WHERE l.iso=%s AND t.name=%s AND l.id=t.language_source_id", (iso, langName))
+			result = self.db.selectScalar("SELECT id FROM languages WHERE iso=%s AND name=%s", (iso, langName))
 			if result != None:
 				return result
 		else:
 			iso = bibleId[:3].lower()
-		result = self.inputDB.selectScalar("SELECT id FROM languages WHERE iso=%s", (iso))
+		result = self.db.selectScalar("SELECT id FROM languages WHERE iso=%s", (iso))
 		if result != None:
 			return result
 		else:
@@ -139,7 +137,7 @@ for bibleId in bibles.bibleIds:
 	notes = bibles.notes()
 	results.append((lang, bibleId, vernacular, vernacularTrade, name, description, background, notes))
 
-bibles.inputDB.close()
+bibles.db.close()
 outputDB = SQLUtility(config.database_host, config.database_port,
 			config.database_user, config.database_output_db_name)
 outputDB.executeBatch("INSERT INTO bible_translations (language_id, bible_id, vernacular, vernacular_trade, name, description, background, notes) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", results)

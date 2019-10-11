@@ -16,7 +16,7 @@ class BucketReader:
 		self.bibleIdList = None
 
 
-	def bibleIds(self):
+#	def bibleIds(self):
 #		if self.bibleIdList == None:
 #			db = SQLUtility(self.config.database_host, self.config.database_port,
 #				self.config.database_user, self.config.database_output_db_name)
