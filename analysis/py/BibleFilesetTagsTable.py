@@ -17,18 +17,37 @@ from Config import *
 from LPTSExtractReader import *
 from SQLUtility import *
 
-# I think this should be changed to running off bucket_listing not bible_filesets
 
 class BibleFilesetTagsTable:
 
-	def __init__(self, config):
+	def __init__(self, config, db):
 		self.config = config
+		self.db = db
+
+
+	def process(self):
+		self.readAll()
+		results = []
+
+		for fileset in self.filesetList:
+			filesetId = fileset[0]
+			typeCode = fileset[1][0:3]
+			hashId = fileset[2]
+			for name in ["bitrate", "sku", "volume"]:
+				description = self.description(filesetId, typeCode, name)
+				if description != None:
+					adminOnly = self.adminOnly()
+					notes = self.notes()
+					iso = self.iso()
+					languageId = self.languageId()
+					results.append((hashId, name, description, adminOnly, notes, iso, languageId))
+
+		print("num records to insert %d" % (len(results)))
+		self.db.executeBatch("INSERT INTO bible_fileset_tags (hash_id, name, description, admin_only, notes, iso, language_id) VALUES (%s, %s, %s, %s, %s, %s, %s)", results)
 
 
 	def readAll(self):
-		self.validDB = SQLUtility(self.config.database_host, self.config.database_port,
-			self.config.database_user, self.config.database_output_db_name)
-		self.filesetList = self.validDB.select("SELECT id, set_type_code, hash_id FROM bible_filesets", None)
+		self.filesetList = self.db.select("SELECT distinct fileset_id, set_type_code, hash_id FROM bucket_verse_summary", None)
 		reader = LPTSExtractReader(config)
 		self.audioMap = reader.getAudioMap()
 		print("num audio filesets in LPTS", len(self.audioMap.keys()))
@@ -80,30 +99,12 @@ class BibleFilesetTagsTable:
 
 
 config = Config()
-filesets = BibleFilesetTagsTable(config) 
-filesets.readAll()
-results = []
+db = SQLUtility(config.database_host, config.database_port,
+				config.database_user, config.database_output_db_name)
+filesets = BibleFilesetTagsTable(config, db)
+filesets.process()
+db.close() 
 
-for fileset in filesets.filesetList:
-	filesetId = fileset[0]
-	typeCode = fileset[1][0:3]
-	hashId = fileset[2]
-	for name in ["bitrate", "sku", "volume"]:
-		description = filesets.description(filesetId, typeCode, name)
-		if description != None:
-			adminOnly = filesets.adminOnly()
-			notes = filesets.notes()
-			iso = filesets.iso()
-			languageId = filesets.languageId()
-			results.append((hashId, name, description, adminOnly, notes, iso, languageId))
-
-print("num records to insert %d" % (len(results)))
-
-filesets.validDB.close()
-outputDB = SQLUtility(config.database_host, config.database_port,
-			config.database_user, config.database_output_db_name)
-outputDB.executeBatch("INSERT INTO bible_fileset_tags (hash_id, name, description, admin_only, notes, iso, language_id) VALUES (%s, %s, %s, %s, %s, %s, %s)", results)
-outputDB.close()
 
 
 
