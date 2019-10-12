@@ -29,20 +29,36 @@ import sys
 from Config import *
 from LPTSExtractReader import *
 from SQLUtility import *
-from VersesReader import *
+
 
 class BibleTranslationsTable:
 
-	def __init__(self, config):
+	def __init__(self, config, db):
 		self.config = config
+		self.db = db
+
+
+	def process(self):
+		self.readAll()
+		print("num bibles in dbp-prod", len(self.bibleIds))
+		results = []
+		for bibleId in self.bibleIds:
+			bible = self.bibleMap.get(bibleId)
+			lang = self.languageId(bibleId, bible)
+			#lang = biblesTable.languageId(bibleId, bible)
+			vernacular = self.vernacular()
+			vernacularTrade = self.vernacularTrade()
+			name = self.name(bible)
+			description = self.description()
+			background = self.background()
+			notes = self.notes()
+			results.append((lang, bibleId, vernacular, vernacularTrade, name, description, background, notes))
+
+		self.db.executeBatch("INSERT INTO bible_translations (language_id, bible_id, vernacular, vernacular_trade, name, description, background, notes) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", results)	
+
 
 	def readAll(self):
-		self.db = SQLUtility(self.config.database_host, self.config.database_port,
-			self.config.database_user, self.config.database_output_db_name)
-		bucketBibleIds = self.db.selectSet("SELECT distinct bible_id FROM bucket_listing ORDER BY bible_id", None)
-		verse = VersesReader(self.config)
-		verseBibleIds = set(verse.bibleIds())
-		self.bibleIds = sorted(list(bucketBibleIds.union(verseBibleIds)))
+		self.bibleIds = self.db.selectSet("SELECT distinct bible_id FROM bucket_verse_summary ORDER BY bible_id", None)
 		reader = LPTSExtractReader(self.config)
 		self.bibleMap = reader.getBibleIdMap()
 		print("num bibles in map", len(self.bibleMap.keys()))
@@ -121,27 +137,12 @@ class BibleTranslationsTable:
 
 
 config = Config()
-bibles = BibleTranslationsTable(config)
-bibles.readAll()
-print("num bibles in dbp-prod", len(bibles.bibleIds))
-results = []
-for bibleId in bibles.bibleIds:
-	bible = bibles.bibleMap.get(bibleId)
-	lang = bibles.languageId(bibleId, bible)
-	#lang = biblesTable.languageId(bibleId, bible)
-	vernacular = bibles.vernacular()
-	vernacularTrade = bibles.vernacularTrade()
-	name = bibles.name(bible)
-	description = bibles.description()
-	background = bibles.background()
-	notes = bibles.notes()
-	results.append((lang, bibleId, vernacular, vernacularTrade, name, description, background, notes))
+db = SQLUtility(config.database_host, config.database_port,
+				config.database_user, config.database_output_db_name)
+bibles = BibleTranslationsTable(config, db)
+bibles.process()
+db.close()
 
-bibles.db.close()
-outputDB = SQLUtility(config.database_host, config.database_port,
-			config.database_user, config.database_output_db_name)
-outputDB.executeBatch("INSERT INTO bible_translations (language_id, bible_id, vernacular, vernacular_trade, name, description, background, notes) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)", results)
-outputDB.close()
 
 
 
