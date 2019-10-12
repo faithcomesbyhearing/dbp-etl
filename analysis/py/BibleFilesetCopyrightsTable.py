@@ -15,17 +15,44 @@ from Config import *
 from LPTSExtractReader import *
 from SQLUtility import *
 
-# I think I need to modify this so that it runs using bucket_listing not bible_filesets
 
 class BibleFilesetCopyrightsTable:
 
-	def __init__(self, config):
+	def __init__(self, config, db):
 		self.config = config
+		self.db = db
+
+
+	def process(self):
+		self.readAll() 
+		results = []
+
+		for fileset in self.filesetList:
+			filesetId = fileset[0]
+			typeCode = fileset[1][0:3]
+			hashId = fileset[2]
+			if typeCode == "aud" or typeCode == "app":
+				lookup = self.audioMap.get(filesetId[:10])
+			elif typeCode == "tex":
+				lookup = self.textMap.get(filesetId)
+			elif typeCode == "vid":
+				lookup = self.videoMap.get(filesetId)
+			else:
+				print("ERROR: fileset %s has unknown type %s" % (filesetId, typeCode))
+				sys.exit()
+
+			copyright = self.copyright(lookup)
+			copyrightDate = self.copyrightDate(copyright)
+			copyrightDescription = self.copyrightDescription(copyright)
+			openAccess = self.openAccess()
+			results.append((hashId, copyrightDate, copyright, copyrightDescription, openAccess))
+
+		print("num records to insert %d" % (len(results)))
+		self.db.executeBatch("INSERT INTO bible_fileset_copyrights (hash_id, copyright_date, copyright, copyright_description, open_access) VALUES (%s, %s, %s, %s, %s)", results)	
+
 
 	def readAll(self):
-		self.validDB = SQLUtility(self.config.database_host, self.config.database_port,
-			self.config.database_user, self.config.database_output_db_name)
-		self.filesetList = self.validDB.select("SELECT id, set_type_code, hash_id FROM bible_filesets", None)
+		self.filesetList = self.db.select("SELECT distinct fileset_id, set_type_code, hash_id FROM bucket_verse_summary", None)
 		reader = LPTSExtractReader(self.config)
 		self.audioMap = reader.getAudioMap()
 		print("num audio filesets in LPTS", len(self.audioMap.keys()))
@@ -69,37 +96,12 @@ class BibleFilesetCopyrightsTable:
 
 
 config = Config()
-filesets = BibleFilesetCopyrightsTable(config)
-filesets.readAll() 
-results = []
+db = SQLUtility(config.database_host, config.database_port,
+				config.database_user, config.database_output_db_name)
+filesets = BibleFilesetCopyrightsTable(config, db)
+filesets.process()
+db.close()
 
-for fileset in filesets.filesetList:
-	filesetId = fileset[0]
-	typeCode = fileset[1][0:3]
-	hashId = fileset[2]
-	if typeCode == "aud" or typeCode == "app":
-		lookup = filesets.audioMap.get(filesetId[:10])
-	elif typeCode == "tex":
-		lookup = filesets.textMap.get(filesetId)
-	elif typeCode == "vid":
-		lookup = filesets.videoMap.get(filesetId)
-	else:
-		print("ERROR: fileset %s has unknown type %s" % (filesetId, typeCode))
-		sys.exit()
-
-	copyright = filesets.copyright(lookup)
-	copyrightDate = filesets.copyrightDate(copyright)
-	copyrightDescription = filesets.copyrightDescription(copyright)
-	openAccess = filesets.openAccess()
-	results.append((hashId, copyrightDate, copyright, copyrightDescription, openAccess))
-
-print("num records to insert %d" % (len(results)))
-
-filesets.validDB.close()
-outputDB = SQLUtility(config.database_host, config.database_port,
-			config.database_user, config.database_output_db_name)
-outputDB.executeBatch("INSERT INTO bible_fileset_copyrights (hash_id, copyright_date, copyright, copyright_description, open_access) VALUES (%s, %s, %s, %s, %s)", results)
-outputDB.close()
 
 
 
