@@ -20,7 +20,8 @@ from SQLUtility import *
 
 class BibleFilesetsTable:
 
-	def __init__(self, db):
+	def __init__(self, config, db):
+		self.config = config
 		self.db = db
 
 
@@ -45,7 +46,7 @@ class BibleFilesetsTable:
 config = Config()
 db = SQLUtility(config.database_host, config.database_port,
 		config.database_user, config.database_output_db_name)
-bible = BibleFilesetsTable(db)
+bible = BibleFilesetsTable(config, db)
 bible.process()
 db.close()
 

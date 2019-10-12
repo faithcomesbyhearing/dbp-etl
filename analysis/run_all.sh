@@ -58,16 +58,17 @@ insert into valid_dbp.bible_books select * from dbp.bible_books where bible_id i
 # 42925 9/24
 # 42991 9/24
 # 70504 10/6 better
-# 64490 10/9 ? I don't know
+# 64490 10/9 ? I don't know why it changed.
 
 python3 py/BibleFilesTable.py
 # 1086357 9/24
 # 1096274 9/24
 # 1397966 10/9
-# 1369330 10/10
+# 1369330 10/10 This is not correct, but move on
 
 python3 py/BibleFileTagsTable.py
 # 0 9/24
+# 994257 10/12 in query, looks correct how to validate?
 
 python3 py/BibleFileVideoResolutionsTable.py
 # 0 9/24

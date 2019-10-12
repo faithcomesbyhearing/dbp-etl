@@ -29,6 +29,7 @@ class CompareTable:
 		self.tables["access_group_filesets"] = [["access_group_id", "hash_id"], []]
 		self.tables["bible_files"] = [["hash_id", "book_id", "chapter_start", "verse_start"], 
 			["chapter_end", "verse_end", "file_name", "file_size", "duration"]]
+		self.tables["bible_file_tags"] = (("file_id", "tag"), ("value", "admin_only"))
 
 
 	def comparePkey(self, table):
@@ -157,7 +158,8 @@ compare = CompareTable(config)
 #compare.filesetId()
 #compare.comparePkey("bible_books")
 #compare.comparePkeyAndFileset("access_group_filesets")
-compare.comparePkeyAndFileset("bible_files")
+#compare.comparePkeyAndFileset("bible_files")
+compare.compareColumns("bible_file_tags")
 
 
 compare.close()

@@ -19,20 +19,36 @@ from S3Utility import *
 
 class BibleFileTagsTable:
 
-	def __init__(self, config):
+	def __init__(self, config, db):
 		self.config = config
+		self.db = db
+
+
+	def process(self):
+		self.readAll()
+		results = []
+
+		for file in self.filePathResults:
+			fileId = self.fileId(file)
+			tag = self.tag()
+			value = self.value(file)
+			adminOnly = self.adminOnly()
+			results.append((fileId, tag, value, adminOnly))
+			if len(results) > 200:
+				break
+
+		print("num records to insert %d" % (len(results)))
+		self.db.executeBatch("INSERT INTO bible_file_tags (file_id, tag, value, admin_only) VALUES (%s, %s, %s, %s)", results)
 
 
 	def readAll(self):
-		self.validDB = SQLUtility(self.config.database_host, self.config.database_port,
-			self.config.database_user, self.config.database_output_db_name)
-		sql = ("SELECT s.asset_id, b.bible_id, s.id, f.file_name, f.id" +
-			" FROM bible_files f, bible_filesets s, bible_fileset_connections b" +
-			" WHERE f.hash_id = s.hash_id" + 
-			" AND s.hash_id = b.hash_id" +
-			" AND f.hash_id = b.hash_id" +
-			" AND s.set_type_code IN ('audio', 'audio_drama')")
-		self.filePathResults = self.validDB.select(sql, None)
+		sql = ("SELECT b.asset_id, b.bible_id, b.fileset_id, b.file_name, f.id" +
+			" FROM bible_files f, bucket_listing b" +
+			" WHERE b.hash_id = f.hash_id"
+			" AND b.book_id = f.book_id"
+			" AND b.chapter_start = f.chapter_start"
+			" AND b.set_type_code IN ('audio', 'audio_drama')")
+		self.filePathResults = self.db.select(sql, None)
 		print("num %d files in result table" % (len(self.filePathResults)))
 		self.s3 = S3Utility(self.config)
 
@@ -52,7 +68,6 @@ class BibleFileTagsTable:
 		self.s3.downloadFile(bucket, key, filename)
 		try:
 			audio = MP3(filename)
-			print(audio)
 			self.s3.deleteFile(filename)
 			print(audio.info.length, str(int(round(audio.info.length))))
 			return str(int(round(audio.info.length)))
@@ -66,26 +81,11 @@ class BibleFileTagsTable:
 
 
 config = Config()
-tags = BibleFileTagsTable(config) 
-tags.readAll()
-results = []
-
-for file in tags.filePathResults:
-	fileId = tags.fileId(file)
-	tag = tags.tag()
-	value = tags.value(file)
-	adminOnly = tags.adminOnly()
-	results.append((fileId, tag, value, adminOnly))
-	if len(results) > 100:
-		break
-
-print("num records to insert %d" % (len(results)))
-tags.validDB.close()
-sys.exit()
-outputDB = SQLUtility(config.database_host, config.database_port,
-			config.database_user, config.database_output_db_name)
-outputDB.executeBatch("INSERT INTO bible_file_tags (file_id, tag, value, admin_only) VALUES (%s, %s, %s, %s)", results)
-outputDB.close()
+db = SQLUtility(config.database_host, config.database_port,
+				config.database_user, config.database_output_db_name)
+tags = BibleFileTagsTable(config, db)
+tags.process()
+db.close() 
 
 
 
