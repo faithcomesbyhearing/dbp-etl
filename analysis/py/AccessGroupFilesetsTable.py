@@ -32,8 +32,9 @@ from SQLUtility import *
 
 class AccessGroupFilesetsTable:
 
-	def __init__(self, config):
+	def __init__(self, config, db):
 		self.config = config
+		self.db = db
 		self.PERMISSION_PUBLIC_DOMAIN = config.permission_public_domain # 2
 		self.PERMISSION_FCBH_GENERAL = config.permission_fcbh_general # 3  Don't know what is for
 		self.PERMISSION_FCBH_WEB = config.permission_fcbh_web # 4
@@ -45,10 +46,25 @@ class AccessGroupFilesetsTable:
 		self.PERMISSION_BIBLEIS_HIDE = config.permission_bibleis_hide # 10
 
 
+	def process(self):
+		self.readAll()
+		results = []
+
+		for fileset in self.filesetList:
+			filesetId = fileset[0]
+			typeCode = fileset[1][0:3]
+			hashId = fileset[2]
+
+			accessGroupIds = self.accessGroupIds(filesetId, typeCode)
+			for accessGroupId in accessGroupIds:
+				results.append((accessGroupId, hashId))
+
+		print("num records to insert %d" % (len(results)))
+		self.db.executeBatch("INSERT INTO access_group_filesets (access_group_id, hash_id) VALUES (%s, %s)", results)
+
+
 	def readAll(self):
-		self.validDB = SQLUtility(self.config.database_host, self.config.database_port,
-			self.config.database_user, self.config.database_output_db_name)
-		self.filesetList = self.validDB.select("SELECT id, set_type_code, hash_id FROM bible_filesets", None)
+		self.filesetList = self.db.select("SELECT distinct fileset_id, set_type_code, hash_id FROM bucket_verse_summary", None)
 		print("num filesets in bible_filesets", len(self.filesetList))
 		reader = LPTSExtractReader(config)
 		self.audioMap = reader.getAudioMap()
@@ -104,26 +120,12 @@ class AccessGroupFilesetsTable:
 
 
 config = Config()
-filesets = AccessGroupFilesetsTable(config)
-filesets.readAll()
-results = []
+db = SQLUtility(config.database_host, config.database_port,
+				config.database_user, config.database_output_db_name)
+filesets = AccessGroupFilesetsTable(config, db)
+filesets.process()
+db.close()
 
-for fileset in filesets.filesetList:
-	filesetId = fileset[0]
-	typeCode = fileset[1][0:3]
-	hashId = fileset[2]
-
-	accessGroupIds = filesets.accessGroupIds(filesetId, typeCode)
-	for accessGroupId in accessGroupIds:
-		results.append((accessGroupId, hashId))
-
-print("num records to insert %d" % (len(results)))
-
-filesets.validDB.close()
-outputDB = SQLUtility(config.database_host, config.database_port,
-			config.database_user, config.database_output_db_name)
-outputDB.executeBatch("INSERT INTO access_group_filesets (access_group_id, hash_id) VALUES (%s, %s)", results)
-outputDB.close()
 
 
 """
