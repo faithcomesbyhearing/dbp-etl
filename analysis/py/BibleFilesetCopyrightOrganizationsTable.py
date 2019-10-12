@@ -13,19 +13,32 @@ from Config import *
 from LPTSExtractReader import *
 from SQLUtility import *
 
-# I think I need to modify this so that it runs using bucket_listing not bible_filesets
 
 class BibleFilesetCopyrightOrganizationsTable:
 
-	def __init__(self, config):
+	def __init__(self, config, db):
 		self.config = config
+		self.db = db
+
+
+	def process(self):
+		self.readAll()
+		results = []
+
+		for fileset in self.filesetList:
+			filesetId = fileset[0]
+			typeCode = fileset[1][0:3]
+			hashId = fileset[2]
+			(organizationId, organizationRole) = self.organization(filesetId, typeCode)
+			results.append((hashId, organizationId, organizationRole))
+
+		print("num records to insert %d" % (len(results)))
+		self.db.executeBatch("INSERT INTO bible_fileset_copyright_organizations (hash_id, organization_id, organization_role) VALUES (%s, %s, %s)", results)
 
 
 	def readAll(self):
-		self.validDB = SQLUtility(self.config.database_host, self.config.database_port,
-			self.config.database_user, self.config.database_output_db_name)
-		self.filesetList = self.validDB.select("SELECT id, set_type_code, hash_id FROM bible_filesets", None)
-		self.orgNameMap = self.validDB.selectMap("SELECT name, organization_id FROM organization_translations", None)
+		self.filesetList = self.db.select("SELECT distinct fileset_id, set_type_code, hash_id FROM bucket_verse_summary", None)
+		self.orgNameMap = self.db.selectMap("SELECT name, organization_id FROM organization_translations", None)
 		reader = LPTSExtractReader(config)
 		self.audioMap = reader.getAudioMap()
 		print("num audio filesets in LPTS", len(self.audioMap.keys()))
@@ -71,24 +84,11 @@ class BibleFilesetCopyrightOrganizationsTable:
 
 
 config = Config()
-filesets = BibleFilesetCopyrightOrganizationsTable(config)
-filesets.readAll()
-results = []
-
-for fileset in filesets.filesetList:
-	filesetId = fileset[0]
-	typeCode = fileset[1][0:3]
-	hashId = fileset[2]
-	(organizationId, organizationRole) = filesets.organization(filesetId, typeCode)
-	results.append((hashId, organizationId, organizationRole))
-
-print("num records to insert %d" % (len(results)))
-
-filesets.validDB.close()
-outputDB = SQLUtility(config.database_host, config.database_port,
-			config.database_user, config.database_output_db_name)
-outputDB.executeBatch("INSERT INTO bible_fileset_copyright_organizations (hash_id, organization_id, organization_role) VALUES (%s, %s, %s)", results)
-outputDB.close()
+db = SQLUtility(config.database_host, config.database_port,
+				config.database_user, config.database_output_db_name)
+filesets = BibleFilesetCopyrightOrganizationsTable(config, db)
+filesets.process()
+db.close()
 
 
 
