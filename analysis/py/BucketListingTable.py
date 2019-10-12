@@ -14,18 +14,24 @@ from Legacy import *
 
 class BucketListingTable:
 
-	def __init__(self, config):
+	def __init__(self, config, db):
 		self.config = config
+		self.db = db
 		self.lookup = LookupTables()
 		self.legacy = Legacy(config)
 		self.VIDEO_BOOK_SET = {"MAT","MRK","LUK","JHN"}
 		self.VIDEO_BOOK_MAP = {"Mark": "MRK", "MRKZ": "MRK", "Luke": "LUK"}
 
 
+	def process(self):
+		self.createBucketTable()
+		self.insertBucketList("dbp-prod")
+		self.insertBucketList("dbp-vid")
+		self.createIndexes()
+
+
 	def createBucketTable(self):
-		db = SQLUtility(self.config.database_host, self.config.database_port,
-				self.config.database_user, self.config.database_output_db_name)
-		db.execute("DROP TABLE IF EXISTS bucket_listing", None)
+		self.db.execute("DROP TABLE IF EXISTS bucket_listing", None)
 		sql = ("CREATE TABLE bucket_listing ("
 			+ " asset_id varchar(255) not null,"
 			+ " type_code varchar(255) not null,"
@@ -40,8 +46,7 @@ class BucketListingTable:
 			+ " verse_start varchar(255) NULL,"
 			+ " verse_end varchar(255) NULL,"
 			+ " video_height varchar(255) NULL)")
-		db.execute(sql, None)
-		db.close()
+		self.db.execute(sql, None)
 
 
 	def insertBucketList(self, bucketName):
@@ -123,19 +128,13 @@ class BucketListingTable:
 		self.privateDrop(output, "WARNING: video_id %s was excluded", dropVideoIds)
 		output.close()
 		print("%d rows to insert" % (len(results)))
-		db = SQLUtility(self.config.database_host, self.config.database_port,
-				self.config.database_user, self.config.database_output_db_name)
-		db.executeBatch("INSERT INTO bucket_listing VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", results)
-		db.close()
+		self.db.executeBatch("INSERT INTO bucket_listing VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", results)
 
 
 	def createIndexes(self):
-		db = SQLUtility(self.config.database_host, self.config.database_port,
-				self.config.database_user, self.config.database_output_db_name)
-		db.execute("CREATE INDEX bucket_listing_bible_id ON bucket_listing (bible_id)", None)
-		db.execute("CREATE INDEX bucket_listing_fileset_id ON bucket_listing (fileset_id)", None)
-		db.execute("CREATE INDEX bucket_listing_hash_id ON bucket_listing (hash_id)", None)
-		db.close()
+		self.db.execute("CREATE INDEX bucket_listing_bible_id ON bucket_listing (bible_id)", None)
+		self.db.execute("CREATE INDEX bucket_listing_fileset_id ON bucket_listing (fileset_id)", None)
+		self.db.execute("CREATE INDEX bucket_listing_hash_id ON bucket_listing (hash_id)", None)
 
 
 	def privateDrop(self, output, message, dropIds):
@@ -246,11 +245,11 @@ class BucketListingTable:
 
 
 config = Config()
-bucket = BucketListingTable(config)
-bucket.createBucketTable()
-bucket.insertBucketList("dbp-prod")
-bucket.insertBucketList("dbp-vid")
-bucket.createIndexes()
+db = SQLUtility(config.database_host, config.database_port,
+				config.database_user, config.database_output_db_name)
+bucket = BucketListingTable(config, db)
+bucket.process()
+db.close()
 
 """
 AUDIO BOOK_ID ERRORS

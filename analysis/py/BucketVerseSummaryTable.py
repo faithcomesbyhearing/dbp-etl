@@ -15,27 +15,17 @@ from VersesReader import *
 class BucketVerseSummaryTable:
 
 
-	def __init__(self, config):
+	def __init__(self, config, db):
 		self.config = config
 		self.legacy = Legacy(config)
-		self.db = None
+		self.db = db
 
 
 	def process(self):
-		self.db = SQLUtility(self.config.database_host, self.config.database_port,
-				self.config.database_user, self.config.database_output_db_name)
 		self.createSummaryTable()
 		self.insertBucketSummary()
 		self.insertVerseSummary()
 		self.createIndexes()
-		self.close()
-
-
-	def close(self):
-		if self.db != None:
-			self.db.close()
-			self.db = None
-			print("database closed")
 
 
 	## The pkey assumes that a fileset can have multiple bibles.
@@ -86,8 +76,11 @@ class BucketVerseSummaryTable:
 
 
 config = Config()
-summary = BucketVerseSummaryTable(config)
+db = SQLUtility(config.database_host, config.database_port,
+				config.database_user, config.database_output_db_name)
+summary = BucketVerseSummaryTable(config, db)
 summary.process()
+db.close()
 
 
 
