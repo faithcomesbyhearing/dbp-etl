@@ -17,6 +17,8 @@ from Config import *
 from LPTSExtractReader import *
 from SQLUtility import *
 
+# I think this should be changed to running off bucket_listing not bible_filesets
+
 class BibleFilesetTagsTable:
 
 	def __init__(self, config):

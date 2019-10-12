@@ -23,25 +23,44 @@ import io
 import os
 import sys
 from Config import *
-from VersesReader import *
 from SQLUtility import *
 from LPTSExtractReader import *
 from LookupTables import *
 
 class BiblesTable:
 
-	def __init__(self, config):
+	def __init__(self, config, db):
 		self.config = config
+		self.db = db
+
+
+	def process(self):
+		self.readAll()
+		print("num bibles in dbp-prod + verses", len(bibles.bibleIds))
+		results = []
+		for bibleId in self.bibleIds:
+			bible = self.bibleMap.get(bibleId)
+			lang = self.languageId(bibleId, bible)
+			verse = self.versification(bible)
+			date = self.date(bible)
+			scope = self.scope(bible)
+			script = self.script(bible)
+			numeral = self.numeralSystemId(script)
+			derived = self.derived(bible)
+			copyright = self.copyright(bible)
+			priority = self.priority(bible)
+			reviewed = self.reviewed(bible)
+			notes = self.notes(bible)
+			results.append((bibleId, lang, verse, numeral, date, scope, script, derived, copyright, 
+				priority, reviewed, notes))
+
+		print("num bibles to be inserted: %d" % (len(results)))
+		self.db.executeBatch("INSERT INTO bibles (id, language_id, versification, numeral_system_id, `date`, scope, script, derived, copyright, priority, reviewed, notes) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", results)
+
 
 	def readAll(self):
-		self.inputDB = SQLUtility(self.config.database_host, self.config.database_port,
-				self.config.database_user, self.config.database_output_db_name)
-		bucketBibleIds = self.inputDB.selectSet("SELECT distinct bible_id FROM bucket_listing ORDER BY bible_id", None)
-
-		verse = VersesReader(self.config)
-		verseBibleIds = set(verse.bibleIds())
-		self.bibleIds = sorted(list(bucketBibleIds.union(verseBibleIds)))
-		print("num bibleIds  bucket: %d  verse: %d  verse+bucket: %d" % (len(bucketBibleIds), len(verseBibleIds), len(self.bibleIds)))
+		self.bibleIds = self.db.selectSet("SELECT distinct bible_id FROM bucket_verse_summary ORDER BY bible_id", None)
+		print("num %d bibleIds in bucket_verse_summary" % (len(self.bibleIds)))
 
 		reader = LPTSExtractReader(self.config)
 		self.bibleMap = reader.getBibleIdMap()
@@ -53,13 +72,13 @@ class BiblesTable:
 		if bible != None:
 			iso = bible.ISO()
 			langName = bible.LangName()
-			#result = self.inputDB.selectScalar("SELECT l.id FROM languages l,language_translations t WHERE l.iso=%s AND t.name=%s AND l.id=t.language_source_id", (iso, langName))
-			result = self.inputDB.selectScalar("SELECT id FROM languages WHERE iso=%s AND name=%s", (iso, langName))
+			#result = self.db.selectScalar("SELECT l.id FROM languages l,language_translations t WHERE l.iso=%s AND t.name=%s AND l.id=t.language_source_id", (iso, langName))
+			result = self.db.selectScalar("SELECT id FROM languages WHERE iso=%s AND name=%s", (iso, langName))
 			if result != None:
 				return result
 		else:
 			iso = bibleId[:3].lower()
-		result = self.inputDB.selectScalar("SELECT id FROM languages WHERE iso=%s", (iso))
+		result = self.db.selectScalar("SELECT id FROM languages WHERE iso=%s", (iso))
 		if result != None:
 			return result
 		else:
@@ -76,7 +95,7 @@ class BiblesTable:
 		## associating this with Bible is incorrect, because there could be multiple
 		## damIds with different scripts
 		result = None
-		result = self.inputDB.selectScalar("SELECT numeral_system_id FROM alphabet_numeral_systems WHERE script_id=%s", (script))
+		result = self.db.selectScalar("SELECT numeral_system_id FROM alphabet_numeral_systems WHERE script_id=%s", (script))
 		## note this query returns multiple rows for Arab and Deva, I dont know which is correct
 		if result != None:
 			return result
@@ -149,32 +168,12 @@ class BiblesTable:
 
 
 config = Config()
-bibles = BiblesTable(config)
-bibles.readAll()
-print("num bibles in dbp-prod + verses", len(bibles.bibleIds))
-results = []
-for bibleId in bibles.bibleIds:
-	bible = bibles.bibleMap.get(bibleId)
-	lang = bibles.languageId(bibleId, bible)
-	verse = bibles.versification(bible)
-	date = bibles.date(bible)
-	scope = bibles.scope(bible)
-	script = bibles.script(bible)
-	numeral = bibles.numeralSystemId(script)
-	derived = bibles.derived(bible)
-	copyright = bibles.copyright(bible)
-	priority = bibles.priority(bible)
-	reviewed = bibles.reviewed(bible)
-	notes = bibles.notes(bible)
-	results.append((bibleId, lang, verse, numeral, date, scope, script, derived, copyright, 
-		priority, reviewed, notes))
-
-bibles.inputDB.close()
-print("num bibles to be inserted: %d" % (len(results)))
-outputDB = SQLUtility(config.database_host, config.database_port,
+db = SQLUtility(config.database_host, config.database_port,
 			config.database_user, config.database_output_db_name)
-outputDB.executeBatch("INSERT INTO bibles (id, language_id, versification, numeral_system_id, `date`, scope, script, derived, copyright, priority, reviewed, notes) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)", results)
-outputDB.close()
+bibles = BiblesTable(config, db)
+bibles.process()
+db.close()
+
 
 
 

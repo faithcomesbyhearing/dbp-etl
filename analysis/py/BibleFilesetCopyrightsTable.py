@@ -15,6 +15,8 @@ from Config import *
 from LPTSExtractReader import *
 from SQLUtility import *
 
+# I think I need to modify this so that it runs using bucket_listing not bible_filesets
+
 class BibleFilesetCopyrightsTable:
 
 	def __init__(self, config):

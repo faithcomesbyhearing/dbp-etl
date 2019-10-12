@@ -14,48 +14,35 @@ import os
 import sys
 from Config import *
 from SQLUtility import *
-from VersesReader import *
 
 class BibleFilesetConnectionsTable:
 
-	def __init__(self, config):
+	def __init__(self, config, db):
 		self.config = config
+		self.db = db
 
-	def readAll(self):
-		validDB = SQLUtility(self.config.database_host, self.config.database_port,
-			self.config.database_user, self.config.database_output_db_name)
-		self.filesetList = validDB.select("SELECT distinct hash_id, bible_id FROM bucket_listing", None)
-		print("num filesets in bible_filesets %d" % (len(self.filesetList)))
-		self.verseHashIds = validDB.selectMap("SELECT id, hash_id FROM bible_filesets WHERE set_type_code='text_plain'", None)
-		validDB.close()
-		verses = VersesReader(config)
-		self.verseBiblesFileset = verses.bibleIdFilesetId()
-		print("num verse filesets in verses %d" % (len(self.verseBiblesFileset)))
+
+	def process(self):
+		filesetList = self.db.select("SELECT distinct hash_id, bible_id FROM bucket_verse_summary", None)
+		print("num filesets in bible_filesets %d" % (len(filesetList)))
+		results = []
+
+		for row in filesetList:
+			hashId = row[0]
+			bibleId = row[1]
+			results.append((hashId, bibleId))
+
+		print("num records to insert %d" % (len(results)))
+		self.db.executeBatch("INSERT INTO bible_fileset_connections (hash_id, bible_id) VALUES (%s, %s)", results)
 
 
 config = Config()
-connects = BibleFilesetConnectionsTable(config)
-connects.readAll()
-results = []
+db = SQLUtility(config.database_host, config.database_port,
+				config.database_user, config.database_output_db_name)
+connects = BibleFilesetConnectionsTable(config, db)
+connects.process()
+db.close()
 
-for row in connects.filesetList:
-	hashId = row[0]
-	bibleId = row[1]
-	results.append((hashId, bibleId))
-
-for row in connects.verseBiblesFileset:
-	parts = row.split("/")
-	bibleId = parts[0]
-	filesetId = parts[1]
-	hashId = connects.verseHashIds[filesetId]
-	results.append((hashId, bibleId))
-
-print("num records to insert %d" % (len(results)))
-
-outputDB = SQLUtility(config.database_host, config.database_port,
-			config.database_user, config.database_output_db_name)
-outputDB.executeBatch("INSERT INTO bible_fileset_connections (hash_id, bible_id) VALUES (%s, %s)", results)
-outputDB.close()
 
 
 

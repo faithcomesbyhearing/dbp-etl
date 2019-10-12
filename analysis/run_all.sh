@@ -7,6 +7,9 @@ python3 py/BucketListingTable.py
 # 30698082 9/27
 # 1626574 10/1 verified
 
+python3 py/BucketVerseSummaryTable.py
+# 6543 10/11 verified
+
 python3 py/BibleFilesetsTable.py
 # 3728 9/24
 # 3749 9/24
