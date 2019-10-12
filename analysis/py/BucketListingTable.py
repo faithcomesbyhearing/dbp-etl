@@ -25,10 +25,9 @@ class BucketListingTable:
 	def createBucketTable(self):
 		db = SQLUtility(self.config.database_host, self.config.database_port,
 				self.config.database_user, self.config.database_output_db_name)
-		sql = "DROP TABLE IF EXISTS bucket_listing"
-		db.execute(sql, None)
+		db.execute("DROP TABLE IF EXISTS bucket_listing", None)
 		sql = ("CREATE TABLE bucket_listing ("
-			+ " bucket varchar(255) not null,"
+			+ " asset_id varchar(255) not null,"
 			+ " type_code varchar(255) not null,"
 			+ " bible_id varchar(255) not null,"
 			+ " fileset_id varchar(255) not null,"
