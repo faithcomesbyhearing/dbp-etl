@@ -4,6 +4,12 @@
 #| hash_id           | char(12)         | NO   | PRI | NULL              |
 #| organization_id   | int(10) unsigned | NO   | PRI | NULL              |
 #| organization_role | int(11)          | NO   | MUL | NULL              |
+#| PRIMARY KEY (hash_id, organization_id)
+#| KEY (organization_id)
+#| KEY (organization_role)
+#| FOREIGN KEY (organization_role) REFERENCES bible_fileset_copyright_roles (id)
+#| FOREIGN KEY (hash_id) REFERENCES bible_filesets (hash_id)
+#| FOREIGN KEY (organization_id) REFERENCES organizations (id)
 #
 
 import io

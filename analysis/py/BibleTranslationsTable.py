@@ -10,15 +10,20 @@
 # language_id's per bibleId, which would contradict the bibles table.  It should be in one of the
 # two tables, not both.
 #
-# id               | int(10) unsigned | NO   | PRI | NULL              | auto_increment              |
-# language_id      | int(10) unsigned | NO   | MUL | NULL              |                             |
-# bible_id         | varchar(12)      | NO   | MUL | NULL              |                             |
-# vernacular       | tinyint(1)       | NO   |     | 0                 |                             |
-# vernacular_trade | tinyint(1)       | NO   |     | 0                 |                             |
-# name             | varchar(191)     | NO   |     | NULL              |                             |
-# description      | text             | YES  |     | NULL              |                             |
-# background       | text             | YES  |     | NULL              |                             |
-# notes            | text             | YES  |     | NULL              |                             |
+#| id               | int(10) unsigned | NO   | PRI | NULL              | auto_increment              |
+#| language_id      | int(10) unsigned | NO   | MUL | NULL              |                             |
+#| bible_id         | varchar(12)      | NO   | MUL | NULL              |                             |
+#| vernacular       | tinyint(1)       | NO   |     | 0                 |                             |
+#| vernacular_trade | tinyint(1)       | NO   |     | 0                 |                             |
+#| name             | varchar(191)     | NO   |     | NULL              |                             |
+#| description      | text             | YES  |     | NULL              |                             |
+#| background       | text             | YES  |     | NULL              |                             |
+#| notes            | text             | YES  |     | NULL              |                             |
+#| PRIMARY KEY (id)
+#| KEY (language_id)
+#| KEY (bible_id)
+#| FOREIGN KEY (bible_id) REFERENCES bibles (id)
+#| FOREIGN KEY (language_id) REFERENCES languages (id)
 #
 # This table has no unique logical key.  bible_id, language_id, vernacular is close to unique.
 

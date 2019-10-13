@@ -72,6 +72,7 @@ python3 py/BibleFileTagsTable.py
 
 python3 py/BibleFileVideoResolutionsTable.py
 # 0 9/24
+# 49149 10/12 not verified
 
 python3 py/BibleFileVideoTransportStreamTable.py
 # 0 9/24

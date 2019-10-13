@@ -4,6 +4,10 @@
 #
 #| hash_id    | char(12)    | NO   | PRI | NULL              |
 #| bible_id   | varchar(12) | NO   | PRI | NULL              | 
+#| PRIMARY KEY (hash_id, bible_id)
+#| KEY (bible_id)
+#| FOREIGN KEY (hash_id) REFERENCES bible_filesets (hash_id)
+#| FOREIGN KEY (bible_id) REFERENCES bibles (id)
 #
 
 # Get a list of filesetId's and hashIds from the database

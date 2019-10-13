@@ -17,6 +17,13 @@
 #| priority          | tinyint(3) unsigned | NO   |     | 0                 |                             |
 #| reviewed          | tinyint(1)          | YES  |     | 0                 |                             |
 #| notes             | text                | YES  |     | NULL  
+#| PRIMARY KEY (id)
+#| KEY (language_id)
+#| KEY (numeral_system_id)
+#| KEY (script)
+#| FOREIGN KEY (script) REFERENCES alphabets (script)
+#| FOREIGN KEY (language_id) REFERENCES languages (id)
+#| FOREIGN KEY (numeral_system_id) REFERENCES numeral_systems (id)
 #
 
 import io

@@ -7,6 +7,15 @@
 #| set_type_code | varchar(16) | NO   | MUL | NULL              |                             |
 #| set_size_code | char(9)     | NO   | MUL | NULL              |                             |
 #| hidden        | tinyint(1)  | NO   |     | 0                 |                             |
+#| PRIMARY KEY (hash_id)
+#| UNIQUE KEY (id, asset_id, set_type_code)
+#| KEY (asset_id)
+#| KEY (set_type_code)
+#| KEY (set_size_code)
+#| FOREIGN KEY (asset_id) REFERENCES assets (id)
+#| FOREIGN KEY (set_size_code) REFERENCES bible_fileset_sizes (set_size_code)
+#| FOREIGN KEY (set_type_code) REFERENCES bible_fileset_types (set_type_code)
+#
 
 import io
 import os

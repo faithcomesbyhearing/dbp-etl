@@ -11,7 +11,11 @@
 #| file_name     | varchar(191)        | NO   |     | NULL              |                             |
 #| file_size     | int(10) unsigned    | YES  |     | NULL              |                             |
 #| duration      | int(10) unsigned    | YES  |     | NULL              |                             |
-#
+#| PRIMARY KEY (id)
+#| UNIQUE KEY (hash_id, book_id, chapter_start, verse_start)
+#| KEY (book_id),
+#| FOREIGN KEY (hash_id) REFERENCES bible_filesets (hash_id)
+#| FOREIGN KEY (book_id) REFERENCES books (id)
 #
 
 import io

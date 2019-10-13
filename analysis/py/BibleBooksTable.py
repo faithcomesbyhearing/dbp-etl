@@ -17,7 +17,9 @@ from Config import *
 from BucketReader import *
 from SQLUtility import *
 
-class BibleFilesTable:
+### This has not been written
+
+class BibleBooksTable:
 
 	def __init__(self, config):
 		self.config = config

@@ -9,6 +9,10 @@
 #| resolution_height | int(10) unsigned | NO   |     | NULL              |                |
 #| codec             | varchar(64)      | NO   |     |                   |                |
 #| stream            | tinyint(1)       | NO   |     | NULL              |                |
+#| PRIMARY KEY (id)
+#| UNIQUE KEY (file_name)
+#| KEY (bible_file_id)
+#| FOREIGN KEY (bible_file_id) REFERENCES bible_files (id)
 #
 
 import io

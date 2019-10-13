@@ -5,7 +5,8 @@
 #| tag        | varchar(12)      | NO   | PRI | NULL              |       |
 #| value      | varchar(191)     | NO   |     | NULL              |       |
 #| admin_only | tinyint(1)       | NO   |     | NULL              |       |
-#
+#| PRIMARY KEY (file_id, tag)
+#| FOREIGN KEY (file_id) REFERENCES bible_files (id)
 #
 
 import io

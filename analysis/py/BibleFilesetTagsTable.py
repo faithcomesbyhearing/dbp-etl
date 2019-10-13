@@ -8,6 +8,12 @@
 #| notes       | text             | YES  |     | NULL              |
 #| iso         | char(3)          | NO   | MUL | NULL              |
 #| language_id | int(10) unsigned | NO   | PRI | 0                 |
+#| PRIMARY KEY (hash_id, name, language_id)
+#| KEY (iso)
+#| KEY (language_id)
+#| FOREIGN KEY (hash_id) REFERENCES bible_filesets (hash_id)
+#| FOREIGN KEY (language_id) REFERENCES languages (id)
+#| FOREIGN KEY (iso) REFERENCES languages (iso)
 #
 
 import io

@@ -6,6 +6,8 @@
 #| copyright             | text         | NO   |     | NULL              |                             |
 #| copyright_description | text         | NO   |     | NULL              |                             |
 #| open_access           | tinyint(1)   | NO   |     | 1                 |                             |
+#| PRIMARY KEY (hash_id)
+#| FOREIGN KEY (hash_id) REFERENCES bible_filesets (hash_id)
 #
 
 import io
