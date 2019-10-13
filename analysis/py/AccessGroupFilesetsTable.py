@@ -3,6 +3,10 @@
 #
 #| access_group_id | int(10) unsigned | NO   | PRI | NULL              |
 #| hash_id         | char(12)         | NO   | PRI | NULL              |
+#| PRIMARY KEY (access_group_id, hash_id)
+#| KEY (hash_id)
+#| FOREIGN KEY (access_group_id) REFERENCES access_groups (id)
+#| FOREIGN KEY (hash_id) REFERENCES bible_filesets (hash_id)
 #
 #
 #+----+----------------------+----------+

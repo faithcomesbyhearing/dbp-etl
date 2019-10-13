@@ -7,6 +7,8 @@ use valid_dbp;
 
 select count(*) as bucket_listing from bucket_listing;
 
+select count(*) as bucket_verse_summary from bucket_verse_summary;
+
 select count(*) as bibles from bibles;
 
 select count(*) as bible_translations from bible_translations;
