@@ -12,7 +12,7 @@ class VersesReader:
 
 	def __init__(self, config):
 		self.config = config
-		self.versesFilename = "bible_verses.text"
+		self.versesFilename = self.config.directory_bucket_list % ("bible_verses")
 #		self.bibleIdList = None
 #		self.filesetIdList = None
 		self.filesetBibleIdList = None

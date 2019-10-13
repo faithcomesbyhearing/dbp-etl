@@ -3,27 +3,30 @@
  <database>
   <host>127.0.0.1</host>
   <user>root</user>
-  <db_name>test_dbp</db_name>
+  <input_db_name>dbp</input_db_name>
+  <output_db_name>valid_dbp</output_db_name>
   <port>3306</port>
  </database>
  <s3>
-  <!-- changing bucket names will affect calculation of hash_id, and require DBP total reload, GNG 9/1/19 -->
   <bucket>dbp-prod</bucket>
   <vid_bucket>dbp-vid</vid_bucket>
   <aws_profile>Gary</aws_profile>
- </s3>
- <permissions>
-  <access_restricted>7</access_restricted>
-  <access_granted>9</access_granted>
-  <access_video>4</access_video>
- </permissions>
+  <!-- <aws_profile>FCBH_BibleApp</aws_profile> -->
+</s3>
+<permission>
+  <public_domain>2</public_domain>
+  <fcbh_general>3</fcbh_general>
+  <fcbh_web>4</fcbh_web>
+  <fcbh_general_exclude>5</fcbh_general_exclude>
+  <dbs_general>6</dbs_general>
+  <restricted>7</restricted>
+  <gideons_hide>8</gideons_hide>
+  <fcbh_hub>9</fcbh_hub>
+  <bibleis_hide>10</bibleis_hide>
+</permission>
  <directory>
-  <etl_model_xml>input/ETL_Model.xml</etl_model_xml>
-  <lpts_xml>input/qry_dbp4_Regular_and_NonDrama_10rec.xml</lpts_xml>
-  <validate>/Users/garygriswold/FCBH/files/validate</validate>
-  <upload>/Users/garygriswold/FCBH/files/upload</upload>
-  <database>/Users/garygriswold/FCBH/files/database</database>
-  <complete>/Users/garygriswold/FCBH/files/completed</complete>
+  <lpts_xml>input/qry_dbp4_Regular_and_NonDrama.xml</lpts_xml>
+  <bucket_list>/Users/garygriswold/FCBH/bucket_data/%s.txt</bucket_list>
   <sql_output>output/output.sql</sql_output>
  </directory>
 </dbp_etl>
