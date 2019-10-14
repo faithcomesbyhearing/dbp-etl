@@ -6,8 +6,7 @@ from Config import *
 from SQLUtility import *
 import glob
 import subprocess
-import ffmpeg
-import ffmpy
+import hashlib
 
 class dbConnection:
 
@@ -21,6 +20,7 @@ class hls:
 	def __init__(self, bibleid, filesetid):
 		self.bibleid = bibleid
 		self.filesetid = filesetid
+		self.directoryRE = re.compile("(.+)/"+ bibleid +"/"+ filesetid)
 
 	def get_mp3s(self):
 		# get from S3 if needed
@@ -47,7 +47,7 @@ class hls:
 			start_times = ','.join(map(str,times))
 			# TODO: sanity-check result, eg non-empty list, sequential verse numbers
 			# TODO: write to file
-		return startStr
+		return start_times
 
 	def segments(self, mp3, times, bitrate):
 		m = basenameRegex.match(mp3)
@@ -57,18 +57,30 @@ class hls:
 			basename +"_"+ bitrate +"_%03d.ts")
 		print(s.compile) 
 
+	def hashId(self):
+		filesetId = self.filesetid
+		bucket = "dbp-prod"
+		typeCode = "audio_stream"
+		md5 = hashlib.md5()
+		md5.update(filesetId.encode("latin1"))
+		md5.update(bucket.encode("latin1"))
+		md5.update(typeCode.encode("latin1"))
+		hash_id = md5.hexdigest()
+		return hash_id[:12]
+
 ## initialize
-mp3Regex = re.compile('.*B\d+___(\d+)_([A-Za-z+]*)') # matches: chapter, bookname
-basenameRegex = re.compile('(.+)\.mp3') # matches: chapter, bookname
+bookChapRegex = re.compile('.*B\d+___(\d+)_([A-Za-z+]*)') # matches: chapter, bookname
+basenameRegex = re.compile('(.+)\.mp3')
 bitrateRE = re.compile(".*bit_rate=(\d+)")
 books = { "Matthew" : "MAT"} # TODO: get full book list
 config = Config()
 db = dbConnection(config).cursor
+sqlfile = open("/Users/jrstear/tmp/ENGESV/sql", "w")
 
 ## form list of input filesets
 # ARGUMENTS can be one or more [dir/]bible_id/fileset_id
 # should we verify S3 and DB correctness of inputs here? (probably not)
-inputBibles = [ hls('ENGESV','ENGESVN2DA') ]
+inputBibles = [ hls('ENGESV','ENGESVN2SA') ]
 
 for bible in inputBibles:
 	## identify mp3s and timings (get from S3 and DB if needed?)
@@ -83,8 +95,9 @@ for bible in inputBibles:
 				## generate SQL
 				for segment in glob.glob(basename +"_"+ bitrate +"_*.ts"):
 					s = subprocess.run("ffprobe -v error -select_streams a -show_entries stream=bit_rate -of default=noprint_wrappers=1 "+segment, shell=True, capture_output=True)
-					m = bitrateRE.match(str(s.stdout))
-					actual_bitrate = int(m.group(1))
+					actual_bitrate = int(bitrateRE.match(str(s.stdout)).group(1))
+					hashid = bible.hashId()
+					foo = 1
 
 
 	## upload segments to S3
