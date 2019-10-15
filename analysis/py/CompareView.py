@@ -106,6 +106,49 @@ class CompareView:
 		for testMismatch in testMismatches:
 			print("In test not prod: ", testMismatch)
 
+	def compareBibleFilesetPKey(self, table):
+		print(table.upper())
+		self.prod_db = "valid_dbp"
+		self.test_db = "valid_dbp_views"
+		prod_table = "bucket_verse_summary"
+		tableDef = self.tables[table]	
+		pkey = ("fileset_id", "asset_id", "set_type_code")
+		print("pKey: %s" % (",".join(pkey)))
+		columns = pkey
+
+		sqlCount = "SELECT count(*) FROM %s.%s"
+		prodCount = self.db.selectScalar(sqlCount % (self.prod_db, prod_table), None)
+		testCount = self.db.selectScalar(sqlCount % (self.test_db, table), None)
+		countRatio = int(round(100.0 * testCount / prodCount))
+		print("table %s counts: production=%d, test=%d, ratio=%d" % (table, prodCount, testCount, countRatio))
+	
+		onClause = self.privateOnPhrase(pkey)
+		sqlMatchCount = "SELECT count(*) FROM %s.%s p JOIN %s.%s t ON %s"
+		matchCount = self.db.selectScalar(sqlMatchCount % (self.prod_db, prod_table, self.test_db, table, onClause), None)
+		if table == "bible_files_view":
+			sqlMismatchCount = "SELECT count(*) FROM %s.%s p WHERE NOT EXISTS (SELECT 1 FROM %s.%s t WHERE %s) AND p.set_type_code NOT IN ('text_plain', 'app')"
+		else:
+			sqlMismatchCount = "SELECT count(*) FROM %s.%s p WHERE NOT EXISTS (SELECT 1 FROM %s.%s t WHERE %s)"
+		prodMismatchCount = self.db.selectScalar(sqlMismatchCount % (self.prod_db, prod_table, self.test_db, table, onClause), None)
+		testMismatchCount = self.db.selectScalar(sqlMismatchCount % (self.test_db, table, self.prod_db, prod_table, onClause), None)
+		print("num match = %d, prod mismatch = %d,  test mismatch = %d" % (matchCount, prodMismatchCount, testMismatchCount))
+	
+		selectCols = []
+		for key in pkey:
+			selectCols.append("p." + key)
+		for col in columns:
+			selectCols.append("p." + col)
+		selectList = ", ".join(selectCols)
+		if table == "bible_files_view":
+			sqlMismatch = "SELECT %s FROM %s.%s p WHERE NOT EXISTS (SELECT 1 FROM %s.%s t WHERE %s) AND p.set_type_code NOT IN ('text_plain', 'app') limit 100"
+		else:
+			sqlMismatch = "SELECT %s FROM %s.%s p WHERE NOT EXISTS (SELECT 1 FROM %s.%s t WHERE %s) limit 100"
+		prodMismatches = self.db.select(sqlMismatch % (selectList, self.prod_db, prod_table, self.test_db, table, onClause), None)
+		testMismatches = self.db.select(sqlMismatch % (selectList, self.test_db, table, self.prod_db, prod_table, onClause), None)
+		for prodMismatch in prodMismatches:
+			print("In prod not test: ", prodMismatch)
+		for testMismatch in testMismatches:
+			print("In test not prod: ", testMismatch)		
 
 	def compareColumns(self, table):
 		tableDef = self.tables[table]
@@ -178,12 +221,14 @@ class CompareView:
 compare = CompareView()
 
 #compare.comparePkey("bibles_view")
-compare.comparePkey("bible_filesets_view")
-#compare.comparePkey("bible_fileset_copyrights_view")
-#compare.comparePkey("bible_fileset_copyright_organizations_view")
-#compare.comparePkey("bible_fileset_tags_view")
-#compare.comparePkey("access_group_filesets_view")
-#compare.comparePkey("bible_files_view")
+
+# compare to bucket_verse_summary
+#compare.compareBibleFilesetPKey("bible_filesets_view")
+#compare.compareBibleFilesetPKey("bible_fileset_copyrights_view")
+#compare.compareBibleFilesetPKey("bible_fileset_copyright_organizations_view")
+#compare.compareBibleFilesetPKey("bible_fileset_tags_view")
+#compare.compareBibleFilesetPKey("access_group_filesets_view")
+compare.compareBibleFilesetPKey("bible_files_view")
 #compare.comparePkey("bible_file_tags_view")
 #compare.comparePkey("bible_file_video_resolutions_view")
 #compare.comparePkey("bible_file_video_transport_stream_view")
