@@ -32,20 +32,20 @@ class BucketVerseSummaryTable:
 	def createSummaryTable(self):
 		self.db.execute("DROP TABLE IF EXISTS bucket_verse_summary", None)
 		sql = ("CREATE TABLE bucket_verse_summary ("
-			+ " bible_id varchar(255) not null,"
 			+ " fileset_id varchar(255) not null,"
-			+ " set_type_code varchar(255) not null,"
 			+ " asset_id varchar(255) not null,"
+			+ " set_type_code varchar(255) not null,"
+			+ " bible_id varchar(255) not null,"
 			+ " legacy_asset_id varchar(255) not null,"
 			+ " hash_id varchar(255) not null,"
-			+ " PRIMARY KEY (bible_id, fileset_id, set_type_code, asset_id))")
+			+ " PRIMARY KEY (fileset_id, asset_id, set_type_code, bible_id))")
 		self.db.execute(sql, None)
 		print("bucket_verse_summary created")
 
 
 	def insertBucketSummary(self):
 		sql = ("INSERT INTO bucket_verse_summary"
-			+ " SELECT distinct bible_id, fileset_id, set_type_code, asset_id, legacy_asset_id, hash_id"
+			+ " SELECT distinct fileset_id, asset_id, set_type_code, bible_id, legacy_asset_id, hash_id"
 			+ " FROM bucket_listing")
 		self.db.execute(sql, None)
 		print("bucket rows inserted")
@@ -63,8 +63,8 @@ class BucketVerseSummaryTable:
 			assetId = "db"
 			legacyAssetId = self.legacy.legacyAssetId(filesetId, setTypeCode, assetId)
 			hashId = self.legacy.hashId(legacyAssetId, filesetId, setTypeCode)
-			results.append((bibleId, filesetId, setTypeCode, assetId, legacyAssetId, hashId))
-		self.db.executeBatch("INSERT INTO bucket_verse_summary (bible_id, fileset_id, set_type_code, asset_id, legacy_asset_id, hash_id) VALUES (%s, %s, %s, %s, %s, %s)", results)
+			results.append((filesetId, assetId, setTypeCode, bibleId, legacyAssetId, hashId))
+		self.db.executeBatch("INSERT INTO bucket_verse_summary (fileset_id, asset_id, set_type_code, bible_id, legacy_asset_id, hash_id) VALUES (%s, %s, %s, %s, %s, %s)", results)
 		print("num %d verse rows inserted" % (len(results)))
 
 	def createIndexes(self):
