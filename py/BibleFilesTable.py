@@ -38,10 +38,12 @@ class BibleFilesTable:
 		uniqueSet = set()
 
 		for fileset in self.bucketList:
-			fileName = fileset[0]
-			hashId = fileset[1]
-			bookId = fileset[2]
-			chapterStart = fileset[3]
+			hashId = fileset[0]
+			bookId = fileset[1]
+			chapterStart = fileset[2]
+			verseStart = fileset[3]
+			verseEnd = fileset[4]
+			fileName = fileset[5]
 			if chapterStart == "End":
 				if bookId == "MAT":
 					chapterStart = "28"
@@ -61,30 +63,28 @@ class BibleFilesTable:
 					verseEnd = "26"
 				else:
 					chapterStart = "0"
-					verseStart = None
+					verseStart = "1"
 					verseEnd = None
-			chapterEnd = None
-			verseStart = fileset[4]
 			if verseStart != None:
 				if "b" in verseStart:
 					verseStart = verseStart.replace("b", "")
-			verseEnd = fileset[5]
 			if verseEnd != None:
 				if "r" in verseEnd:
 					verseEnd = verseEnd.replace("r", "")
 				if "a" in verseEnd:
 					verseEnd = verseEnd.replace("a", "")
+			chapterEnd = None
 			fileSize = None
 			duration = None
 
 			key = "%s-%s-%s-%s" % (hashId, bookId, chapterStart, verseStart)
-			if key in uniqueSet:
-				print("WARNING: dropping duplicate key ", fileset)
+			if bookId != None and key in uniqueSet:
+				print("WARNING: dropping duplicate key ", key, fileName)
 			elif hashId not in self.hashIdSet:
-				print("WARNING: dropping hash_id mismatch ", fileset)
-			elif chapterStart == "0" and fileName[-5:] == ".html":
-				# This drop is probably not correct for production, correct feedback from App devs
-				print("WARNING: dropping zero chapter html files")
+				print("WARNING: dropping hash_id mismatch ", key, fileName)
+			#elif chapterStart == "0" and fileName[-5:] == ".html":
+			#	# This drop is probably not correct for production, correct feedback from App devs
+			#	print("WARNING: dropping zero chapter html files", key, fileName)
 			else:
 				uniqueSet.add(key)
 				results.append((hashId, bookId, chapterStart, chapterEnd, verseStart, verseEnd, fileName, fileSize, duration))
@@ -94,10 +94,9 @@ class BibleFilesTable:
 
 
 	def readAll(self):
-		sql = ("SELECT file_name, hash_id, book_id, chapter_start, verse_start, verse_end"
+		sql = ("SELECT distinct hash_id, book_id, chapter_start, verse_start, verse_end, file_name"
 			+ " FROM bucket_listing"
-			+ " WHERE book_id IS NOT NULL AND chapter_start is NOT NULL"
-			+ " AND book_id IN (SELECT id FROM books)"
+			+ " WHERE (book_id IN (SELECT id FROM books) OR book_id is NULL)"
 			+ " ORDER by hash_id, book_id, chapter_start, verse_start, length(file_name) DESC, file_name")
 		self.bucketList = self.db.select(sql, None)
 		print("num %d files rows in bucket_listing" % (len(self.bucketList)))

@@ -9,13 +9,13 @@ python3 py/BucketListingTable.py
 # 1624661 10/14 removed index.html and about.html files
 # 1576432 10/14 changed from m3u8 to mp4
 # 1559419 10/14 same, but eliminated 720 etc.
-# 1419952 10/15 removed old type .html files, e.g. GN1.html
+# 1559254 10/15 removed app files
 
 python3 py/BucketVerseSummaryTable.py
 # 6543 10/11 verified
 # 6509 10/14
 # 6487 10/14
-# 6483 10/15
+# 6331 10/15
 
 python3 py/BibleFilesetsTable.py
 # 3728 9/24
@@ -86,6 +86,7 @@ python3 py/BibleFilesTable.py
 # 1397966 10/9
 # 1369330 10/10 This is not correct, but move on
 # 1369330 10/14
+# 1397973 10/15 tested fine in comparison to 
 
 python3 py/BibleFileTagsTable.py
 # 0 9/24
