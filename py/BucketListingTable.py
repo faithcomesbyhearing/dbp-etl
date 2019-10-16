@@ -45,7 +45,6 @@ class BucketListingTable:
 			+ " chapter_start varchar(255) NULL,"
 			+ " verse_start varchar(255) NULL,"
 			+ " verse_end varchar(255) NULL)")
-			#+ " video_height varchar(255) NULL)")
 		self.db.execute(sql, None)
 
 
@@ -53,7 +52,6 @@ class BucketListingTable:
 		results = []
 		dropTypes = set()
 		dropBibleIds = set()
-		#dropAppIds = set()
 		dropAudioIds = set()
 		dropTextIds = set()
 		dropVideoIds = set()
@@ -70,17 +68,6 @@ class BucketListingTable:
 					fileNameSansExt = fileName.split(".")[0]
 					row = (bucketName, typeCode, bibleId, filesetId, fileName)
 					if bibleId.isupper():
-						#if typeCode == "app":
-						#	if fileName.endswith(".apk"):
-						#		if filesetId.isupper():
-						#			setTypeCode = "app"
-						#			legacyAssetId = self.legacy.legacyAssetId(filesetId, setTypeCode, bucketName)
-						#			hashId = self.legacy.hashId(legacyAssetId, filesetId, setTypeCode)
-						#			extra = (setTypeCode, legacyAssetId, hashId)
-						#			fileParts = self.parseAppFilename(fileNameSansExt)
-						#			results.append(row + extra + fileParts)
-						#		else:
-						#			dropAppIds.add("app/%s/%s" % (bibleId, filesetId))
 						if typeCode == "audio":
 							if fileName.endswith(".mp3"):
 								if filesetId.isupper():
@@ -124,7 +111,6 @@ class BucketListingTable:
 		output = io.open(warningPathName, mode="w", encoding="utf-8")
 		self.privateDrop(output, "WARNING: type_code %s was excluded", dropTypes)
 		self.privateDrop(output, "WARNING: bible_id %s was excluded", dropBibleIds)
-		#self.privateDrop(output, "WARNING: app_id %s was excluded", dropAppIds)
 		self.privateDrop(output, "WARNING: audio_id %s was excluded", dropAudioIds)
 		self.privateDrop(output, "WARNING: text_id %s was excluded", dropTextIds)
 		self.privateDrop(output, "WARNING: video_id %s was excluded", dropVideoIds)
@@ -168,15 +154,6 @@ class BucketListingTable:
 				return "unknown"
 
 
-	#def parseAppFilename(self, fileName):
-	#	bookCode = None
-	#	chapterStart = "1"
-	#	verseStart = "1"
-	#	verseEnd = None
-	#	#videoHeight = None
-	#	return (bookCode, chapterStart, verseStart, verseEnd)#, videoHeight)
-
-
 	def parseAudioFilename(self, fileName):
 		seqCode = fileName[0:3]
 		bookCode = self.lookup.bookIdBySequence(seqCode)
@@ -189,8 +166,7 @@ class BucketListingTable:
 				chapterStart = "1"
 		verseStart = "1"
 		verseEnd = None
-		#videoHeight = None
-		return (bookCode, chapterStart, verseStart, verseEnd)#, videoHeight)
+		return (bookCode, chapterStart, verseStart, verseEnd)
 
 
 	def parseTextFilenames(self, fileName):
@@ -210,8 +186,7 @@ class BucketListingTable:
 					chapterStart = "0"
 		verseStart = "1"
 		verseEnd = None
-		#videoHeight = None
-		return (bookCode, chapterStart, verseStart, verseEnd)#, videoHeight)
+		return (bookCode, chapterStart, verseStart, verseEnd)
 
 
 	def parseVideoFilenames(self, fileName):
@@ -238,12 +213,7 @@ class BucketListingTable:
 						verseStart = parts[index + 2] if len(parts) > (index + 2) else "1"
 						verseEnd = parts[index + 3] if len(parts) > (index + 3) else None
 					break
-		#video = parts[-1]
-		#if video[:2] == "av" and video[-1:] == "p":
-		#	videoHeight = video[2:-1]
-		#else:
-		#	videoHeight = None
-		return (bookCode, chapterStart, verseStart, verseEnd)#, videoHeight)
+		return (bookCode, chapterStart, verseStart, verseEnd)
 
 
 config = Config()
