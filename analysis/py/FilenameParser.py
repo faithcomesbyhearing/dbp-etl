@@ -4,6 +4,7 @@
 
 import io
 import sys
+import re
 from Lookup import *
 from SQLUtility import *
 
@@ -17,56 +18,54 @@ class Filename:
 		self.damid = ""
 		self.type = ""
 		self.file = ""
-		self.error = ""
+		self.error = None
+
 
 	def print(self):
 		print(self.seq, self.book, self.chap, self.name, self.damid, self.type, self.file, self.error)
 
-class FilenameParser:
 
-	def __init__(self):
-		self.bookStart = None
-		self.bookEnd = None
-		self.chapStart = None
-		self.chapEnd = None
-		self.seqStart = None
-		self.seqEnd = None
-		self.nameStart = None
-		self.nameEnd = None
-		self.damidStart = None
-		self.damidEnd = None
-		self.typeStart = None
-		self.typeEnd = None
+	def audioParser1(self, filename):
+		parts = re.split("[_.]+", filename)
+		self.type = parts[-1]
+		if any(c.islower() for c in parts[-2]):
+			newParts = self.splitDamId(parts[-2])
+			parts[-2] = newParts[1]
+			parts.insert(-2, newParts[0])
+		self.damid = parts[-2]
+		if len(parts) > 4:
+			if parts[0][0] not in {"A", "B"}:
+				self.error = "invalid seq type"
+			if not parts[0][1].isdigit():
+				self.error = "non-number seq"
+			if not parts[1].isdigit():
+				self.error = "non-number chap"
 
-
-	def parse(self, filename):
-		parsed = Filename()
-		if self.bookStart != None:
-			parsed.book = filename[self.bookStart:self.bookEnd]
-		if self.chapStart != None:
-			parsed.chap = filename[self.chapStart:self.chapEnd].strip("_")
-		if self.seqStart != None:
-			parsed.seq = filename[self.seqStart:self.seqEnd]
-		if self.nameStart != None:
-			parsed.name = filename[self.nameStart:self.nameEnd]
-		if self.damidStart != None:
-			parsed.damid = filename[self.damidStart:self.damidEnd]
-		if self.typeStart != None:
-			parsed.type = filename[self.typeStart:self.typeEnd]
-		self.file = filename
-		if self.chapEnd != None and self.seqEnd != None:
-			chapPadding = "_" * (self.chapEnd - self.seqEnd - len(parsed.chap))
+			while (len(parts) > 5):
+				parts[2] = parts[2] + "_" + parts[3]
+				parts.pop(3)
+			self.seq = parts[0]
+			self.chap = parts[1]
+			self.name = parts[2]
 		else:
-			chapPadding = "_"
-		namePadding = "_" * (self.nameEnd - self.nameStart - len(parsed.name))
-		filenameOut = "%s%s%s_%s%s%s.%s" % (parsed.seq, chapPadding, parsed.chap, parsed.name, namePadding, parsed.damid, parsed.type)
-		if filenameOut != filename:
-			self.error = "Mismatch %s  %s" % (filename, filenameOut)
-			print(self.error)
+			self.error = "less than 4 parts %s" % filename
+		filenameOut = self.seq + self.chap + self.name + self.damid + "." + self.type
+		if filenameOut.replace("_", "") != filename.replace("_",""):
+			self.error = "Mismatch %s" % (filenameOut)
 
 
+	#def 
+	#	if self.error != None:
+	#		print(filename, self.error)
 
-class FilenameScanner:
+
+	def splitDamId(self, string):
+		for index in range(len(string) -1, 0, -1):
+			if string[index].islower():
+				return (string[:index + 1], string[index + 1:])
+
+
+class FilenameParser:
 
 	def __init__(self):
 		self.lookup = Lookup()
@@ -78,13 +77,16 @@ class FilenameScanner:
 		filenamesMap = db.selectMapList("SELECT concat(type_code, '/', bible_id, '/', fileset_id), file_name FROM bucket_listing where type_code=%s", (typeCode))
 		db.close()
 		for prefix in filenamesMap.keys():
-			print(prefix)
+			#print(prefix)
 			filenames = filenamesMap[prefix]
-			parser = self.audioScanner1(prefix, filenames)
 			for filename in filenames:
-				parser.parse(filename)
+				parser = Filename()
+				parser.audioParser1(filename)
+				if parser.error != None:
+					print(prefix, filename, parser.error)
 
 
+"""
 	def audioScanner1(self, prefix, filenames):
 		IN_TYPE = 1
 		IN_DAMID = 2
@@ -184,9 +186,9 @@ class FilenameScanner:
 	#	for file in filenames:
 
 
+"""
 
-
-parser = FilenameScanner()
+parser = FilenameParser()
 parser.process()
 
  #	def testParse(prefix, parsed):
