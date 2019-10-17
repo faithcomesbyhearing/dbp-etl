@@ -10,14 +10,14 @@ from SQLUtility import *
 class Filename:
 
 	def __init__(self):
-		self.book = None
-		self.chap = None
-		self.seq = None
-		self.name = None
-		self.damid =  None
-		self.type = None
-		self.file = None
-		self.error = None
+		self.book = ""
+		self.chap = ""
+		self.seq = ""
+		self.name = ""
+		self.damid = ""
+		self.type = ""
+		self.file = ""
+		self.error = ""
 
 	def print(self):
 		print(self.seq, self.book, self.chap, self.name, self.damid, self.type, self.file, self.error)
@@ -75,7 +75,7 @@ class FilenameScanner:
 		db = SQLUtility("localhost", 3306, "root", "valid_dbp")
 		self.chapterMap = db.selectMap("SELECT id, chapters FROM books", None)
 		typeCode = 'audio'
-		filenamesMap = db.selectMapList("SELECT concat(type_code, '/', bible_id, '/', fileset_id), file_name FROM bucket_listing where type_code=%s limit 50000", (typeCode))
+		filenamesMap = db.selectMapList("SELECT concat(type_code, '/', bible_id, '/', fileset_id), file_name FROM bucket_listing where type_code=%s", (typeCode))
 		db.close()
 		for prefix in filenamesMap.keys():
 			print(prefix)
@@ -94,13 +94,14 @@ class FilenameScanner:
 		PRE_SEQ = 6
 		IN_SEQ = 7
 		state = IN_TYPE
-		file = filenames[2]
+		midpoint = int(len(filenames) / 2)
+		file = filenames[midpoint]
 		parser = FilenameParser()
 		parser.file = file
 		endPos = len(file) -1
 		for index in range(endPos, -1, -1):
 			char = file[index]
-			if prefix == "audio/ARBAKI/ARBAKIS2DA":
+			if prefix == "audio/ZAITBL/ZAINVSN1DA":
 				print(index, char, ord(char), state, endPos)
 			if state == IN_TYPE:
 				if char == ".":
