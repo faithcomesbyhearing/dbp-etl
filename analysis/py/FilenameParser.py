@@ -22,8 +22,51 @@ class Filename:
 	def print(self):
 		print(self.seq, self.book, self.chap, self.name, self.damid, self.type, self.file, self.error)
 
-
 class FilenameParser:
+
+	def __init__(self):
+		self.bookStart = None
+		self.bookEnd = None
+		self.chapStart = None
+		self.chapEnd = None
+		self.seqStart = None
+		self.seqEnd = None
+		self.nameStart = None
+		self.nameEnd = None
+		self.damidStart = None
+		self.damidEnd = None
+		self.typeStart = None
+		self.typeEnd = None
+
+
+	def parse(self, filename):
+		parsed = Filename()
+		if self.bookStart != None:
+			parsed.book = filename[self.bookStart:self.bookEnd]
+		if self.chapStart != None:
+			parsed.chap = filename[self.chapStart:self.chapEnd].strip("_")
+		if self.seqStart != None:
+			parsed.seq = filename[self.seqStart:self.seqEnd]
+		if self.nameStart != None:
+			parsed.name = filename[self.nameStart:self.nameEnd]
+		if self.damidStart != None:
+			parsed.damid = filename[self.damidStart:self.damidEnd]
+		if self.typeStart != None:
+			parsed.type = filename[self.typeStart:self.typeEnd]
+		self.file = filename
+		if self.chapEnd != None and self.seqEnd != None:
+			chapPadding = "_" * (self.chapEnd - self.seqEnd - len(parsed.chap))
+		else:
+			chapPadding = "_"
+		namePadding = "_" * (self.nameEnd - self.nameStart - len(parsed.name))
+		filenameOut = "%s%s%s_%s%s%s.%s" % (parsed.seq, chapPadding, parsed.chap, parsed.name, namePadding, parsed.damid, parsed.type)
+		if filenameOut != filename:
+			self.error = "Mismatch %s  %s" % (filename, filenameOut)
+			print(self.error)
+
+
+
+class FilenameScanner:
 
 	def __init__(self):
 		self.lookup = Lookup()
@@ -32,33 +75,15 @@ class FilenameParser:
 		db = SQLUtility("localhost", 3306, "root", "valid_dbp")
 		self.chapterMap = db.selectMap("SELECT id, chapters FROM books", None)
 		typeCode = 'audio'
-		filenamesMap = db.selectMapList("SELECT concat(type_code, '/', bible_id, '/', fileset_id), file_name FROM bucket_listing where type_code=%s limit 50", (typeCode))
+		filenamesMap = db.selectMapList("SELECT concat(type_code, '/', bible_id, '/', fileset_id), file_name FROM bucket_listing where type_code=%s limit 50000", (typeCode))
 		db.close()
 		for prefix in filenamesMap.keys():
 			print(prefix)
 			filenames = filenamesMap[prefix]
-			result = self.audioScanner1(prefix, filenames)
-			#results = self.parseAudio1(prefix, filenamesMap[prefix])
-			#ans = self.testBookId(prefix, results)
-			#if ans != "ok":
-			#	self.dumpFilenames(ans, prefix, results)
-			#for filename in 
-			#print(filename)
-			#parts = filename#.split("_")
-			#firstChar = parts[0:1]
-			#secondChar = parts[1:2]
-			#if firstChar in {"A", "B"} and secondChar.isdigit():
-			#	print(parts[0:3])
-			#	print("  ",parts[6:8])
-			#	print("    ", parts[9:23])
-			#	#print(parts[3]) sequence
-			#	#print(parts[4]) part of name
-				#print(parts[6]) if len(parts) > 6 else "No 6"
-				#print(parts[9]) if len(parts) > 9 else "no 9" 
-				#a = 2
+			parser = self.audioScanner1(prefix, filenames)
+			for filename in filenames:
+				parser.parse(filename)
 
-			#else:
-			#	print("Incorrect format: ", filename)
 
 	def audioScanner1(self, prefix, filenames):
 		IN_TYPE = 1
@@ -70,26 +95,29 @@ class FilenameParser:
 		IN_SEQ = 7
 		state = IN_TYPE
 		file = filenames[2]
-		parsed = Filename()
-		parsed.file = file
+		parser = FilenameParser()
+		parser.file = file
 		endPos = len(file) -1
 		for index in range(endPos, -1, -1):
-			#print(index)
 			char = file[index]
-			print(index, char, ord(char), state, endPos)
+			if prefix == "audio/ARBAKI/ARBAKIS2DA":
+				print(index, char, ord(char), state, endPos)
 			if state == IN_TYPE:
 				if char == ".":
-					parsed.type = "%d:%d" % (index + 1, endPos + 1)
+					parser.typeStart = index + 1
+					parser.typeEnd = endPos + 1
 					endPos = index
 					state = IN_DAMID
 			elif state == IN_DAMID:
 				if char == "_" or char.islower():
-					parsed.damid = "%d:%d" % (index + 1, endPos)
+					parser.damidStart = index + 1
+					parser.damidEnd = endPos
 					endPos = index
 					state = IN_NAME
 			elif state == IN_NAME:
 				if char == "_" and index < 10:
-					parsed.name = "%d:%d" % (index + 1, endPos + 1)
+					parser.nameStart = index + 1
+					parser.nameEnd = endPos + 1
 					state = PRE_CHAP
 			elif state == PRE_CHAP:
 				if char.isdigit():
@@ -97,7 +125,8 @@ class FilenameParser:
 					state = IN_CHAP
 			elif state == IN_CHAP:
 				if char == "_":
-					parsed.chap = "%d:%d" % (index + 1, endPos + 1)
+					parser.chapStart = index# + 1
+					parser.chapEnd = endPos + 1
 					state = PRE_SEQ
 			elif state == PRE_SEQ:
 				if char.isdigit():
@@ -107,12 +136,13 @@ class FilenameParser:
 
 			#else:
 				# error
-		parsed.seq = "%d:%d" % (0, endPos)
-		parsed.print()
-		return parsed	
+		parser.seqStart = 0 
+		parser.seqEnd = endPos + 1
+		#parser.print()
+		return parser	
 
 
-	def parseAudio1(self, prefix, filenames):
+	def parseAudio1(self, parseKey, prefix, filenames):
 		# {seq}__{chap}_{name}{damid}.mp3
 		results = []
 		for file in filenames:
@@ -155,7 +185,7 @@ class FilenameParser:
 
 
 
-parser = FilenameParser()
+parser = FilenameScanner()
 parser.process()
 
  #	def testParse(prefix, parsed):
