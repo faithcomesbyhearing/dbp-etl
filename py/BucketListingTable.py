@@ -123,6 +123,7 @@ class BucketListingTable:
 		self.db.execute("CREATE INDEX bucket_listing_bible_id ON bucket_listing (bible_id)", None)
 		self.db.execute("CREATE INDEX bucket_listing_fileset_id ON bucket_listing (fileset_id, asset_id, set_type_code)", None)
 		self.db.execute("CREATE INDEX bucket_listing_hash_id ON bucket_listing (hash_id, book_id, chapter_start, verse_start)", None)
+		self.db.execute("CREATE INDEX bucket_listing_prefix ON bucket_listing (type_code, bible_id, fileset_id)", None)
 
 
 	def privateDrop(self, output, message, dropIds):

@@ -1,6 +1,4 @@
-# BuildBookNames.py
-
-#class BuildBookNames:
+# FilenameParser.py
 
 import io
 import sys
@@ -10,7 +8,8 @@ from SQLUtility import *
 
 class Filename:
 
-	def __init__(self):
+	def __init__(self, chapterMap):
+		self.chapterMap = chapterMap
 		self.book = ""
 		self.chap = ""
 		self.seq = ""
@@ -18,45 +17,94 @@ class Filename:
 		self.damid = ""
 		self.type = ""
 		self.file = ""
-		self.error = None
+		self.error = []
+
+
+	def setSeq(self, seq):
+		self.seq = seq
+		if not seq[1:].isdigit():
+			self.error.append("non-number seq")
+
+
+	# Should be used before set chapter
+	def setBookName(self, name):
+		self.name = name
+		bookId = Lookup().usfmBookId(name)
+		if bookId == None:
+			self.error.append("usfm not found for name")
+		else:
+			self.setBook(bookId)
+
+
+	def setBook(self, bookId):
+		self.book = bookId
+		if bookId not in self.chapterMap.keys():
+			self.error.append("usfm code is not valid")
+
+
+	def setChap(self, chap):
+		self.chap = chap
+		if not chap.isdigit():
+			self.error.append("non-number chap")
+		elif self.book != None:
+			chapter = self.chapterMap.get(self.book)
+			if chapter != None and int(chap) > int(chapter):
+				self.error.append("chap too large")
+
+
+
+	def setDamid(self, damid):
+		self.damid = damid
+
+
+	def setType(self, typ):
+		self.type = typ
 
 
 	def print(self):
 		print(self.seq, self.book, self.chap, self.name, self.damid, self.type, self.file, self.error)
 
 
+	## {book_seq}___{chap}_{bookname}____{damid}.mp3 e.g. B01___01_Matthew_____ENGGIDN2DA.mp3
 	def audioParser1(self, filename):
 		parts = re.split("[_.]+", filename)
-		self.type = parts[-1]
+		self.setType(parts[-1])
+		# split name from damid if there is no _ between
 		if any(c.islower() for c in parts[-2]):
 			newParts = self.splitDamId(parts[-2])
 			parts[-2] = newParts[1]
 			parts.insert(-2, newParts[0])
-		self.damid = parts[-2]
+		self.setDamid(parts[-2])
+		# combine name parts
 		if len(parts) > 4:
-			if parts[0][0] not in {"A", "B"}:
-				self.error = "invalid seq type"
-			if not parts[0][1].isdigit():
-				self.error = "non-number seq"
-			if not parts[1].isdigit():
-				self.error = "non-number chap"
-
 			while (len(parts) > 5):
 				parts[2] = parts[2] + "_" + parts[3]
 				parts.pop(3)
-			self.seq = parts[0]
-			self.chap = parts[1]
-			self.name = parts[2]
+
+			self.setSeq(parts[0])
+			self.setBookName(parts[2])
+			self.setChap(parts[1])
 		else:
-			self.error = "less than 4 parts %s" % filename
+			self.error.append("less than 5 parts")
 		filenameOut = self.seq + self.chap + self.name + self.damid + "." + self.type
 		if filenameOut.replace("_", "") != filename.replace("_",""):
-			self.error = "Mismatch %s" % (filenameOut)
+			self.error.append("Mismatch %s" % (filenameOut))
 
 
-	#def 
-	#	if self.error != None:
-	#		print(filename, self.error)
+	## {book_seq}_{bookname}_{chap}_{damid}.mp3 e.g. B01_Genesis_01_S1COXWBT.mp3
+	def audioParser2(self, filename):
+		parts = re.split("[_.]+", filename)
+		if len(parts) == 5:
+			self.setSeq(parts[0])
+			self.setBookName(parts[1])
+			self.setChap(parts[2])
+			self.setDamid(parts[3])
+			self.setType(parts[4])
+		else:
+			self.error.append("not 5 parts")
+		filenameOut = self.seq + self.name + self.chap + self.damid + "." + self.type
+		if filenameOut.replace("_", "") != filename.replace("_",""):
+			self.error.append("Mismatch %s" % (filenameOut))
 
 
 	def splitDamId(self, string):
@@ -68,7 +116,8 @@ class Filename:
 class FilenameParser:
 
 	def __init__(self):
-		self.lookup = Lookup()
+		self.parsedList = []
+		self.unparsedList = []
 
 	def process(self):
 		db = SQLUtility("localhost", 3306, "root", "valid_dbp")
@@ -79,127 +128,59 @@ class FilenameParser:
 		for prefix in filenamesMap.keys():
 			#print(prefix)
 			filenames = filenamesMap[prefix]
+
+			numErrors = 0
 			for filename in filenames:
-				parser = Filename()
+				parser = Filename(self.chapterMap)
 				parser.audioParser1(filename)
-				if parser.error != None:
-					print(prefix, filename, parser.error)
-
-
-"""
-	def audioScanner1(self, prefix, filenames):
-		IN_TYPE = 1
-		IN_DAMID = 2
-		IN_NAME = 3
-		PRE_CHAP = 4
-		IN_CHAP = 5
-		PRE_SEQ = 6
-		IN_SEQ = 7
-		state = IN_TYPE
-		midpoint = int(len(filenames) / 2)
-		file = filenames[midpoint]
-		parser = FilenameParser()
-		parser.file = file
-		endPos = len(file) -1
-		for index in range(endPos, -1, -1):
-			char = file[index]
-			if prefix == "audio/ZAITBL/ZAINVSN1DA":
-				print(index, char, ord(char), state, endPos)
-			if state == IN_TYPE:
-				if char == ".":
-					parser.typeStart = index + 1
-					parser.typeEnd = endPos + 1
-					endPos = index
-					state = IN_DAMID
-			elif state == IN_DAMID:
-				if char == "_" or char.islower():
-					parser.damidStart = index + 1
-					parser.damidEnd = endPos
-					endPos = index
-					state = IN_NAME
-			elif state == IN_NAME:
-				if char == "_" and index < 10:
-					parser.nameStart = index + 1
-					parser.nameEnd = endPos + 1
-					state = PRE_CHAP
-			elif state == PRE_CHAP:
-				if char.isdigit():
-					endPos = index
-					state = IN_CHAP
-			elif state == IN_CHAP:
-				if char == "_":
-					parser.chapStart = index# + 1
-					parser.chapEnd = endPos + 1
-					state = PRE_SEQ
-			elif state == PRE_SEQ:
-				if char.isdigit():
-					endPos = index
-					state = IN_SEQ
-			#elif state == IN_SEQ:
-
-			#else:
-				# error
-		parser.seqStart = 0 
-		parser.seqEnd = endPos + 1
-		#parser.print()
-		return parser	
-
-
-	def parseAudio1(self, parseKey, prefix, filenames):
-		# {seq}__{chap}_{name}{damid}.mp3
-		results = []
-		for file in filenames:
-			parsed = Filename()
-			parsed.seq = file[0:3]
-			parsed.chap = file[6:8]
-			parsed.name = file[9:21].strip("_")
-			parsed.damid = file[23:].split(".")[0]
-			parsed.book = self.lookup.usfmBookId(parsed.name)
-			parsed.file = file
-			padding = "_" * (14 - len(parsed.name))
-			formatted = "%s___%s_%s%s%s.mp3" % (parsed.seq, parsed.chap, parsed.name, padding, parsed.damid)
-			if file != formatted:
-				print("DIFF:", file, formatted)
+				if len(parser.error) > 0:
+					numErrors += 1
+					print("audio1", prefix, filename, ", ".join(parser.error))
+			if numErrors == 0:
+				self.parsedList.append(("audio1", prefix))
 			else:
-				print("OK")
-			results.append(parsed)
-		return results
+				self.unparsedList.append((numErrors, "audio1", prefix))
+				"""
+				numError = 0
+				for filename in filenames:
+					parser = Filename(self.chapterMap)
+					parser.audioParser2(filename)
+					if len(parser.error) > 0:
+						numErrors += 1
+						print("audio2", prefix, filename, ", ".join(parser.error))
+				if numErrors == 0:
+					self.parsedList.append(("audio2", prefix))
+				else:
+					self.unparsedList.append((numErrors, "audio1", prefix))
+				"""
 
 
-	def dumpFilenames(self, error, prefix, filenames):
-		print("ERROR:", error, prefix)
-		for file in filenames:
-			file.print()
+		## Try multiple parse functions
+		## for each attempt save a) the total error count, b) function name, c) array of Filename
+		## after all functions are completed, pick the one with the best error count
+		## among those that capture book and chapter
+		## report that one, otherwise
+		## if any method returns no errors, stop and save that one
+		## if any method returns similar errors, i.e. within 10 or within 10% report both.
+
+## we need a better index on bucket
 
 
-	def testBookId(self, prefix, filenames):
-		for file in filenames:
-			if file.book == None:
-				return "bookid_null_err"
-			if int(file.chap) > self.chapterMap[file.book]:
-				return "chap_too_big_err"
+	def summary(self):
+		file = io.open("FilenameParser.out", mode="w", encoding="utf-8")
+		for entry in self.parsedList:
+			file.write("%s  %s\n" % entry)
+		file.write("\n\nUnparsed\n\n")
+		for entry in self.unparsedList:
+			file.write("%d  %s  %s\n" % entry)
+		file.close()
 
-		return "ok"
-
-
-	#def testChapterId(self, prefix, filenames):
-	#	for file in filenames:
-
-
-"""
 
 parser = FilenameParser()
 parser.process()
+parser.summary()
 
- #	def testParse(prefix, parsed):
- #		for file in parsed:
- #			# regorganize these by books
- #			sequence = file[0]
- #			bookId = file[1]
- #			chapter = file[2]
- #			if chapter > chapterMap[bookId]:
- #				return "chapter_seq_err"
- #		return "ok"
+
 
 
 
