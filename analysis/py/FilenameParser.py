@@ -15,11 +15,10 @@ class Filename:
 		self.verseStart = ""
 		self.verseEnd = ""
 		self.bookSeq = ""
-		self.fileSeq = "" # used by a minority
+		self.fileSeq = ""
 		self.name = ""
 		self.damid = ""
-		self.unknown1 = ""
-		self.unknown2 = ""
+		self.unknown = []
 		self.type = ""
 		self.file = ""
 		self.errors = []
@@ -79,12 +78,12 @@ class Filename:
 		self.damid = damid
 
 
-	def setUnknown1(self, unknown):
-		self.unknown1 = unknown
+	def addUnknown(self, unknown):
+		self.unknown.append(unknown)
 
 
-	def setUnknown2(self, unknown):
-		self.unknown2 = unknown
+	def getUnknown(self, index):
+		return self.unknown[index] if index < len(self.unknown) else ""
 
 
 	def setType(self, typ):
@@ -107,7 +106,7 @@ class FilenameParser:
 		self.parsedList = []
 		self.unparsedList = []
 
-		## {book_seq}___{chap}_{bookname}____{damid}.mp3 
+		## {bookseq}___{chap}_{bookname}____{damid}.mp3 
 		## B01___01_Matthew_____ENGGIDN2DA.mp3
 	def audio1(self, filename):
 		file = Filename(self.chapterMap)
@@ -131,7 +130,7 @@ class FilenameParser:
 		return file
 
 
-	## {book_seq}_{bookname}_{chap}_{damid}.mp3
+	## {bookseq}_{bookname}_{chap}_{damid}.mp3
 	## B01_Genesis_01_S1COXWBT.mp3
 	def audio2(self, filename):
 		file = Filename(self.chapterMap)
@@ -150,7 +149,7 @@ class FilenameParser:
 		return file
 
 
-	## {book_seq}_{file_seq}__{bookname}_{chap}_____{damid}.mp3
+	## {bookseq}_{fileseq}__{bookname}_{chap}_____{damid}.mp3
 	## A08_073__Ruth_01_________S2RAMTBL.mp3
 	def audio3(self, filename):
 		file = Filename(self.chapterMap)
@@ -170,8 +169,8 @@ class FilenameParser:
 		return file
 
 
- 	## {file_seq}_{USFM}_{chap}_{verse_start}-{verse_end}_SET_{unknown}___{damid}.mp3
- 	## 052_GEN_027_18-29_Set_54____SNMNVSP1DA.mp3
+ 	## {fileseq}_{USFM}_{chap}_{versestart}-{verseend}_SET_{unknown}___{damid}.mp3
+ 	## audio/SNMNVS/SNMNVSP1DA16/052_GEN_027_18-29_Set_54____SNMNVSP1DA.mp3
 	def audio4(self, filename):
 		file = Filename(self.chapterMap)
 		parts = re.split("[_.-]+", filename)
@@ -181,15 +180,38 @@ class FilenameParser:
 			file.setChap(parts[2])
 			file.setVerseStart(parts[3])
 			file.setVerseEnd(parts[4])
-			file.setUnknown1(parts[5])
-			file.setUnknown2(parts[6])
+			file.addUnknown(parts[5])
+			file.addUnknown(parts[6])
 			file.setDamid(parts[7])
 			file.setType(parts[8])
 		else:
 			file.errors.append("not 9 parts")
-		filenameOut = file.fileSeq + file.book + file.chap + file.verseStart + file.verseEnd + file.unknown1 + file.unknown2 + file.damid + "." + file.type
+		filenameOut = file.fileSeq + file.book + file.chap + file.verseStart + file.verseEnd + file.getUnknown(0) + file.getUnknown(1) + file.damid + "." + file.type
 		file.setFile(filename, filenameOut)
 		return file
+
+
+	## {lang}_{vers}_{bookseq}_{bookname}_{chap}_{versestart}-{verseend}_{unknown}_{unknown}.mp3
+	## audio/SNMNVS/SNMNVSP1DA/SNM_NVS_01_Genesis_041_50-57_SET91_PASSAGE1.mp3
+	def audio5(self, filename):
+		file = Filename(self.chapterMap)
+		parts = re.split("[_.-]+", filename)
+		if len(parts) == 10:
+			file.addUnknown(parts[0])
+			file.addUnknown(parts[1])
+			file.setBookSeq(parts[2])
+			file.setBookName(parts[3])
+			file.setChap(parts[4])
+			file.setVerseStart(parts[5])
+			file.setVerseEnd(parts[6])
+			file.addUnknown(parts[7])
+			file.addUnknown(parts[8])
+			file.setType(parts[9])
+		else:
+			file.errors.append("not 10 parts")
+		filenameOut = file.getUnknown(0) + file.getUnknown(1) + file.bookSeq + file.name + file.chap + file.verseStart + file.verseEnd + file.getUnknown(2) + file.getUnknown(3) + "." + file.type
+		file.setFile(filename, filenameOut)
+		return file		
 
 
 	def splitDamId(self, string):
@@ -215,7 +237,7 @@ class FilenameParser:
 			+ " FROM bucket_listing where type_code=%s AND bible_id='SNMNVS'"))
 		filenamesMap = db.selectMapList(sql, (typeCode))
 		db.close()
-		self.parsers = [self.audio1, self.audio2, self.audio3, self.audio4]
+		self.parsers = [self.audio1, self.audio2, self.audio3, self.audio4, self.audio5]
 
 		for prefix in filenamesMap.keys():
 			filenames = filenamesMap[prefix]
