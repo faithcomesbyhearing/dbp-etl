@@ -17,6 +17,7 @@ class Filename:
 		self.bookSeq = ""
 		self.fileSeq = ""
 		self.name = ""
+		self.title = ""
 		self.damid = ""
 		self.unknown = []
 		self.type = ""
@@ -72,6 +73,10 @@ class Filename:
 		self.verseEnd = verseEnd
 		if not verseEnd.isdigit():
 			self.errors.append("non-number verse end")
+
+
+	def setTitle(self, title):
+		self.title = title
 
 
 	def setDamid(self, damid):
@@ -214,6 +219,36 @@ class FilenameParser:
 		return file		
 
 
+	## {bookseq}___{fileseq}_{bookname}_{chap}_{startverse}_{endverse}{name}__damid.mp3
+	## audio/PRSGNN/PRSGNNS1DA/B01___22_Genesis_21_1_10BirthofIsaac__S1PRSGNN.mp3
+	def audio6(self, filename):
+		file = Filename(self.chapterMap)
+		parts = re.split("[_.]+", filename)
+		if len(parts) > 7:
+			file.setBookSeq(parts[0])
+			file.setFileSeq(parts[1])
+			file.setBookName(parts[2])
+			file.setChap(parts[3])
+			file.setVerseStart(parts[4])
+			(verseEnd, title) = self.splitNumAlpha(parts[5])
+			file.setVerseEnd(verseEnd)
+			parts[5] = verseEnd
+			if title != None:
+				parts.insert(6, title)
+				self.combineName(parts, 6, 9)
+				file.setTitle(parts[6])
+			else:
+				self.combineName(parts, 5, 8)
+				file.setTitle(parts[6])
+			file.setDamid(parts[-2])
+			file.setType(parts[-1])
+		else:
+			file.errors.append("not 8 parts")
+		filenameOut = file.bookSeq + file.fileSeq + file.name + file.chap + file.verseStart + file.verseEnd + file.title + file.damid + "." + file.type
+		file.setFile(filename, filenameOut)
+		return file	
+
+
 	def splitDamId(self, string):
 		for index in range(len(string) -1, 0, -1):
 			if string[index].islower():
@@ -226,6 +261,13 @@ class FilenameParser:
 			parts.pop(namePart + 1)
 
 
+	def splitNumAlpha(self, string):
+		for index in range(len(string)):
+			if string[index].isalpha():
+				return (string[:index], string[index:])
+		return (string, None)
+
+
 
 	def process(self):
 		db = SQLUtility("localhost", 3306, "root", "valid_dbp")
@@ -234,10 +276,10 @@ class FilenameParser:
 		sql = ("SELECT concat(type_code, '/', bible_id, '/', fileset_id), file_name"
 			+ " FROM bucket_listing where type_code=%s limit 10000000000")
 		sqlTest = (("SELECT concat(type_code, '/', bible_id, '/', fileset_id), file_name"
-			+ " FROM bucket_listing where type_code=%s AND bible_id='SNMNVS'"))
+			+ " FROM bucket_listing where type_code=%s AND bible_id='PRSGNN'"))
 		filenamesMap = db.selectMapList(sql, (typeCode))
 		db.close()
-		self.parsers = [self.audio1, self.audio2, self.audio3, self.audio4, self.audio5]
+		self.parsers = [self.audio1, self.audio2, self.audio3, self.audio4, self.audio5, self.audio6]
 
 		for prefix in filenamesMap.keys():
 			filenames = filenamesMap[prefix]
@@ -276,7 +318,6 @@ class FilenameParser:
 			files.append(file)
 			if len(file.errors) > 0:
 				numErrors += 1
-				#print(parser.__name__, prefix, filename, ", ".join(file.errors))
 		return (numErrors, parser, files)
 
 
