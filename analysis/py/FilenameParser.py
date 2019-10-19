@@ -97,12 +97,29 @@ class Filename:
 
 	def setFile(self, filename, genFilename):
 		self.file = filename
-		if genFilename.replace("_", "") != filename.replace("_","").replace("-",""):
-			self.errors.append("Mismatch %s" % (genFilename))
+		## temp remove because of inconsistency with new and old functions
+##		if genFilename.replace("_", "") != filename.replace("_","").replace("-","").replace(".",""):
+##			self.errors.append("Mismatch %s" % (genFilename))
 
 
 	def print(self):
 		print(self.seq, self.book, self.chap, self.name, self.damid, self.type, self.file, self.errors)
+
+
+class FilenameTemplate:
+
+	def __init__(self, parts):
+		for index in range(len(parts)):
+			part = parts[index]
+			if part not in {"book_id", "chapter", "verse_start", "verse_end", 
+				"book_seq", "file_seq", "book_name", "title", "damid", "?damid", "type", "misc"}:
+				print("ERROR: filenameTemplate part %s is not known" % (part))
+				sys.exit()
+			if part in {"book_name", "title"}:
+				self.namePosition = index
+		self.parts = parts
+		self.numParts = len(parts)
+		self.hasProblemDamId = (parts[-2] == "?damid")
 
 
 class FilenameParser:
@@ -111,9 +128,9 @@ class FilenameParser:
 		self.parsedList = []
 		self.unparsedList = []
 
-		## {bookseq}___{chap}_{bookname}____{damid}.mp3 
-		## B01___01_Matthew_____ENGGIDN2DA.mp3
-	def audio1(self, filename):
+	## {bookseq}___{chap}_{bookname}____{damid}.mp3 
+	## B01___01_Matthew_____ENGGIDN2DA.mp3
+	def audio1_old(self, filename):
 		file = Filename(self.chapterMap)
 		parts = re.split("[_.]+", filename)
 		file.setType(parts[-1])
@@ -133,6 +150,93 @@ class FilenameParser:
 		filenameOut = file.bookSeq + file.chap + file.name + file.damid + "." + file.type
 		file.setFile(filename, filenameOut)
 		return file
+
+
+	## {bookseq}___{chap}_{bookname}____{damid}.mp3 
+	## B01___01_Matthew_____ENGGIDN2DA.mp3
+	def audio1(self, filename):
+		template = FilenameTemplate(["book_seq", "chapter", "book_name", "?damid", "type"])
+		return self.parse(template, filename)
+
+
+	def parse(self, template, filename):
+		file = Filename(self.chapterMap)
+		parts = re.split("[_.-]+", filename)
+		if template.hasProblemDamId:
+			self.splitDamIdIfNeeded(parts, -2)
+		if len(parts) > template.numParts:
+			self.combineName(parts, template.namePosition, template.numParts)
+		if template.numParts == len(parts):
+			for index in range(template.numParts):
+				part = parts[index]
+				item = template.parts[index]
+				if item == "book_seq":
+					file.setBookSeq(part)
+				elif item == "file_seq":
+					file.setFileSeq(part)
+				elif item == "book_name":
+					file.setBookName(part)
+				elif item == "book_id":
+					file.setBook(part)
+				elif item == "chapter":
+					file.setChap(part)
+				elif item == "verse_start":
+					file.setVerseStart(part)
+				elif item == "verse_end":
+					file.setVerseEnd(part)
+				elif item == "title":
+					file.setTitle(part)
+				elif item == "damid" or item == "?damid":
+					file.setDamid(part)
+				elif item == "type":
+					file.setType(part)
+				elif item == "misc":
+					file.addUnknown(part)
+				else:
+					print("ERROR: unknown type in template %s" % (item))
+					sys.exit()	
+		else:
+			file.errors.append(("expect %d parts, have %d" % (template.numParts, len(parts))))
+
+		fileOut = []
+		miscIndex = 0
+		for item in template.parts:
+			if item == "book_seq":
+				fileOut.append(file.bookSeq)
+			elif item == "file_seq":
+				fileOut.append(file.fileSeq)
+			elif item == "book_name":
+				fileOut.append(file.name)
+			elif item == "book_id":
+				fileOut.append(file.book)
+			elif item == "chapter":
+				fileOut.append(file.chap)
+			elif item == "verse_start":
+				fileOut.append(file.verseStart)
+			elif item == "verse_end":
+				fileOut.append(file.verseEnd)
+			elif item == "title":
+				fileOut.append(file.title)
+			elif item == "damid" or item == "?damid":
+				fileOut.append(file.damid)
+			elif item == "type":
+				fileOut.append(file.type)
+			elif item == "misc":
+				fileOut.append(file.unknown[miscIndex])
+				miscIndex += 1
+		filenameOut = "".join(fileOut)
+		file.setFile(filename, filenameOut)
+		return file
+
+
+	def splitDamIdIfNeeded(self, parts, damidIndex):
+		damid = parts[damidIndex]
+		if any(c.islower() for c in damid):
+			for index in range(len(damid) -1, 0, -1):
+				if damid[index].islower():
+					parts[damidIndex] = damid[index + 1:]
+					parts.insert(damidIndex, damid[:index + 1])
+					break
 
 
 	## {bookseq}_{bookname}_{chap}_{damid}.mp3
@@ -249,6 +353,7 @@ class FilenameParser:
 		return file	
 
 
+	## deprecated
 	def splitDamId(self, string):
 		for index in range(len(string) -1, 0, -1):
 			if string[index].islower():
@@ -268,7 +373,6 @@ class FilenameParser:
 		return (string, None)
 
 
-
 	def process(self):
 		db = SQLUtility("localhost", 3306, "root", "valid_dbp")
 		self.chapterMap = db.selectMap("SELECT id, chapters FROM books", None)
@@ -276,7 +380,7 @@ class FilenameParser:
 		sql = ("SELECT concat(type_code, '/', bible_id, '/', fileset_id), file_name"
 			+ " FROM bucket_listing where type_code=%s limit 10000000000")
 		sqlTest = (("SELECT concat(type_code, '/', bible_id, '/', fileset_id), file_name"
-			+ " FROM bucket_listing where type_code=%s AND bible_id='PRSGNN'"))
+			+ " FROM bucket_listing where type_code=%s AND bible_id='ANYWBT'"))
 		filenamesMap = db.selectMapList(sql, (typeCode))
 		db.close()
 		self.parsers = [self.audio1, self.audio2, self.audio3, self.audio4, self.audio5, self.audio6]
