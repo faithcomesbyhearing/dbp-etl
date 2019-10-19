@@ -12,18 +12,29 @@ class Filename:
 		self.chapterMap = chapterMap
 		self.book = ""
 		self.chap = ""
-		self.seq = ""
+		self.verseStart = ""
+		self.verseEnd = ""
+		self.bookSeq = ""
+		self.fileSeq = "" # used by a minority
 		self.name = ""
 		self.damid = ""
+		self.unknown1 = ""
+		self.unknown2 = ""
 		self.type = ""
 		self.file = ""
-		self.error = []
+		self.errors = []
 
 
-	def setSeq(self, seq):
-		self.seq = seq
-		if not seq[1:].isdigit():
-			self.error.append("non-number seq")
+	def setBookSeq(self, bookSeq):
+		self.bookSeq = bookSeq
+		if not bookSeq[1:].isdigit():
+			self.errors.append("non-number bookSeq")
+
+
+	def setFileSeq(self, fileSeq):
+		self.fileSeq = fileSeq
+		if not fileSeq.isdigit():
+			self.errors.append("non-number fileSeq")
 
 
 	# Should be used before set chapter
@@ -31,7 +42,7 @@ class Filename:
 		self.name = name
 		bookId = Lookup().usfmBookId(name)
 		if bookId == None:
-			self.error.append("usfm not found for name")
+			self.errors.append("usfm not found for name")
 		else:
 			self.setBook(bookId)
 
@@ -39,30 +50,55 @@ class Filename:
 	def setBook(self, bookId):
 		self.book = bookId
 		if bookId not in self.chapterMap.keys():
-			self.error.append("usfm code is not valid")
+			self.errors.append("usfm code is not valid")
 
 
 	def setChap(self, chap):
 		self.chap = chap
 		if not chap.isdigit():
-			self.error.append("non-number chap")
+			self.errors.append("non-number chap")
 		elif self.book != None:
 			chapter = self.chapterMap.get(self.book)
 			if chapter != None and int(chap) > int(chapter):
-				self.error.append("chap too large")
+				self.errors.append("chap too large")
 
+
+	def setVerseStart(self, verseStart):
+		self.verseStart = verseStart
+		if not verseStart.isdigit():
+			self.errors.append("non-number verse start")
+
+
+	def setVerseEnd(self, verseEnd):
+		self.verseEnd = verseEnd
+		if not verseEnd.isdigit():
+			self.errors.append("non-number verse end")
 
 
 	def setDamid(self, damid):
 		self.damid = damid
 
 
+	def setUnknown1(self, unknown):
+		self.unknown1 = unknown
+
+
+	def setUnknown2(self, unknown):
+		self.unknown2 = unknown
+
+
 	def setType(self, typ):
 		self.type = typ
 
 
+	def setFile(self, filename, genFilename):
+		self.file = filename
+		if genFilename.replace("_", "") != filename.replace("_","").replace("-",""):
+			self.errors.append("Mismatch %s" % (genFilename))
+
+
 	def print(self):
-		print(self.seq, self.book, self.chap, self.name, self.damid, self.type, self.file, self.error)
+		print(self.seq, self.book, self.chap, self.name, self.damid, self.type, self.file, self.errors)
 
 
 class FilenameParser:
@@ -71,8 +107,9 @@ class FilenameParser:
 		self.parsedList = []
 		self.unparsedList = []
 
-		## {book_seq}___{chap}_{bookname}____{damid}.mp3 e.g. B01___01_Matthew_____ENGGIDN2DA.mp3
-	def audioParser1(self, filename):
+		## {book_seq}___{chap}_{bookname}____{damid}.mp3 
+		## B01___01_Matthew_____ENGGIDN2DA.mp3
+	def audio1(self, filename):
 		file = Filename(self.chapterMap)
 		parts = re.split("[_.]+", filename)
 		file.setType(parts[-1])
@@ -82,38 +119,76 @@ class FilenameParser:
 			parts[-2] = newParts[1]
 			parts.insert(-2, newParts[0])
 		file.setDamid(parts[-2])
-		# combine name parts
 		if len(parts) > 4:
-			while (len(parts) > 5):
-				parts[2] = parts[2] + "_" + parts[3]
-				parts.pop(3)
-
-			file.setSeq(parts[0])
+			self.combineName(parts, 2, 5)
+			file.setBookSeq(parts[0])
 			file.setBookName(parts[2])
 			file.setChap(parts[1])
 		else:
-			file.error.append("less than 5 parts")
-		filenameOut = file.seq + file.chap + file.name + file.damid + "." + file.type
-		if filenameOut.replace("_", "") != filename.replace("_",""):
-			file.error.append("Mismatch %s" % (filenameOut))
+			file.errors.append("less than 5 parts")
+		filenameOut = file.bookSeq + file.chap + file.name + file.damid + "." + file.type
+		file.setFile(filename, filenameOut)
 		return file
 
 
-	## {book_seq}_{bookname}_{chap}_{damid}.mp3 e.g. B01_Genesis_01_S1COXWBT.mp3
-	def audioParser2(self, filename):
+	## {book_seq}_{bookname}_{chap}_{damid}.mp3
+	## B01_Genesis_01_S1COXWBT.mp3
+	def audio2(self, filename):
 		file = Filename(self.chapterMap)
 		parts = re.split("[_.]+", filename)
-		if len(parts) == 5:
-			file.setSeq(parts[0])
+		if len(parts) > 4:
+			self.combineName(parts, 1, 5)
+			file.setBookSeq(parts[0])
 			file.setBookName(parts[1])
 			file.setChap(parts[2])
 			file.setDamid(parts[3])
 			file.setType(parts[4])
 		else:
-			file.error.append("not 5 parts")
-		filenameOut = file.seq + file.name + file.chap + file.damid + "." + file.type
-		if filenameOut.replace("_", "") != filename.replace("_",""):
-			file.error.append("Mismatch %s" % (filenameOut))
+			file.errors.append("not 5 parts")
+		filenameOut = file.bookSeq + file.name + file.chap + file.damid + "." + file.type
+		file.setFile(filename, filenameOut)
+		return file
+
+
+	## {book_seq}_{file_seq}__{bookname}_{chap}_____{damid}.mp3
+	## A08_073__Ruth_01_________S2RAMTBL.mp3
+	def audio3(self, filename):
+		file = Filename(self.chapterMap)
+		parts = re.split("[_.]+", filename)
+		if len(parts) > 5:
+			self.combineName(parts, 2, 6)
+			file.setBookSeq(parts[0])
+			file.setFileSeq(parts[1])
+			file.setBookName(parts[2])
+			file.setChap(parts[3])
+			file.setDamid(parts[4])
+			file.setType(parts[5])
+		else:
+			file.errors.append("not 6 parts")
+		filenameOut = file.bookSeq + file.fileSeq + file.name + file.chap + file.damid + "." + file.type
+		file.setFile(filename, filenameOut)
+		return file
+
+
+ 	## {file_seq}_{USFM}_{chap}_{verse_start}-{verse_end}_SET_{unknown}___{damid}.mp3
+ 	## 052_GEN_027_18-29_Set_54____SNMNVSP1DA.mp3
+	def audio4(self, filename):
+		file = Filename(self.chapterMap)
+		parts = re.split("[_.-]+", filename)
+		if len(parts) == 9:
+			file.setFileSeq(parts[0])
+			file.setBook(parts[1])
+			file.setChap(parts[2])
+			file.setVerseStart(parts[3])
+			file.setVerseEnd(parts[4])
+			file.setUnknown1(parts[5])
+			file.setUnknown2(parts[6])
+			file.setDamid(parts[7])
+			file.setType(parts[8])
+		else:
+			file.errors.append("not 9 parts")
+		filenameOut = file.fileSeq + file.book + file.chap + file.verseStart + file.verseEnd + file.unknown1 + file.unknown2 + file.damid + "." + file.type
+		file.setFile(filename, filenameOut)
 		return file
 
 
@@ -123,55 +198,64 @@ class FilenameParser:
 				return (string[:index + 1], string[index + 1:])
 
 
+	def combineName(self, parts, namePart, maxParts):
+		while (len(parts) > maxParts):
+			parts[namePart] = parts[namePart] + "_" + parts[namePart + 1]
+			parts.pop(namePart + 1)
+
+
+
 	def process(self):
 		db = SQLUtility("localhost", 3306, "root", "valid_dbp")
 		self.chapterMap = db.selectMap("SELECT id, chapters FROM books", None)
 		typeCode = 'audio'
-		filenamesMap = db.selectMapList("SELECT concat(type_code, '/', bible_id, '/', fileset_id), file_name FROM bucket_listing where type_code=%s limit 100000000000", (typeCode))
+		sql = ("SELECT concat(type_code, '/', bible_id, '/', fileset_id), file_name"
+			+ " FROM bucket_listing where type_code=%s limit 10000000000")
+		sqlTest = (("SELECT concat(type_code, '/', bible_id, '/', fileset_id), file_name"
+			+ " FROM bucket_listing where type_code=%s AND bible_id='SNMNVS'"))
+		filenamesMap = db.selectMapList(sql, (typeCode))
 		db.close()
+		self.parsers = [self.audio1, self.audio2, self.audio3, self.audio4]
+
 		for prefix in filenamesMap.keys():
-			#print(prefix)
 			filenames = filenamesMap[prefix]
-
-			numErrors = 0
-			for filename in filenames:
-				#parser = Filename(self.chapterMap)
-				file = self.audioParser1(filename)
-				if len(file.error) > 0:
-					numErrors += 1
-					print("audio1", prefix, filename, ", ".join(file.error))
+			(numErrors, parser, files) = self.parseFileset(prefix, filenames)
+			parserName = parser.__name__
 			if numErrors == 0:
-				self.parsedList.append(("audio1", prefix))
+				self.parsedList.append((parserName, prefix))
 			else:
-				self.unparsedList.append((numErrors, "audio1", prefix))
-				"""
-				numError = 0
-				for filename in filenames:
-					parser = Filename(self.chapterMap)
-					parser.audioParser2(filename)
-					if len(parser.error) > 0:
-						numErrors += 1
-						print("audio2", prefix, filename, ", ".join(parser.error))
-				if numErrors == 0:
-					self.parsedList.append(("audio2", prefix))
-				else:
-					self.unparsedList.append((numErrors, "audio1", prefix))
-				"""
+				self.unparsedList.append((numErrors, parserName, prefix))
+				for file in files:
+					if len(file.errors) > 0:
+						print(parserName, prefix, file.file, ", ".join(file.errors))
 
 
-		## Try multiple parse functions
-		## for each attempt save a) the total error count, b) function name, c) array of Filename
-		## after all functions are completed, pick the one with the best error count
-		## among those that capture book and chapter
-		## report that one, otherwise
-		## if any method returns no errors, stop and save that one
-		## if any method returns similar errors, i.e. within 10 or within 10% report both.
+	def parseFileset(self, prefix, filenames):
+		parserTries = []
+		for parser in self.parsers:
+			(numErrors, parser, files) = self.parseOneFileset(parser, prefix, filenames)
+			if numErrors == 0:
+				return (numErrors, parser, files)
+			parserTries.append((numErrors, parser, files))
+		best = 1000000
+		selected = None
+		for aTry in parserTries:
+			if aTry[0] < best:
+				best = aTry[0]
+				selected = aTry
+		return selected
 
-		## we need a better index on bucket
 
-	#def parsePrefix(self, prefix, parser, parserName):
-		### In order to get this to work, I think the parsers need to factory filename class instance
-		## that way the parse function is a method on this class.
+	def parseOneFileset(self, parser, prefix, filenames):
+		numErrors = 0
+		files = []
+		for filename in filenames:
+			file = parser(filename)
+			files.append(file)
+			if len(file.errors) > 0:
+				numErrors += 1
+				#print(parser.__name__, prefix, filename, ", ".join(file.errors))
+		return (numErrors, parser, files)
 
 
 	def summary(self):

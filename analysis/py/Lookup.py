@@ -165,6 +165,7 @@ class Lookup:
 			'1Reyes_Capitulo':		'1KI',
 			'2Reyes_Capitulo':		'2KI',
 			'Esdras_Capitulo':		'EST',
+			'Esther_Capitulo':		'EST',
 			'Job_Capitulo':			'JOB',
 			'Salmos_Capitulo':		'PSA',
 			'Proverbios_Capitulo':	'PRO',
