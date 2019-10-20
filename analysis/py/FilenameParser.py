@@ -129,34 +129,46 @@ class FilenameParser:
 		self.parsedList = []
 		self.unparsedList = []
 
-	## {bookseq}___{chap}_{bookname}____{damid}.mp3 
-	## B01___01_Matthew_____ENGGIDN2DA.mp3
-	def audio1_old(self, filename):
-		file = Filename(self.chapterMap)
-		parts = re.split("[_.]+", filename)
-		file.setType(parts[-1])
-		# split name from damid if there is no _ between
-		if any(c.islower() for c in parts[-2]):
-			newParts = self.splitDamId(parts[-2])
-			parts[-2] = newParts[1]
-			parts.insert(-2, newParts[0])
-		file.setDamid(parts[-2])
-		if len(parts) > 4:
-			self.combineName(parts, 2, 5)
-			file.setBookSeq(parts[0])
-			file.setBookName(parts[2])
-			file.setChap(parts[1])
-		else:
-			file.errors.append("less than 5 parts")
-		filenameOut = file.bookSeq + file.chap + file.name + file.damid + "." + file.type
-		file.setFile(filename, filenameOut)
-		return file
-
 
 	## {bookseq}___{chap}_{bookname}____{damid}.mp3 
 	## B01___01_Matthew_____ENGGIDN2DA.mp3
 	def audio1(self, filename):
 		template = FilenameTemplate(["book_seq", "chapter", "book_name", "?damid", "type"], [])
+		return self.parse(template, filename)
+
+
+	## {bookseq}_{bookname}_{chap}_{damid}.mp3
+	## B01_Genesis_01_S1COXWBT.mp3
+	def audio2(self, filename):
+		template = FilenameTemplate(["book_seq", "book_name", "chapter", "damid", "type"], [])
+		return self.parse(template, filename)
+
+
+	## {bookseq}_{fileseq}__{bookname}_{chap}_____{damid}.mp3
+	## A08_073__Ruth_01_________S2RAMTBL.mp3
+	def audio3(self, filename):
+		template = FilenameTemplate(["book_seq", "file_seq", "book_name", "chapter", "damid", "type"], [])
+		return self.parse(template, filename)
+
+
+ 	## {fileseq}_{USFM}_{chap}_{versestart}-{verseend}_SET_{unknown}___{damid}.mp3
+ 	## audio/SNMNVS/SNMNVSP1DA16/052_GEN_027_18-29_Set_54____SNMNVSP1DA.mp3
+	def audio4(self, filename):
+		template = FilenameTemplate(["file_seq", "book_id", "chapter", "verse_start", "verse_end", "misc", "misc", "damid", "type"], [])
+		return self.parse(template, filename)
+
+
+	## {lang}_{vers}_{bookseq}_{bookname}_{chap}_{versestart}-{verseend}_{unknown}_{unknown}.mp3
+	## audio/SNMNVS/SNMNVSP1DA/SNM_NVS_01_Genesis_041_50-57_SET91_PASSAGE1.mp3
+	def audio5(self, filename):
+		template = FilenameTemplate(["misc", "misc", "book_seq", "book_name", "chapter", "verse_start", "verse_end", "misc", "misc", "type"], [])
+		return self.parse(template, filename)
+
+
+	## {bookseq}___{fileseq}_{bookname}_{chap}_{startverse}_{endverse}{name}__damid.mp3
+	## audio/PRSGNN/PRSGNNS1DA/B01___22_Genesis_21_1_10BirthofIsaac__S1PRSGNN.mp3
+	def audio6(self, filename):
+		template = FilenameTemplate(["book_seq", "file_seq", "book_name", "chapter", "verse_start", "verse_end", "title", "damid", "type"], ["verse_end_clean"])
 		return self.parse(template, filename)
 
 
@@ -244,150 +256,6 @@ class FilenameParser:
 					break
 
 
-	## {bookseq}_{bookname}_{chap}_{damid}.mp3
-	## B01_Genesis_01_S1COXWBT.mp3
-	def audio2(self, filename):
-		template = FilenameTemplate(["book_seq", "book_name", "chapter", "damid", "type"], [])
-		return self.parse(template, filename)
-
-
-	def audio2_old(self, filename):
-		file = Filename(self.chapterMap)
-		parts = re.split("[_.]+", filename)
-		if len(parts) > 4:
-			self.combineName(parts, 1, 5)
-			file.setBookSeq(parts[0])
-			file.setBookName(parts[1])
-			file.setChap(parts[2])
-			file.setDamid(parts[3])
-			file.setType(parts[4])
-		else:
-			file.errors.append("not 5 parts")
-		filenameOut = file.bookSeq + file.name + file.chap + file.damid + "." + file.type
-		file.setFile(filename, filenameOut)
-		return file
-
-
-	## {bookseq}_{fileseq}__{bookname}_{chap}_____{damid}.mp3
-	## A08_073__Ruth_01_________S2RAMTBL.mp3
-	def audio3(self, filename):
-		template = FilenameTemplate(["book_seq", "file_seq", "book_name", "chapter", "damid", "type"], [])
-		return self.parse(template, filename)
-
-
-	def audio3_old(self, filename):
-		file = Filename(self.chapterMap)
-		parts = re.split("[_.]+", filename)
-		if len(parts) > 5:
-			self.combineName(parts, 2, 6)
-			file.setBookSeq(parts[0])
-			file.setFileSeq(parts[1])
-			file.setBookName(parts[2])
-			file.setChap(parts[3])
-			file.setDamid(parts[4])
-			file.setType(parts[5])
-		else:
-			file.errors.append("not 6 parts")
-		filenameOut = file.bookSeq + file.fileSeq + file.name + file.chap + file.damid + "." + file.type
-		file.setFile(filename, filenameOut)
-		return file
-
-
- 	## {fileseq}_{USFM}_{chap}_{versestart}-{verseend}_SET_{unknown}___{damid}.mp3
- 	## audio/SNMNVS/SNMNVSP1DA16/052_GEN_027_18-29_Set_54____SNMNVSP1DA.mp3
-	def audio4(self, filename):
-		template = FilenameTemplate(["file_seq", "book_id", "chapter", "verse_start", "verse_end", "misc", "misc", "damid", "type"], [])
-		return self.parse(template, filename)
-
-
-	def audio4_old(self, filename):
-		file = Filename(self.chapterMap)
-		parts = re.split("[_.-]+", filename)
-		if len(parts) == 9:
-			file.setFileSeq(parts[0])
-			file.setBook(parts[1])
-			file.setChap(parts[2])
-			file.setVerseStart(parts[3])
-			file.setVerseEnd(parts[4])
-			file.addUnknown(parts[5])
-			file.addUnknown(parts[6])
-			file.setDamid(parts[7])
-			file.setType(parts[8])
-		else:
-			file.errors.append("not 9 parts")
-		filenameOut = file.fileSeq + file.book + file.chap + file.verseStart + file.verseEnd + file.getUnknown(0) + file.getUnknown(1) + file.damid + "." + file.type
-		file.setFile(filename, filenameOut)
-		return file
-
-
-	## {lang}_{vers}_{bookseq}_{bookname}_{chap}_{versestart}-{verseend}_{unknown}_{unknown}.mp3
-	## audio/SNMNVS/SNMNVSP1DA/SNM_NVS_01_Genesis_041_50-57_SET91_PASSAGE1.mp3
-	def audio5(self, filename):
-		template = FilenameTemplate(["misc", "misc", "book_seq", "book_name", "chapter", "verse_start", "verse_end", "misc", "misc", "type"], [])
-		return self.parse(template, filename)
-
-	def audio5_old(self, filename):
-		file = Filename(self.chapterMap)
-		parts = re.split("[_.-]+", filename)
-		if len(parts) == 10:
-			file.addUnknown(parts[0])
-			file.addUnknown(parts[1])
-			file.setBookSeq(parts[2])
-			file.setBookName(parts[3])
-			file.setChap(parts[4])
-			file.setVerseStart(parts[5])
-			file.setVerseEnd(parts[6])
-			file.addUnknown(parts[7])
-			file.addUnknown(parts[8])
-			file.setType(parts[9])
-		else:
-			file.errors.append("not 10 parts")
-		filenameOut = file.getUnknown(0) + file.getUnknown(1) + file.bookSeq + file.name + file.chap + file.verseStart + file.verseEnd + file.getUnknown(2) + file.getUnknown(3) + "." + file.type
-		file.setFile(filename, filenameOut)
-		return file		
-
-
-	## {bookseq}___{fileseq}_{bookname}_{chap}_{startverse}_{endverse}{name}__damid.mp3
-	## audio/PRSGNN/PRSGNNS1DA/B01___22_Genesis_21_1_10BirthofIsaac__S1PRSGNN.mp3
-	def audio6(self, filename):
-		template = FilenameTemplate(["book_seq", "file_seq", "book_name", "chapter", "verse_start", "verse_end", "title", "damid", "type"], ["verse_end_clean"])
-		return self.parse(template, filename)
-
-	def audio6_old(self, filename):
-		file = Filename(self.chapterMap)
-		parts = re.split("[_.]+", filename)
-		if len(parts) > 7:
-			file.setBookSeq(parts[0])
-			file.setFileSeq(parts[1])
-			file.setBookName(parts[2])
-			file.setChap(parts[3])
-			file.setVerseStart(parts[4])
-			(verseEnd, title) = self.splitNumAlpha(parts[5])
-			file.setVerseEnd(verseEnd)
-			parts[5] = verseEnd
-			if title != None:
-				parts.insert(6, title)
-				self.combineName(parts, 6, 9)
-				file.setTitle(parts[6])
-			else:
-				self.combineName(parts, 5, 8)
-				file.setTitle(parts[6])
-			file.setDamid(parts[-2])
-			file.setType(parts[-1])
-		else:
-			file.errors.append("not 8 parts")
-		filenameOut = file.bookSeq + file.fileSeq + file.name + file.chap + file.verseStart + file.verseEnd + file.title + file.damid + "." + file.type
-		file.setFile(filename, filenameOut)
-		return file	
-
-
-	## deprecated
-#	def splitDamId(self, string):
-#		for index in range(len(string) -1, 0, -1):
-#			if string[index].islower():
-#				return (string[:index + 1], string[index + 1:])
-
-
 	def combineName(self, parts, namePart, maxParts):
 		while (len(parts) > maxParts):
 			parts[namePart] = parts[namePart] + "_" + parts[namePart + 1]
@@ -401,9 +269,6 @@ class FilenameParser:
 				parts[splitPart] = string[:index]
 				parts.insert(splitPart + 1, string[index:])
 				break
-
-				#return (string[:index], string[index:])
-		#return (string, None)
 
 
 	def process(self):
@@ -471,6 +336,136 @@ class FilenameParser:
 parser = FilenameParser()
 parser.process()
 parser.summary()
+
+"""
+	## {bookseq}___{chap}_{bookname}____{damid}.mp3 
+	## B01___01_Matthew_____ENGGIDN2DA.mp3
+	def audio1_old(self, filename):
+		file = Filename(self.chapterMap)
+		parts = re.split("[_.]+", filename)
+		file.setType(parts[-1])
+		# split name from damid if there is no _ between
+		if any(c.islower() for c in parts[-2]):
+			newParts = self.splitDamId(parts[-2])
+			parts[-2] = newParts[1]
+			parts.insert(-2, newParts[0])
+		file.setDamid(parts[-2])
+		if len(parts) > 4:
+			self.combineName(parts, 2, 5)
+			file.setBookSeq(parts[0])
+			file.setBookName(parts[2])
+			file.setChap(parts[1])
+		else:
+			file.errors.append("less than 5 parts")
+		filenameOut = file.bookSeq + file.chap + file.name + file.damid + "." + file.type
+		file.setFile(filename, filenameOut)
+		return file
+
+	def audio2_old(self, filename):
+		file = Filename(self.chapterMap)
+		parts = re.split("[_.]+", filename)
+		if len(parts) > 4:
+			self.combineName(parts, 1, 5)
+			file.setBookSeq(parts[0])
+			file.setBookName(parts[1])
+			file.setChap(parts[2])
+			file.setDamid(parts[3])
+			file.setType(parts[4])
+		else:
+			file.errors.append("not 5 parts")
+		filenameOut = file.bookSeq + file.name + file.chap + file.damid + "." + file.type
+		file.setFile(filename, filenameOut)
+		return file
+
+	def audio3_old(self, filename):
+		file = Filename(self.chapterMap)
+		parts = re.split("[_.]+", filename)
+		if len(parts) > 5:
+			self.combineName(parts, 2, 6)
+			file.setBookSeq(parts[0])
+			file.setFileSeq(parts[1])
+			file.setBookName(parts[2])
+			file.setChap(parts[3])
+			file.setDamid(parts[4])
+			file.setType(parts[5])
+		else:
+			file.errors.append("not 6 parts")
+		filenameOut = file.bookSeq + file.fileSeq + file.name + file.chap + file.damid + "." + file.type
+		file.setFile(filename, filenameOut)
+		return file
+
+	def audio4_old(self, filename):
+		file = Filename(self.chapterMap)
+		parts = re.split("[_.-]+", filename)
+		if len(parts) == 9:
+			file.setFileSeq(parts[0])
+			file.setBook(parts[1])
+			file.setChap(parts[2])
+			file.setVerseStart(parts[3])
+			file.setVerseEnd(parts[4])
+			file.addUnknown(parts[5])
+			file.addUnknown(parts[6])
+			file.setDamid(parts[7])
+			file.setType(parts[8])
+		else:
+			file.errors.append("not 9 parts")
+		filenameOut = file.fileSeq + file.book + file.chap + file.verseStart + file.verseEnd + file.getUnknown(0) + file.getUnknown(1) + file.damid + "." + file.type
+		file.setFile(filename, filenameOut)
+		return file
+
+	def audio5_old(self, filename):
+		file = Filename(self.chapterMap)
+		parts = re.split("[_.-]+", filename)
+		if len(parts) == 10:
+			file.addUnknown(parts[0])
+			file.addUnknown(parts[1])
+			file.setBookSeq(parts[2])
+			file.setBookName(parts[3])
+			file.setChap(parts[4])
+			file.setVerseStart(parts[5])
+			file.setVerseEnd(parts[6])
+			file.addUnknown(parts[7])
+			file.addUnknown(parts[8])
+			file.setType(parts[9])
+		else:
+			file.errors.append("not 10 parts")
+		filenameOut = file.getUnknown(0) + file.getUnknown(1) + file.bookSeq + file.name + file.chap + file.verseStart + file.verseEnd + file.getUnknown(2) + file.getUnknown(3) + "." + file.type
+		file.setFile(filename, filenameOut)
+		return file		
+
+	def audio6_old(self, filename):
+		file = Filename(self.chapterMap)
+		parts = re.split("[_.]+", filename)
+		if len(parts) > 7:
+			file.setBookSeq(parts[0])
+			file.setFileSeq(parts[1])
+			file.setBookName(parts[2])
+			file.setChap(parts[3])
+			file.setVerseStart(parts[4])
+			(verseEnd, title) = self.splitNumAlpha(parts[5])
+			file.setVerseEnd(verseEnd)
+			parts[5] = verseEnd
+			if title != None:
+				parts.insert(6, title)
+				self.combineName(parts, 6, 9)
+				file.setTitle(parts[6])
+			else:
+				self.combineName(parts, 5, 8)
+				file.setTitle(parts[6])
+			file.setDamid(parts[-2])
+			file.setType(parts[-1])
+		else:
+			file.errors.append("not 8 parts")
+		filenameOut = file.bookSeq + file.fileSeq + file.name + file.chap + file.verseStart + file.verseEnd + file.title + file.damid + "." + file.type
+		file.setFile(filename, filenameOut)
+		return file	
+
+
+
+
+
+
+"""
 
 
 
