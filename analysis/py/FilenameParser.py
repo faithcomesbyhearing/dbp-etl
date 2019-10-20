@@ -97,9 +97,8 @@ class Filename:
 
 	def setFile(self, filename, genFilename):
 		self.file = filename
-		## temp remove because of inconsistency with new and old functions
-##		if genFilename.replace("_", "") != filename.replace("_","").replace("-","").replace(".",""):
-##			self.errors.append("Mismatch %s" % (genFilename))
+		if genFilename.replace("_", "") != filename.replace("_","").replace("-","").replace(".",""):
+			self.errors.append("Mismatch %s" % (genFilename))
 
 
 	def print(self):
@@ -108,7 +107,8 @@ class Filename:
 
 class FilenameTemplate:
 
-	def __init__(self, parts):
+	def __init__(self, parts, specialInst):
+		self.namePosition = None
 		for index in range(len(parts)):
 			part = parts[index]
 			if part not in {"book_id", "chapter", "verse_start", "verse_end", 
@@ -120,6 +120,7 @@ class FilenameTemplate:
 		self.parts = parts
 		self.numParts = len(parts)
 		self.hasProblemDamId = (parts[-2] == "?damid")
+		self.verseEndClean = ("verse_end_clean" in specialInst)
 
 
 class FilenameParser:
@@ -155,7 +156,7 @@ class FilenameParser:
 	## {bookseq}___{chap}_{bookname}____{damid}.mp3 
 	## B01___01_Matthew_____ENGGIDN2DA.mp3
 	def audio1(self, filename):
-		template = FilenameTemplate(["book_seq", "chapter", "book_name", "?damid", "type"])
+		template = FilenameTemplate(["book_seq", "chapter", "book_name", "?damid", "type"], [])
 		return self.parse(template, filename)
 
 
@@ -164,7 +165,11 @@ class FilenameParser:
 		parts = re.split("[_.-]+", filename)
 		if template.hasProblemDamId:
 			self.splitDamIdIfNeeded(parts, -2)
-		if len(parts) > template.numParts:
+		if template.verseEndClean:
+			verseEndPos = template.parts.index("verse_end")
+			if verseEndPos < len(parts):
+				self.splitNumAlpha(parts, verseEndPos)
+		if len(parts) > template.numParts and template.namePosition != None:
 			self.combineName(parts, template.namePosition, template.numParts)
 		if template.numParts == len(parts):
 			for index in range(template.numParts):
@@ -222,7 +227,7 @@ class FilenameParser:
 			elif item == "type":
 				fileOut.append(file.type)
 			elif item == "misc":
-				fileOut.append(file.unknown[miscIndex])
+				fileOut.append(file.getUnknown(miscIndex))
 				miscIndex += 1
 		filenameOut = "".join(fileOut)
 		file.setFile(filename, filenameOut)
@@ -242,6 +247,11 @@ class FilenameParser:
 	## {bookseq}_{bookname}_{chap}_{damid}.mp3
 	## B01_Genesis_01_S1COXWBT.mp3
 	def audio2(self, filename):
+		template = FilenameTemplate(["book_seq", "book_name", "chapter", "damid", "type"], [])
+		return self.parse(template, filename)
+
+
+	def audio2_old(self, filename):
 		file = Filename(self.chapterMap)
 		parts = re.split("[_.]+", filename)
 		if len(parts) > 4:
@@ -261,6 +271,11 @@ class FilenameParser:
 	## {bookseq}_{fileseq}__{bookname}_{chap}_____{damid}.mp3
 	## A08_073__Ruth_01_________S2RAMTBL.mp3
 	def audio3(self, filename):
+		template = FilenameTemplate(["book_seq", "file_seq", "book_name", "chapter", "damid", "type"], [])
+		return self.parse(template, filename)
+
+
+	def audio3_old(self, filename):
 		file = Filename(self.chapterMap)
 		parts = re.split("[_.]+", filename)
 		if len(parts) > 5:
@@ -281,6 +296,11 @@ class FilenameParser:
  	## {fileseq}_{USFM}_{chap}_{versestart}-{verseend}_SET_{unknown}___{damid}.mp3
  	## audio/SNMNVS/SNMNVSP1DA16/052_GEN_027_18-29_Set_54____SNMNVSP1DA.mp3
 	def audio4(self, filename):
+		template = FilenameTemplate(["file_seq", "book_id", "chapter", "verse_start", "verse_end", "misc", "misc", "damid", "type"], [])
+		return self.parse(template, filename)
+
+
+	def audio4_old(self, filename):
 		file = Filename(self.chapterMap)
 		parts = re.split("[_.-]+", filename)
 		if len(parts) == 9:
@@ -303,6 +323,10 @@ class FilenameParser:
 	## {lang}_{vers}_{bookseq}_{bookname}_{chap}_{versestart}-{verseend}_{unknown}_{unknown}.mp3
 	## audio/SNMNVS/SNMNVSP1DA/SNM_NVS_01_Genesis_041_50-57_SET91_PASSAGE1.mp3
 	def audio5(self, filename):
+		template = FilenameTemplate(["misc", "misc", "book_seq", "book_name", "chapter", "verse_start", "verse_end", "misc", "misc", "type"], [])
+		return self.parse(template, filename)
+
+	def audio5_old(self, filename):
 		file = Filename(self.chapterMap)
 		parts = re.split("[_.-]+", filename)
 		if len(parts) == 10:
@@ -326,6 +350,10 @@ class FilenameParser:
 	## {bookseq}___{fileseq}_{bookname}_{chap}_{startverse}_{endverse}{name}__damid.mp3
 	## audio/PRSGNN/PRSGNNS1DA/B01___22_Genesis_21_1_10BirthofIsaac__S1PRSGNN.mp3
 	def audio6(self, filename):
+		template = FilenameTemplate(["book_seq", "file_seq", "book_name", "chapter", "verse_start", "verse_end", "title", "damid", "type"], ["verse_end_clean"])
+		return self.parse(template, filename)
+
+	def audio6_old(self, filename):
 		file = Filename(self.chapterMap)
 		parts = re.split("[_.]+", filename)
 		if len(parts) > 7:
@@ -354,10 +382,10 @@ class FilenameParser:
 
 
 	## deprecated
-	def splitDamId(self, string):
-		for index in range(len(string) -1, 0, -1):
-			if string[index].islower():
-				return (string[:index + 1], string[index + 1:])
+#	def splitDamId(self, string):
+#		for index in range(len(string) -1, 0, -1):
+#			if string[index].islower():
+#				return (string[:index + 1], string[index + 1:])
 
 
 	def combineName(self, parts, namePart, maxParts):
@@ -366,11 +394,16 @@ class FilenameParser:
 			parts.pop(namePart + 1)
 
 
-	def splitNumAlpha(self, string):
+	def splitNumAlpha(self, parts, splitPart):
+		string = parts[splitPart]
 		for index in range(len(string)):
 			if string[index].isalpha():
-				return (string[:index], string[index:])
-		return (string, None)
+				parts[splitPart] = string[:index]
+				parts.insert(splitPart + 1, string[index:])
+				break
+
+				#return (string[:index], string[index:])
+		#return (string, None)
 
 
 	def process(self):
