@@ -18,6 +18,7 @@ class Filename:
 		self.fileSeq = ""
 		self.name = ""
 		self.title = ""
+		self.usfx2 = ""
 		self.damid = ""
 		self.unknown = []
 		self.type = ""
@@ -27,8 +28,9 @@ class Filename:
 
 	def setBookSeq(self, bookSeq):
 		self.bookSeq = bookSeq
-		if not bookSeq[1:].isdigit():
-			self.errors.append("non-number bookSeq")
+		if not bookSeq.isdigit():
+			if not bookSeq[0] in {"A", "B"}:
+				self.errors.append("non-number bookSeq")
 
 
 	def setFileSeq(self, fileSeq):
@@ -42,7 +44,7 @@ class Filename:
 		self.name = name
 		bookId = Lookup().usfmBookId(name)
 		if bookId == None:
-			self.errors.append("usfm not found for name")
+			self.errors.append("usfm not found for name: %s" % (name))
 		else:
 			self.setBook(bookId)
 
@@ -50,7 +52,13 @@ class Filename:
 	def setBook(self, bookId):
 		self.book = bookId
 		if bookId not in self.chapterMap.keys():
-			self.errors.append("usfm code is not valid")
+			self.errors.append("usfm code %s is not valid" % (bookId))
+
+
+	def setUSFX2(self, usfx2, usfx2Map):
+		self.usfx2 = usfx2
+		bookId = usfx2Map.get(usfx2)
+		self.setBook(bookId)
 
 
 	def setChap(self, chap):
@@ -60,19 +68,19 @@ class Filename:
 		elif self.book != None:
 			chapter = self.chapterMap.get(self.book)
 			if chapter != None and int(chap) > int(chapter):
-				self.errors.append("chap too large")
+				self.errors.append("chap too large: %s for %s" % (chap, self.book))
 
 
 	def setVerseStart(self, verseStart):
 		self.verseStart = verseStart
 		if not verseStart.isdigit():
-			self.errors.append("non-number verse start")
+			self.errors.append("non-number verse start: %s" % (verseStart))
 
 
 	def setVerseEnd(self, verseEnd):
 		self.verseEnd = verseEnd
 		if not verseEnd.isdigit():
-			self.errors.append("non-number verse end")
+			self.errors.append("non-number verse end: %s" % (verseEnd))
 
 
 	def setTitle(self, title):
@@ -108,8 +116,11 @@ class Filename:
 				fileOut.append(self.name.replace("_",""))
 			elif item == "book_id":
 				fileOut.append(self.book)
+			elif item == "usfx2":
+				fileOut.append(self.usfx2)
 			elif item == "chapter":
-				fileOut.append(self.chap)
+				if not template.optionalChapter or self.chap != "0":
+					fileOut.append(self.chap)
 			elif item == "verse_start":
 				fileOut.append(self.verseStart)
 			elif item == "verse_end":
@@ -139,16 +150,21 @@ class FilenameTemplate:
 		self.parts = parts
 		self.numParts = len(parts)
 		self.namePosition = None
+		self.chapterPosition = None
 		for index in range(len(parts)):
 			part = parts[index]
 			if part not in {"book_id", "chapter", "verse_start", "verse_end", 
-				"book_seq", "file_seq", "book_name", "title", "damid", "type", "misc"}:
+				"book_seq", "file_seq", "book_name", "usfx2", "title", "damid", "type", "misc"}:
 				print("ERROR: filenameTemplate part %s is not known" % (part))
 				sys.exit()
 			if part in {"book_name", "title"}:
 				self.namePosition = index
+			if part == "chapter":
+				self.chapterPosition = index
 		self.hasProblemDamId = ("damid_front_clean" in specialInst)
 		self.verseEndClean = ("verse_end_clean" in specialInst)
+		self.optionalChapter = ("optional_chapter" in specialInst)
+		self.splitPosition2 = ("split_position2" in specialInst)
 
 
 class FilenameParser:
@@ -175,14 +191,31 @@ class FilenameParser:
 			FilenameTemplate("audio8", ("file_seq", "misc", "misc", "misc", "book_name", "chapter", "type"), ()),
 			## {bookseq}__{fileseq}_{non-standar-book-id}_{chapter}_{chapter_end}_{damid}.mp3   A01__002_GEN_1_2__S1DESWBT.mp
 			FilenameTemplate("audio9", ("book_seq", "file_seq", "book_name", "chapter", "misc", "damid", "type"), ()),
+			## Need to somehow lower the priority of this template, so it is only used when others fail totally.
 			## {fileseq}_{title}.mp3
 			##FilenameTemplate("audio10", ("file_seq", "title", "type"), ())
+		)
+		self.textTemplates = (
+			## {damid}_{bookseq}_{bookid}_{optionalchap}.html   AAZANT_70_MAT_10.html
+			FilenameTemplate("text1", ("damid", "book_seq", "book_id", "chapter", "type"), ("optional_chapter",)),
+			## {usfx2}{optionalchap}.html  AC12.html
+			FilenameTemplate("text2", ("usfx2", "chapter", "type"), ("split_position2", "optional_chapter")),
+		)
+		self.videoTemplates = (
+			## {lang}_{book_id}_{chap}-{verse_start}-{verse-end}.mp4  Romanian_MRK_9-33-50.mp4
+			FilenameTemplate("video1", ("title", "book_id", "chapter", "verse_start", "verse_end", "type"), ("scan_for_book_id",)),
+			## {lang}_{book_id}_End_Credits.mp4  Romanian_MRK_End_Credits.mp4
+
+			## {bookseq}___{chap}_{bookname}___{damid}.mp3  MBCMVAN1DA16/B01___23_S_Mateus____MBCMVAN1DA.mp3
+			#FilenameTemplate("video3", ("book_seq", "chapter", "book_name", "damid", "type"), ("damid_front_clean",)),
 		)
 
 
 	def parse(self, template, filename):
 		file = Filename(self.chapterMap)
 		parts = re.split("[_.-]+", filename)
+		if template.splitPosition2:
+			self.splitPosition(parts, 2)
 		if template.hasProblemDamId:
 			self.splitDamIdIfNeeded(parts, -2)
 		if template.verseEndClean:
@@ -191,6 +224,8 @@ class FilenameParser:
 				self.splitNumAlpha(parts, verseEndPos)
 		if len(parts) > template.numParts and template.namePosition != None:
 			self.combineName(parts, template.namePosition, template.numParts)
+		if template.optionalChapter and (len(parts) + 1) == template.numParts:
+			self.addZeroChapter(parts, template)
 		if template.numParts == len(parts):
 			for index in range(template.numParts):
 				part = parts[index]
@@ -200,7 +235,9 @@ class FilenameParser:
 				elif item == "file_seq":
 					file.setFileSeq(part)
 				elif item == "book_name":
-					file.setBookName(part)
+					file.setBookName(part) ### pass in chapterMap here
+				elif item == "usfx2":
+					file.setUSFX2(part, self.usfx2Map)
 				elif item == "book_id":
 					file.setBook(part)
 				elif item == "chapter":
@@ -224,6 +261,13 @@ class FilenameParser:
 			file.errors.append(("expect %d parts, have %d" % (template.numParts, len(parts))))
 		file.setFile(template, filename)
 		return file
+
+
+	def splitPosition(self, parts, position):
+		if len(parts[0]) > position:
+			first = parts[0]
+			parts[0] = first[:position]
+			parts.insert(1, first[position:])		
 
 
 	def splitDamIdIfNeeded(self, parts, damidIndex):
@@ -251,20 +295,35 @@ class FilenameParser:
 				break
 
 
-	def process(self):
+	def addZeroChapter(self, parts, template):
+		parts.insert(template.chapterPosition, "0")
+
+
+
+	def process(self, typeCode):
 		db = SQLUtility("localhost", 3306, "root", "valid_dbp")
 		self.chapterMap = db.selectMap("SELECT id, chapters FROM books", None)
-		typeCode = 'audio'
+		self.usfx2Map = db.selectMap("SELECT id_usfx, id FROM books", None)
+		self.usfx2Map['J1'] = '1JN' ## fix incorrect entry in books table
 		sql = ("SELECT concat(type_code, '/', bible_id, '/', fileset_id), file_name"
 			+ " FROM bucket_listing where type_code=%s limit 1000000000")
 		sqlTest = (("SELECT concat(type_code, '/', bible_id, '/', fileset_id), file_name"
-			+ " FROM bucket_listing where type_code=%s AND bible_id='ANYWBT'"))
+			+ " FROM bucket_listing where type_code=%s AND bible_id='PORERV'"))
 		filenamesMap = db.selectMapList(sql, (typeCode))
 		db.close()
 
+		if typeCode == "audio":
+			templates = self.audioTemplates
+		elif typeCode == "text":
+			templates = self.textTemplates
+		elif typeCode == "video":
+			templates = self.videoTemplates
+		else:
+			print("ERROR: unknown type_code: %s" % (typeCode))
+
 		for prefix in filenamesMap.keys():
 			filenames = filenamesMap[prefix]
-			(numErrors, template, files) = self.parseFileset(prefix, filenames)
+			(numErrors, template, files) = self.parseFileset(templates, prefix, filenames)
 			if numErrors == 0:
 				self.parsedList.append((template.name, prefix))
 			else:
@@ -274,9 +333,9 @@ class FilenameParser:
 						print(template.name, prefix, file.file, ", ".join(file.errors))
 
 
-	def parseFileset(self, prefix, filenames):
+	def parseFileset(self, templates, prefix, filenames):
 		parserTries = []
-		for template in self.audioTemplates:
+		for template in templates:
 			(numErrors, template, files) = self.parseOneFileset(template, prefix, filenames)
 			if numErrors == 0:
 				return (numErrors, template, files)
@@ -312,7 +371,7 @@ class FilenameParser:
 
 
 parser = FilenameParser()
-parser.process()
+parser.process('video')
 parser.summary()
 
 
