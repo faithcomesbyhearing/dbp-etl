@@ -8,8 +8,8 @@ from SQLUtility import *
 
 class Filename:
 
-	def __init__(self, chapterMap):
-		self.chapterMap = chapterMap
+	def __init__(self):
+		#self.chapterMap = chapterMap
 		self.book = ""
 		self.chap = ""
 		self.verseStart = ""
@@ -24,6 +24,7 @@ class Filename:
 		self.type = ""
 		self.file = ""
 		self.errors = []
+		self.template = None
 
 
 	def setBookSeq(self, bookSeq):
@@ -49,24 +50,24 @@ class Filename:
 			self.setBook(bookId)
 
 
-	def setBook(self, bookId):
+	def setBook(self, bookId, chapterMap):
 		self.book = bookId
-		if bookId not in self.chapterMap.keys():
+		if bookId not in chapterMap.keys():
 			self.errors.append("usfm code %s is not valid" % (bookId))
 
 
-	def setUSFX2(self, usfx2, usfx2Map):
+	def setUSFX2(self, usfx2, chapterMap, usfx2Map):
 		self.usfx2 = usfx2
 		bookId = usfx2Map.get(usfx2)
-		self.setBook(bookId)
+		self.setBook(bookId, chapterMap)
 
 
-	def setChap(self, chap):
+	def setChap(self, chap, chapterMap):
 		self.chap = chap
 		if not chap.isdigit():
 			self.errors.append("non-number chap")
 		elif self.book != None:
-			chapter = self.chapterMap.get(self.book)
+			chapter = chapterMap.get(self.book)
 			if chapter != None and int(chap) > int(chapter):
 				self.errors.append("chap too large: %s for %s" % (chap, self.book))
 
@@ -101,6 +102,10 @@ class Filename:
 
 	def setType(self, typ):
 		self.type = typ
+
+
+	def numErrors(self):
+		return len(self.errors)
 
 
 	def setFile(self, template, filename):
@@ -212,7 +217,8 @@ class FilenameParser:
 
 
 	def parse(self, template, filename):
-		file = Filename(self.chapterMap)
+		file = Filename()
+		file.template = template
 		parts = re.split("[_.-]+", filename)
 		if template.splitPosition2:
 			self.splitPosition(parts, 2)
@@ -235,13 +241,13 @@ class FilenameParser:
 				elif item == "file_seq":
 					file.setFileSeq(part)
 				elif item == "book_name":
-					file.setBookName(part) ### pass in chapterMap here
+					file.setBookName(part)
 				elif item == "usfx2":
-					file.setUSFX2(part, self.usfx2Map)
+					file.setUSFX2(part, self.chapterMap, self.usfx2Map)
 				elif item == "book_id":
-					file.setBook(part)
+					file.setBook(part, self.chapterMap)
 				elif item == "chapter":
-					file.setChap(part)
+					file.setChap(part, self.chapterMap)
 				elif item == "verse_start":
 					file.setVerseStart(part)
 				elif item == "verse_end":
@@ -370,9 +376,103 @@ class FilenameParser:
 		file.close()
 
 
+	def process2(self, typeCode):
+		db = SQLUtility("localhost", 3306, "root", "valid_dbp")
+		self.chapterMap = db.selectMap("SELECT id, chapters FROM books", None)
+		extras = {"FRT":6, "INT":1, "BAK":2, "LXX":1, "CNC":2, "GLO":26, "TDX":1, "NDX":1, "OTH":5, 
+			"XXA":4, "XXB":3, "XXC":1, "XXD":1, "XXE":1, "XXF":1, "XXG":1}
+		self.chapterMap.update(extras)
+		self.chapterMap["PSA"] = 151
+		self.usfx2Map = db.selectMap("SELECT id_usfx, id FROM books", None)
+		extras = {"FR":"FRT", "IN":"INT", "BK":"BAK", "CN":"CNC", "GS":"GLO", "TX":"TDX", "OH":"OTH",
+			"XA":"XXA", "XB":"XXB", "XC":"XXC", "XD":"XXD", "XE":"XXE", "XF":"XXF", "XG":"XXG"}
+		self.usfx2Map.update(extras)
+		self.usfx2Map["J1"] = "1JN" ## fix incorrect entry in books table
+		sql = ("SELECT concat(type_code, '/', bible_id, '/', fileset_id), file_name"
+			+ " FROM bucket_listing where type_code=%s limit 1000000000")
+		sqlTest = (("SELECT concat(type_code, '/', bible_id, '/', fileset_id), file_name"
+			+ " FROM bucket_listing where type_code=%s AND bible_id='PORERV'"))
+		filenamesMap = db.selectMapList(sql, (typeCode))
+		db.close()
+
+		if typeCode == "audio":
+			templates = self.audioTemplates
+		elif typeCode == "text":
+			templates = self.textTemplates
+		elif typeCode == "video":
+			templates = self.videoTemplates
+		else:
+			print("ERROR: unknown type_code: %s" % (typeCode))
+
+		for prefix in filenamesMap.keys():
+			filenames = filenamesMap[prefix]
+			(numErrors, files) = self.parseOneFileset2(templates, prefix, filenames)
+			if numErrors == 0:
+				self.parsedList.append((prefix))
+			else:
+				self.unparsedList.append((numErrors, prefix))
+				#for file in files:
+				#	if len(file.errors) > 0:
+				#		print(template.name, prefix, file.file, ", ".join(file.errors))
+
+
+#	def parseFileset2(self, templates, prefix, filenames):
+#		parserTries = []
+#		for template in templates:
+#			(numErrors, template, files) = self.parseOneFileset2(templates, prefix, filenames)
+#			if numErrors == 0:
+#				return (numErrors, template, files)
+#			parserTries.append((numErrors, template, files))
+#		best = 1000000
+#		selected = None
+#		for aTry in parserTries:
+#			if aTry[0] < best:
+#				best = aTry[0]
+#				selected = aTry
+#		return selected
+
+
+	def parseOneFileset2(self, templates, prefix, filenames):
+		numErrors = 0
+		files = []
+		for filename in filenames:
+			file = self.parseOneFilename2(templates, prefix, filename)
+			files.append(file)
+			if file.numErrors() > 0:
+				numErrors += 1
+				print(file.template.name, prefix, file.file, ", ".join(file.errors))
+		return (numErrors, files)
+
+
+	def parseOneFilename2(self, templates, prefix, filename):
+		parserTries = []
+		for template in templates:
+			file = self.parse(template, filename)
+			if file.numErrors == 0:
+				return file
+			parserTries.append(file)
+		best = 1000000
+		selected = None
+		for file in parserTries:
+			if file.numErrors() < best:
+				best = file.numErrors()
+				selected = file
+		return selected
+
+
+	def summary2(self):
+		file = io.open("FilenameParser.out", mode="w", encoding="utf-8")
+		for entry in self.parsedList:
+			file.write("%s\n" % entry)
+		file.write("\n\nUnparsed\n\n")
+		for entry in self.unparsedList:
+			file.write("%d  %s\n" % entry)
+		file.close()
+
+
 parser = FilenameParser()
-parser.process('video')
-parser.summary()
+parser.process2('text')
+parser.summary2()
 
 
 
