@@ -9,7 +9,6 @@ from SQLUtility import *
 class Filename:
 
 	def __init__(self):
-		#self.chapterMap = chapterMap
 		self.book = ""
 		self.chap = ""
 		self.verseStart = ""
@@ -145,7 +144,7 @@ class Filename:
 
 
 	def print(self):
-		print(self.seq, self.book, self.chap, self.name, self.damid, self.type, self.file, self.errors)
+		print(self.bookSeq, self.fileSeq, self.book, self.chap, self.name, self.damid, self.type, self.file, self.errors)
 
 
 class FilenameTemplate:
@@ -336,7 +335,7 @@ class FilenameParser:
 				self.unparsedList.append((numErrors, template.name, prefix))
 				for file in files:
 					if len(file.errors) > 0:
-						print(template.name, prefix, file.file, ", ".join(file.errors))
+						print(prefix, file.file, ", ".join(file.errors))
 
 
 	def parseFileset(self, templates, prefix, filenames):
@@ -376,13 +375,16 @@ class FilenameParser:
 		file.close()
 
 
+	## Process2 processes tries each template with each file and returns the best parse
 	def process2(self, typeCode):
 		db = SQLUtility("localhost", 3306, "root", "valid_dbp")
 		self.chapterMap = db.selectMap("SELECT id, chapters FROM books", None)
 		extras = {"FRT":6, "INT":1, "BAK":2, "LXX":1, "CNC":2, "GLO":26, "TDX":1, "NDX":1, "OTH":5, 
 			"XXA":4, "XXB":3, "XXC":1, "XXD":1, "XXE":1, "XXF":1, "XXG":1}
 		self.chapterMap.update(extras)
-		self.chapterMap["PSA"] = 151
+		corrections = {"MAN":1, "PS2":1}
+		self.chapterMap.update(corrections)
+		#self.chapterMap["PSA"] = 151
 		self.usfx2Map = db.selectMap("SELECT id_usfx, id FROM books", None)
 		extras = {"FR":"FRT", "IN":"INT", "BK":"BAK", "CN":"CNC", "GS":"GLO", "TX":"TDX", "OH":"OTH",
 			"XA":"XXA", "XB":"XXB", "XC":"XXC", "XD":"XXD", "XE":"XXE", "XF":"XXF", "XG":"XXG"}
@@ -411,25 +413,10 @@ class FilenameParser:
 				self.parsedList.append((prefix))
 			else:
 				self.unparsedList.append((numErrors, prefix))
-				#for file in files:
-				#	if len(file.errors) > 0:
-				#		print(template.name, prefix, file.file, ", ".join(file.errors))
 
+			bookMap = self.buildBookChapterMap(files)
+			self.checkBookChapterMap(prefix, bookMap)
 
-#	def parseFileset2(self, templates, prefix, filenames):
-#		parserTries = []
-#		for template in templates:
-#			(numErrors, template, files) = self.parseOneFileset2(templates, prefix, filenames)
-#			if numErrors == 0:
-#				return (numErrors, template, files)
-#			parserTries.append((numErrors, template, files))
-#		best = 1000000
-#		selected = None
-#		for aTry in parserTries:
-#			if aTry[0] < best:
-#				best = aTry[0]
-#				selected = aTry
-#		return selected
 
 
 	def parseOneFileset2(self, templates, prefix, filenames):
@@ -458,6 +445,43 @@ class FilenameParser:
 				best = file.numErrors()
 				selected = file
 		return selected
+
+
+	def buildBookChapterMap(self, files):
+		bookMap = {}
+		for file in files:
+			if file.book not in {None, "FRT", "INT", "BAK", "LXX", "CNC", "GLO", "TDX", "NDX", "OTH", 
+				"XXA", "XXB", "XXC", "XXD", "XXE", "XXF", "XXG"}:
+				chapters = bookMap.get(file.book)
+				if chapters == None:
+					maxChapter = self.chapterMap[file.book]
+					chapters = [0] * (maxChapter + 1)
+					bookMap[file.book] = chapters
+				chap = int(file.chap)
+				if len(chapters) > chap:
+					chapters[chap] += 1
+				#else:
+				#	print("chapter %s is too large for %s" % (file.chap, file.book))
+		return bookMap
+
+
+	def checkBookChapterMap(self, prefix, bookMap):
+		for book in bookMap.keys():
+			chapters = bookMap[book]
+			empty = []
+			tomany = []
+			for chapter in range(len(chapters)):
+				count = chapters[chapter]	
+				if count == 0:
+					empty.append(chapter)
+					#print("%s no %d chapter for %s" % (prefix, chapter, book))
+				elif count > 2:
+					tomany.append(chapter)
+					#print("%s %d chapters for %d in %s" % (prefix, count, chapter, book)) 
+			if len(empty) > 0:
+				print("%s %s is missing chapters:" % (prefix, book), empty)
+			if len(tomany) > 0:
+				print("%s %s has too many chapters:" % (prefix, book), tomany)
 
 
 	def summary2(self):
