@@ -40,13 +40,13 @@ class Filename:
 
 
 	# Should be used before set chapter
-	def setBookName(self, name):
+	def setBookName(self, name, chapterMap):
 		self.name = name
 		bookId = Lookup().usfmBookId(name)
 		if bookId == None:
 			self.errors.append("usfm not found for name: %s" % (name))
 		else:
-			self.setBook(bookId)
+			self.setBook(bookId, chapterMap)
 
 
 	def setBook(self, bookId, chapterMap):
@@ -181,27 +181,34 @@ class FilenameParser:
 		self.parsedList = []
 		self.unparsedList = []
 		self.audioTemplates = (
+			##FilenameTemplate("audio0", ("type",), ()),
 			## {bookseq}___{chap}_{bookname}____{damid}.mp3   B01___01_Matthew_____ENGGIDN2DA.mp3
-			FilenameTemplate("audio1", ("book_seq", "chapter", "book_name", "damid", "type"), ("damid_front_clean",)),
-			## {bookseq}_{bookname}_{chap}_{damid}.mp3   B01_Genesis_01_S1COXWBT.mp3
-			FilenameTemplate("audio2", ("book_seq", "book_name", "chapter", "damid", "type"), ()),
-			## {bookseq}_{fileseq}__{bookname}_{chap}_____{damid}.mp3   A08_073__Ruth_01_________S2RAMTBL.mp3
-			FilenameTemplate("audio3", ("book_seq", "file_seq", "book_name", "chapter", "damid", "type"), ()),
- 			## {fileseq}_{USFM}_{chap}_{versestart}-{verseend}_SET_{unknown}___{damid}.mp3   audio/SNMNVS/SNMNVSP1DA16/052_GEN_027_18-29_Set_54____SNMNVSP1DA.mp3
-			FilenameTemplate("audio4", ("file_seq", "book_id", "chapter", "verse_start", "verse_end", "misc", "misc", "damid", "type"), ()),
-			## {lang}_{vers}_{bookseq}_{bookname}_{chap}_{versestart}-{verseend}_{unknown}_{unknown}.mp3  audio/SNMNVS/SNMNVSP1DA/SNM_NVS_01_Genesis_041_50-57_SET91_PASSAGE1.mp3
-			FilenameTemplate("audio5", ("misc", "misc", "book_seq", "book_name", "chapter", "verse_start", "verse_end", "misc", "misc", "type"), ()),
-			## {bookseq}___{fileseq}_{bookname}_{chap}_{startverse}_{endverse}{name}__damid.mp3   audio/PRSGNN/PRSGNNS1DA/B01___22_Genesis_21_1_10BirthofIsaac__S1PRSGNN.mp3
-			FilenameTemplate("audio6", ("book_seq", "file_seq", "book_name", "chapter", "verse_start", "verse_end", "title", "damid", "type"), ("verse_end_clean",)),
+			FilenameTemplate("audio6", ("book_seq", "chapter", "book_name", "damid", "type"), ("damid_front_clean",)),
 			## {misc}_{misc}_Set_{fileseq}_{bookname}_{chap}_{verse_start}-{verse_end}.mp3   Nikaraj_P2KFTNIE_Set_051_Luke_21_1-19.mp3
-			FilenameTemplate("audio7", ("misc", "misc", "misc", "file_seq", "book_name", "chapter", "verse_start", "verse_end", "type"), ()),
-			## {file_seq}_{testament}_{KDZ}_{vers}_{bookname}_{chap}.mp3   1215_O2_KDZ_ESV_PSALM_57.mp3
-			FilenameTemplate("audio8", ("file_seq", "misc", "misc", "misc", "book_name", "chapter", "type"), ()),
+			FilenameTemplate("audio1", ("misc", "misc", "misc", "file_seq", "book_name", "chapter", "verse_start", "verse_end", "type"), ()),
+			## {fileseq}_{USFM}_{chap}_{versestart}-{verseend}_SET_{unknown}___{damid}.mp3   audio/SNMNVS/SNMNVSP1DA16/052_GEN_027_18-29_Set_54____SNMNVSP1DA.mp3
+			FilenameTemplate("audio2", ("file_seq", "book_id", "chapter", "verse_start", "verse_end", "misc", "misc", "damid", "type"), ()),
+			## {lang}_{vers}_{bookseq}_{bookname}_{chap}_{versestart}-{verseend}_{unknown}_{unknown}.mp3  audio/SNMNVS/SNMNVSP1DA/SNM_NVS_01_Genesis_041_50-57_SET91_PASSAGE1.mp3
+			FilenameTemplate("audio3", ("misc", "misc", "book_seq", "book_name", "chapter", "verse_start", "verse_end", "misc", "misc", "type"), ()),
+			## {bookseq}___{fileseq}_{bookname}_{chap}_{startverse}_{endverse}{name}__damid.mp3   audio/PRSGNN/PRSGNNS1DA/B01___22_Genesis_21_1_10BirthofIsaac__S1PRSGNN.mp3
+			FilenameTemplate("audio4", ("book_seq", "file_seq", "book_name", "chapter", "verse_start", "verse_end", "title", "damid", "type"), ("verse_end_clean",)),
+			## missing explaination
+			FilenameTemplate("audio5", ("file_seq", "misc", "misc", "misc", "book_name", "chapter", "type"), ()),
+
 			## {bookseq}__{fileseq}_{non-standar-book-id}_{chapter}_{chapter_end}_{damid}.mp3   A01__002_GEN_1_2__S1DESWBT.mp
+
+			## {bookseq}_{fileseq}__{bookname}_{chap}_____{damid}.mp3   A08_073__Ruth_01_________S2RAMTBL.mp3
+			FilenameTemplate("audio8", ("book_seq", "file_seq", "book_name", "chapter", "damid", "type"), ()),
+
+			## {bookseq}_{bookname}_{chap}_{damid}.mp3   B01_Genesis_01_S1COXWBT.mp3
+			FilenameTemplate("audio7", ("book_seq", "book_name", "chapter", "damid", "type"), ()),
+ 			## {file_seq}_{testament}_{KDZ}_{vers}_{bookname}_{chap}.mp3   1215_O2_KDZ_ESV_PSALM_57.mp3
 			FilenameTemplate("audio9", ("book_seq", "file_seq", "book_name", "chapter", "misc", "damid", "type"), ()),
 			## Need to somehow lower the priority of this template, so it is only used when others fail totally.
+			
 			## {fileseq}_{title}.mp3
-			##FilenameTemplate("audio10", ("file_seq", "title", "type"), ())
+			FilenameTemplate("audio_story", ("file_seq", "title", "type"), ()),
+			FilenameTemplate("audio_story2", ("book_seq", "file_seq", "title", "type"), ())
 		)
 		self.textTemplates = (
 			## {damid}_{bookseq}_{bookid}_{optionalchap}.html   AAZANT_70_MAT_10.html
@@ -258,7 +265,7 @@ class FilenameParser:
 				elif item == "file_seq":
 					file.setFileSeq(part)
 				elif item == "book_name":
-					file.setBookName(part)
+					file.setBookName(part, self.chapterMap)
 				elif item == "usfx2":
 					file.setUSFX2(part, self.chapterMap, self.usfx2Map)
 				elif item == "book_id":
@@ -485,15 +492,16 @@ class FilenameParser:
 
 
 	def validateCompleteness(self, file):
-		if file.book == None or file.book == "":
-			file.errors.append("book_id is not found")
-		if file.chap == None or file.chap == "":
-				file.errors.append("chapter not found")
-		if file.type == "mp4" and file.chap.isdigit():
-			if file.verseStart == None or file.verseStart == "":
-				file.errors.append("verse start not found")
-			if file.verseEnd == None or file.verseEnd == "":
-				file.errors.append("verse end not found")
+		if file.template.name != "audio_story" and file.template.name != "audio_story2":
+			if file.book == None or file.book == "":
+				file.errors.append("book_id is not found")
+			if file.chap == None or file.chap == "":
+					file.errors.append("chapter not found")
+			if file.type == "mp4" and file.chap.isdigit():
+				if file.verseStart == None or file.verseStart == "":
+					file.errors.append("verse start not found")
+				if file.verseEnd == None or file.verseEnd == "":
+					file.errors.append("verse end not found")
 
 
 	def buildBookChapterMap(self, files):
@@ -540,7 +548,7 @@ class FilenameParser:
 
 
 parser = FilenameParser()
-parser.process2('text')
+parser.process2('audio')
 parser.summary2()
 
 
