@@ -63,6 +63,8 @@ class Filename:
 
 	def setChap(self, chap, chapterMap):
 		self.chap = chap
+		if chap.lower() == "end":
+			return
 		if not chap.isdigit():
 			self.errors.append("non-number chap")
 		elif self.book != None:
@@ -80,7 +82,8 @@ class Filename:
 	def setVerseEnd(self, verseEnd):
 		self.verseEnd = verseEnd
 		if not verseEnd.isdigit():
-			self.errors.append("non-number verse end: %s" % (verseEnd))
+			if not verseEnd[:-1].isdigit() or not verseEnd[-1] == "r":
+				self.errors.append("non-number verse end: %s" % (verseEnd))
 
 
 	def setTitle(self, title):
@@ -138,7 +141,7 @@ class Filename:
 			elif item == "misc":
 				fileOut.append(self.getUnknown(miscIndex))
 				miscIndex += 1
-		filenameOut = "".join(fileOut)
+		filenameOut = "".join(fileOut).replace("_","")
 		if filenameOut != filename.replace("_","").replace("-","").replace(".",""):
 			self.errors.append("Mismatch %s" % (filenameOut))
 
@@ -169,6 +172,7 @@ class FilenameTemplate:
 		self.verseEndClean = ("verse_end_clean" in specialInst)
 		self.optionalChapter = ("optional_chapter" in specialInst)
 		self.splitPosition2 = ("split_position2" in specialInst)
+		self.scanForBookId = ("scan_for_book_id" in specialInst)
 
 
 class FilenameParser:
@@ -207,11 +211,23 @@ class FilenameParser:
 		)
 		self.videoTemplates = (
 			## {lang}_{book_id}_{chap}-{verse_start}-{verse-end}.mp4  Romanian_MRK_9-33-50.mp4
-			FilenameTemplate("video1", ("title", "book_id", "chapter", "verse_start", "verse_end", "type"), ("scan_for_book_id",)),
-			## {lang}_{book_id}_End_Credits.mp4  Romanian_MRK_End_Credits.mp4
+			FilenameTemplate("video1", ("misc", "book_id", "chapter", "verse_start", "verse_end", "type"), ("scan_for_book_id",)),
+			## This pattern has an extra 1 at the end
+			FilenameTemplate("video2", ("misc", "book_id", "chapter", "verse_start", "verse_end", "misc", "type"), ("scan_for_book_id",)),
+			## This pattern for extra R_1 at the end
+			FilenameTemplate("video3", ("misc", "book_id", "chapter", "verse_start", "verse_end", "misc", "misc", "type"), ("scan_for_book_id",)),
+			## This pattern for End Credit
+			FilenameTemplate("video4", ("misc", "book_id", "chapter", "misc", "type"), ("scan_for_book_id",)),
+			## This pattern for End Credit with extra 1 at the end
+			FilenameTemplate("video5", ("misc", "book_id", "chapter", "misc", "misc", "type"), ("scan_for_book_id",)),
+			## This pattern for End Credit with extra R_1 at the end
+			FilenameTemplate("video6", ("misc", "book_id", "chapter", "misc", "misc", "misc", "type"), ("scan_for_book_id",)),
 
+			## This pattern for
+			## {lang}_{book_id}_End_Credits.mp4  Romanian_MRK_End_Credits.mp4
+# What ever happened to MBCWBT It is th format below
 			## {bookseq}___{chap}_{bookname}___{damid}.mp3  MBCMVAN1DA16/B01___23_S_Mateus____MBCMVAN1DA.mp3
-			#FilenameTemplate("video3", ("book_seq", "chapter", "book_name", "damid", "type"), ("damid_front_clean",)),
+			##FilenameTemplate("video3", ("book_seq", "chapter", "book_name", "damid", "type"), ("damid_front_clean",)),
 		)
 
 
@@ -221,6 +237,8 @@ class FilenameParser:
 		parts = re.split("[_.-]+", filename)
 		if template.splitPosition2:
 			self.splitPosition(parts, 2)
+		if template.scanForBookId:
+			self.scanForBookId(parts)
 		if template.hasProblemDamId:
 			self.splitDamIdIfNeeded(parts, -2)
 		if template.verseEndClean:
@@ -268,13 +286,28 @@ class FilenameParser:
 		return file
 
 
+	## This method will split the first part into 2 at a specified position
 	def splitPosition(self, parts, position):
 		if len(parts[0]) > position:
 			first = parts[0]
 			parts[0] = first[:position]
-			parts.insert(1, first[position:])		
+			parts.insert(1, first[position:])
 
 
+	## This method searches parts for a valid bookId, combines all preceding parts into 1 part
+	def	scanForBookId(self, parts):
+		bookPosition = 0
+		for index in range(len(parts)):
+			if parts[index] in {"MAT", "MRK", "LUK", "JHN", "ACT"}:
+				bookPosition = index 
+				break
+		for index in range(bookPosition - 1):
+			parts[0] = parts[0] + "_" + parts[1]
+			parts.pop(1)
+
+
+
+	## This method splits between Bible bookname and a damid, when there was no _ between them
 	def splitDamIdIfNeeded(self, parts, damidIndex):
 		damid = parts[damidIndex]
 		if any(c.islower() for c in damid):
@@ -285,12 +318,14 @@ class FilenameParser:
 					break
 
 
+	## This method combines parts starting at a position to return a list of a stated size
 	def combineName(self, parts, namePart, maxParts):
 		while (len(parts) > maxParts):
 			parts[namePart] = parts[namePart] + "_" + parts[namePart + 1]
 			parts.pop(namePart + 1)
 
 
+	## Split a part that is part alpha and part numberic into two parts
 	def splitNumAlpha(self, parts, splitPart):
 		string = parts[splitPart]
 		for index in range(len(string)):
@@ -300,6 +335,7 @@ class FilenameParser:
 				break
 
 
+	## Add a zero where that part was missing, this is used for chapters
 	def addZeroChapter(self, parts, template):
 		parts.insert(template.chapterPosition, "0")
 
@@ -414,8 +450,8 @@ class FilenameParser:
 			else:
 				self.unparsedList.append((numErrors, prefix))
 
-			bookMap = self.buildBookChapterMap(files)
-			self.checkBookChapterMap(prefix, bookMap)
+			#bookMap = self.buildBookChapterMap(files)
+			#self.checkBookChapterMap(prefix, bookMap)
 
 
 
@@ -424,6 +460,7 @@ class FilenameParser:
 		files = []
 		for filename in filenames:
 			file = self.parseOneFilename2(templates, prefix, filename)
+			self.validateCompleteness(file)
 			files.append(file)
 			if file.numErrors() > 0:
 				numErrors += 1
@@ -447,10 +484,22 @@ class FilenameParser:
 		return selected
 
 
+	def validateCompleteness(self, file):
+		if file.book == None or file.book == "":
+			file.errors.append("book_id is not found")
+		if file.chap == None or file.chap == "":
+				file.errors.append("chapter not found")
+		if file.type == "mp4" and file.chap.isdigit():
+			if file.verseStart == None or file.verseStart == "":
+				file.errors.append("verse start not found")
+			if file.verseEnd == None or file.verseEnd == "":
+				file.errors.append("verse end not found")
+
+
 	def buildBookChapterMap(self, files):
 		bookMap = {}
 		for file in files:
-			if file.book not in {None, "FRT", "INT", "BAK", "LXX", "CNC", "GLO", "TDX", "NDX", "OTH", 
+			if file.book not in {None, "", "FRT", "INT", "BAK", "LXX", "CNC", "GLO", "TDX", "NDX", "OTH", 
 				"XXA", "XXB", "XXC", "XXD", "XXE", "XXF", "XXG"}:
 				chapters = bookMap.get(file.book)
 				if chapters == None:
@@ -460,8 +509,6 @@ class FilenameParser:
 				chap = int(file.chap)
 				if len(chapters) > chap:
 					chapters[chap] += 1
-				#else:
-				#	print("chapter %s is too large for %s" % (file.chap, file.book))
 		return bookMap
 
 
@@ -474,10 +521,8 @@ class FilenameParser:
 				count = chapters[chapter]	
 				if count == 0:
 					empty.append(chapter)
-					#print("%s no %d chapter for %s" % (prefix, chapter, book))
 				elif count > 2:
 					tomany.append(chapter)
-					#print("%s %d chapters for %d in %s" % (prefix, count, chapter, book)) 
 			if len(empty) > 0:
 				print("%s %s is missing chapters:" % (prefix, book), empty)
 			if len(tomany) > 0:
