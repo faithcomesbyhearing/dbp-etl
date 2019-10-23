@@ -11,7 +11,8 @@
 #     INSERT INTO bible_filesets (eg ENGESVN2SA)
 #     stream_hashid = SELECT FROM bible_filesets WHERE id = ENGESVN2SA
 #     local_mp3s = get list of local mp3's (download from s3 if needed)
-#     foreach chapter # SELECT file_name FROM bible_files WHERE hash_id=hash_id # ensure cannon book/chapter order
+#        # enforce cannon book/chapter order in mp3s or sql query, and foreach on that (for progress monitoring)
+#     foreach chapter # SELECT file_name FROM bible_files WHERE hash_id=hash_id
 #       if new book, print first letter of book (or . for missing books in cannon-order sequence)
 #       foreach bitrate_hashid # DISTINCT(description) FROM bible_fileset_tags WHERE hash_id=hashid AND name='bitrate'
 #         # do work
