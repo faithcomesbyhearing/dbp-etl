@@ -548,7 +548,7 @@ class FilenameParser:
 
 
 parser = FilenameParser()
-parser.process2('audio')
+parser.process2('video')
 parser.summary2()
 
 
