@@ -20,47 +20,27 @@ class RegExParser:
 		db.close()
 
 
-	def parseVideo(self):
-		video1 = re.compile(r"(.*)_(MAT|MRK|LUK|JHN)_([0-9]+)-([0-9]+b?)-([0-9]+)(.*)")
-		video2 = re.compile(r"(.*)_(MAT|MRK|LUK|JHN)_(End_[Cc]redits)()()(.*)")
-		video3 = re.compile(r"(.*)_(Mark)_([0-9]+)-([0-9]+b?)-([0-9]+)(.*)")
-		video4 = re.compile(r"(.*)_(MRKZ)_(End_[Cc]redits)()()(.*)")
-		regExList = (video1, video2, video3, video4)
-		for filename in self.filenameList:
-			print(filename)
-			match = None
-			for regex in regExList:
-				match = regex.match(filename)
-				if match != None:
-					print("video1", match.group(1), match.group(2), match.group(3), match.group(4), 
-						match.group(5), match.group(6))
-					break
-			if match == None:
-				print("ERROR: could not parse", filename)
-				sys.exit() # terminate if none of the parsers can parse the filename
+	def videoParsers(self):
+		regexList = (
+		("video1", re.compile(r"(.*)_(MAT|MRK|LUK|JHN)_([0-9]+)-([0-9]+b?)-([0-9]+)(.*).mp4")),
+		("video2", re.compile(r"(.*)_(MAT|MRK|LUK|JHN)_(End_[Cc]redits)()()(.*).mp4")),
+		("video3", re.compile(r"(.*)_(Mark)_([0-9]+)-([0-9]+b?)-([0-9]+)(.*).mp4")),
+		("video4", re.compile(r"(.*)_(MRKZ)_(End_[Cc]redits)()()(.*).mp4")),
+		)
+		return regexList
 
 
-	def parseText(self):
+	def textParsers(self):
+		regexList = (
 		## {damid}_{bookseq}_{bookid}_{optionalchap}.html   AAZANT_70_MAT_10.html
-		text1 = re.compile(r"([A-Z0-9]+)_([0-9]+)_([0-9A-Z]+)_?([0-9]*).(html)")
+		("text1", re.compile(r"([A-Z0-9]+)_([0-9]+)_([0-9A-Z]+)_?([0-9]*).(html)")),
 		## {usfx2}{optionalchap}.html  AC12.html
-		text2 = re.compile(r"()()([A-Z][A-Z0-9])([0-9]*).(html)")
-		regExList = (text1, text2)
-		for filename in self.filenameList:
-			print(filename)
-			match = None
-			for regex in regExList:
-				match = regex.match(filename)
-				if match != None:
-					print("text1", match.group(1), match.group(2), match.group(3), match.group(4), 
-						match.group(5))
-					break
-			if match == None:
-				print("ERROR: could not parse", filename)
-				sys.exit() # terminate if none of the parsers can parse the filename
+		("text2", re.compile(r"()()([A-Z][A-Z0-9])([0-9]*).(html)")),
+		)
+		return regexList
 
 
-	def parseAudio(self):
+	def videoParsers(self):
 		regexList = (
 			## {bookseq}___{chap}_{bookname}____{damid}.mp3   B01___01_Matthew_____ENGGIDN2DA.mp3
 			("audio1", re.compile(r"([AB][0-9]+)_+([0-9]+)_([1-4]?[A-Za-z]+)_+([A-Z0-9]+).mp3")),
@@ -85,6 +65,7 @@ class RegExParser:
 			## {fileseq}_{title}.mp3  01_Creation.mp3
 			("audioStory2", re.compile(r"([0-9]+)_([A-Za-z0-9_'\(\)\-& ]+).mp3")),
 		)
+		return regexList
 
 		## {misc}_{misc}_Set_{fileseq}_{bookname}_{chap}_{verse_start}-{verse_end}.mp3   Nikaraj_P2KFTNIE_Set_051_Luke_21_1-19.mp3
 		##FilenameTemplate("audio1", ("misc", "misc", "misc", "file_seq", "book_name", "chapter", "verse_start", "verse_end", "type"), ()),
@@ -104,10 +85,16 @@ class RegExParser:
 			## {file_seq}_{testament}_{KDZ}_{vers}_{bookname}_{chap}.mp3   1215_O2_KDZ_ESV_PSALM_57.mp3
 		##FilenameTemplate("audio9", ("book_seq", "file_seq", "book_name", "chapter", "misc", "damid", "type"), ()),
 		## Need to somehow lower the priority of this template, so it is only used when others fail totally.
-		
-		## {fileseq}_{title}.mp3
-		##FilenameTemplate("audio_story", ("file_seq", "title", "type"), ()),
-		##FilenameTemplate("audio_story2", ("book_seq", "file_seq", "title", "type"), ())		
+
+
+	def process(self, typeCode):
+		if typeCode == "audio":
+			regexList = self.videoParsers()
+		elif typeCode == "text":
+			regexList = self.textParsers()
+		elif typeCode == "video":
+			regexList = self.videoParsers()
+
 		for filename in self.filenameList:
 			print(filename)
 			match = None
@@ -115,9 +102,6 @@ class RegExParser:
 				match = regex[1].match(filename)
 				if match != None:
 					print(regex[0], match.groups())
-					#print(regex[0], match.string)
-					#print(regex[0], match.group(1), match.group(2), match.group(3), match.group(4)) 
-						#match.group(5))
 					break
 			if match == None:
 				print("ERROR: could not parse", filename)
@@ -125,9 +109,10 @@ class RegExParser:
 					sys.exit() # terminate if none of the parsers can parse the filename
 
 
+#typeCode = 'video'
+#typeCode = 'text'
+typeCode = 'audio'
+parser = RegExParser(typeCode)
+parser.process(typeCode)
 
-parser = RegExParser('audio')
-#parser.parseVideo()
-#parser.parseText()
-parser.parseAudio()
 
