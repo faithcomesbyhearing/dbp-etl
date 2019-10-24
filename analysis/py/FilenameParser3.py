@@ -62,6 +62,8 @@ class Filename:
 
 
 	def setChapter(self, chapter, chapterMap):
+		if chapter == "":
+			chapter = "0"
 		self.chapter = chapter
 		if chapter[:3].lower() == "end":
 			self.chapter = "end"
@@ -175,9 +177,9 @@ class FilenameParser:
 		)
 		self.textTemplates = (
 			## {damid}_{bookseq}_{bookid}_{optionalchap}.html   AAZANT_70_MAT_10.html
-			FilenameTemplate("text1", re.compile(r"([A-Z0-9]+)_([0-9]+)_([0-9A-Z]+)_?([0-9]*).(html)")), # remove last group
+			FilenameTemplate("text1", re.compile(r"([A-Z0-9]+)_([0-9]+)_([A-Z0-9]+)_?([0-9]*).(html)")),
 			## {usfx2}{optionalchap}.html  AC12.html
-			FilenameTemplate("text2", re.compile(r"()()([A-Z][A-Z0-9])([0-9]*).(html)")),
+			FilenameTemplate("text2", re.compile(r"([A-Z][A-Z0-9])([0-9]*).(html)")),
 		)
 		self.audioTemplates = (
 			## {bookseq}___{chap}_{bookname}____{damid}.mp3   B01___01_Matthew_____ENGGIDN2DA.mp3
@@ -241,6 +243,18 @@ class FilenameParser:
 				elif template.name == "video4":
 					bookId = "MRK" if match.group(2) == "MRKZ" else None
 					file.setBookId(bookId, self.chapterMap)
+			elif template.name[:3] == "tex":
+				if template.name == "text1":
+					file.setDamid(match.group(1))
+					file.setBookSeq(match.group(2))
+					file.setBookId(match.group(3), self.chapterMap)
+					file.setChapter(match.group(4), self.chapterMap)
+				elif template.name == "text2":
+					file.setBookId(match.group(1), self.chapterMap)
+					file.setChapter(match.group(2), self.chapterMap)
+				else:
+					print("ERROR: unknown templated %s" % (template.name))
+
 		else:
 			file.errors.append("no regex match to %s" % (template.name))
 
@@ -263,7 +277,7 @@ class FilenameParser:
 		self.usfx2Map.update(extras)
 		self.usfx2Map["J1"] = "1JN" ## fix incorrect entry in books table
 		sql = ("SELECT concat(type_code, '/', bible_id, '/', fileset_id), file_name"
-			+ " FROM bucket_listing where type_code=%s limit 1000000000")
+			+ " FROM bucket_listing where type_code=%s limit 10000000")
 		sqlTest = (("SELECT concat(type_code, '/', bible_id, '/', fileset_id), file_name"
 			+ " FROM bucket_listing where type_code=%s AND bible_id='PORERV'"))
 		filenamesMap = db.selectMapList(sql, (typeCode))
@@ -288,7 +302,6 @@ class FilenameParser:
 
 			bookMap = self.buildBookChapterMap(files)
 			self.checkBookChapterMap(prefix, bookMap)
-
 
 
 	def parseOneFileset3(self, templates, prefix, filenames):
@@ -319,7 +332,7 @@ class FilenameParser:
 				best = file.numErrors()
 				selected = file
 		#print("selected")
-		selected.print()
+		#selected.print()
 		return selected
 
 
@@ -381,7 +394,7 @@ class FilenameParser:
 
 
 parser = FilenameParser()
-parser.process3('video')
+parser.process3('text')
 parser.summary3()
 
 
