@@ -1,28 +1,41 @@
 # audioHLS.py
 # given input bibleid[s][,type], create corresponding HLS filesets in DB (no extra files in S3 are needed)
+# eg python audioHS.py ENGESV ENGNIV/ENGNIVN2DA
+#ENGWEB/ENGWEBN2SA: cannot create stream - no timings available!
+#ENGESV/ENGESVN2SA: MML
+#ERROR: blah blah...
+#details...
 
 ## approach: INSERT/SELECT as we go, risking partial loads and paying sequential overhead, but simplifying bookkeeping
 ##           support one or many input bibleid's (btw could invoke one bibleid per aws lambda to parallelize large sets)
 ## feedback: one line per bibleid/fileset, with letters indicating book being worked (or . if book not in fileset), newline at end
 # foreach bibleid (list of input bibleid[/fileset])
-#   foreach type_fileset (audio drama,nondrama) # DISTINCT(fileset_id) FROM bible_filesets WHERE set_type_code IN ('audio_drama','audio') AND bitrate=64k
+#   foreach type_fileset (audio drama,nondrama) # DISTINCT(fileset_id) FROM bible_filesets WHERE set_type_code IN ('audio_drama','audio') AND bitrate=64kbps
+#            ENGESVN2DA ENGESVN2DA16
 #       # wrinkle: use only C fileset if N and O also exists (duplicates!?  verify C's work on live.bible.is and new bible.is app)
 #     print("bibleid/type_fileset:", end=" ") # so can tell what program is working on
-#     INSERT INTO bible_filesets (eg ENGESVN2SA)
+#       # verify that this type_fileset has entries in bible_file_timestamps, skip if not
+#     INSERT INTO bible_filesets (eg ENGESVN2SA,audio_drama_stream)
 #     stream_hashid = SELECT FROM bible_filesets WHERE id = ENGESVN2SA
-#     local_mp3s = get list of local mp3's (download from s3 if needed)
+#     local_mp3s = get list of local mp3's (download from s3 if needed, all available bitrates for this type)
+#aws s3 cp ENGESVN2DA
+#aws s3 cp ENGESVN2DA16
 #        # enforce cannon book/chapter order in mp3s or sql query, and foreach on that (for progress monitoring)
 #     foreach chapter # SELECT file_name FROM bible_files WHERE hash_id=hash_id
+#(N2DA,MAT,1)
+#(N2DA16,MAT,1)
+#(N2DA,MAT,2)
+#(N2DA16,MAT,2)
 #       if new book, print first letter of book (or . for missing books in cannon-order sequence)
 #       foreach bitrate_hashid # DISTINCT(description) FROM bible_fileset_tags WHERE hash_id=hashid AND name='bitrate'
 #         # do work
 #         verify chapter is available in mp3s (eg B01___01_Matthew_____ENGESVN2DA.mp3)
-#         use ffprobe to determine bitrate
+#         bitrate = get_bitrate(chapter)
 #         [bytes,offsets,durations] = use ffprobe to determine verse offset, bytes, and duration
 #         # save work
-#         INSERT INTO bible_files (stream_hashid, eg B01___01_Matthew_____ENGESVN2DA.m3u8)
+#         INSERT INTO bible_files (stream_hashid, eg B01___01_Matthew_____ENGESVN2SA.m3u8)
 #         fileid = SELECT FROM bible_files (what we inserted above)
-#         INSERT INTO bible_files_stream_bandwidths (fileid, eg B01___01_Matthew_____ENGESVN2DA-bitrate.m3u8, bitrate)
+#         INSERT INTO bible_files_stream_bandwidths (fileid, eg "B01___01_Matthew_____ENGESVN2SA-64kbps.m3u8", bitrate)
 #         bwid = SELECT FROM bible_files_stream_bandwidths (what we inserted above)
 #         INSERT INTO bible_files_stream_segments (bwid, timestamps.id, [bytes,offsets,durations])
 
