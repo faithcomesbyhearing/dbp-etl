@@ -6,17 +6,15 @@ from SQLUtility import *
 HOST = "localhost"
 USER = "root"
 PORT = 3306
-DB_NAME = "dbp_hls"
-ASSET_ID = "dbp-prod"
-TYPE_CODE = "audio_stream"
+DB_NAME = "dbp"
 CODEC = "avc1.4d001f,mp4a.40.2"
 STREAM = "1"
 
 class AudioHLSAdapter:
 
 	def __init__(self):
-		self.db = SQLUtility(HOST, USER, PORT, DB_NAME)
-		self.cursor = self.db.cursor()
+		self.db = SQLUtility(HOST, PORT, USER, DB_NAME)
+		self.cursor = self.db.conn.cursor()
 		self.currHashId = None
 		self.currFileId = None
 		self.currBandwidthId = None
@@ -27,96 +25,126 @@ class AudioHLSAdapter:
 		self.db.close() # test closing twice
 
 
+	def checkBibleId(self, bibleId):
+		sql = "SELECT count(*) FROM bible_fileset_connections WHERE bible_id=%s"
+		return self.db.selectScalar(sql, (bibleId,))
+
+
+	def checkFilesetId(self, bibleId, filesetId):
+		sql = ("SELECT count(*) FROM bible_fileset_connections bfc, bible_filesets bf"
+			" WHERE bfc.bible_id=%s AND bf.id=%s")
+		return self.db.selectScalar(sql, (bibleId, filesetId))
+
+
+	def checkBibleTimestamps(self, bibleId):
+		sql = ("SELECT count(*) FROM bible_file_timestamps ft, bible_files bf, bible_filesets bfs,"
+			" bible_fileset_connections bfc"
+			" WHERE bf.id=ft.bible_file_id AND bfs.hash_id=bf.hash_id AND bfc.hash_id=bfs.hash_id"
+			" AND bfc.bible_id=%s")
+		return self.db.selectScalar(sql, (bibleId,))
+
+
 	## Returns the number of rows of timestamp data available for a filesetId
-	def hasTimestamps(self, filesetId):
+	def checkFilesetTimestamps(self, filesetId):
 		sql = ("SELECT count(*) FROM bible_file_timestamps ft, bible_files bf, bible_filesets bfs"
 			" WHERE bf.id=ft.bible_file_id AND bfs.hash_id=bf.hash_id AND bfs.id=%s")
 		return self.db.selectScalar(sql, (filesetId,))
 
 
-	## Returns the audio fileset_id for a bible_id
-	def selectFilesets(self, bibleId):
+	## Returns the audio fileset_ids for a bible_id
+	def selectFilesetIds(self, bibleId):
 		sql = ("SELECT bf.id FROM bible_filesets bf, bible_fileset_connections bfc"
-			+ " WHERE bf.hash_id=bfc.hash_id AND bfc.bible_id=%s"
-			+ " AND bf.set_type_code IN ('audio', 'audio_drama')")
+			" WHERE bf.hash_id=bfc.hash_id AND bfc.bible_id=%s"
+			" AND bf.set_type_code IN ('audio', 'audio_drama')")
 		return self.db.selectList(sql, (bibleId,))
+
+
+	def selectFileset(self, filesetId):
+		sql = "SELECT asset_id, set_type_code, set_size_code FROM bible_filesets WHERE id=%s"
+		return self.db.selectRow(sql, (filesetId,))
 
 
     ## Returns the files associated with a fileset
 	def selectBibleFiles(self, filesetId):
-		sql = ("SELECT bf.file_name, bf.book_id, bf.chapter_start, bf.chapter_end, bf.verse_start, bf.verse_end"
-			# I think that I don't need file_size and duration
-			+ " FROM bible_files bf, bible_filesets bfs"
-			+ " WHERE bf.hash_id=bfs.hash_id AND bfs.id=%s"
-			+ " ORDER BY bf.file_name")
+		sql = ("SELECT bf.file_name, bf.book_id, bf.chapter_start, bf.chapter_end, bf.verse_start," 
+			" bf.verse_end, bf.file_size, bf.duration"
+			" FROM bible_files bf, bible_filesets bfs"
+			" WHERE bf.hash_id=bfs.hash_id AND bfs.id=%s"
+			" ORDER BY bf.file_name")
 		return self.db.select(sql, (filesetId,))
 
 
     ## Returns the timestamps of a fileset in a map[book:chapter:verse] = timestamp
 	def selectTimestamps(self, filesetId):
 		sql = ("SELECT bf.file_name, bf.book_id, bf.chapter_start, ft.verse_start, ft.timestamp"
-			+ " FROM bible_file_timestamps ft, bible_files bf, bible_filesets bfs"
-			+ " WHERE bf.id=ft.bible_file_id AND bfs.hash_id=bf.hash_id"
-			+ " AND bfs.id=%s ORDER BY bf.file_name, ft.verse_start")
+			" FROM bible_file_timestamps ft, bible_files bf, bible_filesets bfs"
+			" WHERE bf.id=ft.bible_file_id AND bfs.hash_id=bf.hash_id"
+			" AND bfs.id=%s ORDER BY bf.file_name, ft.verse_start")
 		resultSet = self.db.select(sql, (filesetId,))
 		results = {}
-		for row in resultsSet:
+		for row in resultSet:
 			key = "%s:%d:%d" % (row[1], row[2], row[3]) # book:chapter:verse
 			results[key] = row[4] # timestamp
 		return results
 
 
     ## Inserts a new row into the fileset table
-	def insertFileset(self, filesetId, hashId, setSizeCode): # I either need to add assetId or remove hashId
+	def insertFileset(self, values):
+		sql = ("INSERT INTO bible_fileset (hash_id, id, asset_id, set_type_code, set_size_code)"
+			" VALUES (%s, %s, %s, %s, %s)")
 		try:
 			self.cursor.execute("BEGIN")
-			sql = ("INSERT INTO bible_fileset (hash_id, id, asset_id, set_type_code, set_size_code)"
-				+ " VALUES (%s, %s, %s, %s, %s)")
-			values = (hashId, filesetId, ASSET_ID, TYPE_CODE, setSizeCode)
-			self.cursor.execute(sql, values)			
-			self.currHashId = hashId
+			#self.cursor.execute(sql, values)
+			print(sql % values)		
+			self.currHashId = values[0]
 		except Exception as err:
-			self.error(cursor, statement, err)
+			self.error(self.cursor, sql, err)
 
 
     ## Inserts a new row into the bible_files table
-	def insertFile(self, bookId, chapterStart, chapterEnd, verseStart, verseEnd, filename, fileSize, duration):
+	def insertFile(self, values):
+		sql = ("INSERT INTO bible_files (hash_id, file_name, book_id, chapter_start, chapter_end,"
+			" verse_start, verse_end, file_size, duration) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)")
 		try:
-			sql = ("INSERT INTO bible_files (hash_id, book_id, chapter_start, chapter_end, verse_start,"
-				+ " verse_end, file_name, file_size, duration) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)")
-			values = (self.currHashId, bookId, chapterStart, chapterEnd, verseStart, verseEnd, 
-					filename, fileSize, duration)
-			self.cursor.execute(sql, values)
-			self.currFileId = self.cursor.execute("LAST_INSERT()")
+			values = (self.currHashId,) + values
+			#self.cursor.execute(sql, values)
+			#self.currFileId = self.cursor.execute("LAST_INSERT()")
+			print(sql % values)
+			self.currFileId = 12345
 		except Exception as err:
-			self.error(cursor, statement, err)
+			self.error(self.cursor, sql, err)
 
 
 	## Inserts a new row into the bible_file_stream_bandwidth table
-	def insertBandwidth(self, fileId, filename, bandwidth, width, height):
+	def insertBandwidth(self, values):
+		sql = ("INSERT INTO bible_file_stream_bandwidths (file_id, file_name, bitrate)"
+			" VALUES (%s, %s, %s)")
 		try:
-			sql = ("INSERT INTO bible_file_stream_bandwidths (file_id, file_name, bandwidth, resolution_width,"
-				+ " resolution_height, codec, stream) VALUES (%s, %s, %s, %s, %s, %s, %s)")
-			values = (self.currFileId, filename, bandwidth, width, height, CODEC, STREAM)
-			self.cursor.execute(sql, values)
-			self.currBandwidthId = self.cursor.execute("LAST_INSERT()")
+			values = (self.currFileId,) + values
+			#self.cursor.execute(sql, values)
+			#self.currBandwidthId = self.cursor.execute("LAST_INSERT()")
+			print(sql % values)
+			self.currBandwidthId = 67891
 		except Exception as err:
-			self.error(cursor, statement, err)
+			self.error(self.cursor, sql, err)
 
 
-	def addSegment(self, timestampId, byteCount, offset, duration):
-		self.segments.append((self.currBandwidthId, timestampId, byteCount, offset, duration))
+	def addSegment(self, values):
+		self.segments.append((self.currBandwidthId,) + values)
 
 
     ## Inserts a collection of rows into the bible_file_stream_segments table
 	def insertSegments(self):
+		sql = ("INSERT INTO bible_file_stream_segments (bandwidthId, timestampId, byteCount, offset, duration)"
+			+ " VALUES (%s, %s, %s, %s, %s)")
 		try:
-			sql = ("INSERT INTO bible_file_stream_segments (bandwidthId, timestampId, byteCount, offset, duration)"
-				+ " VALUES (%s, %s, %s, %s, %s)")
-			cursor.executemany(statement, self.segments)
-			self.db.commit()
+			#cursor.executemany(sql, self.segments)
+			#self.db.commit()
+			for segment in self.segments:
+				print(sql % segment)
+			self.segments = []
 		except Exception as err:
-			self.error(cursor, statement, err)
+			self.error(self.cursor, sql, err)
 
 
 	## Test after new HLS data added, performance could probably be improved by changing to joins
@@ -141,8 +169,8 @@ class AudioHLSAdapter:
 
 	def error(self, cursor, statement, err):
 		cursor.close()	
-		print("ERROR executing SQL %s on '%s'" % (error, stmt))
-		self.db.rollback()
+		print("ERROR executing SQL %s on '%s'" % (err, statement))
+		self.db.conn.rollback()
 		sys.exit()
 
 

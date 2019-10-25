@@ -1,6 +1,7 @@
-# audioHLS.py
-# given input bibleid[s][,type], create corresponding HLS filesets in DB (no extra files in S3 are needed)
+# AudioHLS.py
 
+# given input bibleid[s][,type], create corresponding HLS filesets in DB (no extra files in S3 are needed)
+#
 ## approach: INSERT/SELECT as we go, risking partial loads and paying sequential overhead, but simplifying bookkeeping
 ##           support one or many input bibleid's (btw could invoke one bibleid per aws lambda to parallelize large sets)
 ## feedback: one line per bibleid/fileset, with letters indicating book being worked (or . if book not in fileset), newline at end
@@ -26,96 +27,175 @@
 #         bwid = SELECT FROM bible_files_stream_bandwidths (what we inserted above)
 #         INSERT INTO bible_files_stream_segments (bwid, timestamps.id, [bytes,offsets,durations])
 
+import sys
 import re
-from Config import *
-from SQLUtility import *
+#from Config import *
+from AudioHLSAdapter import *
 import glob
 import subprocess
 from subprocess import Popen, PIPE
 import hashlib
 
-class dbConnection:
 
-	def __init__(self, config):
-		self.config = config
-		self.cursor = SQLUtility(self.config.database_host, self.config.database_port,
-			self.config.database_user, self.config.database_input_db_name)
+class AudioHLS:
 
-class hls:
+	def __init__(self):
+		self.adapter = AudioHLSAdapter()
 
-	def __init__(self, bibleid, filesetid):
-		self.bibleid = bibleid
-		self.filesetid = filesetid
-		self.directoryRE = re.compile("(.+)/"+ bibleid +"/"+ filesetid)
+	#	self.directoryRE = re.compile("(.+)/"+ bibleid +"/"+ filesetid)
 
-	def get_mp3s(self):
-		# TODO: get from S3 if needed
-		pat="/Users/jrstear/tmp/"+ self.bibleid +"/"+ self.filesetid +"/*.mp3"
-		# TODO: sort by ascending cannon book,chap (and use to determine processing order later)
-		return sorted(glob.glob(pat)) 
+	def processLambdaEvent(self, event):
+		print("This method will be used to start program from an AWS Lambda event")
 
-	def get_verse_start_times(self, mp3):
-		# get from DB if needed
-		timingfile = glob.glob(mp3 +".timing")
-		# TODO: if timingfile exists, simply read it into an array
-		if (len(timingfile) != 0):
-			foo = 1
-		else:
-			m = bookChapRegex.match(mp3)
-			# TODO: don't assume match
-			chap = str(int(m.group(1))) # omit leading 0's
-			book = books[m.group(2)] # TODO: verify dictionary match
-			sql = "SELECT ft.timestamp FROM bible_file_timestamps ft " \
-				"JOIN bible_files bf ON bf.id=ft.bible_file_id " \
-				"JOIN bible_filesets fs ON fs.hash_id=bf.hash_id " \
-				"WHERE fs.id=\'"+ self.filesetid +"\' " \
-				"AND book_id=\'"+ book +"\' AND chapter_start="+ chap + " ORDER BY ft.verse_start"
-			times = db.selectList(sql, None)
-			# TODO: sanity-check result, eg non-empty list, sequential verse numbers
-			# TODO: write to file
-		return times
 
-	def hashId(self):
-		filesetId = self.filesetid
-		bucket = "dbp-prod"
-		typeCode = "audio_stream"
+	def processCommandLine(self):
+		print("do", sys.argv)
+		if len(sys.argv) < 2:
+			print("ERROR: Enter bibleids or bibleid/filesetids to process on command line.")
+			sys.exit()
+		arguments = sys.argv[1:]
+		self.validateArguments(arguments)
+		for arg in arguments:
+			parts = arg.split("/")
+			print(arg)
+			if len(parts) > 1:
+				self.processFilesetId(parts[1])
+			else:
+				self.processBibleId(arg)
+
+
+	## This is used by both processCommandLine and ProcessLambdaEvent
+	def validateArguments(self, arguments):
+		errorCount = 0
+		for arg in arguments:
+			parts = arg.split("/")
+			if len(parts) == 1:
+				if self.adapter.checkBibleId(arg) < 1:
+					errorCount += 1
+					print("ERROR: bibleid: %s does not exist." % (arg))
+				elif self.adapter.checkBibleTimestamps(arg) < 1:
+					errorCount += 1
+					print("ERROR: bibleid: %s has no timestamp data." % (arg))
+			elif len(parts) == 2:
+				if parts[1][8:10] != "DA":
+					errorCount += 1
+					print("ERROR: filesetid: %s must have DA in 8,9 position.")
+				elif self.adapter.checkFilesetId(parts[0], parts[1]) < 1:
+					errorCount += 1
+					print("ERROR: bibleid/filesetid pair: %s does not exist." % (arg))
+				elif self.adapter.checkFilesetTimestamps(parts[1]) < 1:
+					errorCount += 1
+					print("ERROR: filesetid: %s has no timestamp data." % (arg))
+			else:
+				errorCount += 1
+				print("ERROR: argument: %s is invalid and was not processed." % (arg))
+		if errorCount > 0:
+			sys.exit()
+
+
+	def processBibleId(self, bibleId):
+		print("do bible", bibleId)
+		filesetList = self.adapter.selectFilesetIds(bibleId)
+		for filesetId in filesetList:
+			self.processFilesetId(filesetId)
+
+
+	def processFilesetId(self, origFilesetId):
+		print("do fileset", origFilesetId)
+		fileset = self.adapter.selectFileset(origFilesetId)
+		filesetId = origFilesetId[0:8] + "SA" + origFilesetId[11:]
+		assetId = fileset[0]
+		setTypeCode = fileset[1]
+		setTypeCode = "audio_stream"
+		setSizeCode = fileset[2]
+		hashId = self.hashId(assetId, filesetId, setTypeCode)
+
+		## Select all needed data before transaction starts
+		files = self.adapter.selectBibleFiles(origFilesetId)
+		timestampMap = self.adapter.selectTimestamps(origFilesetId)
+
+		## Transaction starts
+		self.adapter.insertFileset((hashId, filesetId, assetId, setTypeCode, setSizeCode))
+
+		for file in files:
+			origFilename = file[0]
+			filename = origFilename.split(".")[0] + ".m3u8"
+			values = (filename,) + file[1:]
+			self.adapter.insertFile(values)
+
+			bitrate = self.getBitrate(origFilename)
+			self.adapter.insertBandwidth((filename, bitrate))
+
+			key = "%s:%s:%s" % (file[1], file[2], file[4]) # book:chapter:verse
+			timestamps = timestampMap[key]
+			mp3File = "fullpath2File"
+			for dur, off, byt in self.getBoundaries(mp3File, timestamps):
+				#print(" ".join([dur,off,byt]))
+				self.adapter.addSegment((1, dur, off, byt))
+				# TODO: note that bible_file_stream_segments has FK to bible_file_timestamps.id,
+				# so add timestamps.id to query so we can set that in the INSERT
+			self.adapter.insertSegments()
+
+
+
+	def hashId(self, bucket, filesetId, typeCode):
 		md5 = hashlib.md5()
 		md5.update(filesetId.encode("latin1"))
 		md5.update(bucket.encode("latin1"))
 		md5.update(typeCode.encode("latin1"))
-		self.hash_id = md5.hexdigest()[:12]
-		return self.hash_id
+		hash_id = md5.hexdigest()
+		return hash_id[:12]
 
-def get_bitrate(file):
-	bitrateRegex = re.compile('.*bit_rate=([0-9]+)')
-	cmd = 'ffprobe -select_streams a -v error -show_format ' + file + ' | grep bit_rate'
-	s = subprocess.run(cmd, shell=True, capture_output=True)
-	# TODO: add error checking on above run and below regex
-	return bitrateRegex.match(str(s)).group(1)
 
-def get_boundaries(file, times):
-	cmd = 'ffprobe -show_frames -select_streams a -of compact -show_entries frame=best_effort_timestamp_time,pkt_pos ' + file
-	pipe = Popen(cmd, shell=True, stdout=PIPE)
-	i = prevtime = prevpos = 0
-	bound = times[i]
-	for line in pipe.stdout:
-		tm = timesRegex.match(str(line))
-		time = float(tm.group(1))
-		pos  = int(tm.group(2))
-		if (time >= bound):
-			duration = time - prevtime
-			nbytes = pos - prevpos
-			yield [str(duration), str(prevpos), str(nbytes)]
-			prevtime, prevpos = time, pos
-			if (i+1 != len(times)):
-				i += 1
-				bound = times[i]
-			else: 
-				bound = 99999999 # search to end of pipe
-	duration = time - prevtime
-	nbytes = pos - prevpos
-	yield [str(duration), str(prevpos), str(nbytes)]
+	def getBitrate(self, file):
+		return "64"
+		bitrateRegex = re.compile('.*bit_rate=([0-9]+)')
+		cmd = 'ffprobe -select_streams a -v error -show_format ' + file + ' | grep bit_rate'
+		s = subprocess.run(cmd, shell=True, capture_output=True)
+		# TODO: add error checking on above run and below regex
+		return bitrateRegex.match(str(s)).group(1)
 
+
+	#def get_mp3s(self, bibleId, filesetId):
+	#	# TODO: get from S3 if needed
+	#	pat="/Users/jrstear/tmp/"+ bibleId +"/"+ filesetId +"/*.mp3"
+	#	# TODO: sort by ascending cannon book,chap (and use to determine processing order later)
+	#	return sorted(glob.glob(pat)) 
+
+
+	def getBoundaries(self, file, times):
+		yield ("12", "34", "56")
+		return
+		cmd = 'ffprobe -show_frames -select_streams a -of compact -show_entries frame=best_effort_timestamp_time,pkt_pos ' + file
+		pipe = Popen(cmd, shell=True, stdout=PIPE)
+		i = prevtime = prevpos = 0
+		bound = times[i]
+		for line in pipe.stdout:
+			tm = timesRegex.match(str(line))
+			time = float(tm.group(1))
+			pos  = int(tm.group(2))
+			if (time >= bound):
+				duration = time - prevtime
+				nbytes = pos - prevpos
+				yield [str(duration), str(prevpos), str(nbytes)]
+				prevtime, prevpos = time, pos
+				if (i+1 != len(times)):
+					i += 1
+					bound = times[i]
+				else: 
+					bound = 99999999 # search to end of pipe
+		duration = time - prevtime
+		nbytes = pos - prevpos
+		yield [str(duration), str(prevpos), str(nbytes)]
+
+
+
+hls = AudioHLS()
+#hls.processCommandLine()
+#hls.processBibleId("ENGESV")
+hls.processFilesetId("ENGESVN2DA")
+
+"""
 ## initialize
 bookChapRegex = re.compile('.*B\d+___(\d+)_([A-Za-z+]*)') # matches: chapter, bookname
 basenameRegex = re.compile('(.+)\.mp3')
@@ -147,3 +227,6 @@ for bible in inputBibles:
 				# TODO: note that bible_file_stream_segments has FK to bible_file_timestamps.id,
 				# so add timestamps.id to query so we can set that in the INSERT
 			print("done")
+"""
+
+
