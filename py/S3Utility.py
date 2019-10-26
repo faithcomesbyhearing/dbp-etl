@@ -12,7 +12,7 @@ class S3Utility:
 	def __init__(self, config):
 		self.config = config
 		session = boto3.Session(profile_name='FCBH_Gary') # needs config
-		self.client = session.client('s3')
+		self.client = session.client('s3')		
 
 
 	def downloadFile(self, s3Bucket, s3Key, filename):
@@ -25,7 +25,7 @@ class S3Utility:
 
 
 	def deleteFile(self, filename):
-		a=1
+		os.remove(filename)
 
 """
 config = Config()
@@ -35,8 +35,5 @@ s3.downloadFile("dbp-prod", "text/GILBSP/GILBSP/GILBSP_8_JDG_1.html", "text:GILB
 ## The following is in DBP, and not in valid_dbp
 s3.downloadFile("dbp-prod", "text/GILBSP/GILBSP/GILBSP_26_LAM_1.html", "text:GILBSP:GILBSP:GILBSP_26_LAM_1.html")
 """
-
-
-
 
 

@@ -28,19 +28,24 @@
 #         INSERT INTO bible_files_stream_segments (bwid, timestamps.id, [bytes,offsets,durations])
 
 import sys
+import os
 import re
 #from Config import *
+import boto3
 from AudioHLSAdapter import *
 import glob
 import subprocess
 from subprocess import Popen, PIPE
 import hashlib
 
+MP3_DIRECTORY = "%s/FCBH/files/tmp" % (os.environ["HOME"])
 
 class AudioHLS:
 
 	def __init__(self):
 		self.adapter = AudioHLSAdapter()
+		session = boto3.Session(profile_name='FCBH_Gary') # needs config
+		self.s3Client = session.client('s3')
 
 	#	self.directoryRE = re.compile("(.+)/"+ bibleid +"/"+ filesetid)
 
@@ -97,10 +102,10 @@ class AudioHLS:
 		print("do bible", bibleId)
 		filesetList = self.adapter.selectFilesetIds(bibleId)
 		for filesetId in filesetList:
-			self.processFilesetId(filesetId)
+			self.processFilesetId(bibleId, filesetId)
 
 
-	def processFilesetId(self, origFilesetId):
+	def processFilesetId(self, bibleId, origFilesetId):
 		print("do fileset", origFilesetId)
 		fileset = self.adapter.selectFileset(origFilesetId)
 		filesetId = origFilesetId[0:8] + "SA" + origFilesetId[11:]
@@ -123,6 +128,7 @@ class AudioHLS:
 			values = (filename,) + file[1:]
 			self.adapter.insertFile(values)
 
+			mp3FilePath = self.getMP3File(assetId, bibleId, origFilesetId, origFilename)
 			bitrate = self.getBitrate(origFilename)
 			self.adapter.insertBandwidth((filename, bitrate))
 
@@ -145,6 +151,27 @@ class AudioHLS:
 		md5.update(typeCode.encode("latin1"))
 		hash_id = md5.hexdigest()
 		return hash_id[:12]
+
+
+	def getMP3File(self, s3Bucket, bibleId, filesetId, filename):
+		s3Key = "audio/%s/%s/%s" % (bibleId, filesetId, filename)
+		print(s3Key)
+		filepath = MP3_DIRECTORY + os.sep + s3Key
+		print(filepath)	
+		try:
+			if not os.access(filepath, os.R_OK):
+				print("does not exist")
+				directory = filepath[:filepath.rfind("/")]
+				if not os.access(directory, os.R_OK):
+					print("dir does not exist")
+					os.makedirs(directory)
+					print("made directory")
+				self.s3Client.download_file(s3Bucket, s3Key, filepath)
+				print("download succeeds")
+			return filepath
+		except Exception as err:
+			print("ERROR: Download %s failed with error %s" % (s3Key, err))
+			return None	
 
 
 	def getBitrate(self, file):
@@ -193,7 +220,7 @@ class AudioHLS:
 hls = AudioHLS()
 #hls.processCommandLine()
 #hls.processBibleId("ENGESV")
-hls.processFilesetId("ENGESVN2DA")
+hls.processFilesetId("ENGESV", "ENGESVN2DA")
 
 """
 ## initialize
@@ -228,5 +255,24 @@ for bible in inputBibles:
 				# so add timestamps.id to query so we can set that in the INSERT
 			print("done")
 """
+
+"""
+SAMPLE LAMBDA PROGRAM
+import boto3
+import os
+import sys
+import uuid
+from urllib.parse import unquote_plus
+
+s3_client = boto3.client('s3')
+
+def handler(event, context):
+    for record in event['Records']:
+        bucket = record['s3']['bucket']['name']
+        key = unquote_plus(record['s3']['object']['key'])
+        download_path = '/tmp/{}{}'.format(uuid.uuid4(), key)
+        s3_client.download_file(bucket, key, download_path)
+"""
+
 
 
