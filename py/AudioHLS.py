@@ -46,7 +46,8 @@ class AudioHLS:
 		self.adapter = AudioHLSAdapter()
 		session = boto3.Session(profile_name='FCBH_Gary') # needs config
 		self.s3Client = session.client('s3')
-		self.bitrateRegex = re.compile('bit_rate=([0-9]+)')
+		self.bitrateRegex = re.compile(r"bit_rate=([0-9]+)")
+		self.timesRegex = re.compile(r"best_effort_timestamp_time=([0-9.]+)\|pkt_pos=([0-9]+)")
 
 
 	def processLambdaEvent(self, event):
@@ -119,7 +120,7 @@ class AudioHLS:
 		files = self.adapter.selectBibleFiles(origFilesetId)
 		timestampMap = self.adapter.selectTimestamps(origFilesetId)
 
-		## Transaction starts
+		self.adapter.beginFilesetInsertTran()
 		self.adapter.insertFileset((hashId, filesetId, assetId, setTypeCode, setSizeCode))
 
 		for file in files:
@@ -133,17 +134,14 @@ class AudioHLS:
 			filename = origFilename.split(".")[0] + "-" + str(int(int(bitrate)/1000)) + "kbs.m3u8"
 			self.adapter.insertBandwidth((filename, bitrate))
 
-			key = "%s:%s:%s" % (file[1], file[2], file[4]) # book:chapter:verse
+			key = "%s:%s" % (file[1], file[2]) # book:chapter
 			timestamps = timestampMap[key]
-			print(key, timestamps)
-			mp3File = "fullpath2File"
-			for dur, off, byt in self.getBoundaries(mp3File, timestamps):
-				#print(" ".join([dur,off,byt]))
-				self.adapter.addSegment((1, dur, off, byt))
-				# TODO: note that bible_file_stream_segments has FK to bible_file_timestamps.id,
-				# so add timestamps.id to query so we can set that in the INSERT
+			#print(key, timestamps)
+			for segment in self.getBoundaries(mp3FilePath, timestamps):
+				#print(segment)
+				self.adapter.addSegment(segment)
 			self.adapter.insertSegments()
-
+		self.adapter.commitFilesetInsertTran()
 
 
 	def hashId(self, bucket, filesetId, typeCode):
@@ -157,9 +155,9 @@ class AudioHLS:
 
 	def getMP3File(self, s3Bucket, bibleId, filesetId, filename):
 		s3Key = "audio/%s/%s/%s" % (bibleId, filesetId, filename)
-		print(s3Key)
+		#print(s3Key)
 		filepath = MP3_DIRECTORY + os.sep + s3Key
-		print(filepath)	
+		#print(filepath)	
 		try:
 			if not os.access(filepath, os.R_OK):
 				print("does not exist")
@@ -192,29 +190,33 @@ class AudioHLS:
 
 
 	def getBoundaries(self, file, times):
-		yield ("12", "34", "56")
-		return
 		cmd = 'ffprobe -show_frames -select_streams a -of compact -show_entries frame=best_effort_timestamp_time,pkt_pos ' + file
-		pipe = Popen(cmd, shell=True, stdout=PIPE)
-		i = prevtime = prevpos = 0
-		bound = times[i]
-		for line in pipe.stdout:
-			tm = timesRegex.match(str(line))
-			time = float(tm.group(1))
-			pos  = int(tm.group(2))
-			if (time >= bound):
-				duration = time - prevtime
-				nbytes = pos - prevpos
-				yield [str(duration), str(prevpos), str(nbytes)]
-				prevtime, prevpos = time, pos
-				if (i+1 != len(times)):
-					i += 1
-					bound = times[i]
-				else: 
-					bound = 99999999 # search to end of pipe
-		duration = time - prevtime
-		nbytes = pos - prevpos
-		yield [str(duration), str(prevpos), str(nbytes)]
+		try:
+			pipe = Popen(cmd, shell=True, stdout=PIPE)
+			i = prevtime = prevpos = 0
+			(timestamp_id, bound) = times[i]
+			for line in pipe.stdout:
+				#print("line", line)
+				tm = self.timesRegex.search(str(line))
+				time = float(tm.group(1))
+				pos  = int(tm.group(2))
+				if (time >= bound):
+					duration = time - prevtime
+					nbytes = pos - prevpos
+					#yield (timestamp_id, str(duration), str(prevpos), str(nbytes))
+					yield (timestamp_id, duration, prevpos, nbytes)
+					prevtime, prevpos = time, pos
+					if (i+1 != len(times)):
+						i += 1
+						(timestamp_id, bound) = times[i]
+					else: 
+						bound = 99999999 # search to end of pipe
+			duration = time - prevtime
+			nbytes = pos - prevpos
+			yield (timestamp_id, duration, prevpos, nbytes)
+		except subprocess.CalledProcessError as err:
+			print(err.output)
+			return None
 
 
 
