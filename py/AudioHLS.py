@@ -46,8 +46,8 @@ class AudioHLS:
 		self.adapter = AudioHLSAdapter()
 		session = boto3.Session(profile_name='FCBH_Gary') # needs config
 		self.s3Client = session.client('s3')
+		self.bitrateRegex = re.compile('bit_rate=([0-9]+)')
 
-	#	self.directoryRE = re.compile("(.+)/"+ bibleid +"/"+ filesetid)
 
 	def processLambdaEvent(self, event):
 		print("This method will be used to start program from an AWS Lambda event")
@@ -129,11 +129,13 @@ class AudioHLS:
 			self.adapter.insertFile(values)
 
 			mp3FilePath = self.getMP3File(assetId, bibleId, origFilesetId, origFilename)
-			bitrate = self.getBitrate(origFilename)
+			bitrate = self.getBitrate(mp3FilePath)
+			filename = origFilename.split(".")[0] + "-" + str(int(int(bitrate)/1000)) + "kbs.m3u8"
 			self.adapter.insertBandwidth((filename, bitrate))
 
 			key = "%s:%s:%s" % (file[1], file[2], file[4]) # book:chapter:verse
 			timestamps = timestampMap[key]
+			print(key, timestamps)
 			mp3File = "fullpath2File"
 			for dur, off, byt in self.getBoundaries(mp3File, timestamps):
 				#print(" ".join([dur,off,byt]))
@@ -175,19 +177,18 @@ class AudioHLS:
 
 
 	def getBitrate(self, file):
-		return "64"
-		bitrateRegex = re.compile('.*bit_rate=([0-9]+)')
 		cmd = 'ffprobe -select_streams a -v error -show_format ' + file + ' | grep bit_rate'
-		s = subprocess.run(cmd, shell=True, capture_output=True)
-		# TODO: add error checking on above run and below regex
-		return bitrateRegex.match(str(s)).group(1)
-
-
-	#def get_mp3s(self, bibleId, filesetId):
-	#	# TODO: get from S3 if needed
-	#	pat="/Users/jrstear/tmp/"+ bibleId +"/"+ filesetId +"/*.mp3"
-	#	# TODO: sort by ascending cannon book,chap (and use to determine processing order later)
-	#	return sorted(glob.glob(pat)) 
+		try:
+			response = subprocess.run(cmd, shell=True, capture_output=True)
+			result = self.bitrateRegex.search(str(response))
+			if result != None:
+				return result.group(1)
+			else:
+				print("ERROR: ffprobe for bitrate failed for %s" % (file))
+				return None
+		except subprocess.CalledProcessError as err:
+			print(err.output)
+			return None
 
 
 	def getBoundaries(self, file, times):
@@ -273,6 +274,3 @@ def handler(event, context):
         download_path = '/tmp/{}{}'.format(uuid.uuid4(), key)
         s3_client.download_file(bucket, key, download_path)
 """
-
-
-
