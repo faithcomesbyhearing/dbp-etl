@@ -70,22 +70,31 @@ class AudioHLSAdapter:
 			" bf.verse_end, bf.file_size, bf.duration"
 			" FROM bible_files bf, bible_filesets bfs"
 			" WHERE bf.hash_id=bfs.hash_id AND bfs.id=%s"
-			" ORDER BY bf.file_name")
+			" ORDER BY bf.file_name limit 4")
 		return self.db.select(sql, (filesetId,))
 
 
     ## Returns the timestamps of a fileset in a map[book:chapter:verse] = timestamp
 	def selectTimestamps(self, filesetId):
-		sql = ("SELECT bf.file_name, bf.book_id, bf.chapter_start, ft.verse_start, ft.timestamp"
+		sql = ("SELECT bf.file_name, bf.book_id, bf.chapter_start, ft.id, ft.verse_start, ft.timestamp"
 			" FROM bible_file_timestamps ft, bible_files bf, bible_filesets bfs"
 			" WHERE bf.id=ft.bible_file_id AND bfs.hash_id=bf.hash_id"
 			" AND bfs.id=%s ORDER BY bf.file_name, ft.verse_start")
 		resultSet = self.db.select(sql, (filesetId,))
 		results = {}
 		for row in resultSet:
-			key = "%s:%d:%d" % (row[1], row[2], row[3]) # book:chapter:verse
-			results[key] = row[4] # timestamp
+			key = "%s:%d" % (row[1], row[2]) # book:chapter
+			times = results.get(key, [])
+			times.append((row[3], row[5]))
+			results[key] = times
 		return results
+
+
+	def beginFilesetInsertTran(self):
+		try:
+			self.cursor.execute("BEGIN")
+		except Exception as err:
+			self.error(self.cursor, sql, err)
 
 
     ## Inserts a new row into the fileset table
@@ -93,7 +102,6 @@ class AudioHLSAdapter:
 		sql = ("INSERT INTO bible_fileset (hash_id, id, asset_id, set_type_code, set_size_code)"
 			" VALUES (%s, %s, %s, %s, %s)")
 		try:
-			self.cursor.execute("BEGIN")
 			#self.cursor.execute(sql, values)
 			print(sql % values)		
 			self.currHashId = values[0]
@@ -117,10 +125,10 @@ class AudioHLSAdapter:
 
 	## Inserts a new row into the bible_file_stream_bandwidth table
 	def insertBandwidth(self, values):
-		sql = ("INSERT INTO bible_file_stream_bandwidths (file_id, file_name, bitrate)"
-			" VALUES (%s, %s, %s)")
+		sql = ("INSERT INTO bible_file_stream_bandwidths (bible_file_id, file_name, bandwidth, codec, stream)"
+			" VALUES (%s, %s, %s, %s, %s)")
 		try:
-			values = (self.currFileId,) + values
+			values = (self.currFileId,) + values + (CODEC, STREAM)
 			#self.cursor.execute(sql, values)
 			#self.currBandwidthId = self.cursor.execute("LAST_INSERT()")
 			print(sql % values)
@@ -135,16 +143,22 @@ class AudioHLSAdapter:
 
     ## Inserts a collection of rows into the bible_file_stream_segments table
 	def insertSegments(self):
-		sql = ("INSERT INTO bible_file_stream_segments (bandwidthId, timestampId, byteCount, offset, duration)"
+		sql = ("INSERT INTO bible_file_stream_segments (stream_bandwidth_id, timestamp_id, runtime, offset, bytes)"
 			+ " VALUES (%s, %s, %s, %s, %s)")
 		try:
 			#cursor.executemany(sql, self.segments)
-			#self.db.commit()
 			for segment in self.segments:
 				print(sql % segment)
 			self.segments = []
 		except Exception as err:
 			self.error(self.cursor, sql, err)
+
+
+	def commitFilesetInsertTran(self):
+		try:
+			self.db.conn.commit()
+		except Exception as err:
+			self.error(self.cursor, sql, err)			
 
 
 	## Test after new HLS data added, performance could probably be improved by changing to joins

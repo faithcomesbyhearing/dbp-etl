@@ -138,7 +138,7 @@ class AudioHLS:
 			timestamps = timestampMap[key]
 			#print(key, timestamps)
 			for segment in self.getBoundaries(mp3FilePath, timestamps):
-				#print(segment)
+				#print("SEG", segment)
 				self.adapter.addSegment(segment)
 			self.adapter.insertSegments()
 		self.adapter.commitFilesetInsertTran()
@@ -192,18 +192,17 @@ class AudioHLS:
 	def getBoundaries(self, file, times):
 		cmd = 'ffprobe -show_frames -select_streams a -of compact -show_entries frame=best_effort_timestamp_time,pkt_pos ' + file
 		try:
-			pipe = Popen(cmd, shell=True, stdout=PIPE)
-			i = prevtime = prevpos = 0
+			pipe = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
+			i = prevtime = prevpos = time = 0
 			(timestamp_id, bound) = times[i]
 			for line in pipe.stdout:
-				#print("line", line)
+				#print(line)
 				tm = self.timesRegex.search(str(line))
 				time = float(tm.group(1))
 				pos  = int(tm.group(2))
 				if (time >= bound):
 					duration = time - prevtime
 					nbytes = pos - prevpos
-					#yield (timestamp_id, str(duration), str(prevpos), str(nbytes))
 					yield (timestamp_id, duration, prevpos, nbytes)
 					prevtime, prevpos = time, pos
 					if (i+1 != len(times)):
@@ -214,7 +213,7 @@ class AudioHLS:
 			duration = time - prevtime
 			nbytes = pos - prevpos
 			yield (timestamp_id, duration, prevpos, nbytes)
-		except subprocess.CalledProcessError as err:
+		except subprocess.SubprocessError as err:
 			print(err.output)
 			return None
 
