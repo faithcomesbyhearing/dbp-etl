@@ -30,10 +30,9 @@
 import sys
 import os
 import re
-#from Config import *
 import boto3
 from AudioHLSAdapter import *
-import glob
+#import glob
 import subprocess
 from subprocess import Popen, PIPE
 import hashlib
@@ -48,6 +47,10 @@ class AudioHLS:
 		self.s3Client = session.client('s3')
 		self.bitrateRegex = re.compile(r"bit_rate=([0-9]+)")
 		self.timesRegex = re.compile(r"best_effort_timestamp_time=([0-9.]+)\|pkt_pos=([0-9]+)")
+
+
+	def close(self):
+		self.adapter.close()
 
 
 	def processLambdaEvent(self, event):
@@ -102,6 +105,7 @@ class AudioHLS:
 	def processBibleId(self, bibleId):
 		print("do bible", bibleId)
 		filesetList = self.adapter.selectFilesetIds(bibleId)
+		## if we have both dramatic and non-dramatic, only do dramatic
 		for filesetId in filesetList:
 			self.processFilesetId(bibleId, filesetId)
 
@@ -222,7 +226,9 @@ class AudioHLS:
 hls = AudioHLS()
 #hls.processCommandLine()
 #hls.processBibleId("ENGESV")
+hls.adapter.deleteFileset("ENGESVN2SA")
 hls.processFilesetId("ENGESV", "ENGESVN2DA")
+hls.close()
 
 """
 ## initialize

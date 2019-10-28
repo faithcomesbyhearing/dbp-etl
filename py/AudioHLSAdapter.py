@@ -6,9 +6,11 @@ from SQLUtility import *
 HOST = "localhost"
 USER = "root"
 PORT = 3306
-DB_NAME = "dbp"
+DB_NAME = "hls_dbp"
 CODEC = "avc1.4d001f,mp4a.40.2"
 STREAM = "1"
+
+# insert into bible_fileset_types (set_type_code, name) values ('audio_stream','HLS Audio Stream');
 
 class AudioHLSAdapter:
 
@@ -21,8 +23,20 @@ class AudioHLSAdapter:
 		self.segments = []
 
 	def close(self):
-		self.cursor.close() # test closing twice
-		self.db.close() # test closing twice
+		self.cursor.close()
+		self.db.close()
+
+
+	## Query finds audio filesets without HLS where timestamp data is available
+	## Limitation: It cannot distinquish between a fileset that has a complete HLS and one with a little
+	## This is not being used
+	def findFilesetIdNeedHLS(self):
+		sql = ("SELECT DISTINCT bs.id"
+			" FROM bible_file_timestamps bft, bible_files bf, bible_filesets bs"
+			" WHERE bft.bible_file_id = bf.id AND bf.hash_id = bs.hash_id"
+			" AND bs.id NOT IN (SELECT CONCAT(LEFT(id,8),'DA',MID(id,11,2))"
+			" FROM bible_filesets WHERE set_type_code = 'audio_stream')")
+		return self.db.selectList(sql, None)
 
 
 	def checkBibleId(self, bibleId):
@@ -70,7 +84,7 @@ class AudioHLSAdapter:
 			" bf.verse_end, bf.file_size, bf.duration"
 			" FROM bible_files bf, bible_filesets bfs"
 			" WHERE bf.hash_id=bfs.hash_id AND bfs.id=%s"
-			" ORDER BY bf.file_name limit 4")
+			" ORDER BY bf.file_name")
 		return self.db.select(sql, (filesetId,))
 
 
@@ -92,19 +106,22 @@ class AudioHLSAdapter:
 
 	def beginFilesetInsertTran(self):
 		try:
-			self.cursor.execute("BEGIN")
+			#self.cursor.execute("BEGIN")
+			self.db.conn.begin()
 		except Exception as err:
 			self.error(self.cursor, sql, err)
 
 
     ## Inserts a new row into the fileset table
 	def insertFileset(self, values):
-		sql = ("INSERT INTO bible_fileset (hash_id, id, asset_id, set_type_code, set_size_code)"
+		sql = ("INSERT INTO bible_filesets (hash_id, id, asset_id, set_type_code, set_size_code)"
 			" VALUES (%s, %s, %s, %s, %s)")
 		try:
-			#self.cursor.execute(sql, values)
-			print(sql % values)		
+			print(sql % values)
+			self.cursor.execute(sql, values)		
 			self.currHashId = values[0]
+
+			self.db.conn.commit()
 		except Exception as err:
 			self.error(self.cursor, sql, err)
 
@@ -115,10 +132,10 @@ class AudioHLSAdapter:
 			" verse_start, verse_end, file_size, duration) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)")
 		try:
 			values = (self.currHashId,) + values
-			#self.cursor.execute(sql, values)
-			#self.currFileId = self.cursor.execute("LAST_INSERT()")
 			print(sql % values)
-			self.currFileId = 12345
+			self.cursor.execute(sql, values)
+			self.currFileId = self.cursor.lastrowid
+			print("insert bible_files, last insert id", self.currFileId)
 		except Exception as err:
 			self.error(self.cursor, sql, err)
 
@@ -129,10 +146,10 @@ class AudioHLSAdapter:
 			" VALUES (%s, %s, %s, %s, %s)")
 		try:
 			values = (self.currFileId,) + values + (CODEC, STREAM)
-			#self.cursor.execute(sql, values)
-			#self.currBandwidthId = self.cursor.execute("LAST_INSERT()")
 			print(sql % values)
-			self.currBandwidthId = 67891
+			self.cursor.execute(sql, values)
+			self.currBandwidthId = self.cursor.lastrowid
+			print("insert bandwidths, last_insert_id", self.currBandwidthId)
 		except Exception as err:
 			self.error(self.cursor, sql, err)
 
@@ -146,9 +163,9 @@ class AudioHLSAdapter:
 		sql = ("INSERT INTO bible_file_stream_segments (stream_bandwidth_id, timestamp_id, runtime, offset, bytes)"
 			+ " VALUES (%s, %s, %s, %s, %s)")
 		try:
-			#cursor.executemany(sql, self.segments)
 			for segment in self.segments:
 				print(sql % segment)
+			self.cursor.executemany(sql, self.segments)
 			self.segments = []
 		except Exception as err:
 			self.error(self.cursor, sql, err)
@@ -163,26 +180,26 @@ class AudioHLSAdapter:
 
 	## Test after new HLS data added, performance could probably be improved by changing to joins
 	def deleteFileset(self, filesetId):
-		cursor.execute("BEGIN")
-		sql = ("DELETE FROM bible_file_stream_segments WHERE bandwidth_id IN"
-				+ "(SELECT id FROM bible_file_stream_bandwidths WHERE file_id IN"
+		self.cursor.execute("BEGIN")
+		sql = ("DELETE FROM bible_file_stream_segments WHERE stream_bandwidth_id IN"
+				+ "(SELECT id FROM bible_file_stream_bandwidths WHERE bible_file_id IN"
 				+ "(SELECT id FROM bible_files WHERE hash_id IN"
 				+ "(SELECT hash_id FROM bible_filesets WHERE id=%s)))")
-		cursor.execute(sql, (filesetId,))
-		sql = ("DELETE FROM bible_file_stream_bandwidths WHERE file_id IN"
+		self.cursor.execute(sql, (filesetId,))
+		sql = ("DELETE FROM bible_file_stream_bandwidths WHERE bible_file_id IN"
 				+ "(SELECT id FROM bible_files WHERE hash_id IN"
 				+ "(SELECT hash_id FROM bible_filesets WHERE id=%s))")
-		cursor.execute(sql, (filesetId,))
+		self.cursor.execute(sql, (filesetId,))
 		sql = ("DELETE FROM bible_files WHERE hash_id IN"
-				+ "(SELECT hash_id FROM bible_filesets WHERE id=%s))")
-		cursor.execute(sql, (filesetId,))
-		sql = ("DELETE FROM bible_filesets WHERE id=%s)")
-		cursor.execute(sql, (filesetId,))
-		self.db.commit()
+				+ "(SELECT hash_id FROM bible_filesets WHERE id=%s)")
+		self.cursor.execute(sql, (filesetId,))
+		sql = ("DELETE FROM bible_filesets WHERE id=%s")
+		self.cursor.execute(sql, (filesetId,))
+		self.db.conn.commit()
 
 
 	def error(self, cursor, statement, err):
-		cursor.close()	
+		self.cursor.close()	
 		print("ERROR executing SQL %s on '%s'" % (err, statement))
 		self.db.conn.rollback()
 		sys.exit()
