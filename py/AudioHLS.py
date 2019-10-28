@@ -30,19 +30,39 @@
 import sys
 import os
 import re
+import pymysql
 import boto3
-from AudioHLSAdapter import *
-#import glob
 import subprocess
 from subprocess import Popen, PIPE
 import hashlib
 
-MP3_DIRECTORY = "%s/FCBH/files/tmp" % (os.environ["HOME"])
+
+## insert into bible_fileset_types (set_type_code, name) values ('audio_stream','HLS Audio Stream');
+
+HLS_HOST = "localhost"
+HLS_USER = "root"
+HLS_PORT = 3306
+HLS_DB_NAME = "hls_dbp"
+HLS_CODEC = "avc1.4d001f,mp4a.40.2"
+HLS_STREAM = "1"
+HLS_MP3_DIRECTORY = "%s/FCBH/files/tmp" % (os.environ["HOME"])
+
+
+## Lambda entry point
+def handler(event, context):
+	print("This method will be used to start program from an AWS Lambda event")
+    #for record in event['Records']:
+    #    bucket = record['s3']['bucket']['name']
+    #    key = unquote_plus(record['s3']['object']['key'])
+    #    download_path = '/tmp/{}{}'.format(uuid.uuid4(), key)
+    #    s3_client.download_file(bucket, key, download_path)
+    #    # pass to validateArguments
+    #    # call processFilesetId and processBibleId as needed
 
 class AudioHLS:
 
 	def __init__(self):
-		self.adapter = AudioHLSAdapter()
+		self.adapter = AudioHLSAdapter() # This class is found later in this file
 		session = boto3.Session(profile_name='FCBH_Gary') # needs config
 		self.s3Client = session.client('s3')
 		self.bitrateRegex = re.compile(r"bit_rate=([0-9]+)")
@@ -53,10 +73,7 @@ class AudioHLS:
 		self.adapter.close()
 
 
-	def processLambdaEvent(self, event):
-		print("This method will be used to start program from an AWS Lambda event")
-
-
+	## Command line entry point
 	def processCommandLine(self):
 		print("do", sys.argv)
 		if len(sys.argv) < 2:
@@ -73,7 +90,7 @@ class AudioHLS:
 				self.processBibleId(arg)
 
 
-	## This is used by both processCommandLine and ProcessLambdaEvent
+	## This is used by both processCommandLine and lambda handler
 	def validateArguments(self, arguments):
 		errorCount = 0
 		for arg in arguments:
@@ -105,7 +122,6 @@ class AudioHLS:
 	def processBibleId(self, bibleId):
 		print("do bible", bibleId)
 		filesetList = self.adapter.selectFilesetIds(bibleId)
-		## if we have both dramatic and non-dramatic, only do dramatic
 		for filesetId in filesetList:
 			self.processFilesetId(bibleId, filesetId)
 
@@ -140,9 +156,7 @@ class AudioHLS:
 
 			key = "%s:%s" % (file[1], file[2]) # book:chapter
 			timestamps = timestampMap[key]
-			#print(key, timestamps)
 			for segment in self.getBoundaries(mp3FilePath, timestamps):
-				#print("SEG", segment)
 				self.adapter.addSegment(segment)
 			self.adapter.insertSegments()
 		self.adapter.commitFilesetInsertTran()
@@ -160,7 +174,7 @@ class AudioHLS:
 	def getMP3File(self, s3Bucket, bibleId, filesetId, filename):
 		s3Key = "audio/%s/%s/%s" % (bibleId, filesetId, filename)
 		#print(s3Key)
-		filepath = MP3_DIRECTORY + os.sep + s3Key
+		filepath = HLS_MP3_DIRECTORY + os.sep + s3Key
 		#print(filepath)	
 		try:
 			if not os.access(filepath, os.R_OK):
@@ -222,6 +236,245 @@ class AudioHLS:
 			return None
 
 
+class AudioHLSAdapter:
+
+	def __init__(self):
+		self.db = pymysql.connect(host = HLS_HOST,
+                             		user = HLS_USER,
+                             		password = os.environ['MYSQL_PASSWD'],
+                             		db = HLS_DB_NAME,
+                             		port = HLS_PORT,
+                             		charset = 'utf8mb4',
+                             		cursorclass = pymysql.cursors.Cursor)
+		self.tranCursor = None
+		self.currHashId = None
+		self.currFileId = None
+		self.currBandwidthId = None
+		self.segments = []
+
+	def close(self):
+		self.db.close()
+
+
+	## Query finds audio filesets without HLS where timestamp data is available
+	## Limitation: It cannot distinquish between a fileset that has a complete HLS and one with a little
+	## This is not being used
+	def findFilesetIdNeedHLS(self):
+		sql = ("SELECT DISTINCT bs.id"
+			" FROM bible_file_timestamps bft, bible_files bf, bible_filesets bs"
+			" WHERE bft.bible_file_id = bf.id AND bf.hash_id = bs.hash_id"
+			" AND bs.id NOT IN (SELECT CONCAT(LEFT(id,8),'DA',MID(id,11,2))"
+			" FROM bible_filesets WHERE set_type_code = 'audio_stream')")
+		return self.selectList(sql, None)
+
+
+	def checkBibleId(self, bibleId):
+		sql = "SELECT count(*) FROM bible_fileset_connections WHERE bible_id=%s"
+		return self.selectScalar(sql, (bibleId,))
+
+
+	def checkFilesetId(self, bibleId, filesetId):
+		sql = ("SELECT count(*) FROM bible_fileset_connections bfc, bible_filesets bf"
+			" WHERE bfc.bible_id=%s AND bf.id=%s")
+		return self.selectScalar(sql, (bibleId, filesetId))
+
+
+	def checkBibleTimestamps(self, bibleId):
+		sql = ("SELECT count(*) FROM bible_file_timestamps ft, bible_files bf, bible_filesets bfs,"
+			" bible_fileset_connections bfc"
+			" WHERE bf.id=ft.bible_file_id AND bfs.hash_id=bf.hash_id AND bfc.hash_id=bfs.hash_id"
+			" AND bfc.bible_id=%s")
+		return self.selectScalar(sql, (bibleId,))
+
+
+	## Returns the number of rows of timestamp data available for a filesetId
+	def checkFilesetTimestamps(self, filesetId):
+		sql = ("SELECT count(*) FROM bible_file_timestamps ft, bible_files bf, bible_filesets bfs"
+			" WHERE bf.id=ft.bible_file_id AND bfs.hash_id=bf.hash_id AND bfs.id=%s")
+		return self.selectScalar(sql, (filesetId,))
+
+
+	## Returns the audio fileset_ids for a bible_id
+	def selectFilesetIds(self, bibleId):
+		sql = ("SELECT bf.id FROM bible_filesets bf, bible_fileset_connections bfc"
+			" WHERE bf.hash_id=bfc.hash_id AND bfc.bible_id=%s"
+			" AND bf.set_type_code IN ('audio', 'audio_drama')")
+		return self.selectList(sql, (bibleId,))
+
+
+	def selectFileset(self, filesetId):
+		sql = "SELECT asset_id, set_type_code, set_size_code FROM bible_filesets WHERE id=%s"
+		return self.selectRow(sql, (filesetId,))
+
+
+    ## Returns the files associated with a fileset
+	def selectBibleFiles(self, filesetId):
+		sql = ("SELECT bf.file_name, bf.book_id, bf.chapter_start, bf.chapter_end, bf.verse_start," 
+			" bf.verse_end, bf.file_size, bf.duration"
+			" FROM bible_files bf, bible_filesets bfs"
+			" WHERE bf.hash_id=bfs.hash_id AND bfs.id=%s"
+			" ORDER BY bf.file_name LIMIT 5")
+		return self.select(sql, (filesetId,))
+
+
+    ## Returns the timestamps of a fileset in a map[book:chapter:verse] = timestamp
+	def selectTimestamps(self, filesetId):
+		sql = ("SELECT bf.file_name, bf.book_id, bf.chapter_start, ft.id, ft.verse_start, ft.timestamp"
+			" FROM bible_file_timestamps ft, bible_files bf, bible_filesets bfs"
+			" WHERE bf.id=ft.bible_file_id AND bfs.hash_id=bf.hash_id"
+			" AND bfs.id=%s ORDER BY bf.file_name, ft.verse_start")
+		resultSet = self.select(sql, (filesetId,))
+		results = {}
+		for row in resultSet:
+			key = "%s:%d" % (row[1], row[2]) # book:chapter
+			times = results.get(key, [])
+			times.append((row[3], row[5]))
+			results[key] = times
+		return results
+
+
+	def beginFilesetInsertTran(self):
+		try:
+			#self.cursor.execute("BEGIN")
+			self.db.begin()
+			self.tranCursor = self.db.cursor()
+		except Exception as err:
+			self.error(None, sql, err)
+
+
+    ## Inserts a new row into the fileset table
+	def insertFileset(self, values):
+		sql = ("INSERT INTO bible_filesets (hash_id, id, asset_id, set_type_code, set_size_code)"
+			" VALUES (%s, %s, %s, %s, %s)")
+		try: 
+			print(sql % values)
+			self.tranCursor.execute(sql, values)		
+			self.currHashId = values[0]
+			self.db.commit()
+		except Exception as err:
+			self.error(self.tranCursor, sql, err)
+
+
+    ## Inserts a new row into the bible_files table
+	def insertFile(self, values):
+		sql = ("INSERT INTO bible_files (hash_id, file_name, book_id, chapter_start, chapter_end,"
+			" verse_start, verse_end, file_size, duration) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)")
+		try:
+			values = (self.currHashId,) + values
+			print(sql % values)
+			self.tranCursor.execute(sql, values)
+			self.currFileId = self.tranCursor.lastrowid
+			print("insert bible_files, last insert id", self.currFileId)
+		except Exception as err:
+			self.error(self.tranCursor, sql, err)
+
+
+	## Inserts a new row into the bible_file_stream_bandwidth table
+	def insertBandwidth(self, values):
+		sql = ("INSERT INTO bible_file_stream_bandwidths (bible_file_id, file_name, bandwidth, codec, stream)"
+			" VALUES (%s, %s, %s, %s, %s)")
+		try:
+			values = (self.currFileId,) + values + (HLS_CODEC, HLS_STREAM)
+			print(sql % values)
+			self.tranCursor.execute(sql, values)
+			self.currBandwidthId = self.tranCursor.lastrowid
+			print("insert bandwidths, last_insert_id", self.currBandwidthId)
+		except Exception as err:
+			self.error(self.tranCursor, sql, err)
+
+
+	def addSegment(self, values):
+		self.segments.append((self.currBandwidthId,) + values)
+
+
+    ## Inserts a collection of rows into the bible_file_stream_segments table
+	def insertSegments(self):
+		sql = ("INSERT INTO bible_file_stream_segments (stream_bandwidth_id, timestamp_id, runtime, offset, bytes)"
+			+ " VALUES (%s, %s, %s, %s, %s)")
+		try:
+			for segment in self.segments:
+				print(sql % segment)
+			self.tranCursor.executemany(sql, self.segments)
+			self.segments = []
+		except Exception as err:
+			self.error(self.tranCursor, sql, err)
+
+
+	def commitFilesetInsertTran(self):
+		try:
+			self.db.commit()
+			self.tranCursor.close()
+		except Exception as err:
+			self.error(self.tranCursor, sql, err)			
+
+
+	## Test after new HLS data added, performance could probably be improved by changing to joins
+	def deleteFileset(self, filesetId):
+		cursor = self.db.cursor()
+		self.db.begin()
+		sql = ("DELETE FROM bible_file_stream_segments WHERE stream_bandwidth_id IN"
+				+ "(SELECT id FROM bible_file_stream_bandwidths WHERE bible_file_id IN"
+				+ "(SELECT id FROM bible_files WHERE hash_id IN"
+				+ "(SELECT hash_id FROM bible_filesets WHERE id=%s)))")
+		cursor.execute(sql, (filesetId,))
+		sql = ("DELETE FROM bible_file_stream_bandwidths WHERE bible_file_id IN"
+				+ "(SELECT id FROM bible_files WHERE hash_id IN"
+				+ "(SELECT hash_id FROM bible_filesets WHERE id=%s))")
+		cursor.execute(sql, (filesetId,))
+		sql = ("DELETE FROM bible_files WHERE hash_id IN"
+				+ "(SELECT hash_id FROM bible_filesets WHERE id=%s)")
+		cursor.execute(sql, (filesetId,))
+		sql = ("DELETE FROM bible_filesets WHERE id=%s")
+		cursor.execute(sql, (filesetId,))
+		self.db.commit()
+		cursor.close()
+
+##
+## Convenience Methods
+##
+	def select(self, statement, values):
+		cursor = self.db.cursor()
+		try:
+			cursor.execute(statement, values)
+			resultSet = cursor.fetchall()
+			cursor.close()
+			return resultSet
+		except Exception as err:
+			self.error(cursor, statement, err)
+
+
+	def selectScalar(self, statement, values):
+		cursor = self.db.cursor()
+		try:
+			cursor.execute(statement, values)
+			result = cursor.fetchone()
+			cursor.close()
+			return result[0] if result != None else None
+		except Exception as err:
+			self.error(cursor, statement, err)
+
+
+	def selectRow(self, statement, values):
+		resultSet = self.select(statement, values)
+		return resultSet[0] if len(resultSet) > 0 else [None] * 10	
+
+
+	def selectList(self, statement, values):
+		resultSet = self.select(statement, values)
+		results = []
+		for row in resultSet:
+			results.append(row[0])
+		return results
+
+
+	def error(self, cursor, statement, err):
+		if cursor != None:
+			cursor.close()	
+		print("ERROR executing SQL %s on '%s'" % (err, statement))
+		self.db.rollback()
+		sys.exit()
+
+
 
 hls = AudioHLS()
 #hls.processCommandLine()
@@ -264,20 +517,3 @@ for bible in inputBibles:
 			print("done")
 """
 
-"""
-SAMPLE LAMBDA PROGRAM
-import boto3
-import os
-import sys
-import uuid
-from urllib.parse import unquote_plus
-
-s3_client = boto3.client('s3')
-
-def handler(event, context):
-    for record in event['Records']:
-        bucket = record['s3']['bucket']['name']
-        key = unquote_plus(record['s3']['object']['key'])
-        download_path = '/tmp/{}{}'.format(uuid.uuid4(), key)
-        s3_client.download_file(bucket, key, download_path)
-"""
