@@ -416,27 +416,26 @@ class AudioHLSAdapter:
 
 
 	def deleteFilesBandwidthsSegments(self, filesetId):
-		print(("DELETE %s" % (filesetId)), end="", flush=True)
+		#print(("DELETE %s" % (filesetId)), end="", flush=True)
 		cursor = self.tranCursor
-		self.db.begin()
 		sql = ("DELETE bfss FROM bible_file_stream_segments AS bfss" 
 				" INNER JOIN bible_file_stream_bandwidths AS bfsb ON bfss.stream_bandwidth_id = bfsb.id"
 				" INNER JOIN bible_files AS bf ON bfsb.bible_file_id = bf.id"
 				" INNER JOIN bible_filesets AS bs ON bf.hash_id = bs.hash_id"
 				" WHERE bs.id = %s")
 		cursor.execute(sql, (filesetId,))
-		print("  segments", end="", flush=True)
+		#print("  segments", end="", flush=True)
 		sql = ("DELETE bfsb FROM bible_file_stream_bandwidths AS bfsb"
 				" INNER JOIN bible_files AS bf ON bfsb.bible_file_id = bf.id"
 				" INNER JOIN bible_filesets AS bs ON bf.hash_id = bs.hash_id"
 				" WHERE bs.id = %s")
 		cursor.execute(sql, (filesetId,))
-		print("  bandwidths", end="", flush=True)
+		#print("  bandwidths", end="", flush=True)
 		sql = ("DELETE bf FROM bible_files AS bf"
 				" INNER JOIN bible_filesets AS bs ON bf.hash_id = bs.hash_id"
 				" WHERE bs.id = %s")
 		cursor.execute(sql, (filesetId,))
-		print("  files", end="\n", flush=True)
+		#print("  files", end="\n", flush=True)
 
 ##
 ## Convenience Methods
