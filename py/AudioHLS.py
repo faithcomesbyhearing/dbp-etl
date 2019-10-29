@@ -75,7 +75,6 @@ class AudioHLS:
 
 	## Command line entry point
 	def processCommandLine(self):
-		print("do", sys.argv)
 		if len(sys.argv) < 2:
 			print("ERROR: Enter bibleids or bibleid/filesetids to process on command line.")
 			sys.exit()
@@ -83,7 +82,6 @@ class AudioHLS:
 		self.validateArguments(arguments)
 		for arg in arguments:
 			parts = arg.split("/")
-			print(arg)
 			if len(parts) > 1:
 				self.processFilesetId(parts[1])
 			else:
@@ -120,7 +118,6 @@ class AudioHLS:
 
 
 	def processBibleId(self, bibleId):
-		print("do bible", bibleId)
 		filesetList = self.adapter.selectFilesetIds(bibleId)
 		for filesetId in filesetList:
 			self.processFilesetId(bibleId, filesetId)
@@ -173,19 +170,14 @@ class AudioHLS:
 
 	def getMP3File(self, s3Bucket, bibleId, filesetId, filename):
 		s3Key = "audio/%s/%s/%s" % (bibleId, filesetId, filename)
-		#print(s3Key)
 		filepath = HLS_MP3_DIRECTORY + os.sep + s3Key
-		#print(filepath)	
 		try:
 			if not os.access(filepath, os.R_OK):
-				print("does not exist")
+				#print("Must download %s" % (s3Key))
 				directory = filepath[:filepath.rfind("/")]
 				if not os.access(directory, os.R_OK):
-					print("dir does not exist")
 					os.makedirs(directory)
-					print("made directory")
 				self.s3Client.download_file(s3Bucket, s3Key, filepath)
-				print("download succeeds")
 			return filepath
 		except Exception as err:
 			print("ERROR: Download %s failed with error %s" % (s3Key, err))
@@ -203,7 +195,7 @@ class AudioHLS:
 				print("ERROR: ffprobe for bitrate failed for %s" % (file))
 				return None
 		except subprocess.CalledProcessError as err:
-			print(err.output)
+			print("ERROR:", err.output)
 			return None
 
 
@@ -214,7 +206,6 @@ class AudioHLS:
 			i = prevtime = prevpos = time = 0
 			(timestamp_id, bound) = times[i]
 			for line in pipe.stdout:
-				#print(line)
 				tm = self.timesRegex.search(str(line))
 				time = float(tm.group(1))
 				pos  = int(tm.group(2))
@@ -232,7 +223,7 @@ class AudioHLS:
 			nbytes = pos - prevpos
 			yield (timestamp_id, duration, prevpos, nbytes)
 		except subprocess.SubprocessError as err:
-			print(err.output)
+			print("ERROR:", err.output)
 			return None
 
 
@@ -251,9 +242,12 @@ class AudioHLSAdapter:
 		self.currFileId = None
 		self.currBandwidthId = None
 		self.segments = []
+		self.sqlLog = open("AudioHLSSQL.log", mode="wt")
+
 
 	def close(self):
 		self.db.close()
+		self.sqlLog.close()
 
 
 	## Query finds audio filesets without HLS where timestamp data is available
@@ -313,7 +307,7 @@ class AudioHLSAdapter:
 			" bf.verse_end, bf.file_size, bf.duration"
 			" FROM bible_files bf, bible_filesets bfs"
 			" WHERE bf.hash_id=bfs.hash_id AND bfs.id=%s"
-			" ORDER BY bf.file_name LIMIT 5")
+			" ORDER BY bf.file_name")
 		return self.select(sql, (filesetId,))
 
 
@@ -335,7 +329,6 @@ class AudioHLSAdapter:
 
 	def beginFilesetInsertTran(self):
 		try:
-			#self.cursor.execute("BEGIN")
 			self.db.begin()
 			self.tranCursor = self.db.cursor()
 		except Exception as err:
@@ -347,10 +340,9 @@ class AudioHLSAdapter:
 		sql = ("INSERT INTO bible_filesets (hash_id, id, asset_id, set_type_code, set_size_code)"
 			" VALUES (%s, %s, %s, %s, %s)")
 		try: 
-			print(sql % values)
+			self.sqlLog.write((sql + "\n") % values)
 			self.tranCursor.execute(sql, values)		
 			self.currHashId = values[0]
-			self.db.commit()
 		except Exception as err:
 			self.error(self.tranCursor, sql, err)
 
@@ -361,10 +353,10 @@ class AudioHLSAdapter:
 			" verse_start, verse_end, file_size, duration) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)")
 		try:
 			values = (self.currHashId,) + values
-			print(sql % values)
+			self.sqlLog.write((sql + "\n") % values)
 			self.tranCursor.execute(sql, values)
 			self.currFileId = self.tranCursor.lastrowid
-			print("insert bible_files, last insert id", self.currFileId)
+			self.sqlLog.write("insert bible_files, last insert id %d\n" % self.currFileId)
 		except Exception as err:
 			self.error(self.tranCursor, sql, err)
 
@@ -375,10 +367,10 @@ class AudioHLSAdapter:
 			" VALUES (%s, %s, %s, %s, %s)")
 		try:
 			values = (self.currFileId,) + values + (HLS_CODEC, HLS_STREAM)
-			print(sql % values)
+			self.sqlLog.write((sql + "\n") % values)
 			self.tranCursor.execute(sql, values)
 			self.currBandwidthId = self.tranCursor.lastrowid
-			print("insert bandwidths, last_insert_id", self.currBandwidthId)
+			self.sqlLog.write("insert bandwidths, last_insert_id %d\n" % self.currBandwidthId)
 		except Exception as err:
 			self.error(self.tranCursor, sql, err)
 
@@ -393,7 +385,7 @@ class AudioHLSAdapter:
 			+ " VALUES (%s, %s, %s, %s, %s)")
 		try:
 			for segment in self.segments:
-				print(sql % segment)
+				self.sqlLog.write((sql + "\n") % segment)
 			self.tranCursor.executemany(sql, self.segments)
 			self.segments = []
 		except Exception as err:
