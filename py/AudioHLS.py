@@ -36,7 +36,6 @@ import subprocess
 from subprocess import Popen, PIPE
 import hashlib
 
-
 ## insert into bible_fileset_types (set_type_code, name) values ('audio_stream','HLS Audio Stream');
 
 HLS_HOST = "localhost"
@@ -124,7 +123,7 @@ class AudioHLS:
 
 
 	def processFilesetId(self, bibleId, origFilesetId):
-		print("do fileset", origFilesetId)
+		print(origFilesetId + ": ", end="", flush=True)
 		fileset = self.adapter.selectFileset(origFilesetId)
 		filesetId = origFilesetId[0:8] + "SA" + origFilesetId[11:]
 		assetId = fileset[0]
@@ -140,6 +139,7 @@ class AudioHLS:
 		self.adapter.beginFilesetInsertTran()
 		self.adapter.insertFileset((hashId, filesetId, assetId, setTypeCode, setSizeCode))
 
+		currBook = None
 		for file in files:
 			origFilename = file[0]
 			filename = origFilename.split(".")[0] + ".m3u8"
@@ -156,7 +156,11 @@ class AudioHLS:
 			for segment in self.getBoundaries(mp3FilePath, timestamps):
 				self.adapter.addSegment(segment)
 			self.adapter.insertSegments()
+			if currBook != file[1]:
+				currBook = file[1]
+				print(currBook[0], end="", flush=True)
 		self.adapter.commitFilesetInsertTran()
+		print("", end="\n", flush=True)
 
 
 	def hashId(self, bucket, filesetId, typeCode):
@@ -402,6 +406,7 @@ class AudioHLSAdapter:
 
 	## Test after new HLS data added, performance could probably be improved by changing to joins
 	def deleteFileset(self, filesetId):
+		print(("DELETE %s" % (filesetId)), end="", flush=True)
 		cursor = self.db.cursor()
 		self.db.begin()
 		sql = ("DELETE FROM bible_file_stream_segments WHERE stream_bandwidth_id IN"
@@ -409,16 +414,22 @@ class AudioHLSAdapter:
 				+ "(SELECT id FROM bible_files WHERE hash_id IN"
 				+ "(SELECT hash_id FROM bible_filesets WHERE id=%s)))")
 		cursor.execute(sql, (filesetId,))
+		print("  segments", end="", flush=True)
 		sql = ("DELETE FROM bible_file_stream_bandwidths WHERE bible_file_id IN"
 				+ "(SELECT id FROM bible_files WHERE hash_id IN"
 				+ "(SELECT hash_id FROM bible_filesets WHERE id=%s))")
 		cursor.execute(sql, (filesetId,))
+		print("  bandwidths", end="", flush=True)
 		sql = ("DELETE FROM bible_files WHERE hash_id IN"
 				+ "(SELECT hash_id FROM bible_filesets WHERE id=%s)")
 		cursor.execute(sql, (filesetId,))
+		print("  files", end="", flush=True)
+#### Deprecated...
 		sql = ("DELETE FROM bible_filesets WHERE id=%s")
 		cursor.execute(sql, (filesetId,))
+		print("  filesets", end="", flush=True)
 		self.db.commit()
+		print("", end="\n", flush=True)
 		cursor.close()
 
 ##
