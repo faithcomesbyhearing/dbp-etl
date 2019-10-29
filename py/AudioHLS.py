@@ -64,7 +64,7 @@ class AudioHLS:
 	def __init__(self):
 		self.adapter = AudioHLSAdapter() # This class is found later in this file
 		session = boto3.Session(profile_name=HLS_AWS_PROFILE) # needs config
-		self.s3Client = session.client('s3')
+		self.s3Client = session.client("s3")
 		self.bitrateRegex = re.compile(r"bit_rate=([0-9]+)")
 		self.timesRegex = re.compile(r"best_effort_timestamp_time=([0-9.]+)\|pkt_pos=([0-9]+)")
 
@@ -148,13 +148,13 @@ class AudioHLS:
 					currBook = file[1]
 					print(currBook[0], end="", flush=True)
 				origFilename = file[0]
-				filename = origFilename.split(".")[0] + ".m3u8"
+				filename = origFilename.split(".")[0][:-2] + "SA.m3u8"
 				values = (filename,) + file[1:]
 				self.adapter.insertFile(values)
 
 				mp3FilePath = self.getMP3File(assetId, bibleId, origFilesetId, origFilename)
 				bitrate = self.getBitrate(mp3FilePath)
-				filename = origFilename.split(".")[0] + "-" + str(int(int(bitrate)/1000)) + "kbs.m3u8"
+				filename = filename.split(".")[0] + "-" + str(int(int(bitrate)/1000)) + "kbs.m3u8"
 				self.adapter.insertBandwidth((filename, bitrate))
 
 				key = "%s:%s" % (file[1], file[2]) # book:chapter
@@ -434,10 +434,6 @@ class AudioHLSAdapter:
 				+ "(SELECT hash_id FROM bible_filesets WHERE id=%s)")
 		cursor.execute(sql, (filesetId,))
 		print("  files", end="", flush=True)
-#### Deprecated...
-		sql = ("DELETE FROM bible_filesets WHERE id=%s")
-		cursor.execute(sql, (filesetId,))
-		print("  filesets", end="", flush=True)
 		self.db.commit()
 		print("", end="\n", flush=True)
 		cursor.close()
