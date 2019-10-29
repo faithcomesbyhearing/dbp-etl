@@ -125,44 +125,48 @@ class AudioHLS:
 
 
 	def processFilesetId(self, bibleId, origFilesetId):
-		print(origFilesetId + ": ", end="", flush=True)
-		fileset = self.adapter.selectFileset(origFilesetId)
-		filesetId = origFilesetId[0:8] + "SA" + origFilesetId[11:]
-		assetId = fileset[0]
-		setTypeCode = fileset[1]
-		setTypeCode = "audio_stream"
-		setSizeCode = fileset[2]
-		hashId = self.hashId(assetId, filesetId, setTypeCode)
+		try:
+			print(origFilesetId + ": ", end="", flush=True)
+			fileset = self.adapter.selectFileset(origFilesetId)
+			filesetId = origFilesetId[0:8] + "SA" + origFilesetId[11:]
+			assetId = fileset[0]
+			setTypeCode = fileset[1]
+			setTypeCode = "audio_stream"
+			setSizeCode = fileset[2]
+			hashId = self.hashId(assetId, filesetId, setTypeCode)
 
-		## Select all needed data before transaction starts
-		files = self.adapter.selectBibleFiles(origFilesetId)
-		timestampMap = self.adapter.selectTimestamps(origFilesetId)
+			## Select all needed data before transaction starts
+			files = self.adapter.selectBibleFiles(origFilesetId)
+			timestampMap = self.adapter.selectTimestamps(origFilesetId)
 
-		self.adapter.beginFilesetInsertTran()
-		self.adapter.insertFileset((hashId, filesetId, assetId, setTypeCode, setSizeCode))
+			self.adapter.beginFilesetInsertTran()
+			self.adapter.insertFileset((hashId, filesetId, assetId, setTypeCode, setSizeCode))
 
-		currBook = None
-		for file in files:
-			origFilename = file[0]
-			filename = origFilename.split(".")[0] + ".m3u8"
-			values = (filename,) + file[1:]
-			self.adapter.insertFile(values)
+			currBook = None
+			for file in files:
+				if currBook != file[1]:
+					currBook = file[1]
+					print(currBook[0], end="", flush=True)
+				origFilename = file[0]
+				filename = origFilename.split(".")[0] + ".m3u8"
+				values = (filename,) + file[1:]
+				self.adapter.insertFile(values)
 
-			mp3FilePath = self.getMP3File(assetId, bibleId, origFilesetId, origFilename)
-			bitrate = self.getBitrate(mp3FilePath)
-			filename = origFilename.split(".")[0] + "-" + str(int(int(bitrate)/1000)) + "kbs.m3u8"
-			self.adapter.insertBandwidth((filename, bitrate))
+				mp3FilePath = self.getMP3File(assetId, bibleId, origFilesetId, origFilename)
+				bitrate = self.getBitrate(mp3FilePath)
+				filename = origFilename.split(".")[0] + "-" + str(int(int(bitrate)/1000)) + "kbs.m3u8"
+				self.adapter.insertBandwidth((filename, bitrate))
 
-			key = "%s:%s" % (file[1], file[2]) # book:chapter
-			timestamps = timestampMap[key]
-			for segment in self.getBoundaries(mp3FilePath, timestamps):
-				self.adapter.addSegment(segment)
-			self.adapter.insertSegments()
-			if currBook != file[1]:
-				currBook = file[1]
-				print(currBook[0], end="", flush=True)
-		self.adapter.commitFilesetInsertTran()
-		print("", end="\n", flush=True)
+				key = "%s:%s" % (file[1], file[2]) # book:chapter
+				timestamps = timestampMap[key]
+				for segment in self.getBoundaries(mp3FilePath, timestamps):
+					self.adapter.addSegment(segment)
+				self.adapter.insertSegments()
+			self.adapter.commitFilesetInsertTran()
+			print("", end="\n", flush=True)
+		except Exception as error:
+			print(("\nERROR: at %s %s" % (origFilename, error)), flush=True)
+			self.adapter.rollbackFilesetInsertTran()
 
 
 	def hashId(self, bucket, filesetId, typeCode):
@@ -177,60 +181,52 @@ class AudioHLS:
 	def getMP3File(self, s3Bucket, bibleId, filesetId, filename):
 		s3Key = "audio/%s/%s/%s" % (bibleId, filesetId, filename)
 		filepath = HLS_MP3_DIRECTORY + os.sep + s3Key
-		try:
-			if not os.access(filepath, os.R_OK):
-				#print("Must download %s" % (s3Key))
-				directory = filepath[:filepath.rfind("/")]
-				if not os.access(directory, os.R_OK):
-					os.makedirs(directory)
-				self.s3Client.download_file(s3Bucket, s3Key, filepath)
-			return filepath
-		except Exception as err:
-			print("ERROR: Download %s failed with error %s" % (s3Key, err))
-			return None	
+		if not os.access(filepath, os.R_OK):
+			#print("Must download %s" % (s3Key))
+			directory = filepath[:filepath.rfind("/")]
+			if not os.access(directory, os.R_OK):
+				os.makedirs(directory)
+			self.s3Client.download_file(s3Bucket, s3Key, filepath)
+		return filepath
 
 
 	def getBitrate(self, file):
 		cmd = 'ffprobe -select_streams a -v error -show_format ' + file + ' | grep bit_rate'
-		try:
-			response = subprocess.run(cmd, shell=True, capture_output=True)
-			result = self.bitrateRegex.search(str(response))
-			if result != None:
-				return result.group(1)
-			else:
-				print("ERROR: ffprobe for bitrate failed for %s" % (file))
-				return None
-		except subprocess.CalledProcessError as err:
-			print("ERROR:", err.output)
-			return None
+		response = subprocess.run(cmd, shell=True, capture_output=True)
+		result = self.bitrateRegex.search(str(response))
+		if result != None:
+			return result.group(1)
+		else:
+			raise Exception("ffprobe for bitrate failed for %s" % (file))
 
 
 	def getBoundaries(self, file, times):
 		cmd = 'ffprobe -show_frames -select_streams a -of compact -show_entries frame=best_effort_timestamp_time,pkt_pos ' + file
-		try:
-			pipe = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
-			i = prevtime = prevpos = time = 0
-			(timestamp_id, bound) = times[i]
-			for line in pipe.stdout:
-				tm = self.timesRegex.search(str(line))
-				time = float(tm.group(1))
-				pos  = int(tm.group(2))
-				if (time >= bound):
-					duration = time - prevtime
-					nbytes = pos - prevpos
-					yield (timestamp_id, duration, prevpos, nbytes)
-					prevtime, prevpos = time, pos
-					if (i+1 != len(times)):
-						i += 1
-						(timestamp_id, bound) = times[i]
-					else: 
-						bound = 99999999 # search to end of pipe
-			duration = time - prevtime
-			nbytes = pos - prevpos
-			yield (timestamp_id, duration, prevpos, nbytes)
-		except subprocess.SubprocessError as err:
-			print("ERROR:", err.output)
-			return None
+		pipe = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
+		i = prevtime = prevpos = time = pos = 0
+		(timestamp_id, bound) = times[i]
+		hasResults = False
+		for line in pipe.stdout:
+			hasResults = True
+			tm = self.timesRegex.search(str(line))
+			time = float(tm.group(1))
+			pos  = int(tm.group(2))
+			if (time >= bound):
+				duration = time - prevtime
+				nbytes = pos - prevpos
+				yield (timestamp_id, duration, prevpos, nbytes)
+				prevtime, prevpos = time, pos
+				if (i+1 != len(times)):
+					i += 1
+					(timestamp_id, bound) = times[i]
+				else: 
+					bound = 99999999 # search to end of pipe
+		if not hasResults:
+			raise Exception("ffprobe failed to return position data.")
+		duration = time - prevtime
+		nbytes = pos - prevpos
+		yield (timestamp_id, duration, prevpos, nbytes)
+
 
 
 class AudioHLSAdapter:
@@ -252,8 +248,12 @@ class AudioHLSAdapter:
 
 
 	def close(self):
-		self.db.close()
-		self.sqlLog.close()
+		if self.db != None:
+			self.db.close()
+			self.db = None
+		if self.sqlLog != None:
+			self.sqlLog.close()
+			self.sqlLog = None
 
 
 	## Query finds audio filesets without HLS where timestamp data is available
@@ -403,7 +403,15 @@ class AudioHLSAdapter:
 			self.db.commit()
 			self.tranCursor.close()
 		except Exception as err:
-			self.error(self.tranCursor, sql, err)			
+			self.error(self.tranCursor, sql, err)	
+
+
+	def rollbackFilesetInsertTran(self):
+		try:
+			self.db.rollback()
+			self.tranCursor.close()
+		except Exception as err:
+			self.error(self.tranCursor, sql, err)		
 
 
 	## Test after new HLS data added, performance could probably be improved by changing to joins
