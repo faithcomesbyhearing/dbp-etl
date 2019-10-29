@@ -45,6 +45,7 @@ HLS_DB_NAME = "hls_dbp"
 HLS_CODEC = "avc1.4d001f,mp4a.40.2"
 HLS_STREAM = "1"
 HLS_MP3_DIRECTORY = "%s/FCBH/files/tmp" % (os.environ["HOME"])
+HLS_AWS_PROFILE = "FCBH_Gary"
 
 
 ## Lambda entry point
@@ -62,7 +63,7 @@ class AudioHLS:
 
 	def __init__(self):
 		self.adapter = AudioHLSAdapter() # This class is found later in this file
-		session = boto3.Session(profile_name='FCBH_Gary') # needs config
+		session = boto3.Session(profile_name=HLS_AWS_PROFILE) # needs config
 		self.s3Client = session.client('s3')
 		self.bitrateRegex = re.compile(r"bit_rate=([0-9]+)")
 		self.timesRegex = re.compile(r"best_effort_timestamp_time=([0-9.]+)\|pkt_pos=([0-9]+)")
@@ -82,9 +83,10 @@ class AudioHLS:
 		for arg in arguments:
 			parts = arg.split("/")
 			if len(parts) > 1:
-				self.processFilesetId(parts[1])
+				self.processFilesetId(parts[0], parts[1])
 			else:
 				self.processBibleId(arg)
+		self.close()
 
 
 	## This is used by both processCommandLine and lambda handler
@@ -480,10 +482,10 @@ class AudioHLSAdapter:
 
 
 hls = AudioHLS()
-#hls.processCommandLine()
-#hls.processBibleId("ENGESV")
 hls.adapter.deleteFileset("ENGESVN2SA")
-hls.processFilesetId("ENGESV", "ENGESVN2DA")
+hls.processCommandLine()
+#hls.processBibleId("ENGESV")
+#hls.processFilesetId("ENGESV", "ENGESVN2DA")
 hls.close()
 
 """
