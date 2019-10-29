@@ -489,7 +489,7 @@ hls = AudioHLS()
 hls.processCommandLine()
 #hls.processBibleId("ENGESV")
 #hls.processFilesetId("ENGESV", "ENGESVN2DA")
-hls.close()
+#hls.close()
 
 """
 ## initialize
