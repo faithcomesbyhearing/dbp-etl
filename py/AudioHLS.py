@@ -128,7 +128,7 @@ class AudioHLS:
 		try:
 			print(origFilesetId + ": ", end="", flush=True)
 			fileset = self.adapter.selectFileset(origFilesetId)
-			filesetId = origFilesetId[0:8] + "SA" + origFilesetId[11:]
+			filesetId = origFilesetId[0:8] + "SA"
 			assetId = fileset[0]
 			setTypeCode = fileset[1]
 			setTypeCode = "audio_stream"
@@ -140,7 +140,7 @@ class AudioHLS:
 			timestampMap = self.adapter.selectTimestamps(origFilesetId)
 
 			self.adapter.beginFilesetInsertTran()
-			self.adapter.insertFileset((hashId, filesetId, assetId, setTypeCode, setSizeCode))
+			self.adapter.replaceFileset((hashId, filesetId, assetId, setTypeCode, setSizeCode))
 
 			currBook = None
 			for file in files:
@@ -342,8 +342,8 @@ class AudioHLSAdapter:
 
 
     ## Inserts a new row into the fileset table
-	def insertFileset(self, values):
-		sql = ("INSERT INTO bible_filesets (hash_id, id, asset_id, set_type_code, set_size_code)"
+	def replaceFileset(self, values):
+		sql = ("REPLACE INTO bible_filesets (hash_id, id, asset_id, set_type_code, set_size_code)"
 			" VALUES (%s, %s, %s, %s, %s)")
 		try: 
 			self.sqlLog.write((sql + "\n") % values)
