@@ -37,6 +37,7 @@ from subprocess import Popen, PIPE
 import hashlib
 
 ## insert into bible_fileset_types (set_type_code, name) values ('audio_stream','HLS Audio Stream');
+## insert into bible_fileset_types (set_type_code, name) values ('audio_stream_dra', 'HLS Audio Stream Drama');
 
 HLS_HOST = "localhost"
 HLS_USER = "root"
@@ -125,6 +126,7 @@ class AudioHLS:
 
 
 	def processFilesetId(self, bibleId, origFilesetId):
+		origFilename = None
 		try:
 			print("%s/%s: " % (bibleId, origFilesetId), end="", flush=True)
 			fileset = self.adapter.selectFileset(origFilesetId)
@@ -134,6 +136,7 @@ class AudioHLS:
 			setTypeCode = "audio_stream"
 			setSizeCode = fileset[2]
 			hashId = self.hashId(assetId, filesetId, setTypeCode)
+			bitrate = origFilesetId[10:] if origFilesetId[10:] != "" else "64"
 
 			## Select all needed data before transaction starts
 			files = self.adapter.selectBibleFiles(origFilesetId)
@@ -141,7 +144,7 @@ class AudioHLS:
 
 			self.adapter.beginFilesetInsertTran()
 			self.adapter.replaceFileset((hashId, filesetId, assetId, setTypeCode, setSizeCode))
-			self.adapter.deleteFilesBandwidthsSegments(filesetId)
+			self.adapter.deleteFilesBandwidthsSegments(filesetId, bitrate)
 
 			currBook = None
 			for file in files:
@@ -151,7 +154,7 @@ class AudioHLS:
 				origFilename = file[0]
 				filename = origFilename.split(".")[0][:-2] + "SA.m3u8"
 				values = (filename,) + file[1:]
-				self.adapter.insertFile(values)
+				self.adapter.replaceFile(values)
 
 				mp3FilePath = self.getMP3File(assetId, bibleId, origFilesetId, origFilename)
 				bitrate = self.getBitrate(mp3FilePath)
@@ -168,6 +171,7 @@ class AudioHLS:
 		except Exception as error:
 			print(("\nERROR: at %s %s" % (origFilename, error)), flush=True)
 			self.adapter.rollbackFilesetInsertTran()
+			#raise error ## Comment out for production
 
 
 	def hashId(self, bucket, filesetId, typeCode):
@@ -346,7 +350,7 @@ class AudioHLSAdapter:
 	def replaceFileset(self, values):
 		sql = ("REPLACE INTO bible_filesets (hash_id, id, asset_id, set_type_code, set_size_code)"
 			" VALUES (%s, %s, %s, %s, %s)")
-		try: 
+		try:
 			self.sqlLog.write((sql + "\n") % values)
 			self.tranCursor.execute(sql, values)		
 			self.currHashId = values[0]
@@ -355,8 +359,8 @@ class AudioHLSAdapter:
 
 
     ## Inserts a new row into the bible_files table
-	def insertFile(self, values):
-		sql = ("INSERT INTO bible_files (hash_id, file_name, book_id, chapter_start, chapter_end,"
+	def replaceFile(self, values):
+		sql = ("REPLACE INTO bible_files (hash_id, file_name, book_id, chapter_start, chapter_end,"
 			" verse_start, verse_end, file_size, duration) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)")
 		try:
 			values = (self.currHashId,) + values
@@ -415,28 +419,30 @@ class AudioHLSAdapter:
 			self.error(self.tranCursor, sql, err)		
 
 
-	def deleteFilesBandwidthsSegments(self, filesetId):
+	def deleteFilesBandwidthsSegments(self, filesetId, bitrate):
 		#print(("DELETE %s" % (filesetId)), end="", flush=True)
 		cursor = self.tranCursor
+		if bitrate == "64":
+			bitrateIn = ("48001", "96000")
+		elif bitrate == "32":
+			bitrateIn = ("24001", "48000")
+		elif bitrate == "16":
+			bitrateIn = ("0", "24000")
+		else:
+			self.error(cursor, "DELETE fileset", "Unknown bitrate %s" % (bitrate))
 		sql = ("DELETE bfss FROM bible_file_stream_segments AS bfss" 
 				" INNER JOIN bible_file_stream_bandwidths AS bfsb ON bfss.stream_bandwidth_id = bfsb.id"
 				" INNER JOIN bible_files AS bf ON bfsb.bible_file_id = bf.id"
 				" INNER JOIN bible_filesets AS bs ON bf.hash_id = bs.hash_id"
-				" WHERE bs.id = %s")
-		cursor.execute(sql, (filesetId,))
+				" WHERE bs.id = %s AND bfsb.bandwidth BETWEEN %s AND %s")
+		cursor.execute(sql, (filesetId, bitrateIn[0], bitrateIn[1]))
 		#print("  segments", end="", flush=True)
 		sql = ("DELETE bfsb FROM bible_file_stream_bandwidths AS bfsb"
 				" INNER JOIN bible_files AS bf ON bfsb.bible_file_id = bf.id"
 				" INNER JOIN bible_filesets AS bs ON bf.hash_id = bs.hash_id"
-				" WHERE bs.id = %s")
-		cursor.execute(sql, (filesetId,))
+				" WHERE bs.id = %s AND bfsb.bandwidth BETWEEN %s AND %s")
+		cursor.execute(sql, (filesetId, bitrateIn[0], bitrateIn[1]))
 		#print("  bandwidths", end="", flush=True)
-		sql = ("DELETE bf FROM bible_files AS bf"
-				" INNER JOIN bible_filesets AS bs ON bf.hash_id = bs.hash_id"
-				" WHERE bs.id = %s")
-		cursor.execute(sql, (filesetId,))
-		#print("  files", end="\n", flush=True)
-
 ##
 ## Convenience Methods
 ##
