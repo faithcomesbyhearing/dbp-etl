@@ -430,6 +430,37 @@ class FilenameParser:
 
 
 	def checkVideoBookChapterVerse(self, prefix, files):
+		filesSorted = sorted(files, key=attrgetter('bookId', 'chapterNum', 'verseStartNum'))
+		books = {}
+		for file in filesSorted:
+			currChaps = books.get(file.bookId, {})
+			currVerses = currChaps.get(file.chapterNum, [])
+			currVerses.append((file.verseStartNum, file.verseEndNum))
+			currChaps[file.chapterNum] = currVerses
+			books[file.bookId] = currChaps
+		extraChapters = []
+		missingChapters = []
+		missingVerses = [] # TBD
+		for book, chapters in books.items():
+			#print(book)
+			maxChapter = self.chapterMap[book]
+			for index in range(1, maxChapter + 1):
+				if index not in chapters:
+					missingChapters.append("%s:%d" % (book, index))
+			for chapter, verses in chapters.items():
+				if chapter > maxChapter:
+					extraChapters.append("%s:%d" % (book, chapter))
+				#print(chapter)
+				#for verse in verses:
+					#print(verse)
+		if len(extraChapters) > 0:
+			print(prefix, "chapters too large", extraChapters)
+		if len(missingChapters) > 0:
+			print(prefix, "chapters missing", missingChapters)
+			#sys.exit()
+		## Could this be simplified, by first breaking lists of files into list of books,
+		## containing list of chapters, contains a list of verses?
+		"""
 		missingChapters = []
 		missingVerses = []
 		currBook = None
@@ -470,6 +501,7 @@ class FilenameParser:
 			print(prefix, "is missing chapters:", missingChapters)
 		if len(missingVerses) > 0:
 			print(prefix, "is missing verses:", missingVerses)
+		"""
 
 
 	def summary3(self):
