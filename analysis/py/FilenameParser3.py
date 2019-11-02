@@ -3,6 +3,7 @@
 import io
 import sys
 import re
+from operator import attrgetter #itemgetter, 
 from Lookup import *
 from SQLUtility import *
 
@@ -13,9 +14,13 @@ class Filename:
 		self.file = filename
 		self.bookId = ""
 		self.chapter = ""
+		self.chapterNum = 0
 		self.chapterEnd = ""
+		self.chapterEndNum = 0
 		self.verseStart = ""
+		self.verseStartNum = 0
 		self.verseEnd = ""
+		self.verseEndNum = 0
 		self.bookSeq = ""
 		self.fileSeq = ""
 		self.name = ""
@@ -75,6 +80,8 @@ class Filename:
 			maxChapter = chapterMap.get(self.bookId)
 			if maxChapter != None and int(chapter) > int(maxChapter):
 				self.errors.append("chapter too large: %s for %s" % (chapter, self.bookId))
+		self.chapterNum = int(self.chapter)
+
 
 
 	def setChapterEnd(self, chapter, chapterMap):
@@ -85,6 +92,7 @@ class Filename:
 			maxChapter = chapterMap.get(self.bookId)
 			if maxChapter != None and int(chapter) > int(maxChapter):
 				self.errors.append("end chapter too large: %s for %s" % (chapter, self.bookId))
+		self.chapterEndNum = int(self.chapterEnd)
 
 
 	def setVerseStart(self, verseStart):
@@ -92,6 +100,7 @@ class Filename:
 		if not verseStart.isdigit():
 			if not verseStart[:-1].isdigit() or not verseStart[-1] == "b":
 				self.errors.append("non-number verse start: %s" % (verseStart))
+		self.verseStartNum = int(self.verseStart)
 
 
 	def setVerseEnd(self, verseEnd):
@@ -99,6 +108,13 @@ class Filename:
 		if not verseEnd.isdigit():
 			if not verseEnd[:-1].isdigit() or not verseEnd[-1] == "r":
 				self.errors.append("non-number verse end: %s" % (verseEnd))
+		if self.verseStart.isdigit() and self.verseEnd.isdigit():
+			startInt = int(self.verseStart)
+			endInt = int(self.verseEnd)
+			if startInt >= endInt:
+				self.errors.append("verse out of sequence start: %s  end: %s" % (self.verseStart, self.verseEnd))
+		self.verseEndNum = int(self.verseEnd)
+
 
 
 	def setTitle(self, title):
@@ -127,42 +143,6 @@ class Filename:
 		return len(self.errors)
 
 
-#	def setFile(self, template, filename):
-#		self.file = filename
-#		fileOut = []
-#		miscIndex = 0
-#		for item in template.parts:
-#			if item == "book_seq":
-#				fileOut.append(self.bookSeq)
-#			elif item == "file_seq":
-#				fileOut.append(self.fileSeq)
-#			elif item == "book_name":
-#				fileOut.append(self.name.replace("_",""))
-#			elif item == "book_id":
-#				fileOut.append(self.book)
-#			elif item == "usfx2":
-#				fileOut.append(self.usfx2)
-#			elif item == "chapter":
-#				if not template.optionalChapter or self.chapter != "0":
-#					fileOut.append(self.chapter)
-#			elif item == "verse_start":
-#				fileOut.append(self.verseStart)
-#			elif item == "verse_end":
-#				fileOut.append(self.verseEnd)
-#			elif item == "title":
-#				fileOut.append(self.title.replace("_",""))
-#			elif item == "damid":
-#				fileOut.append(self.damid)
-#			elif item == "type":
-#				fileOut.append(self.type)
-#			elif item == "misc":
-#				fileOut.append(self.getUnknown(miscIndex))
-#				miscIndex += 1
-#		filenameOut = "".join(fileOut).replace("_","")
-#		if filenameOut != filename.replace("_","").replace("-","").replace(".",""):
-#			self.errors.append("Mismatch %s" % (filenameOut))
-
-
 	def print(self):
 		print(self.bookSeq, self.fileSeq, self.bookId, self.chapter, self.name, self.damid, self.type, self.file, self.errors)
 
@@ -181,9 +161,9 @@ class FilenameParser:
 		self.unparsedList = []
 
 		self.videoTemplates = (
-			FilenameTemplate("video1", re.compile(r"(.*)_(MAT|MRK|LUK|JHN)_([0-9]+)-([0-9]+b?)-([0-9]+).*.(mp4)")),
+			FilenameTemplate("video1", re.compile(r"(.*)_(MAT|MRK|LUK|JHN)_([0-9]+)-([0-9]+)b?-([0-9]+).*.(mp4)")),
 			FilenameTemplate("video2", re.compile(r"(.*)_(MAT|MRK|LUK|JHN)_(End_[Cc]redits)()().*.(mp4)")),
-			FilenameTemplate("video3", re.compile(r"(.*)_(Mark)_([0-9]+)-([0-9]+b?)-([0-9]+).*.(mp4)")),
+			FilenameTemplate("video3", re.compile(r"(.*)_(Mark)_([0-9]+)-([0-9]+)b?-([0-9]+).*.(mp4)")),
 			FilenameTemplate("video4", re.compile(r"(.*)_(MRKZ)_(End_[Cc]redits)()().*.(mp4)")),
 		)
 		self.textTemplates = (
@@ -365,8 +345,11 @@ class FilenameParser:
 			else:
 				self.unparsedList.append((numErrors, prefix))
 
-			#bookMap = self.buildBookChapterMap(files)
-			#self.checkBookChapterMap(prefix, bookMap)
+			if typeCode in {"text", "audio"}:
+				bookMap = self.buildBookChapterMap(files)
+				self.checkBookChapterMap(prefix, bookMap)
+			elif typeCode == "video":
+				self.checkVideoBookChapterVerse(prefix, files)
 
 
 	def parseOneFileset3(self, templates, prefix, filenames):
@@ -446,6 +429,49 @@ class FilenameParser:
 				print("%s %s has too many chapters:" % (prefix, bookId), tomany)
 
 
+	def checkVideoBookChapterVerse(self, prefix, files):
+		missingChapters = []
+		missingVerses = []
+		currBook = None
+		currChapter = 1
+		nextVerse = 1
+		filesSorted = sorted(files, key=attrgetter('bookId', 'chapterNum', 'verseStartNum'))
+		for file in filesSorted:
+			#print(file.file, file.bookId, file.chapterNum, file.verseStartNum, file.verseEndNum)
+			if currBook != file.bookId:
+				if currBook != None:
+					maxChapter = self.chapterMap[currBook]
+					while currChapter < maxChapter:
+						missingChapters.append("%s:%d" % (currBook, currChapter))
+						currChapter += 1
+				currBook = file.bookId
+				currChapter = 1
+				nextVerse = 1
+				#print("current:", currBook, currChapter, nextVerse)
+
+			if currChapter != file.chapterNum:
+				#print("chapter not equal")
+				nextChapter = currChapter + 1
+				#print("next chapter", nextChapter)
+				while nextChapter < file.chapterNum:
+					missingChapters.append("%s:%d" % (currBook, nextChapter))
+					nextChapter += 1
+					#print("next chapter 2", nextChapter)
+				currChapter = file.chapterNum
+				nextVerse = 1
+
+			if nextVerse != file.verseStartNum:
+				#print("verse not equals next/file", nextVerse, file.verseStartNum)
+				missingVerses.append("%s:%d:%d" % (currBook, currChapter, nextVerse))
+
+			else:
+				nextVerse = file.verseEndNum + 1
+		if len(missingChapters) > 0:
+			print(prefix, "is missing chapters:", missingChapters)
+		if len(missingVerses) > 0:
+			print(prefix, "is missing verses:", missingVerses)
+
+
 	def summary3(self):
 		file = io.open("FilenameParser.out", mode="w", encoding="utf-8")
 		for entry in self.parsedList:
@@ -457,7 +483,7 @@ class FilenameParser:
 
 
 parser = FilenameParser()
-parser.process3('audio')
+parser.process3('video')
 parser.summary3()
 
 
