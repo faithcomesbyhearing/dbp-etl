@@ -440,7 +440,7 @@ class FilenameParser:
 			books[file.bookId] = currChaps
 		extraChapters = []
 		missingChapters = []
-		missingVerses = [] # TBD
+		missingVerses = []
 		for book, chapters in books.items():
 			#print(book)
 			maxChapter = self.chapterMap[book]
@@ -448,60 +448,22 @@ class FilenameParser:
 				if index not in chapters:
 					missingChapters.append("%s:%d" % (book, index))
 			for chapter, verses in chapters.items():
+				#print(chapter)
 				if chapter > maxChapter:
 					extraChapters.append("%s:%d" % (book, chapter))
-				#print(chapter)
-				#for verse in verses:
-					#print(verse)
+				nextVerse = 1
+				for verseStart, verseEnd in verses:
+					#print("verse", verseStart, verseEnd)
+					while verseStart > nextVerse:
+						missingVerses.append("%s:%d:%d" % (book, chapter, nextVerse))
+						nextVerse += 1
+					nextVerse = verseEnd + 1
 		if len(extraChapters) > 0:
 			print(prefix, "chapters too large", extraChapters)
 		if len(missingChapters) > 0:
 			print(prefix, "chapters missing", missingChapters)
-			#sys.exit()
-		## Could this be simplified, by first breaking lists of files into list of books,
-		## containing list of chapters, contains a list of verses?
-		"""
-		missingChapters = []
-		missingVerses = []
-		currBook = None
-		currChapter = 1
-		nextVerse = 1
-		filesSorted = sorted(files, key=attrgetter('bookId', 'chapterNum', 'verseStartNum'))
-		for file in filesSorted:
-			#print(file.file, file.bookId, file.chapterNum, file.verseStartNum, file.verseEndNum)
-			if currBook != file.bookId:
-				if currBook != None:
-					maxChapter = self.chapterMap[currBook]
-					while currChapter < maxChapter:
-						missingChapters.append("%s:%d" % (currBook, currChapter))
-						currChapter += 1
-				currBook = file.bookId
-				currChapter = 1
-				nextVerse = 1
-				#print("current:", currBook, currChapter, nextVerse)
-
-			if currChapter != file.chapterNum:
-				#print("chapter not equal")
-				nextChapter = currChapter + 1
-				#print("next chapter", nextChapter)
-				while nextChapter < file.chapterNum:
-					missingChapters.append("%s:%d" % (currBook, nextChapter))
-					nextChapter += 1
-					#print("next chapter 2", nextChapter)
-				currChapter = file.chapterNum
-				nextVerse = 1
-
-			if nextVerse != file.verseStartNum:
-				#print("verse not equals next/file", nextVerse, file.verseStartNum)
-				missingVerses.append("%s:%d:%d" % (currBook, currChapter, nextVerse))
-
-			else:
-				nextVerse = file.verseEndNum + 1
-		if len(missingChapters) > 0:
-			print(prefix, "is missing chapters:", missingChapters)
 		if len(missingVerses) > 0:
-			print(prefix, "is missing verses:", missingVerses)
-		"""
+			print(prefix, "verses missing", missingVerses)
 
 
 	def summary3(self):

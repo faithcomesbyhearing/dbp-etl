@@ -37,7 +37,7 @@ from subprocess import Popen, PIPE
 import hashlib
 
 ## insert into bible_fileset_types (set_type_code, name) values ('audio_stream','HLS Audio Stream');
-## insert into bible_fileset_types (set_type_code, name) values ('audio_stream_dra', 'HLS Audio Stream Drama');
+## insert into bible_fileset_types (set_type_code, name) values ('audio_drama_stre', 'HLS Audio Stream Drama');
 
 HLS_HOST = "localhost"
 HLS_USER = "root"
@@ -132,8 +132,12 @@ class AudioHLS:
 			fileset = self.adapter.selectFileset(origFilesetId)
 			filesetId = origFilesetId[0:8] + "SA"
 			assetId = fileset[0]
-			setTypeCode = fileset[1]
-			setTypeCode = "audio_stream"
+			if fileset[1] == "audio":
+				setTypeCode = "audio_stream"
+			elif fileset[1] == "audio_drama":
+				setTypeCode = "audio_drama_stre"
+			else:
+				raise("Invalid set_type_code %s" % (fileset[1]))
 			setSizeCode = fileset[2]
 			hashId = self.hashId(assetId, filesetId, setTypeCode)
 			bitrate = origFilesetId[10:] if origFilesetId[10:] != "" else "64"
