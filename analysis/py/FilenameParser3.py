@@ -3,7 +3,7 @@
 import io
 import sys
 import re
-from operator import attrgetter #itemgetter, 
+from operator import attrgetter
 from Lookup import *
 from SQLUtility import *
 
@@ -477,7 +477,7 @@ class FilenameParser:
 
 
 parser = FilenameParser()
-parser.process3('video')
+parser.process3('text')
 parser.summary3()
 
 
