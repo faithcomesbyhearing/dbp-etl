@@ -76,10 +76,10 @@ class Filename:
 			return
 		if not chapter.isdigit():
 			self.errors.append("non-number chap")
-		elif self.bookId != None:
-			maxChapter = chapterMap.get(self.bookId)
-			if maxChapter != None and int(chapter) > int(maxChapter):
-				self.errors.append("chapter too large: %s for %s" % (chapter, self.bookId))
+		#elif self.bookId != None:
+		#	maxChapter = chapterMap.get(self.bookId)
+		#	if maxChapter != None and int(chapter) > int(maxChapter):
+		#		self.errors.append("chapter too large: %s for %s" % (chapter, self.bookId))
 		self.chapterNum = int(self.chapter)
 
 
@@ -346,8 +346,9 @@ class FilenameParser:
 				self.unparsedList.append((numErrors, prefix))
 
 			if typeCode in {"text", "audio"}:
-				bookMap = self.buildBookChapterMap(files)
-				self.checkBookChapterMap(prefix, bookMap)
+				self.checkBookChapter(prefix, files)
+				#bookMap = self.buildBookChapterMap(files)
+				#self.checkBookChapterMap(prefix, bookMap)
 			elif typeCode == "video":
 				self.checkVideoBookChapterVerse(prefix, files)
 
@@ -394,7 +395,7 @@ class FilenameParser:
 				if file.verseEnd == None or file.verseEnd == "":
 					file.errors.append("verse end not found")
 
-
+	## deprecated
 	def buildBookChapterMap(self, files):
 		bookMap = {}
 		for file in files:
@@ -411,22 +412,66 @@ class FilenameParser:
 						chapters[chap] += 1
 		return bookMap
 
-
+    # deprecated
 	def checkBookChapterMap(self, prefix, bookMap):
 		for bookId in bookMap.keys():
 			chapters = bookMap[bookId]
+			maxChapter = int(self.chapterMap.get(bookId))
 			empty = []
 			tomany = []
+			tohigh = []
 			for chapter in range(1, len(chapters)):
 				count = chapters[chapter]	
 				if count == 0:
 					empty.append(chapter)
 				elif count > 2:
 					tomany.append(chapter)
+				if count > 0 and chapter > maxChapter:
+					tohigh.append(chapter)
+
 			if len(empty) > 0:
 				print("%s %s is missing chapters:" % (prefix, bookId), empty)
 			if len(tomany) > 0:
 				print("%s %s has too many chapters:" % (prefix, bookId), tomany)
+			if len(tohigh) > 0:
+				print("%s %s has invalid chapter numbers:" % (prefix, bookId), tohigh)
+
+
+	def checkBookChapter(self, prefix, files):
+		#filesSorted = sorted(files, key=attrgetter('bookId', 'chapterNum'))
+		books = {}
+		#for file in filesSorted:
+		for file in files:
+			if file.bookId not in {None, "", "FRT", "INT", "BAK", "LXX", "CNC", "GLO", "TDX", "NDX", "OTH", 
+				"XXA", "XXB", "XXC", "XXD", "XXE", "XXF", "XXG"}:
+				currChaps = books.get(file.bookId, [])
+				currChaps.append(file.chapterNum)
+				books[file.bookId] = currChaps
+		extraChapters = []
+		missingChapters = []
+		for book, chapters in books.items():
+			#print(book)
+			maxChapter = self.chapterMap[book]
+			for index in range(1, maxChapter + 1):
+				if index not in chapters:
+					missingChapters.append("%s:%d" % (book, index))
+			for chapter in chapters:
+				#print(chapter)
+				if chapter > maxChapter:
+					extraChapters.append("%s:%d" % (book, chapter))
+				#nextVerse = 1
+				#for verseStart, verseEnd in verses:
+					#print("verse", verseStart, verseEnd)
+				#	while verseStart > nextVerse:
+				#		missingVerses.append("%s:%d:%d" % (book, chapter, nextVerse))
+				#		nextVerse += 1
+				#	nextVerse = verseEnd + 1
+		if len(extraChapters) > 0:
+			print(prefix, "chapters too large", extraChapters)
+		if len(missingChapters) > 0:
+			print(prefix, "chapters missing", missingChapters)
+		#if len(missingVerses) > 0:
+		#	print(prefix, "verses missing", missingVerses)
 
 
 	def checkVideoBookChapterVerse(self, prefix, files):
