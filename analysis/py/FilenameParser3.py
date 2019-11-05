@@ -438,9 +438,7 @@ class FilenameParser:
 
 
 	def checkBookChapter(self, prefix, files):
-		#filesSorted = sorted(files, key=attrgetter('bookId', 'chapterNum'))
 		books = {}
-		#for file in filesSorted:
 		for file in files:
 			if file.bookId not in {None, "", "FRT", "INT", "BAK", "LXX", "CNC", "GLO", "TDX", "NDX", "OTH", 
 				"XXA", "XXB", "XXC", "XXD", "XXE", "XXF", "XXG"}:
@@ -459,19 +457,12 @@ class FilenameParser:
 				#print(chapter)
 				if chapter > maxChapter:
 					extraChapters.append("%s:%d" % (book, chapter))
-				#nextVerse = 1
-				#for verseStart, verseEnd in verses:
-					#print("verse", verseStart, verseEnd)
-				#	while verseStart > nextVerse:
-				#		missingVerses.append("%s:%d:%d" % (book, chapter, nextVerse))
-				#		nextVerse += 1
-				#	nextVerse = verseEnd + 1
 		if len(extraChapters) > 0:
-			print(prefix, "chapters too large", extraChapters)
+			#print(prefix, "chapters too large", extraChapters)
+			self.summaryMessage(prefix, "chapters too large", extraChapters)
 		if len(missingChapters) > 0:
-			print(prefix, "chapters missing", missingChapters)
-		#if len(missingVerses) > 0:
-		#	print(prefix, "verses missing", missingVerses)
+			#print(prefix, "chapters missing", missingChapters)
+			self.summaryMessage(prefix, "chapters missing", missingChapters)
 
 
 	def checkVideoBookChapterVerse(self, prefix, files):
@@ -509,6 +500,32 @@ class FilenameParser:
 			print(prefix, "chapters missing", missingChapters)
 		if len(missingVerses) > 0:
 			print(prefix, "verses missing", missingVerses)
+
+
+	def summaryMessage(self, prefix, message, errors):
+		#print(prefix, message, errors)
+		currBook, chapter = errors[0].split(":")
+		startChap = int(chapter)
+		nextChap = startChap
+		results = []
+		for error in errors:
+			book, chapter = error.split(":")
+			if book == currBook and int(chapter) == nextChap:
+				nextChap += 1
+			else:
+				self.appendError(results, currBook, startChap, nextChap)
+				currBook = book
+				startChap = int(chapter)
+				nextChap = startChap + 1
+		self.appendError(results, currBook, startChap, nextChap)
+		print(prefix, message, ", ".join(results))
+
+
+	def appendError(self, results, book, chapStart, chapEnd):
+		if chapStart == (chapEnd - 1):
+			results.append("%s %d" % (book, chapStart))
+		else:
+			results.append("%s %d-%d" % (book, chapStart, chapEnd - 1))
 
 
 	def summary3(self):
