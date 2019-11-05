@@ -313,9 +313,11 @@ class FilenameParser:
 		extras = {"FRT":6, "INT":1, "BAK":2, "LXX":1, "CNC":2, "GLO":26, "TDX":1, "NDX":1, "OTH":5, 
 			"XXA":4, "XXB":3, "XXC":1, "XXD":1, "XXE":1, "XXF":1, "XXG":1}
 		self.chapterMap.update(extras)
-		corrections = {"MAN":1, "PS2":1}
+		corrections = {"MAN":1, "PS2":1, "BAR":5}
 		self.chapterMap.update(corrections)
-		#self.chapterMap["PSA"] = 151
+		self.maxChapterMap = self.chapterMap.copy()
+		corrections = {"JOL":4, "PSA":151, "BAR":6}
+		self.maxChapterMap.update(corrections)
 		self.usfx2Map = db.selectMap("SELECT id_usfx, id FROM books", None)
 		extras = {"FR":"FRT", "IN":"INT", "BK":"BAK", "CN":"CNC", "GS":"GLO", "TX":"TDX", "OH":"OTH",
 			"XA":"XXA", "XB":"XXB", "XC":"XXC", "XD":"XXD", "XE":"XXE", "XF":"XXF", "XG":"XXG"}
@@ -453,6 +455,7 @@ class FilenameParser:
 			for index in range(1, maxChapter + 1):
 				if index not in chapters:
 					missingChapters.append("%s:%d" % (book, index))
+			maxChapter = self.maxChapterMap[book]
 			for chapter in chapters:
 				#print(chapter)
 				if chapter > maxChapter:
