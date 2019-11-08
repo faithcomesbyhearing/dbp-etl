@@ -25,7 +25,7 @@
   <bibleis_hide>10</bibleis_hide>
 </permission>
  <directory>
-  <lpts_xml>input/qry_dbp4_Regular_and_NonDrama.xml</lpts_xml>
+  <lpts_xml>/Users/garygriswold/FCBH/bucket_data/qry_dbp4_Regular_and_NonDrama.xml</lpts_xml>
   <bucket_list>/Users/garygriswold/FCBH/bucket_data/%s.txt</bucket_list>
   <sql_output>output/output.sql</sql_output>
  </directory>
