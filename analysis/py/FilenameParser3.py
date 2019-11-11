@@ -313,7 +313,7 @@ class FilenameParser:
 		extras = {"FRT":6, "INT":1, "BAK":2, "LXX":1, "CNC":2, "GLO":26, "TDX":1, "NDX":1, "OTH":5, 
 			"XXA":4, "XXB":3, "XXC":1, "XXD":1, "XXE":1, "XXF":1, "XXG":1}
 		self.chapterMap.update(extras)
-		corrections = {"MAN":1, "PS2":1, "BAR":5}
+		corrections = {"MAL":3, "MAN":1, "PS2":1, "BAR":5}
 		self.chapterMap.update(corrections)
 		self.maxChapterMap = self.chapterMap.copy()
 		corrections = {"JOL":4, "PSA":151, "BAR":6}
@@ -461,10 +461,8 @@ class FilenameParser:
 				if chapter > maxChapter:
 					extraChapters.append("%s:%d" % (book, chapter))
 		if len(extraChapters) > 0:
-			#print(prefix, "chapters too large", extraChapters)
 			self.summaryMessage(prefix, "chapters too large", extraChapters)
 		if len(missingChapters) > 0:
-			#print(prefix, "chapters missing", missingChapters)
 			self.summaryMessage(prefix, "chapters missing", missingChapters)
 
 
@@ -498,11 +496,11 @@ class FilenameParser:
 						nextVerse += 1
 					nextVerse = verseEnd + 1
 		if len(extraChapters) > 0:
-			print(prefix, "chapters too large", extraChapters)
+			self.summaryMessage(prefix, "chapters too large", extraChapters)
 		if len(missingChapters) > 0:
-			print(prefix, "chapters missing", missingChapters)
+			self.summaryMessage(prefix, "chapters missing", missingChapters)
 		if len(missingVerses) > 0:
-			print(prefix, "verses missing", missingVerses)
+			self.summaryVerseMessage(prefix, "verses missing", missingVerses)
 
 
 	def summaryMessage(self, prefix, message, errors):
@@ -531,6 +529,34 @@ class FilenameParser:
 			results.append("%s %d-%d" % (book, chapStart, chapEnd - 1))
 
 
+	def summaryVerseMessage(self, prefix, message, errors):
+		#print(prefix, message, errors)
+		currBook, chapter, verse = errors[0].split(":")
+		startChap = int(chapter)
+		startVerse = int(verse)
+		nextVerse = startVerse
+		results = []
+		for error in errors:
+			book, chapter, verse = error.split(":")
+			if book == currBook and int(chapter) == startChap and int(verse) == nextVerse:
+				nextVerse += 1
+			else:
+				self.appendVerseError(results, currBook, startChap, startVerse, nextVerse)
+				currBook = book
+				startChap = int(chapter)
+				startVerse = int(verse)
+				nextVerse = startVerse + 1
+		self.appendVerseError(results, currBook, startChap, startVerse, nextVerse)
+		print(prefix, message, ", ".join(results))
+
+
+	def appendVerseError(self, results, book, chapStart, verseStart, verseEnd):
+		if verseStart == (verseEnd - 1):
+			results.append("%s %d:%d" % (book, chapStart, verseStart))
+		else:
+			results.append("%s %d:%d-%d" % (book, chapStart, verseStart, verseEnd - 1))
+
+
 	def summary3(self):
 		file = io.open("FilenameParser.out", mode="w", encoding="utf-8")
 		for entry in self.parsedList:
@@ -542,7 +568,7 @@ class FilenameParser:
 
 
 parser = FilenameParser()
-parser.process3('text')
+parser.process3('video')
 parser.summary3()
 
 
