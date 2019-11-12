@@ -19,7 +19,9 @@ class Lookup:
 			'1Chronicles':  '1CH',
 			'2Chronicles':  '2CH',
 			'Ezra':  		'EZR',
+			'1Ezra':		'EZR',
 			'Nehemiah':   	'NEH',
+			'2Ezra':		'NEH',
 			'Esther':  		'EST',
 			'Job':   		'JOB',
 			'Psalms':    	'PSA',
@@ -336,10 +338,38 @@ class Lookup:
 			'1TIMUTI':		'1TI',
 			'2TIMUTI':		'2TI',
 			'TITUS':		'TIT',
-			'YAKUB':		'JAS'
+			'YAKUB':		'JAS',
+			# Malay
+			'Kejadian':		'GEN',
+ 			'Keluaran':		'EXO',
+ 			'Imamat':		'LEV',
+			'Bilangan':		'NUM',
+			'Ulangan':		'DEU',
+			'Yosua':		'JOS',
+			'Hakim-hakim':	'JDG',
+			'1Raja-raja':	'1KI',
+			'2Raja-raja':	'2KI',
+			'1Tawarikh':	'1CH',
+			'2Tawarikh':	'2CH',
+			'Nehemia':		'NEH',
+			'Ayub':			'JOB',
+			'Mazmur':    	'PSA',
+			'Amsal':		'PRO',
+			'Pengkhotbah':	'ECC',
+			'Kidung':		'SNG',
+			'Yesaya':		'ISA',
+			'Yeremia':		'JER',
+			'Ratapan':		'LAM',
+			'Yehezkiel':	'EZK',
+			'Yoel':			'JOL',
+			'Yunus':		'AMO',
+			'Mikha':		'MIC',
+			'Habakuk':		'HAB',
+			'Zefanya':		'ZEP',
+			'Hagai':		'HAG',
+			'Zakharia':		'ZEC',
+			'Maleakhi':		'MAL'
 		}
 		result = books.get(bookName, None)
 		return result
-
-
 
