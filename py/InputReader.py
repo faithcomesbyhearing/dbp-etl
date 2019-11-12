@@ -21,6 +21,21 @@ class InputReader:
 		self.results = {}
 
 
+	## This method is probably only for testing
+	def typeCodeListing(self, typeCode):
+		if typeCode == "video":
+			return self.bucketListing("dbp-vid")
+		else:
+			self.bucketListing("dbp-prod")
+			results2 = {}
+			for key in self.results.keys():
+				if key.startswith(typeCode):
+					results2[key] = self.results[key]
+			self.results = results2
+			self.countSummary()
+			return self.results
+
+
 	def bucketListing(self, bucketName):
 		dropTypes = set()
 		dropBibleIds = set()
@@ -38,28 +53,28 @@ class InputReader:
 					filesetId = parts[2]
 					fileName = parts[3]
 					fileNameSansExt = fileName.split(".")[0]
-					row = (typeCode, bibleId, filesetId, fileName)
+					key = "%s/%s/%s" % (typeCode, bibleId, filesetId)
 					if bibleId.isupper():
 						if typeCode == "audio":
 							if fileName.endswith(".mp3"):
 								if filesetId.isupper():
-									self.appendResults(filesetId, row)
+									self.appendResults(key, fileName)
 								else:
-									dropAudioIds.add("audio/%s/%s" % (bibleId, filesetId))
+									dropAudioIds.add(key)
 						elif typeCode == "text":
 							if fileName.endswith(".html"):
 								if filesetId.isupper():
 									if fileNameSansExt not in {"index", "about"}:
-										self.appendResults(filesetId, row)
+										self.appendResults(key, fileName)
 								else:
-									dropTextIds.add("text/%s/%s" % (bibleId, filesetId))
+									dropTextIds.add(key)
 						elif typeCode == "video":
 							if (fileName.endswith(".mp4") and not fileName.endswith("web.mp4") 
 								and not filesetId.endswith("480") and not filesetId.endswith("720")):
 								if filesetId.isupper():
-									self.appendResults(filesetId, row)
+									self.appendResults(key, fileName)
 								else:
-									dropVideoIds.add("video/%s/%s" % (bibleId, filesetId))
+									dropVideoIds.add(key)
 						else:
 							dropTypes.add(typeCode)
 					else:
@@ -73,6 +88,7 @@ class InputReader:
 		self.privateDrop(output, "WARNING: video_id %s was excluded", dropVideoIds)
 		output.close()
 		self.countSummary()
+		return self.results
 
 
 	def privateDrop(self, output, message, dropIds):
@@ -83,10 +99,10 @@ class InputReader:
 			output.write(message % (dropId))
 
 
-	def appendResults(self, filesetId, row):
-		files = self.results.get(filesetId, [])
-		files.append(row)
-		self.results[filesetId] = files
+	def appendResults(self, key, filename):
+		files = self.results.get(key, [])
+		files.append(filename)
+		self.results[key] = files
 
 
 	def countSummary(self):
@@ -98,9 +114,9 @@ class InputReader:
 		return self.results
 
 
-config = Config()
-reader = InputReader(config)
-reader.bucketListing('dbp-prod')
+#config = Config()
+#reader = InputReader(config)
+#reader.bucketListing('dbp-vid')
 
 
 
