@@ -139,33 +139,38 @@ class AudioHLS:
 			else:
 				raise("Invalid set_type_code %s" % (fileset[1]))
 			setSizeCode = fileset[2]
+			origHashId = fileset[3]
 			hashId = self.hashId(assetId, filesetId, setTypeCode)
 			bitrate = origFilesetId[10:] if origFilesetId[10:] != "" else "64"
 
 			## Select all needed data before transaction starts
-			files = self.adapter.selectBibleFiles(origFilesetId)
-			timestampMap = self.adapter.selectTimestamps(origFilesetId)
+			files = self.adapter.selectBibleFiles(origFilesetId) 
+			timestampMap = self.adapter.selectTimestamps(origFilesetId) # could use origHashId instead
 
 			self.adapter.beginFilesetInsertTran()
 			self.adapter.replaceFileset((hashId, filesetId, assetId, setTypeCode, setSizeCode))
+			self.adapter.copyFilesetTables(hashId, origHashId)
 			self.adapter.deleteFilesBandwidthsSegments(filesetId, bitrate)
 
 			currBook = None
 			for file in files:
-				if currBook != file[1]:
-					currBook = file[1]
+				#(753506, 'B01___01_Matthew_____ENGESVN2DA.mp3', 'MAT', 1, None, 1, None, 1724323, 210)
+				origFileId = file[0]
+				if currBook != file[2]:
+					currBook = file[2]
 					print(currBook[0], end="", flush=True)
-				origFilename = file[0]
+				origFilename = file[1]
 				filename = origFilename.split(".")[0][:-2] + "SA.m3u8"
-				values = (filename,) + file[1:]
+				values = (filename,) + file[2:]
 				self.adapter.replaceFile(values)
+				self.adapter.copyFileTags(origFileId)
 
 				mp3FilePath = self.getMP3File(assetId, bibleId, origFilesetId, origFilename)
 				bitrate = self.getBitrate(mp3FilePath)
 				filename = filename.split(".")[0] + "-" + str(int(int(bitrate)/1000)) + "kbs.m3u8"
 				self.adapter.insertBandwidth((filename, bitrate))
 
-				key = "%s:%s" % (file[1], file[2]) # book:chapter
+				key = "%s:%s" % (file[2], file[3]) # book:chapter
 				timestamps = timestampMap[key]
 				for segment in self.getBoundaries(mp3FilePath, timestamps):
 					self.adapter.addSegment(segment)
@@ -175,7 +180,7 @@ class AudioHLS:
 		except Exception as error:
 			print(("\nERROR: at %s %s" % (origFilename, error)), flush=True)
 			self.adapter.rollbackFilesetInsertTran()
-			#raise error ## Comment out for production
+			raise error ## Comment out for production
 
 
 	def hashId(self, bucket, filesetId, typeCode):
@@ -191,7 +196,7 @@ class AudioHLS:
 		s3Key = "audio/%s/%s/%s" % (bibleId, filesetId, filename)
 		filepath = HLS_MP3_DIRECTORY + os.sep + s3Key
 		if not os.access(filepath, os.R_OK):
-			#print("Must download %s" % (s3Key))
+			print("Must download %s" % (s3Key))
 			directory = filepath[:filepath.rfind("/")]
 			if not os.access(directory, os.R_OK):
 				os.makedirs(directory)
@@ -312,13 +317,13 @@ class AudioHLSAdapter:
 
 
 	def selectFileset(self, filesetId):
-		sql = "SELECT asset_id, set_type_code, set_size_code FROM bible_filesets WHERE id=%s"
+		sql = "SELECT asset_id, set_type_code, set_size_code, hash_id FROM bible_filesets WHERE id=%s"
 		return self.selectRow(sql, (filesetId,))
 
 
     ## Returns the files associated with a fileset
 	def selectBibleFiles(self, filesetId):
-		sql = ("SELECT bf.file_name, bf.book_id, bf.chapter_start, bf.chapter_end, bf.verse_start," 
+		sql = ("SELECT bf.id, bf.file_name, bf.book_id, bf.chapter_start, bf.chapter_end, bf.verse_start," 
 			" bf.verse_end, bf.file_size, bf.duration"
 			" FROM bible_files bf, bible_filesets bfs"
 			" WHERE bf.hash_id=bfs.hash_id AND bfs.id=%s"
@@ -362,6 +367,32 @@ class AudioHLSAdapter:
 			self.error(self.tranCursor, sql, err)
 
 
+	def copyFilesetTables(self, saHashId, daHashId):
+		values = (saHashId, daHashId,)
+		sql = ""
+		try:
+			# pkey hash_id, name, language_id
+			sql = ("REPLACE INTO bible_fileset_tags (hash_id, name, description,"
+				" admin_only, notes, iso, language_id)"
+				" SELECT %s, name, description, admin_only, notes, iso, language_id"
+				" FROM bible_fileset_tags WHERE hash_id = %s")
+			self.tranCursor.execute(sql, values)
+			# pkey hash_id, bible_id
+			sql = ("REPLACE INTO bible_fileset_connections (hash_id, bible_id)"
+				" SELECT %s, bible_id" 
+				" FROM bible_fileset_connections"
+				" WHERE hash_id = %s")
+			self.tranCursor.execute(sql, values)
+			# pkey access_group_id, hash_id
+			sql = ("REPLACE INTO access_group_filesets (hash_id, access_group_id)"
+				" SELECT %s, access_group_id"
+				" FROM access_group_filesets"
+				" WHERE hash_id = %s")
+			self.tranCursor.execute(sql, values)
+		except Exception as err:
+			self.error(self.tranCursor, sql, err)
+
+
     ## Inserts a new row into the bible_files table
 	def replaceFile(self, values):
 		sql = ("REPLACE INTO bible_files (hash_id, file_name, book_id, chapter_start, chapter_end,"
@@ -372,6 +403,17 @@ class AudioHLSAdapter:
 			self.tranCursor.execute(sql, values)
 			self.currFileId = self.tranCursor.lastrowid
 			self.sqlLog.write("insert bible_files, last insert id %d\n" % self.currFileId)
+		except Exception as err:
+			self.error(self.tranCursor, sql, err)
+
+
+	def copyFileTags(self, origFileId):
+		sql = ("INSERT INTO bible_file_tags (file_id, tag, value, admin_only)"
+			" SELECT '%s', tag, value, admin_only"
+			" FROM bible_file_tags"
+			" WHERE file_id = %s")
+		try:
+			self.tranCursor.execute(sql, (self.currFileId, origFileId))
 		except Exception as err:
 			self.error(self.tranCursor, sql, err)
 
@@ -396,7 +438,7 @@ class AudioHLSAdapter:
 
     ## Inserts a collection of rows into the bible_file_stream_segments table
 	def insertSegments(self):
-		sql = ("INSERT INTO bible_file_stream_segments (stream_bandwidth_id, timestamp_id, runtime, offset, bytes)"
+		sql = ("INSERT INTO bible_file_stream_bytes (stream_bandwidth_id, timestamp_id, runtime, offset, bytes)"
 			+ " VALUES (%s, %s, %s, %s, %s)")
 		try:
 			for segment in self.segments:
@@ -434,7 +476,7 @@ class AudioHLSAdapter:
 			bitrateIn = ("0", "24000")
 		else:
 			self.error(cursor, "DELETE fileset", "Unknown bitrate %s" % (bitrate))
-		sql = ("DELETE bfss FROM bible_file_stream_segments AS bfss" 
+		sql = ("DELETE bfss FROM bible_file_stream_bytes AS bfss" 
 				" INNER JOIN bible_file_stream_bandwidths AS bfsb ON bfss.stream_bandwidth_id = bfsb.id"
 				" INNER JOIN bible_files AS bf ON bfsb.bible_file_id = bf.id"
 				" INNER JOIN bible_filesets AS bs ON bf.hash_id = bs.hash_id"
@@ -500,37 +542,4 @@ hls.processCommandLine()
 #hls.processFilesetId("ENGESV", "ENGESVN2DA")
 #hls.close()
 
-"""
-## initialize
-bookChapRegex = re.compile('.*B\d+___(\d+)_([A-Za-z+]*)') # matches: chapter, bookname
-basenameRegex = re.compile('(.+)\.mp3')
-timesRegex = re.compile('.*best_effort_timestamp_time=([0-9.]+)\|pkt_pos=([0-9]+)')
-bitrateRE = re.compile(".*bit_rate=(\d+)")
-books = { "Matthew" : "MAT"} # TODO: setup full book dict
-config = Config()
-db = dbConnection(config).cursor
-# TODO: use a /tmp/hls.pid file for sql log to aid debugging?
-sqlfile = open("/Users/jrstear/tmp/ENGESV/sql", "w")
-
-## form list of input filesets
-# ARGUMENTS can be one or more [dir/]bible_id/fileset_id
-# TODO: parse cli arguments rather than hardcode
-inputBibles = [ hls('ENGESV','ENGESVN2DA') ]
-
-for bible in inputBibles:
-	## identify mp3s and timings (get from S3 and DB if needed?)
-	hashid = bible.hashId()
-	for mp3 in bible.get_mp3s():
-			verse_start_times = bible.get_verse_start_times(mp3)
-			verse_start_times_string = ','.join(map(str, verse_start_times))
-			basename = basenameRegex.match(mp3).group(1)
-			bitrate = get_bitrate(mp3)
-			print(mp3 + " bitrate: " + bitrate)
-			# TODO: move get_verse_start_times inside get_boundaries
-			for dur, off, byt in get_boundaries(mp3, verse_start_times):
-				print(" ".join([dur,off,byt]))
-				# TODO: note that bible_file_stream_segments has FK to bible_file_timestamps.id,
-				# so add timestamps.id to query so we can set that in the INSERT
-			print("done")
-"""
 
