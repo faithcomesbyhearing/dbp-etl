@@ -37,7 +37,7 @@ from subprocess import Popen, PIPE
 import hashlib
 
 ## insert into bible_fileset_types (set_type_code, name) values ('audio_stream','HLS Audio Stream');
-## insert into bible_fileset_types (set_type_code, name) values ('audio_drama_stre', 'HLS Audio Stream Drama');
+## insert into bible_fileset_types (set_type_code, name) values ('audio_drama_stream', 'HLS Audio Stream Drama');
 
 HLS_HOST = "localhost"
 HLS_USER = "root"
@@ -135,7 +135,7 @@ class AudioHLS:
 			if fileset[1] == "audio":
 				setTypeCode = "audio_stream"
 			elif fileset[1] == "audio_drama":
-				setTypeCode = "audio_drama_stre"
+				setTypeCode = "audio_drama_stream"
 			else:
 				raise("Invalid set_type_code %s" % (fileset[1]))
 			setSizeCode = fileset[2]
@@ -278,7 +278,7 @@ class AudioHLSAdapter:
 			" FROM bible_file_timestamps bft, bible_files bf, bible_filesets bs"
 			" WHERE bft.bible_file_id = bf.id AND bf.hash_id = bs.hash_id"
 			" AND bs.id NOT IN (SELECT CONCAT(LEFT(id,8),'DA',MID(id,11,2))"
-			" FROM bible_filesets WHERE set_type_code = 'audio_stream')")
+			" FROM bible_filesets WHERE set_type_code IN ('audio_stream', 'audio_drama_stream')")
 		return self.selectList(sql, None)
 
 
