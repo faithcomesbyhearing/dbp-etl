@@ -371,3 +371,227 @@ class Booknames:
 		result = books.get(bookName, None)
 		return result
 
+
+#NT Order:
+#Traditional
+#Russian
+#Plautdietsch
+#Finnish
+
+#OT Order:
+#Masoretic-Christian
+#Masoretic-Tanakh
+#Septuagint
+#Vulgate
+
+	def TraditionalOT(self, sequence):
+		books = {
+			'A01':  'GEN',
+			'A02':  'EXO',
+			'A03':  'LEV',
+			'A04':  'NUM',
+			'A05':  'DEU',
+			'A06':  'JOS',
+			'A07':  'JDG',
+			'A08':  'RUT',
+			'A09':  '1SA',
+			'A10':  '2SA',
+			'A11':  '1KI',
+			'A12':  '2KI',
+			'A13':  '1CH',
+			'A14':  '2CH',
+			'A15':  'EZR',
+			'A16':  'NEH',
+			'A17':  'EST',
+			'A18':  'JOB',
+			'A19':  'PSA',
+			'A20':  'PRO',
+			'A21':  'ECC',
+			'A22':  'SNG',
+			'A23':  'ISA',
+			'A24':  'JER',
+			'A25':  'LAM',
+			'A26':  'EZK',
+			'A27':  'DAN',
+			'A28':  'HOS',
+			'A29':  'JOL',
+			'A30':  'AMO',
+			'A31':  'OBA',
+			'A32': 	'JON',
+			'A33':  'MIC',
+			'A34':  'NAM',
+			'A35':  'HAB',
+			'A36':  'ZEP',
+			'A37':  'HAG',
+			'A38':  'ZEC',
+			'A39':  'MAL',
+			'B01':  'MAT',
+			'B02':  'MRK',
+			'B03':  'LUK',
+			'B04':  'JHN',
+			'B05':  'ACT',
+			'B06':  'ROM',
+			'B07':  '1CO',
+			'B08':  '2CO',
+			'B09':  'GAL',
+			'B10':  'EPH',
+			'B11':  'PHP',
+			'B12':  'COL',
+			'B13':	'1TH',
+			'B14':	'2TH',
+			'B15':  '1TI',
+			'B16':  '2TI',
+			'B17': 	'TIT',
+			'B18':  'PHM',
+			'B19':  'HEB',
+			'B20':  'JAS',
+			'B21':  '1PE',
+			'B22':  '2PE',
+			'B23': 	'1JN',
+			'B24': 	'2JN',
+			'B25': 	'3JN',
+			'B26':  'JUD',
+			'B27':  'REV'
+			#'Tobit':   		'TOB',
+			#'Judith':   	'JDT',
+			#'Wisdom':   	'WIS',
+			#'Sirach':   	'SIR',
+			#'Baruch':   	'BAR',
+			#'EpistJeremia':	'LJE',
+			#'1Maccabees':   '1MA',
+			#'2Maccabees':   '2MA',
+			#'3Maccabees':	'3MA',
+			#'4Maccabees':	'4MA',
+		}
+		result = books.get(sequence, None)
+		return result
+
+	def TraditionalNT(self, sequence):
+		books = {
+			'B01':  'MAT',
+			'B02':  'MRK',
+			'B03':  'LUK',
+			'B04':  'JHN',
+			'B05':  'ACT',
+			'B06':  'ROM',
+			'B07':  '1CO',
+			'B08':  '2CO',
+			'B09':  'GAL',
+			'B10':  'EPH',
+			'B11':  'PHP',
+			'B12':  'COL',
+			'B13':	'1TH',
+			'B14':	'2TH',
+			'B15':  '1TI',
+			'B16':  '2TI',
+			'B17': 	'TIT',
+			'B18':  'PHM',
+			'B19':  'HEB',
+			'B20':  'JAS',
+			'B21':  '1PE',
+			'B22':  '2PE',
+			'B23': 	'1JN',
+			'B24': 	'2JN',
+			'B25': 	'3JN',
+			'B26':  'JUD',
+			'B27':  'REV'
+		}
+		return books.get(sequence, None)
+
+	def RussianNT(self, sequence):
+		books = {
+			'B01':  'MAT',
+			'B02':  'MRK',
+			'B03':  'LUK',
+			'B04':  'JHN',
+			'B05':  'ACT',
+			'B06':  'JAS',
+			'B07':  '1PE',
+			'B08':  '2PE',
+			'B09': 	'1JN',
+			'B10': 	'2JN',
+			'B11': 	'3JN',
+			'B12':  'JUD',
+			'B13':  'ROM',
+			'B14':  '1CO',
+			'B15':  '2CO',
+			'B16':  'GAL',
+			'B17':  'EPH',
+			'B18':  'PHP',
+			'B19':  'COL',
+			'B20':	'1TH',
+			'B21':	'2TH',
+			'B22':  '1TI',
+			'B23':  '2TI',
+			'B24': 	'TIT',
+			'B25':  'PHM',
+			'B26':  'HEB',
+			'B27':  'REV'
+		}
+		return books.get(sequence, None)
+
+
+	def PlautdietschNT(self, sequence):
+		books = {
+			'B01':  'MAT',
+			'B02':  'MRK',
+			'B03':  'LUK',
+			'B04':  'JHN',
+			'B05':  'ACT',
+			'B06':  'ROM',
+			'B07':  '1CO',
+			'B08':  '2CO',
+			'B09':  'GAL',
+			'B10':  'EPH',
+			'B11':  'PHP',
+			'B12':  'COL',
+			'B13':	'1TH',
+			'B14':	'2TH',
+			'B15':  '1TI',
+			'B16':  '2TI',
+			'B17': 	'TIT',
+			'B18':  'PHM',
+			'B19':  '1PE',
+			'B20':  '2PE',
+			'B21': 	'1JN',
+			'B22': 	'2JN',
+			'B23': 	'3JN',
+			'B24':  'HEB',
+			'B25':  'JAS',
+			'B26':  'JUD',
+			'B27':  'REV'
+		}
+		return books.get(sequence, None)
+
+
+	def FinnishNT(self, sequence):
+		books = {
+			'B01':  'MAT',
+			'B02':  'MRK',
+			'B03':  'LUK',
+			'B04':  'JHN',
+			'B05':  'ACT',
+			'B06':  'ROM',
+			'B07':  '1CO',
+			'B08':  '2CO',
+			'B09':  'GAL',
+			'B10':  'EPH',
+			'B11':  'PHP',
+			'B12':  'COL',
+			'B13':	'1TH',
+			'B14':	'2TH',
+			'B15':  '1TI',
+			'B16':  '2TI',
+			'B17': 	'TIT',
+			'B18':  'PHM',
+			'B19':  'HEB',
+			'B20':  '1PE',
+			'B21':  '2PE',
+			'B22': 	'1JN',
+			'B23': 	'2JN',
+			'B24': 	'3JN',
+			'B25':  'JAS',
+			'B26':  'JUD',
+			'B27':  'REV'
+		}
+		return books.get(sequence, None)

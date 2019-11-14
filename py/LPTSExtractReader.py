@@ -299,8 +299,36 @@ class LPTSRecord:
 	def APIDevVideo(self):
 		return self.record.get("APIDevVideo")
 
+	def NTOrder(self):
+		result = self.record.get("NTOrder")
+		if result == None or result == "NA":
+			return "Traditional"
+		else:
+			return result
+
+	def OTOrder(self):
+		result = self.record.get("OTOrder")
+		if result == None or result == "NA":
+			return "Traditional"
+		else:
+			return result
 
 
+#<OTOrder>Dutch Traditional</OTOrder>
+#<OTOrder>Hebrew</OTOrder>
+#<OTOrder>Masoretic-Christian</OTOrder>
+#<OTOrder>Masoretic-Tanakh</OTOrder>
+#<OTOrder>NA</OTOrder>
+#<OTOrder>Panoramic</OTOrder>
+#<OTOrder>Septuagint</OTOrder>
+#<OTOrder>Traditional</OTOrder>
+#<OTOrder>Vulgate</OTOrder>
+
+#<NTOrder>Finnish</NTOrder>
+#<NTOrder>Plautdietsch</NTOrder>
+#<NTOrder>Russian</NTOrder>
+#<NTOrder>Traditional</NTOrder>
+#<NTOrder>Western Arabic</NTOrder>
 
 """
 config = Config()
