@@ -151,6 +151,8 @@ class LPTSRecord:
 	def recordLen(self):
 		return len(self.record.keys())
 
+	# Deprecated.  This does not work, because there on one record, and many damId keys point to it.
+	# This status is just the status of the last key added.
 	# This field was added to record when indexed by damId.  It is the status associated with that damId
 	def thisDamIdStatus(self):
 		return self.record.get("THIS_DAMID_STATUS")
@@ -312,6 +314,28 @@ class LPTSRecord:
 			return "Traditional"
 		else:
 			return result
+
+
+	def NTOrderTemp(self, filesetId):
+		# This fileset is missing any NTOrder
+		if filesetId in {"AZEIBTN2DA", "BLGAMBN1DA"}:
+			return "Russian"
+		# Note BLGAMB has different order from 16 than 64
+		if filesetId in {"BLGAMBN1DA16"}:
+			return "Traditional"
+		return self.NTOrder()
+
+
+	def OTOrderTemp(self, filesetId):
+		# These ENGESV filesets are labeled OTOrder = Hebrew
+		if filesetId in {"ENGESVC1DA", "ENGESVC2DA", "ENGESVC2DA16", "ENGESVO1DA", "ENGESVO2DA"}:
+			return "Traditional"
+		if filesetId in {"GRKEPTC1DA", "GRKEPTO1DA"}:
+			return "Septuagint"
+		result = self.OTOrder()
+		if result in {"Masoretic-Christian", "Masoretic-Tanakh"}:
+			return "Traditional"
+		return result
 
 
 #<OTOrder>Dutch Traditional</OTOrder>

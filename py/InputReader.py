@@ -46,6 +46,7 @@ class InputReader:
 		files = io.open(bucketPath, mode="r", encoding="utf-8")
 		for line in files:
 			if "delete" not in line:
+			#if "audio/ELLAPE" in line:   ####### debug
 				parts = line.strip().split("/")
 				if len(parts) == 4:
 					typeCode = parts[0]

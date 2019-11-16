@@ -5,6 +5,7 @@ import sys
 import re
 from operator import attrgetter
 from Booknames import *
+from LPTSExtractReader import *
 from InputReader import *
 from SQLUtility import *
 
@@ -40,6 +41,23 @@ class Filename:
 				self.errors.append("non-number bookSeq")
 
 
+	def setBookBySeq(self, bookSeq, otOrder, ntOrder, chapterMap):
+		self.bookSeq = bookSeq
+		if bookSeq[0] == "A":
+			orderFunction = otOrder + "OT"	
+		elif bookSeq[0] == "B":
+			orderFunction = ntOrder + "NT"
+		else:
+			self.errors.append("book sequence must begin A or B")
+			return
+		booknames = Booknames()
+		#print("orderFunction", orderFunction)
+		func = getattr(booknames, orderFunction)
+		bookId = func(bookSeq)	
+		if bookId != None:
+			self.setBookId(bookId, chapterMap)
+
+
 	def setFileSeq(self, fileSeq):
 		self.fileSeq = fileSeq
 		if not fileSeq.isdigit():
@@ -69,6 +87,7 @@ class Filename:
 
 
 	def setChapter(self, chapter, chapterMap):
+		#print("set chapter for ", self.bookId, chapter)
 		if chapter == "":
 			chapter = "0"
 		self.chapter = chapter
@@ -77,10 +96,10 @@ class Filename:
 			return
 		if not chapter.isdigit():
 			self.errors.append("non-number chap")
-		#elif self.bookId != None:
-		#	maxChapter = chapterMap.get(self.bookId)
-		#	if maxChapter != None and int(chapter) > int(maxChapter):
-		#		self.errors.append("chapter too large: %s for %s" % (chapter, self.bookId))
+		elif self.bookId != None:
+			maxChapter = chapterMap.get(self.bookId)
+			if maxChapter != None and int(chapter) > int(maxChapter):
+				self.errors.append("chapter too large: %s for %s" % (chapter, self.bookId))
 		self.chapterNum = int(self.chapter)
 
 
@@ -159,6 +178,10 @@ class FilenameParser:
 
 	def __init__(self, config):
 		self.config = config
+		lptsReader = LPTSExtractReader(config)
+		self.lptsFilesetMap = lptsReader.getAllFilesetMap()
+		self.otOrder = None
+		self.ntOrder = None
 		self.parsedList = []
 		self.unparsedList = []
 		self.successCount = {}
@@ -176,6 +199,25 @@ class FilenameParser:
 			FilenameRegex("text2", r"([A-Z][A-Z0-9])([0-9]*).(html)"),
 		)
 		self.audioTemplates = (
+			## using three did not pick up more than 2, but I think it will.
+			## {bookseq}___{chap}_{bookname}____{damid}.mp3   B01___01_Matthew_____ENGGIDN2DA.mp3
+			FilenameRegex("audio101", r"([AB][0-9]+)_+([0-9]+)_+([1-4]?[A-Za-z\-]+)_+([A-Z0-9]+).(mp3)"),
+			## {bookseq}___{chap}_{bookname}____{damid}.mp3   B01___01_1CorinthiansENGGIDN2DA.mp3
+			FilenameRegex("audio102", r"([AB][0-9]+)_+([0-9]+)_+([1-4]?[A-Za-z\-]+[a-z])([A-Z0-9]+).(mp3)"),
+			## {bookseq}___{chap}_{bookname1}_{bookname2}____{damid}.mp3   B01___01_San_Mateo___ACCIBSN1DA.mp3			
+			FilenameRegex("audio103", r"([AB][0-9]+)_+([0-9]+)_+([1-4]?[A-Za-z]+)_([1-4]?[A-Za-z]+)_+([A-Z0-9]+).(mp3)"),
+
+			## {bookseq}_{bookname}_{chap}_{damid}.mp3   B01_Genesis_01_S1COXWBT.mp3
+			FilenameRegex("audio106", r"([AB][0-9]+)_([1-4]?[A-Za-z]+)_([0-9]+)_([A-Z0-9]+).(mp3)"),
+
+			## {misc}_{damid}_Set_{fileseq}_{bookname}_{chap}_{verse_start}-{verse_end}.mp3   Nikaraj_P2KFTNIE_Set_051_Luke_21_1-19.mp3
+			FilenameRegex("audio107", r"([A-Za-z]+)_([A-Z0-9]+)_Set_([0-9]+)_([A-Za-z]+)_([0-9]+)_([0-9]+)-([0-9]+).(mp3)"),
+
+			## Set_{fileseq}_{bookname}_{chapter}_{versestart}-{verseend}__{damid}.mp3  Set_003_Luke_01_26-38__YMRWINP1DA.mp3
+			FilenameRegex("audio108", r"Set_([0-9]+)_([A-Za-z0-9]+)_([0-9]+)_([0-9]+)-([0-9]+)_+([A-Z0-9]+).(mp3)")
+
+		)
+		self.audioTemplates0 = (
 			## {bookseq}___{chap}_{bookname}____{damid}.mp3   B01___01_Matthew_____ENGGIDN2DA.mp3
 			FilenameRegex("audio1", r"([AB][0-9]+)_+([0-9]+)_([1-4]?[A-Za-z\-]+[a-z])_*([A-Z0-9]+).(mp3)"),
 			## room for audio 2
@@ -328,6 +370,41 @@ class FilenameParser:
 				file.setFileSeq(match.group(1))
 				file.setTitle(match.group(2))
 				file.setType(match.group(3))
+			elif template.name == "audio101" or template.name == "audio102":
+				file.setBookBySeq(match.group(1), self.otOrder, self.ntOrder, self.chapterMap)
+				file.setChapter(match.group(2), self.maxChapterMap)
+				file.setTitle(match.group(3))
+				file.setDamid(match.group(4))
+				file.setType(match.group(5))
+			elif template.name == "audio103":
+				file.setBookBySeq(match.group(1), self.otOrder, self.ntOrder, self.chapterMap)
+				file.setChapter(match.group(2), self.maxChapterMap)
+				file.setTitle(match.group(3) + "_" + match.group(4))
+				file.setDamid(match.group(5))
+				file.setType(match.group(6))
+			elif template.name == "audio106":
+				file.setBookSeq(match.group(1))
+				file.setBookName(match.group(2), self.chapterMap)
+				file.setChapter(match.group(3), self.maxChapterMap)
+				file.setDamid(match.group(4))
+				file.setType(match.group(5))
+			elif template.name == "audio107":
+				file.addUnknown(match.group(1))
+				file.setDamid(match.group(2))
+				file.setFileSeq(match.group(3))
+				file.setBookName(match.group(4), self.chapterMap)
+				file.setChapter(match.group(5), self.maxChapterMap)
+				file.setVerseStart(match.group(6))
+				file.setVerseEnd(match.group(7))
+				file.setType(match.group(8))
+			elif template.name == "audio108":
+				file.setFileSeq(match.group(1))
+				file.setBookName(match.group(2), self.chapterMap)
+				file.setChapter(match.group(3), self.maxChapterMap)
+				file.setVerseEnd(match.group(4))
+				file.setVerseEnd(match.group(5))
+				file.setDamid(match.group(6))
+				file.setType(match.group(7))
 			else:
 				print("ERROR: unknown templated %s" % (template.name))
 				sys.exit()
@@ -342,7 +419,7 @@ class FilenameParser:
 		extras = {"FRT":6, "INT":1, "BAK":2, "LXX":1, "CNC":2, "GLO":26, "TDX":1, "NDX":1, "OTH":5, 
 			"XXA":4, "XXB":3, "XXC":1, "XXD":1, "XXE":1, "XXF":1, "XXG":1}
 		self.chapterMap.update(extras)
-		corrections = {"MAL":3, "MAN":1, "PS2":1, "BAR":5}
+		corrections = {"MAL":3, "MAN":1, "PS2":1, "BAR":5, "EZA":9, "SIR":52}
 		self.chapterMap.update(corrections)
 		self.maxChapterMap = self.chapterMap.copy()
 		corrections = {"JOL":4, "PSA":151, "MAL":4, "BAR":6}
@@ -366,6 +443,12 @@ class FilenameParser:
 			print("ERROR: unknown type_code: %s" % (typeCode))
 
 		for prefix in filenamesMap.keys():
+			filesetId = prefix.split("/")[2]
+			#print("START fileset", filesetId)
+			lptsRecord = self.lptsFilesetMap.get(filesetId[0:10], None)
+			self.otOrder = lptsRecord.OTOrderTemp(filesetId) if lptsRecord != None else "Traditional"
+			self.ntOrder = lptsRecord.NTOrderTemp(filesetId) if lptsRecord != None else "Traditional"
+
 			filenames = filenamesMap[prefix]
 			(numErrors, files) = self.parseOneFileset3(templates, prefix, filenames)
 			if numErrors == 0:

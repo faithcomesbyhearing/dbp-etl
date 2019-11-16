@@ -385,7 +385,7 @@ class Booknames:
 #Vulgate
 
 	def TraditionalOT(self, sequence):
-		books = {
+		traditional = {
 			'A01':  'GEN',
 			'A02':  'EXO',
 			'A03':  'LEV',
@@ -424,50 +424,115 @@ class Booknames:
 			'A36':  'ZEP',
 			'A37':  'HAG',
 			'A38':  'ZEC',
-			'A39':  'MAL',
-			'B01':  'MAT',
-			'B02':  'MRK',
-			'B03':  'LUK',
-			'B04':  'JHN',
-			'B05':  'ACT',
-			'B06':  'ROM',
-			'B07':  '1CO',
-			'B08':  '2CO',
-			'B09':  'GAL',
-			'B10':  'EPH',
-			'B11':  'PHP',
-			'B12':  'COL',
-			'B13':	'1TH',
-			'B14':	'2TH',
-			'B15':  '1TI',
-			'B16':  '2TI',
-			'B17': 	'TIT',
-			'B18':  'PHM',
-			'B19':  'HEB',
-			'B20':  'JAS',
-			'B21':  '1PE',
-			'B22':  '2PE',
-			'B23': 	'1JN',
-			'B24': 	'2JN',
-			'B25': 	'3JN',
-			'B26':  'JUD',
-			'B27':  'REV'
-			#'Tobit':   		'TOB',
-			#'Judith':   	'JDT',
-			#'Wisdom':   	'WIS',
-			#'Sirach':   	'SIR',
-			#'Baruch':   	'BAR',
-			#'EpistJeremia':	'LJE',
-			#'1Maccabees':   '1MA',
-			#'2Maccabees':   '2MA',
-			#'3Maccabees':	'3MA',
-			#'4Maccabees':	'4MA',
+			'A39':  'MAL'
 		}
-		result = books.get(sequence, None)
-		return result
+		return traditional.get(sequence, None)
+
+
+	def SeptuagintOT(self, sequence):
+		septuagint = {
+			'A01':  'GEN',
+			'A02':  'EXO',
+			'A03':  'LEV',
+			'A04':  'NUM',
+			'A05':  'DEU',
+			'A06':  'JOS',
+			'A07':  'JDG',
+			'A08':  'RUT',
+			'A09':  '1SA',
+			'A10':  '2SA',
+			'A11':  '1KI',
+			'A12':  '2KI',
+			'A13':  '1CH',
+			'A14':  '2CH',
+			'A15':  'EZA', # Not sure EZA is correct codeEsdras 1
+			'A16':	'EZR',
+			'A17':  'NEH',
+			'A18': 	'TOB', # Tobit
+			'A19': 	'JDT', # Judith
+			'A20':  'ESG', # EST with additions
+			'A21': 	'1MA', # 1Maccabees
+			'A22': 	'2MA', # 2Maccabees
+			'A23': 	'3MA', # 3Maccabees
+			'A24':  'PSA', # is there a special code for PSA 151
+			# I think prayer of Manassa goes here
+			'A25':  'JOB',
+			'A26':  'PRO',
+			'A27':  'ECC',
+			'A28':  'SNG',
+			'A29':	'WIS', # Wisdom of Solomon
+			'A30': 	'SIR', # Sirach
+			# Does Psalm of Solomon go here
+			'A31':  'HOS',
+			'A32':  'AMO',	
+			'A33':  'MIC',
+			'A34':  'JOL',
+			'A35':  'OBA',	
+			'A36': 	'JON',
+			'A37':  'NAM',	
+			'A38':  'HAB',
+			'A39':  'ZEP',
+			'A40':  'HAG',
+			'A41':  'ZEC',
+			'A42':  'MAL',
+			'A43':  'ISA',
+			'A44':  'JER',
+			'A45': 	'BAR', # First book of Baruch
+			'A46':  'LAM',
+			'A47': 	'LJE', # Epistle Jeremiah
+			'A48':  'EZK',
+			'A49':  'DAG', # DAN with additions
+			'A50': 	'4MA' # 4Maccabees
+		}
+		return septuagint.get(sequence, None)
+
+
+	def HebrewOT(self, sequence):
+		hebrew = {
+			'A01':  'GEN',
+			'A02':  'EXO',
+			'A03':  'LEV',
+			'A04':  'NUM',
+			'A05':  'DEU',
+			'A06':  'JOS',
+			'A07':  'JDG',
+			'A08':  '1SA',
+			'A09':  '2SA',
+			'A10':  '1KI',
+			'A11':  '2KI',
+			'A12':  'ISA',
+			'A13':  'JER',
+			'A14':  'EZK',
+			'A15':  'HOS',
+			'A16':  'JOL',
+			'A17':  'AMO',
+			'A18':  'OBA',
+			'A19': 	'JON',
+			'A20':  'MIC',
+			'A21':  'NAM',
+			'A22':  'HAB',
+			'A23':  'ZEP',
+			'A24':  'HAG',
+			'A25':  'ZEC',
+			'A26':  'MAL',
+			'A27':  'PSA',
+			'A28':  'PRO',
+			'A29':  'JOB',
+			'A30':  'SNG',
+			'A31':  'RUT',
+			'A32':  'LAM',
+			'A33':  'ECC',
+			'A34':  'EST',
+			'A35':  'DAN',
+			'A36':  'EZR',
+			'A37':  'NEH',					
+			'A38':  '1CH',
+			'A39':  '2CH'
+		}
+		return hebrew.get(sequence, None)		
 
 	def TraditionalNT(self, sequence):
-		books = {
+		traditional = {
 			'B01':  'MAT',
 			'B02':  'MRK',
 			'B03':  'LUK',
@@ -496,10 +561,10 @@ class Booknames:
 			'B26':  'JUD',
 			'B27':  'REV'
 		}
-		return books.get(sequence, None)
+		return traditional.get(sequence, None)
 
 	def RussianNT(self, sequence):
-		books = {
+		russian = {
 			'B01':  'MAT',
 			'B02':  'MRK',
 			'B03':  'LUK',
@@ -528,11 +593,11 @@ class Booknames:
 			'B26':  'HEB',
 			'B27':  'REV'
 		}
-		return books.get(sequence, None)
+		return russian.get(sequence, None)
 
 
 	def PlautdietschNT(self, sequence):
-		books = {
+		diestsch = {
 			'B01':  'MAT',
 			'B02':  'MRK',
 			'B03':  'LUK',
@@ -561,11 +626,11 @@ class Booknames:
 			'B26':  'JUD',
 			'B27':  'REV'
 		}
-		return books.get(sequence, None)
+		return diestsch.get(sequence, None)
 
 
 	def FinnishNT(self, sequence):
-		books = {
+		finnish = {
 			'B01':  'MAT',
 			'B02':  'MRK',
 			'B03':  'LUK',
@@ -594,4 +659,4 @@ class Booknames:
 			'B26':  'JUD',
 			'B27':  'REV'
 		}
-		return books.get(sequence, None)
+		return finnish.get(sequence, None)
