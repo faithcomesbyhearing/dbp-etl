@@ -58,7 +58,7 @@ class BibleFileTags_Duration_Replace:
 
 	def getMP3File(self, s3Bucket, bibleId, filesetId, filename):
 		s3Key = "audio/%s/%s/%s" % (bibleId, filesetId, filename)
-		filepath = HLS_MP3_DIRECTORY + os.sep + s3Key
+		filepath = DUR_MP3_DIRECTORY + os.sep + s3Key
 		if not os.access(filepath, os.R_OK):
 			print("Must download %s" % (s3Key))
 			directory = filepath[:filepath.rfind("/")]
