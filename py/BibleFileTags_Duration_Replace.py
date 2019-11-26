@@ -3,17 +3,24 @@
 # This program downloads audio files one at a time, computes the duration with ffprobe,
 # and updates bible_file_tags with the correct value.
 #
+# This program processes files in file_id sequence, and requires a starting file_id as 
+# a command line parameter.  So, a stopped process can be restarted at any point.
+#
+# This program produces a log that contains a list of file_id's processed.
+# This is done to provide a restart capability.
+#
 # 1) Does a query of bible_fileset_connections, bible_filesets, and bible_files
 # so that it can obtain a complete key of all audio files.
 # 2) There should be a way to limit it to a fileset for testing purposes
 # 3) It should iterate over the records found, and download each file to a temp directory
 # 4) It should use ffprob to compute the duration
 # 5) It should generate replace statements from bible_file_tags
-# 6) This program needs a restart capability that knows what has already been finished.
 
 
 import sys
 import os
+import io
+import re
 from SQLUtility import *
 import boto3
 import subprocess
@@ -31,6 +38,9 @@ class BibleFileTags_Duration_Replace:
 
 	def __init__(self):
 		self.db = SQLUtility(DUR_HOST, DUR_PORT, DUR_USER, DUR_DB_NAME)
+		session = boto3.Session(profile_name=DUR_AWS_PROFILE)
+		self.s3Client = session.client("s3")
+		self.durationRegex = re.compile(r"duration=([0-9\.]+)")
 		self.output = io.open("BibleFileTags_Duration_Replace.log", mode="a")
 
 
@@ -42,7 +52,7 @@ class BibleFileTags_Duration_Replace:
 		if not fileId.isdigit():
 			print("ERROR: starting file_id must be integer")
 			sys.exit()
-		return fileId
+		return int(fileId)
 		
 
 	def getAudioKeys(self, startingFileId):
@@ -51,16 +61,24 @@ class BibleFileTags_Duration_Replace:
 			" WHERE bfc.hash_id = bs.hash_id"
 			" AND bs.hash_id = bf.hash_id"
 			" AND bs.set_type_code in ('audio', 'audio_drama')"
-			" AND bf.id >= %d"
+			" AND bf.id >= %s"
 			" ORDER BY bf.id")
 		return self.db.select(sql, (startingFileId,))
+
+#SELECT bfc.bible_id, bs.id, bf.file_name, bf.id
+#FROM bible_fileset_connections bfc, bible_filesets bs, bible_files bf
+#WHERE bfc.hash_id = bs.hash_id
+#AND bs.hash_id = bf.hash_id
+#AND bs.set_type_code in ('audio', 'audio_drama')
+#AND bf.id >= 2004987
+#ORDER BY bf.id
 
 
 	def getMP3File(self, s3Bucket, bibleId, filesetId, filename):
 		s3Key = "audio/%s/%s/%s" % (bibleId, filesetId, filename)
 		filepath = DUR_MP3_DIRECTORY + os.sep + s3Key
 		if not os.access(filepath, os.R_OK):
-			print("Must download %s" % (s3Key))
+			#print("Download %s" % (s3Key))
 			directory = filepath[:filepath.rfind("/")]
 			if not os.access(directory, os.R_OK):
 				os.makedirs(directory)
@@ -70,17 +88,18 @@ class BibleFileTags_Duration_Replace:
 
 	## modify to return duration, experiment with this or find in lptsmanager uses mutagen
 	def getDuration(self, file):
-		cmd = 'ffprobe -select_streams a -v error -show_format ' + file + ' | grep bit_rate'
+		cmd = 'ffprobe -select_streams a -v error -show_format ' + file + ' | grep duration'
 		response = subprocess.run(cmd, shell=True, capture_output=True)
-		result = self.bitrateRegex.search(str(response))
+		result = self.durationRegex.search(str(response))
 		if result != None:
-			return result.group(1)
+			dur = result.group(1)
+			return int(round(float(dur)))
 		else:
 			raise Exception("ffprobe for duration failed for %s" % (file))
 
 
 	def updateDatabase(self, fileId, duration):
-		sql = "REPLACE INTO bible_file_tags (file_id, tag, value, admin_only) VALUES (%d, 'duration', %d, 0)"
+		sql = "REPLACE INTO bible_file_tags (file_id, tag, value, admin_only) VALUES (%s, 'duration', %s, 0)"
 		self.db.execute(sql, (fileId, duration))
 		self.output.write("%d\n" % (fileId))
 
@@ -88,13 +107,16 @@ class BibleFileTags_Duration_Replace:
 	def process(self):
 		startingFileId = self.getCommandLine()
 		resultSet = self.getAudioKeys(startingFileId)
+		print("resultSet", len(resultSet))
 		for row in resultSet:
+			print(row)
 			bibleId = row[0]
 			filesetId = row[1]
 			filename = row[2]
 			fileId = row[3]
 			filepath = self.getMP3File("dbp-prod", bibleId, filesetId, filename)
 			duration = self.getDuration(filepath)
+			#print("duration", duration)
 			os.remove(filepath)
 			self.updateDatabase(fileId, duration)
 		self.db.close()
@@ -104,5 +126,7 @@ class BibleFileTags_Duration_Replace:
 
 tags = BibleFileTags_Duration_Replace()
 tags.process()
+
+# maxid 2004987
 
 
