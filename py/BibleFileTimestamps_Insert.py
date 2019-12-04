@@ -3,7 +3,8 @@
 # This program loads timings data into the bible_file_timestamps table.
 # It iterates over a series of files in a directory, or over all timings directories in a tree.
 #
-# Usage: python3 py/BibleFileTimestamps_Insert.py  bible_id or ALL
+# Usage: python3 py/BibleFileTimestamps_Insert.py  /top/dir/root/Eng*
+# Where the * selects all bible directories that start with Eng
 #
 # 
 
@@ -18,7 +19,6 @@ TIM_HOST = "localhost"
 TIM_USER = "root"
 TIM_PORT = 3306
 TIM_DB_NAME = "dbp"
-TIM_MP3_DIRECTORY = "/Volumes/FCBH/DBP_v2_data"
 
 
 class BibleFileTimestamps_Insert:
@@ -30,10 +30,15 @@ class BibleFileTimestamps_Insert:
 
 
 	def getCommandLine(self):
-		if len(sys.argv) < 2:
-			print("Usage: python3 py/BibleFileTimestamps_Insert.py  bible_id or ALL")
+		if len(sys.argv) < 2 or sys.argv[1].find("/") == -1:
+			print("Usage: python3 py/BibleFileTimestamps_Insert.py  /top/dir/root/Eng*")
 			sys.exit()
-		return " ".join(sys.argv[1:])
+		path_and_file = " ".join(sys.argv[1:])
+		pathDir, pathFile = os.path.split(path_and_file)
+		if not os.path.exists(pathDir):
+			print("ERROR: Directory %s does not exist" % (pathDir))
+			sys.exit()
+		return(pathDir, pathFile)
 
 
 	def getFilesetId(self, path):
@@ -64,10 +69,10 @@ class BibleFileTimestamps_Insert:
 		# Possibly we need a query that returns verse_start or verse_start and verse_end
 
 
-	def processBible(self, bible):
-		path = TIM_MP3_DIRECTORY + os.sep + bible + os.sep + bible + ".appDef"
+	def processBible(self, pathDir, bibleDir):
+		path = pathDir + os.sep + bibleDir + os.sep + bibleDir + ".appDef"
 		filesetId = self.getFilesetId(path) 
-		path = TIM_MP3_DIRECTORY + os.sep + bible + os.sep + bible + "_data" + os.sep + "timings"
+		path = pathDir + os.sep + bibleDir + os.sep + bibleDir + "_data" + os.sep + "timings"
 		values = []
 		for file in sorted(os.listdir(path)):
 			if not file.startswith("."):
@@ -86,20 +91,37 @@ class BibleFileTimestamps_Insert:
 						print("ERROR: No file for %s %s:%s" % (filesetId, book, chapter))
 				else:
 					raise Exception("Unable to parse file %s" % (file))
-		sql = "INSERT INTO bible_file_timestamps (bible_file_id, verse_start, verse_end, `timestamp`) VALUES (%s, %s, %s, %s)"
+
 		#for value in values:
 		#	print(value)
-		print("Row %d to be inserted for %s" % (len(values), bible))
-		self.db.executeBatch(sql, values)
+		deleteStmt = ("DELETE FROM bible_file_timestamps WHERE bible_file_id IN"
+			" (SELECT bf.id FROM bible_files bf, bible_filesets bs"
+			" WHERE bf.hash_id = bs.hash_id AND bs.id = %s)")
+		print("Row %d to be inserted for %s, %s" % (len(values), bibleDir, filesetId))
+		cursor = self.db.conn.cursor()
+		try:
+			cursor.execute(deleteStmt, (filesetId,))
+			insertStmt = "INSERT INTO bible_file_timestamps (bible_file_id, verse_start, verse_end, `timestamp`) VALUES (%s, %s, %s, %s)"		
+			cursor.executemany(insertStmt, values)
+			self.db.conn.commit()
+			cursor.close()
+		except Exception as err:
+			self.db.error(cursor, sql, err)
+
+
+#SELECT count(*) FROM bible_file_timestamps WHERE bible_file_id IN
+#(SELECT bf.id FROM bible_files bf, bible_filesets bs
+#WHERE bf.hash_id = bs.hash_id AND bs.id = %s)
 
 
 	def process(self):
-		bible = self.getCommandLine()
-		if bible.upper() == "ALL":
-			for bible in os.listdir(TIM_MP3_DIRECTORY):
-				self.processBible(bible)
-		else:
-			self.processBible(bible)
+		(pathDir, pathFile) = self.getCommandLine()
+		print(pathDir, pathFile)
+		if pathFile.endswith("*"):
+			pathFile = pathFile[:-1]
+		for bibleDir in os.listdir(pathDir):
+			if bibleDir.startswith(pathFile):
+				self.processBible(pathDir, bibleDir)
 		self.db.close()
 
 
