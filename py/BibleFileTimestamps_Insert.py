@@ -27,6 +27,7 @@ class BibleFileTimestamps_Insert:
 		self.db = SQLUtility(TIM_HOST, TIM_PORT, TIM_USER, TIM_DB_NAME)
 		self.xmlRegex = re.compile(r"<filename src.*>(.*)</filename>")
 		self.filenameRegex = re.compile(r"[A-Z0-9]+-[0-9]+-([A-Z1-4]+)-([0-9]+)-timing.txt")
+		self.timingRegex = re.compile(r"([0-9\.]+)\t([0-9\.]+)\t([0-9]+)([a-z]?)")
 
 
 	def getCommandLine(self):
@@ -83,10 +84,18 @@ class BibleFileTimestamps_Insert:
 					fileId = self.getFileId(filesetId, book, chapter)
 					if fileId != None:
 						timings = io.open(path + os.sep + file, mode="r")
+						priorVerse = 0
 						for line in timings:
-							parts = line.strip().split("\t")
-							timing = round(float(parts[0]), 2)
-							values.append((fileId, int(parts[2]), None, timing))
+							result = self.timingRegex.match(line)
+							timing = round(float(result.group(1)), 2)
+							verseStart = int(result.group(3))
+							versePart = result.group(4)
+							if versePart == "" or versePart == "a":
+								values.append((fileId, verseStart, None, timing))
+								# check that all verses are included
+								if (priorVerse + 1) != verseStart:
+									print("WARNING: %s %s:%s skipped from %d to %d" % (filesetId, book, chapter, priorVerse, verseStart))
+								priorVerse = verseStart
 					else:
 						print("ERROR: No file for %s %s:%s" % (filesetId, book, chapter))
 				else:
@@ -109,11 +118,6 @@ class BibleFileTimestamps_Insert:
 			self.db.error(cursor, sql, err)
 
 
-#SELECT count(*) FROM bible_file_timestamps WHERE bible_file_id IN
-#(SELECT bf.id FROM bible_files bf, bible_filesets bs
-#WHERE bf.hash_id = bs.hash_id AND bs.id = %s)
-
-
 	def process(self):
 		(pathDir, pathFile) = self.getCommandLine()
 		print(pathDir, pathFile)
@@ -128,4 +132,20 @@ class BibleFileTimestamps_Insert:
 ins = BibleFileTimestamps_Insert()
 ins.process()
 
+
+"""
+Script for generating outfile for test comparisons
+SELECT bible_file_id, verse_start, verse_end, `timestamp`
+FROM bible_file_timestamps WHERE bible_file_id IN
+(SELECT bf.id FROM bible_files bf, bible_filesets bs
+WHERE bf.hash_id = bs.hash_id AND bs.id = 'ENGKJVN2DA16')
+INTO OUTFILE '/tmp/bible_timestamps.out';
+"""
+
+"""
+Script to test DELETE
+SELECT count(*) FROM bible_file_timestamps WHERE bible_file_id IN
+(SELECT bf.id FROM bible_files bf, bible_filesets bs
+WHERE bf.hash_id = bs.hash_id AND bs.id = 'ENGKJVN2DA16')
+"""
 
