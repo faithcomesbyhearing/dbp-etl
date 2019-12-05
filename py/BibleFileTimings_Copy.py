@@ -1,10 +1,24 @@
 # BibleFileTimings_Copy.py
 
 # This program copies bible_file_timestamp data between sister filesets (eg N1 and N2 for a given bible), 
-# if the corresponding chapter durations are within some epsilon (eg a second by default, 
+# if the corresponding chapter durations are within some delta (eg a second by default, 
 # but setable via command line argument).
 #
-# Usage: python3 py/BibleFileTimings_Copy.py 
+# Usage: python3 py/BibleFileTimings_Copy.py
+#
+# 1. Read in two parameters, quality to permit copying, allowed average duration error to allow copying
+# 2. Group audio filesets by Bible
+# 3. Within Bible group look for filesets with reliable timings less or equal to than quality code x (input param)
+# 4. Look for other filesets within the same Bible group that do not have timings
+# 5. Compare durations for each file within fileset, take difference
+# 6. Average differences, and compare to allowed average duration error
+# 7. If the difference is within range, copy the timestamps
+# 8. During copy store the duration difference in bible_files.timing_est_err
+# 9. During copy store the source file_id in bible_files.timing_src of the file whose timing is copied
+
+# Consider storing timing_est_err in bible_file_tags for duration errors
+# Consider storing timing_est_err in bible_fileset_tags for raw copies error estimate
+# Consider storing timing_src in bible_file_tags which then does not have foreign key.
 
 
 import sys
