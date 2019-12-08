@@ -3,7 +3,7 @@
 # This program loads timings data into the bible_file_timestamps table.
 # It reads one CSV file that contains the timings, and inserts the contents as one batch.
 #
-# Usage: python3 py/BibleFileTimestamps_CSVInsert.py  /top/dir/filename.csv quality_code
+# Usage: python3 py/BibleFileTimestamps_CSVInsert.py  /top/dir/filename.csv timing_est_err
 # Sample Quality codes:
 # 0 = verified by known native speaker
 # 1 = verified by unknown native speaker
@@ -11,10 +11,8 @@
 # 3 = verified by non-speaker (eg members of the text team at FCBH who do this type of thing for a living)
 # 5 = automated spot-checked by non-native speaker (this is the case of most of the SAB appDef timings)
 # 9 = automated unverified (probably would never put these into the DB, but if I did at least I’d have this indicator of non-confidence)
-#
 
 import sys
-#import os
 import io
 import csv
 from SQLUtility import *
@@ -31,12 +29,11 @@ class BibleFileTimestamps_CSVInsert:
 	def __init__(self):
 		self.db = SQLUtility(TIM_HOST, TIM_PORT, TIM_USER, TIM_DB_NAME)
 		self.bookCodeMap = self.db.selectMap("SELECT id_osis, id FROM books", ())
-		print("bookCodeMap", len(self.bookCodeMap.keys()))
 
 
 	def getCommandLine(self):
 		if len(sys.argv) < 3:
-			print("Usage: python3 py/BibleFileTimestamps_CSVInsert.py  /top/dir/filename.csv quality_code")
+			print("Usage: python3 py/BibleFileTimestamps_CSVInsert.py  /top/dir/filename.csv timing_est_err")
 			sys.exit()
 		path = sys.argv[1]
 		if not os.path.exists(path):
@@ -76,15 +73,10 @@ class BibleFileTimestamps_CSVInsert:
 
 	def process(self):
 		(path, qualityCode) = self.getCommandLine()
-		print(path, qualityCode)
 		filesetIdList = self.getFilesetIdList(path)
-		print("filesetId List", filesetIdList)
 		filesetIdStr = "'" + "','".join(filesetIdList) + "'"
-		print("filesetId List", filesetIdStr)
 		fileIdMap = self.getFileIdMap(filesetIdStr)
-		print("fileIdMap", len(fileIdMap.keys()))
 		hashIdMap = self.getHashIdMap(filesetIdStr)
-		print("hashIdMap", len(hashIdMap.items()))
 		values = []
 		with open(path, 'rt') as csvfile:
 			reader = csv.reader(csvfile, delimiter=',', quotechar='"')
@@ -112,7 +104,7 @@ class BibleFileTimestamps_CSVInsert:
 		deleteStmt = ("DELETE FROM bible_file_timestamps WHERE bible_file_id IN"
 			" (SELECT bf.id FROM bible_files bf, bible_filesets bs"
 			" WHERE bf.hash_id = bs.hash_id AND bs.id = %s)")
-		errorStmt = ("INSERT INTO bible_fileset_tags (hash_id, name, description, admin_only, iso, language_id)"
+		errorStmt = ("REPLACE INTO bible_fileset_tags (hash_id, name, description, admin_only, iso, language_id)"
 			" VALUES (%s, 'timing_est_err', %s, 0, 'eng', 6414)")
 		insertStmt = "INSERT INTO bible_file_timestamps (bible_file_id, verse_start, verse_end, `timestamp`) VALUES (%s, %s, %s, %s)"
 		#for value in sorted(values):
@@ -120,14 +112,17 @@ class BibleFileTimestamps_CSVInsert:
 		#print(len(values))
 		try:
 			for filesetId in filesetIdList:
-				cursor.execute(deleteStmt, (filesetId,))
+				sql = deleteStmt
+				cursor.execute(sql, (filesetId,))
 				hashId = hashIdMap[filesetId] # intend to crash if not found
-				cursor.execute(errorStmt, (hashId, qualityCode))
-			cursor.executemany(insertStmt, values)
+				sql = errorStmt
+				cursor.execute(sql, (hashId, qualityCode))
+				sql = insertStmt
+			cursor.executemany(sql, values)
 			self.db.conn.commit()
 			cursor.close()
 		except Exception as err:
-			self.db.error(cursor, insertStmt, err)
+			self.db.error(cursor, sql, err)
 
 		self.db.close()
 
