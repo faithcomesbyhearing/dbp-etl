@@ -3,10 +3,11 @@
 # This program loads timings data into the bible_file_timestamps table.
 # It iterates over a series of files in a directory, or over all timings directories in a tree.
 #
-# Usage: python3 py/BibleFileTimestamps_Insert.py  /top/dir/root/Eng*
-# Where the * selects all bible directories that start with Eng
-#
-# 
+# Usage: python3 py/BibleFileTimestamps_Insert.py  /top/dir/root/Eng  timing_est_err
+# Where the 'Eng' selects all bible directories that start with 'Eng'
+# Usage: python3 py/BibleFileTimestamps_Insert.py  /top/dir/root/English KJV  timing_est_err
+# Where the 'English' and 'KJV' are part of one string 'Eng KJV'
+# Note: the use of wildcard * is NOT expected.
 
 import sys
 import os
@@ -31,15 +32,16 @@ class BibleFileTimestamps_Insert:
 
 
 	def getCommandLine(self):
-		if len(sys.argv) < 2 or sys.argv[1].find("/") == -1:
-			print("Usage: python3 py/BibleFileTimestamps_Insert.py  /top/dir/root/Eng*")
+		if len(sys.argv) < 3 or sys.argv[1].find("/") == -1:
+			print("Usage: python3 py/BibleFileTimestamps_Insert.py  /top/dir/root/Eng  timing_est_err")
 			sys.exit()
-		path_and_file = " ".join(sys.argv[1:])
+		path_and_file = " ".join(sys.argv[1:-1])
 		pathDir, pathFile = os.path.split(path_and_file)
 		if not os.path.exists(pathDir):
 			print("ERROR: Directory %s does not exist" % (pathDir))
 			sys.exit()
-		return(pathDir, pathFile)
+		timingErr = sys.argv[-1]
+		return(pathDir, pathFile, timingErr)
 
 
 	def getFilesetId(self, path):
@@ -70,7 +72,14 @@ class BibleFileTimestamps_Insert:
 		# Possibly we need a query that returns verse_start or verse_start and verse_end
 
 
-	def processBible(self, pathDir, bibleDir):
+	def getHashId(self, filesetId):
+		sql = ("SELECT hash_id FROM bible_filesets WHERE asset_id = 'dbp-prod'"
+			" AND set_type_code IN ('audio', 'audio_drama')"
+			" AND id = %s")
+		return self.db.selectScalar(sql, (filesetId))
+
+
+	def processBible(self, pathDir, bibleDir, timingErr):
 		path = pathDir + os.sep + bibleDir + os.sep + bibleDir + ".appDef"
 		filesetId = self.getFilesetId(path) 
 		path = pathDir + os.sep + bibleDir + os.sep + bibleDir + "_data" + os.sep + "timings"
@@ -106,12 +115,19 @@ class BibleFileTimestamps_Insert:
 		deleteStmt = ("DELETE FROM bible_file_timestamps WHERE bible_file_id IN"
 			" (SELECT bf.id FROM bible_files bf, bible_filesets bs"
 			" WHERE bf.hash_id = bs.hash_id AND bs.id = %s)")
+		errorStmt = ("REPLACE INTO bible_fileset_tags (hash_id, name, description, admin_only, iso, language_id)"
+			" VALUES (%s, 'timing_est_err', %s, 0, 'eng', 6414)")
+		insertStmt = "INSERT INTO bible_file_timestamps (bible_file_id, verse_start, verse_end, `timestamp`) VALUES (%s, %s, %s, %s)"		
 		print("Row %d to be inserted for %s, %s" % (len(values), bibleDir, filesetId))
 		cursor = self.db.conn.cursor()
 		try:
-			cursor.execute(deleteStmt, (filesetId,))
-			insertStmt = "INSERT INTO bible_file_timestamps (bible_file_id, verse_start, verse_end, `timestamp`) VALUES (%s, %s, %s, %s)"		
-			cursor.executemany(insertStmt, values)
+			sql = deleteStmt
+			cursor.execute(sql, (filesetId,))
+			hashId = self.getHashId(filesetId)
+			sql = errorStmt
+			cursor.execute(sql, (hashId, timingErr))
+			sql = insertStmt
+			cursor.executemany(sql, values)
 			self.db.conn.commit()
 			cursor.close()
 		except Exception as err:
@@ -119,18 +135,17 @@ class BibleFileTimestamps_Insert:
 
 
 	def process(self):
-		(pathDir, pathFile) = self.getCommandLine()
+		(pathDir, pathFile, timingErr) = self.getCommandLine()
 		print(pathDir, pathFile)
-		if pathFile.endswith("*"):
-			pathFile = pathFile[:-1]
 		for bibleDir in os.listdir(pathDir):
 			if bibleDir.startswith(pathFile):
-				self.processBible(pathDir, bibleDir)
+				self.processBible(pathDir, bibleDir, timingErr)
 		self.db.close()
 
 
 ins = BibleFileTimestamps_Insert()
 ins.process()
+
 
 
 """
