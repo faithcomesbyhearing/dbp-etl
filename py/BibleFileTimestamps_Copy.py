@@ -39,20 +39,20 @@ class BibleFileTimestamps_Copy:
 
 
 	def getCommandLine(self):
-		if len(sys.argv) < 4:
-			print("Usage: BibleFileTimestamps_Copy.py starting_bible_id ending_bible_id src_timing_err_est, duration_err_limit")
+		if len(sys.argv) < 5:
+			print("Usage: BibleFileTimestamps_Copy.py starting_bible_id ending_bible_id src_timing_err_est duration_err_limit")
 			sys.exit()
 		startingBibleId = sys.argv[1]
 		endingBibleId = sys.argv[2]
 		srcTimingErrEst = sys.argv[3]
 		durationErrLimit = sys.argv[4]
 		if not srcTimingErrEst.isdigit():
-			print("ERROR: timing_est_err %s must be numeric" % (srcTimingErrEst))
+			print("ERROR: src_timing_err_est %s must be numeric" % (srcTimingErrEst))
 			sys.exit()
 		if not durationErrLimit.isdigit():
 			print("ERROR: duration_err_limit %s must be numeric" % (durationErrLimit))
 			sys.exit()
-		return (startingBibleId, endingBibleId, srcTimingErrEst, durationErrLimit)
+		return (startingBibleId, endingBibleId, int(srcTimingErrEst), int(durationErrLimit))
 
 
 	## return sources if they qualify with quality limit, return all targets that have no source
@@ -71,12 +71,14 @@ class BibleFileTimestamps_Copy:
 		for row in resultSet:
 			if row[2] == None:
 				targets.append((row[0], row[1]))
-			elif row[2] <= timingEstErr:
+			elif int(row[2]) <= timingEstErr:
 				sources.append((row[0], row[1]))
+			else:
+				print("%s was not copied, because timing_est_err = %s." % (row[0], row[2]))
 		return (sources, targets)
 
 
-	def compareTwoFilesets(self, srcFilesetId, destFilesetId, durationErrLimit):
+	def compareTwoFilesets(self, srcFilesetId, srcHashId, destFilesetId, destHashId, durationErrLimit):
 		sql = ("SELECT bf1.id, bf2.id,"
 			" (cast(bf2.duration as signed) - cast(bf1.duration as signed)) AS timing_err_est,"
 			" bf1.book_id, bf1.chapter_start"
@@ -86,14 +88,16 @@ class BibleFileTimestamps_Copy:
 			" AND bf1.book_id = bf2.book_id"
 			" AND bf1.chapter_start = bf2.chapter_start"
 			" ORDER by bf1.file_name;")
-		resultSet = self.db.select(sql, (srcFilesetId, destFilesetId))
+		resultSet = self.db.select(sql, (srcHashId, destHashId))
 		if len(resultSet) == 0:
+			print("%s -> %s was not copied, because there are no books in common." % (srcFilesetId, destFilesetId))
 			return None
 		durationDeltas = []
 		for row in resultSet:
 			durationDeltas.append(abs(row[2]))
 		median = statistics.median(durationDeltas)
 		if median > durationErrLimit:
+			print("%s -> %s was not copied, because the median duration delta was %d." % (srcFilesetId, destFilesetId, median))
 			return None
 		return resultSet
 
@@ -123,16 +127,17 @@ class BibleFileTimestamps_Copy:
 	def process(self):
 		(startBibleId, endBibleId, srcTimingErrEst, durationErrLimit) = self.getCommandLine()
 		bibleIdList = self.db.selectList("SELECT id FROM bibles WHERE id BETWEEN %s AND %s", (startBibleId, endBibleId))
-		print(bibleIdList)
 		for bibleId in bibleIdList:
-			print(bibleId)
-			(sourceList, targetList = self.getFilesetSourceAndTargets(bibleId, srcTimingErrEst)
+			(sourceList, targetList) = self.getFilesetSourceAndTargets(bibleId, srcTimingErrEst)
 			for (targetFilesetId, targetHashId) in targetList:
-				for (sourceFilesetId, sourceHashId) in sourceList:
-					fileIds = self.compareTwoFilesets(sourceHashId, targetHashId, durationErrLimit)
-					if fileIds != None:
-						print("Insert %s rows of timestamps for %s" % (len(fileIds), targetFilesetId))
-						#self.copyTimings(targetHashId, fileIds)
+				if len(sourceList) == 0:
+					print("? -> %s was not copied, because there is no source." % (targetFilesetId))
+				else:
+					for (sourceFilesetId, sourceHashId) in sourceList:
+						fileIds = self.compareTwoFilesets(sourceFilesetId, sourceHashId, targetFilesetId, targetHashId, durationErrLimit)
+						if fileIds != None:
+							print("%s -> %s %d Timestamp rows inserted." % (sourceFilesetId, targetFilesetId, len(fileIds)))
+							#self.copyTimings(targetHashId, fileIds)
 		self.db.close()
 
 
