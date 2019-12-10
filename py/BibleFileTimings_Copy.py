@@ -1,4 +1,4 @@
-# BibleFileTimings_Copy.py
+# BibleFileTimestamps_Copy.py
 
 # This program copies bible_file_timestamp data between sister filesets (eg N1 and N2 for a given bible), 
 # if the corresponding chapter durations are within some delta (eg a second by default, 
@@ -32,7 +32,7 @@ DUR_PORT = 3306
 DUR_DB_NAME = "dbp"
 
 
-class BibleFileTimings_Copy:
+class BibleFileTimestamps_Copy:
 
 	def __init__(self):
 		self.db = SQLUtility(DUR_HOST, DUR_PORT, DUR_USER, DUR_DB_NAME)
@@ -40,7 +40,7 @@ class BibleFileTimings_Copy:
 
 	def getCommandLine(self):
 		if len(sys.argv) < 4:
-			print("Usage: BibleFileTimings_Copy.py starting_bible_id ending_bible_id src_timing_err_est, duration_err_limit")
+			print("Usage: BibleFileTimestamps_Copy.py starting_bible_id ending_bible_id src_timing_err_est, duration_err_limit")
 			sys.exit()
 		startingBibleId = sys.argv[1]
 		endingBibleId = sys.argv[2]
@@ -136,8 +136,8 @@ class BibleFileTimings_Copy:
 		self.db.close()
 
 
-duration = BibleFileTimings_Copy()
-duration.process()
+copy = BibleFileTimestamps_Copy()
+copy.process()
 
 ## getFilesetSourceAndTarget
 """
