@@ -4,28 +4,19 @@
 # if the corresponding chapter durations are within some delta (eg a second by default, 
 # but setable via command line argument).
 #
-# Usage: python3 py/BibleFileTimings_Copy.py
+# Usage: python3 py/BibleFileTimings_Copy.py starting_bible_id ending_bible_id src_timing_err_est, duration_err_limit
 #
-# 1. Read in two parameters, quality to permit copying, allowed average duration error to allow copying
-# 2. Group audio filesets by Bible
-# 3. Within Bible group look for filesets with reliable timings less or equal to than quality code x (input param)
-# 4. Look for other filesets within the same Bible group that do not have timings
-# 5. Compare durations for each file within fileset, take difference
-# 6. Average differences, and compare to allowed average duration error
-# 7. If the difference is within range, copy the timestamps
-# 8. During copy store the duration difference in bible_files.timing_est_err
-# 9. During copy store the source file_id in bible_files.timing_src of the file whose timing is copied
+# 1. Read in four parameters, starting_bible_id, ending_bible_id, src_timing_err_est, duration_err_limit
+# 2. Iterate over bible_id's, find group of fileset_ids for each bible_id
+# 3. Find all fileset_id that have no timing_est_err, and create list of possible targets
+# 4. Find the OT fileset and the NT fileset with the best timing_err_est
+# 5. Iterate over each target, and each source within that target
+# 6. Compute duration differences between source.
+# 7. If there is a count, and median difference is within paramters
+# 8. Then perform copy, and update timing_id and timing_est_err
 
-# Note: there is also a need to recopy a fileset that has already been copied, because the source
-# timestamps have improved.
-
-# Note: if the BibleFileTimings_Insert program is given a reliability parameter,
-# how does this affect the ability to process over multiple Bibles.
-# Would it be better if the reliability were stored somewhere?
-
-# Consider storing timing_est_err in bible_file_tags for duration errors
-# Consider storing timing_est_err in bible_fileset_tags for raw copies error estimate
-# Consider storing timing_src in bible_file_tags which then does not have foreign key.
+# Note: This solution is going to redo a copy that has already been done using the best quality
+# timestamps available at that time.
 
 
 import sys
@@ -47,74 +38,104 @@ class BibleFileTimings_Copy:
 		self.db = SQLUtility(DUR_HOST, DUR_PORT, DUR_USER, DUR_DB_NAME)
 
 
-	# One option does all that can be done, skipping any already copied
-	# Another option does a specific bible_id, and does copy even when data exists
 	def getCommandLine(self):
-		if len(sys.argv) < 3:
-			print("Usage: BibleFileTimings_Copy.py source_err_limit_code duration_err_limit_in_sec [bible_id]")
+		if len(sys.argv) < 4:
+			print("Usage: BibleFileTimings_Copy.py starting_bible_id ending_bible_id src_timing_err_est, duration_err_limit")
 			sys.exit()
-		bibleId = sys.argv[3] if len(sys.argv) == 4 else None
-		return(sys.argv[1], sys.argv[2], bibleId)
+		startingBibleId = sys.argv[1]
+		endingBibleId = sys.argv[2]
+		srcTimingErrEst = sys.argv[3]
+		durationErrLimit = sys.argv[4]
+		if not srcTimingErrEst.isdigit():
+			print("ERROR: timing_est_err %s must be numeric" % (srcTimingErrEst))
+			sys.exit()
+		if not durationErrLimit.isdigit():
+			print("ERROR: duration_err_limit %s must be numeric" % (durationErrLimit))
+			sys.exit()
+		return (startingBibleId, endingBibleId, srcTimingErrEst, durationErrLimit)
 
 
-	## return a source if it qualifies with quality limit, return all targets that have no source
-	def getFilesetSourceAndTargets(self, bibleId, qualityLimit):
-		sql = ("SELECT bf.id, bft.description AS timing_est_err"
+	## return sources if they qualify with quality limit, return all targets that have no source
+	def getFilesetSourceAndTargets(self, bibleId, timingEstErr):
+		sql = ("SELECT bf.id, bf.hash_id, bft.description AS timing_est_err"
 			" FROM bible_filesets bf" 
 			" INNER JOIN bible_fileset_connections bfc ON bf.hash_id = bfc.hash_id"
 			" LEFT OUTER JOIN bible_fileset_tags bft ON bf.hash_id = bft.hash_id"
 			" AND bft.name = 'timing_est_err'"
 			" WHERE bfc.bible_id = %s"
 			" AND bf.set_type_code IN ('audio', 'audio_drama')"
-			" ORDER BY bft.description")
+			" ORDER BY bft.description desc")
 		resultSet = self.db.select(sql, (bibleId,))
+		sources = []
 		targets = []
 		for row in resultSet:
-			if row[1] == None:
-				targets.append(row[0])
-			else:
-				if row[1] <= qualityLimit and len(targets) > 0:
-					return (row[0], targets)
-		return (None, None)
+			if row[2] == None:
+				targets.append((row[0], row[1]))
+			elif row[2] <= timingEstErr:
+				sources.append((row[0], row[1]))
+		return (sources, targets)
 
 
-	def selectDurations(self, filesetId):
-		sql = ("SELECT concat(book_id, ':', chapter_start), duration FROM bible_files WHERE hash_id IN"
-				" (SELECT hash_id FROM bible_filesets WHERE id = %s)")
-		return self.db.selectMap(sql, (filesetId,))
+	def compareTwoFilesets(self, srcFilesetId, destFilesetId, durationErrLimit):
+		sql = ("SELECT bf1.id, bf2.id,"
+			" abs(cast(bf1.duration as signed) - cast(bf2.duration as signed)) AS timing_err_est,"
+			" bf1.book_id, bf1.chapter_start"
+			" FROM bible_files bf1, bible_files bf2"
+			" WHERE bf1.hash_id = %s"
+			" AND bf2.hash_id = %s"
+			" AND bf1.book_id = bf2.book_id"
+			" AND bf1.chapter_start = bf2.chapter_start"
+			" ORDER by bf1.file_name;")
+		resultSet = self.db.select(sql, (srcFilesetId, destFilesetId))
+		if len(resultSet) == 0:
+			return None
+		durationDeltas = []
+		for row in resultSet:
+			durationDeltas.append(row[2])
+		median = statistics.median(durationDeltas)
+		if median > durationErrLimit:
+			return None
+		return resultSet
 
 
-	def copyTimings(self, srcFilesetId, destFilesetId):
-		sql = ("INSERT INTO bible_file_timestamps (bible_file_id, verse_start, verse_end, `timestamp`"
-			" SELECT ")
-		# insert select to copy the timings
-		
+	def copyTimings(self, resultSet):
+		cursor = self.db.conn.cursor()
+		insertStmt = ("INSERT INTO bible_file_timestamps (bible_file_id, verse_start, verse_end, `timestamp`"
+			" SELECT %s, verse_start, verse_end, `timestamp`"
+			" FROM bible_file_timestamps WHERE bible_file_id = %s")
+		timingIdStmt = ("REPLACE INTO bible_file_tags (file_id, tag, value, admin_only) VALUES (%s, 'timing_id', %s, 0)")
+		TimingErrStmt = ("REPLACE INTO bible_file_tags (file_id, tag, value, admin_only) VALUES (%s, 'timing_est_err', %s, 0)")
+		try:
+			sql = insertStmt
+			values = []
+			for row in resultSet:
+				values.append((row[1], row[0]))
+			self.db.execute(sql, values)
+			sql = timingIdStmt
+			self.db.execute(sql, values)
+			sql = TimingErrStmt
+			values = []
+			for row in resultSet:
+				values.append((row[1], row[2]))
+			self.db.execute(sql, values)
+			self.db.conn.commit()
+			cursor.close()
+		except Exception as err:
+			self.db.error(cursor, sql, err)
+
 
 	def process(self):
-		(qualityLimit, durationErrLimit, bibleId) = self.getCommandLine()
-		if bibleId != None:
-			bibleIdList = [bibleId]
-		else:
-			bibleIdList = self.db.selectList("SELECT id FROM bibles")
-			print(bibleIdList)
-			for bibleId in bibleIdList:
-				(srcFilesetId, targetList = self.getFilesetSourceAndTargets(bibleId, qualityLimit)
-				if srcFilesetId != None:
-					print(srcFilesetId)
-					srcDurationMap = self.selectDurations(srcFilesetId) # book:chapter -> duration
-
-					for destFilesetId in targetList:
-						durationMap = self.selectDurations(destFilesetId)
-						durationDeltas = []
-						for bookChapter, duration in srcDurationMap.items():
-							compareDuration = durationMap.get(bookChapter)
-							if compareDuration != None:
-								durationDeltas.append((duration - compareDuration))
-								print("%s,%s,%s,%s,%d" % (bibleId, srcFilesetId, destFilesetId, bookChapter, (duration - compareDuration)))
-						avgDuration = statistics.mean(durationDeltas)
-						if avgDuration < durationErrLimit:
-							self.copyTimings(srcFilesetId, destFilesetId)
-
+		(startBibleId, endBibleId, srcTimingErrEst, durationErrLimit) = self.getCommandLine()
+		bibleIdList = self.db.selectList("SELECT id FROM bibles WHERE id BETWEEN %s AND %s", (startBibleId, endBibleId))
+		print(bibleIdList)
+		for bibleId in bibleIdList:
+			print(bibleId)
+			(sourceList, targetList = self.getFilesetSourceAndTargets(bibleId, srcTimingErrEst)
+			for (targetFilesetId, targetHashId) in targetList:
+				for (sourceFilesetId, sourceHashId) in sourceList:
+					fileIds = self.compareTwoFilesets(sourceHashId, targetHashId, durationErrLimit)
+					if fileIds != None:
+						self.copyTimings(fileIds)
 		self.db.close()
 
 
@@ -123,34 +144,23 @@ duration.process()
 
 ## getFilesetSourceAndTarget
 """
-SELECT bf.id, bft.description AS timing_est_err
+SELECT bf.id, bf.hash_id, bft.description AS timing_est_err
 FROM bible_filesets bf 
 INNER JOIN bible_fileset_connections bfc ON bf.hash_id = bfc.hash_id
 LEFT OUTER JOIN bible_fileset_tags bft ON bf.hash_id = bft.hash_id AND bft.name = 'timing_est_err'
 WHERE bfc.bible_id = 'ENGESV'
 AND bf.set_type_code IN ('audio', 'audio_drama')
-ORDER BY bft.description;
+ORDER BY bft.description desc;
 """
 
-## Query to get all timings for a fileset
-## Do I need to do this one file at a time
+## compareDurations of two filesets
 """
-SELECT bft.bible_file_id, bft.verse_start, bft.verse_end, bft.`timestamp` 
-FROM bible_file_timestamps bft
-INNER JOIN bible_files bf ON bft.bible_file_id = bf.id
-INNER JOIN bible_filesets bs ON bf.hash_id = bs.hash_id
-AND bs.id = 'ENGKJVN2DA16'
-
-
+SELECT bf1.id, bf2.id, bf1.book_id, bf1.chapter_start,
+abs(cast(bf1.duration as signed) - cast(bf2.duration as signed)) as timing_err_est
+FROM bible_files bf1, bible_files bf2
+WHERE bf2.hash_id = '2348543d7b4b' -- 'ENGESVN2DA'
+AND bf1.hash_id = '4b3ad0194aee' -- 'ENGESVC2DA16'
+AND bf1.book_id = bf2.book_id
+AND bf1.chapter_start = bf2.chapter_start
+ORDER by bf1.file_name;
 """
-
-"""
-SELECT bf.id FROM bible_files bf
-JOIN bible_filesets bs ON bf.hash_id = bs.hash_id
-AND bs.id = 'ENGKJVN2DA';
-
-"""
-
-
-
-

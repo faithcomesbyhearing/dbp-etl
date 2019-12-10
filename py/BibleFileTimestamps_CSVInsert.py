@@ -41,7 +41,7 @@ class BibleFileTimestamps_CSVInsert:
 			sys.exit()
 		qualityCode = sys.argv[2]
 		if not qualityCode.isdigit():
-			print("ERROR: Quality code %s must be numeric" % (qualityCode))
+			print("ERROR: timing_est_err %s must be numeric" % (qualityCode))
 			sys.exit()
 		return (path, qualityCode)
 
