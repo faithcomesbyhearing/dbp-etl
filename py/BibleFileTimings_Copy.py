@@ -78,7 +78,7 @@ class BibleFileTimings_Copy:
 
 	def compareTwoFilesets(self, srcFilesetId, destFilesetId, durationErrLimit):
 		sql = ("SELECT bf1.id, bf2.id,"
-			" abs(cast(bf1.duration as signed) - cast(bf2.duration as signed)) AS timing_err_est,"
+			" (cast(bf2.duration as signed) - cast(bf1.duration as signed)) AS timing_err_est,"
 			" bf1.book_id, bf1.chapter_start"
 			" FROM bible_files bf1, bible_files bf2"
 			" WHERE bf1.hash_id = %s"
@@ -91,37 +91,33 @@ class BibleFileTimings_Copy:
 			return None
 		durationDeltas = []
 		for row in resultSet:
-			durationDeltas.append(row[2])
+			durationDeltas.append(abs(row[2]))
 		median = statistics.median(durationDeltas)
 		if median > durationErrLimit:
 			return None
 		return resultSet
 
 
-	def copyTimings(self, resultSet):
-		cursor = self.db.conn.cursor()
+	def copyTimings(self, filesetIdhashId, resultSet):
+		deleteStmt = ("DELETE FROM bible_file_timestamps WHERE bible_file_id IN"
+			" (SELECT id FROM bible_files WHERE hash_id = %s)")
+		values = [(hashId,)]
+		statements.append(deleteStmt, values)
 		insertStmt = ("INSERT INTO bible_file_timestamps (bible_file_id, verse_start, verse_end, `timestamp`"
 			" SELECT %s, verse_start, verse_end, `timestamp`"
 			" FROM bible_file_timestamps WHERE bible_file_id = %s")
+		values = []
+		for row in resultSet:
+			values.append((row[1], row[0]))
+		statements.append((insertStmt, values))
 		timingIdStmt = ("REPLACE INTO bible_file_tags (file_id, tag, value, admin_only) VALUES (%s, 'timing_id', %s, 0)")
-		TimingErrStmt = ("REPLACE INTO bible_file_tags (file_id, tag, value, admin_only) VALUES (%s, 'timing_est_err', %s, 0)")
-		try:
-			sql = insertStmt
-			values = []
-			for row in resultSet:
-				values.append((row[1], row[0]))
-			self.db.execute(sql, values)
-			sql = timingIdStmt
-			self.db.execute(sql, values)
-			sql = TimingErrStmt
-			values = []
-			for row in resultSet:
-				values.append((row[1], row[2]))
-			self.db.execute(sql, values)
-			self.db.conn.commit()
-			cursor.close()
-		except Exception as err:
-			self.db.error(cursor, sql, err)
+		statements.append((timingIdStmt, values))
+		timingErrStmt = ("REPLACE INTO bible_file_tags (file_id, tag, value, admin_only) VALUES (%s, 'timing_est_err', %s, 0)")	
+		values = []
+		for row in resultSet:
+			values.append((row[1], row[2]))
+		statements.append((timingErrStmt, values))
+		self.db.executeTransaction(statements)
 
 
 	def process(self):
@@ -135,7 +131,8 @@ class BibleFileTimings_Copy:
 				for (sourceFilesetId, sourceHashId) in sourceList:
 					fileIds = self.compareTwoFilesets(sourceHashId, targetHashId, durationErrLimit)
 					if fileIds != None:
-						self.copyTimings(fileIds)
+						print("Insert %s rows of timestamps for %s" % (len(fileIds), targetFilesetId))
+						#self.copyTimings(targetHashId, fileIds)
 		self.db.close()
 
 

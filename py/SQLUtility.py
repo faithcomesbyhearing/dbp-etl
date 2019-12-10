@@ -45,6 +45,17 @@ class SQLUtility:
 			self.error(cursor, statement, err)
 
 
+	def executeTransaction(self, statements):
+		cursor = self.conn.cursor()
+		try:
+			for statement in statements:
+				cursor.executemany(statement[0], statement[1])
+			self.conn.commit()
+			cursor.close()
+		except Exception as err:
+			self.error(cursor, statement, err)
+
+
 	def select(self, statement, values):
 		#print("SQL:", statement, values)
 		cursor = self.conn.cursor()
