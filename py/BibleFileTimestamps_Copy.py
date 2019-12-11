@@ -18,6 +18,9 @@
 # Note: This solution is going to redo a copy that has already been done using the best quality
 # timestamps available at that time.
 
+# Required for the program to increase size of bible_file_tags.tag
+# alter table bible_file_tags modify tag varchar(16) not null;
+
 
 import sys
 import os
@@ -102,21 +105,26 @@ class BibleFileTimestamps_Copy:
 		return resultSet
 
 
-	def copyTimings(self, filesetIdhashId, resultSet):
+	def copyTimings(self, hashId, resultSet):
+		statements = []
 		deleteStmt = ("DELETE FROM bible_file_timestamps WHERE bible_file_id IN"
 			" (SELECT id FROM bible_files WHERE hash_id = %s)")
 		values = [(hashId,)]
-		statements.append(deleteStmt, values)
-		insertStmt = ("INSERT INTO bible_file_timestamps (bible_file_id, verse_start, verse_end, `timestamp`"
+		statements.append((deleteStmt, values))
+		deleteTagStmt = ("DELETE FROM bible_file_tags WHERE file_id IN"
+			" (SELECT id FROM bible_files WHERE hash_id = %s)"
+			" AND tag IN ('timing_id', 'timing_est_err')")	
+		statements.append((deleteTagStmt, values))
+		insertStmt = ("INSERT INTO bible_file_timestamps (bible_file_id, verse_start, verse_end, `timestamp`)"
 			" SELECT %s, verse_start, verse_end, `timestamp`"
 			" FROM bible_file_timestamps WHERE bible_file_id = %s")
 		values = []
 		for row in resultSet:
 			values.append((row[1], row[0]))
 		statements.append((insertStmt, values))
-		timingIdStmt = ("REPLACE INTO bible_file_tags (file_id, tag, value, admin_only) VALUES (%s, 'timing_id', %s, 0)")
+		timingIdStmt = ("INSERT INTO bible_file_tags (file_id, tag, value, admin_only) VALUES (%s, 'timing_id', %s, 0)")
 		statements.append((timingIdStmt, values))
-		timingErrStmt = ("REPLACE INTO bible_file_tags (file_id, tag, value, admin_only) VALUES (%s, 'timing_est_err', %s, 0)")	
+		timingErrStmt = ("INSERT INTO bible_file_tags (file_id, tag, value, admin_only) VALUES (%s, 'timing_est_err', %s, 0)")	
 		values = []
 		for row in resultSet:
 			values.append((row[1], row[2]))
@@ -137,7 +145,7 @@ class BibleFileTimestamps_Copy:
 						fileIds = self.compareTwoFilesets(sourceFilesetId, sourceHashId, targetFilesetId, targetHashId, durationErrLimit)
 						if fileIds != None:
 							print("%s -> %s %d Timestamp rows inserted." % (sourceFilesetId, targetFilesetId, len(fileIds)))
-							#self.copyTimings(targetHashId, fileIds)
+							self.copyTimings(targetHashId, fileIds)
 		self.db.close()
 
 
