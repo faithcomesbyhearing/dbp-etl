@@ -94,14 +94,14 @@ class BibleFileTimestamps_Copy:
 		resultSet = self.db.select(sql, (srcHashId, destHashId))
 		if len(resultSet) == 0:
 			print("%s -> %s was not copied, because there are no books in common." % (srcFilesetId, destFilesetId))
-			return None
+			return []
 		durationDeltas = []
 		for row in resultSet:
 			durationDeltas.append(abs(row[2]))
 		median = statistics.median(durationDeltas)
 		if median > durationErrLimit:
 			print("%s -> %s was not copied, because the median duration delta was %d." % (srcFilesetId, destFilesetId, median))
-			return None
+			return []
 		return resultSet
 
 
@@ -141,11 +141,14 @@ class BibleFileTimestamps_Copy:
 				if len(sourceList) == 0:
 					print("? -> %s was not copied, because there is no source." % (targetFilesetId))
 				else:
+					copyList = []
 					for (sourceFilesetId, sourceHashId) in sourceList:
 						fileIds = self.compareTwoFilesets(sourceFilesetId, sourceHashId, targetFilesetId, targetHashId, durationErrLimit)
-						if fileIds != None:
-							print("%s -> %s %d Timestamp rows inserted." % (sourceFilesetId, targetFilesetId, len(fileIds)))
-							self.copyTimings(targetHashId, fileIds)
+						if len(fileIds) > 0:
+							print("%s -> %s Timestamps inserted for %d files." % (sourceFilesetId, targetFilesetId, len(fileIds)))
+						copyList += fileIds
+					if len(copyList) > 0:
+						self.copyTimings(targetHashId, copyList)
 		self.db.close()
 
 
