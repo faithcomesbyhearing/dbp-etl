@@ -177,3 +177,24 @@ AND bf1.book_id = bf2.book_id
 AND bf1.chapter_start = bf2.chapter_start
 ORDER by bf1.file_name;
 """
+
+## Testing SQL
+"""
+SELECT bs.id, count(*)
+FROM bible_filesets bs
+INNER JOIN bible_files bf ON bs.hash_id = bf.hash_id
+INNER JOIN bible_file_timestamps bft ON bf.id = bft.bible_file_id
+GROUP BY bs.id;
+
+SELECT bf.book_id, bf.chapter_start, bs.id, count(*), sum(bft.verse_start)
+FROM bible_filesets bs
+INNER JOIN bible_files bf ON bs.hash_id = bf.hash_id
+INNER JOIN bible_file_timestamps bft ON bf.id = bft.bible_file_id
+GROUP BY bf.book_id, bf.chapter_start, bs.id;
+
+SELECT bs.id, bf.book_id, bf.chapter_start, bft.tag, bft.value
+FROM bible_filesets bs
+INNER JOIN bible_files bf ON bs.hash_id = bf.hash_id
+INNER JOIN bible_file_tags bft ON bf.id = bft.file_id
+WHERE bft.tag IN ('timing_id', 'timing_est_err')
+"""
