@@ -316,28 +316,6 @@ class LPTSRecord:
 			return result
 
 
-	def NTOrderTemp(self, filesetId):
-		# This fileset is missing any NTOrder
-		if filesetId in {"AZEIBTN2DA", "BLGAMBN1DA"}:
-			return "Russian"
-		# Note BLGAMB has different order from 16 than 64
-		if filesetId in {"BLGAMBN1DA16"}:
-			return "Traditional"
-		return self.NTOrder()
-
-
-	def OTOrderTemp(self, filesetId):
-		# These ENGESV filesets are labeled OTOrder = Hebrew
-		if filesetId in {"ENGESVC1DA", "ENGESVC2DA", "ENGESVC2DA16", "ENGESVO1DA", "ENGESVO2DA"}:
-			return "Traditional"
-		if filesetId in {"GRKEPTC1DA", "GRKEPTO1DA"}:
-			return "Septuagint"
-		result = self.OTOrder()
-		if result in {"Masoretic-Christian", "Masoretic-Tanakh"}:
-			return "Traditional"
-		return result
-
-
 #<OTOrder>Dutch Traditional</OTOrder>
 #<OTOrder>Hebrew</OTOrder>
 #<OTOrder>Masoretic-Christian</OTOrder>

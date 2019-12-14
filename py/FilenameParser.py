@@ -44,9 +44,9 @@ class Filename:
 	def setBookBySeq(self, bookSeq, otOrder, ntOrder, chapterMap):
 		self.bookSeq = bookSeq
 		if bookSeq[0] == "A":
-			orderFunction = otOrder + "OT"	
+			orderFunction = otOrder.replace("-", "") + "OT"	
 		elif bookSeq[0] == "B":
-			orderFunction = ntOrder + "NT"
+			orderFunction = ntOrder.replace("-", "") + "NT"
 		else:
 			self.errors.append("book sequence must begin A or B")
 			return
@@ -446,8 +446,10 @@ class FilenameParser:
 			filesetId = prefix.split("/")[2]
 			#print("START fileset", filesetId)
 			lptsRecord = self.lptsFilesetMap.get(filesetId[0:10], None)
-			self.otOrder = lptsRecord.OTOrderTemp(filesetId) if lptsRecord != None else "Traditional"
-			self.ntOrder = lptsRecord.NTOrderTemp(filesetId) if lptsRecord != None else "Traditional"
+			#self.otOrder = lptsRecord.OTOrderTemp(filesetId) if lptsRecord != None else "Traditional"
+			#self.ntOrder = lptsRecord.NTOrderTemp(filesetId) if lptsRecord != None else "Traditional"
+			self.otOrder = self.OTOrderTemp(filesetId, lptsRecord)
+			self.ntOrder = self.NTOrderTemp(filesetId, lptsRecord)
 
 			filenames = filenamesMap[prefix]
 			(numErrors, files) = self.parseOneFileset3(templates, prefix, filenames)
@@ -636,6 +638,47 @@ class FilenameParser:
 		for parser, count in self.successCount.items():
 			print("Success Count: %s -> %s" % (parser, count))
 
+
+	def NTOrderTemp(self, filesetId, lptsRecord):
+		# This fileset is missing any NTOrder
+		if filesetId in {"AZEIBTN2DA", "BLGAMBN1DA"}:
+			return "Russian"
+		# Note BLGAMB has different order from 16 than 64
+		if filesetId in {"BLGAMBN1DA16"}:
+			return "Traditional"
+		#return self.NTOrder()
+		if filesetId in {"RUSBIBN1DA", "RUSBIBN1DA16"}:
+			return "Traditional"
+		if filesetId in {"RU1IBSN2DA", "RUSSVRN1DA"}:
+			return "Russian"
+		if lptsRecord != None:
+			return lptsRecord.NTOrder()
+		else:
+			return "Traditional"
+
+
+	def OTOrderTemp(self, filesetId, lptsRecord):
+		if filesetId in {"CASNTMP1DA"}:
+			return "Hebrew"
+		# These ENGESV filesets are labeled OTOrder = Hebrew
+		if filesetId in {"ENGESVC1DA", "ENGESVC2DA", "ENGESVC2DA16", "ENGESVO1DA", "ENGESVO2DA"}:
+			return "Traditional"
+		if filesetId in {"ENGNABC1DA"}:
+			return "Catholic"
+		if filesetId in {"GRKEPTC1DA", "GRKEPTO1DA"}:
+			return "Septuagint"
+		if filesetId in {"HBRHMTO2DA", "HBRHMTC2DA"}:
+			return "Hebrew"
+		#if filesetId in {"TRNNTMP1DA"}:
+		#	return "Hebrew" NOT Traditional, Not Hebrew
+		#result = self.OTOrder()
+		#if result in {"Masoretic-Christian", "Masoretic-Tanakh"}:
+		#	return "Traditional"
+		#return result
+		if lptsRecord != None:
+			return lptsRecord.OTOrder()
+		else:
+			return "Traditional"
 
 config = Config()
 parser = FilenameParser(config)
