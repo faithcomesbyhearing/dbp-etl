@@ -532,7 +532,7 @@ class Booknames:
 		return hebrew.get(sequence, None)	
 
 	def MasoreticChristianOT(self, sequence):
-		return self.TraditionalOT(sequence)	
+		return self.TraditionalOT(sequence)
 
 
 	def CatholicOT(self, sequence):   # This is my name for it. It must be corrected
@@ -585,6 +585,33 @@ class Booknames:
 			'A46':	'MAL'
 		}
 		return catholic.get(sequence, None)
+
+
+	def TRNNTMOT(self, sequence):
+		trnntm = {
+			'A01':  'GEN',
+			'A02':  'EXO',
+			'A03':  'LEV',
+			'A04':  'NUM',
+			'A05':  'DEU',
+			'A06':  'JOS',
+			'A07':  'JDG',
+			'A08':  'RUT',
+			'A09':  '1SA',
+			'A10':  '2SA',
+			'A11':  '1CH',
+			'A12':  '2CH',
+			'A13':	'2KI',
+			'A14':  'ISA',
+			'A15':  'JER',
+			'A16':  'MIC',
+			'A17':  'HOS',
+			'A18':  'PSA',
+			'A19':  'ZEC',
+			'A20': 	'JON'
+		}
+		return trnntm.get(sequence, None)
+
 
 	def TraditionalNT(self, sequence):
 		traditional = {

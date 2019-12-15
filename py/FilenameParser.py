@@ -658,6 +658,22 @@ class FilenameParser:
 
 
 	def OTOrderTemp(self, filesetId, lptsRecord):
+		# The following are all listed as Masoretic-Christian
+		if filesetId in {"AC1IBSN2DA", "AC1IBSN2DA16", "AK1BSGN1DA", "AK1BSGN1DA16", "AK1BSGN2DA", 
+		"AK1BSGN2DA16", "AMHBIBO1DA", "AMHBIBO1DA16", "ARBBIBC1DA", "ARBBIBC1DA16", "ARBBIBN1DA",
+		"ARBBIBN1DA16", "ARBBIBO1DA", "ARBBIBO1DA16", "ARZVDVO2DA", "AYMBSBN2DA", "AYMBSBN2DA16",
+		"AYMSBUN2DA", "AYMSBUN2DA16", "BAMLSBP1DA", "BAMLSBP1DA16", "BAMLSBP2DA", "BANIBSN2DA",
+		"BANIBSN2DA16", "BBABSBN2DA", "BBABSBN2DA16", "BKYBSNN1DA", "BKYBSNN2DA", "BQCSIMN2DA",
+		"BQCSIMN2DA16", "BQPSIMN1DA", "BQPSIMN1DA16", "BQPSIMN2DA", "BQPSIMN2DA16", "BTXLAIN1DA",
+		"BTXLAIN1DA16", "BTXLAIN2DA", "BTXLAIN2DA16", "BULBBSN1DA", "BULBBSN1DA16", "BULBBSN2DA",
+		"BULBBSN2DA16", "BUSSIMN1DA", "BUSSIMN1DA16", "BUSSIMN2DA", "BUSSIMN2DA16", "CABNVSN1DA",
+		"CABNVSN1DA16", "CAKSBGN2DA", "CAKSBGN2DA16", "CH1CNVC1DA", "CH1CNVC2DA", "CH1CNVN1DA",
+		"CH1CNVN2DA", "CH1CNVO1DA", "CH1CNVO1DA16", "CH1CNVO2DA", "CH1CNVO2DA16", "OJ1CBSN2DA",
+		"OJBCBSN2DA", "OJBCBSN2DA16", "CHNUN1N1DA", "CHNUN1N2DA", "CHNUN1O1DA", "CHNUN1O1DA16",
+		"CHNUN1O2DA", "CHNUN1O2DA16", "CHNUNVC1DA", "CHNUNVC2DA", "CHNUNVN1DA", "CHNUNVN2DA",
+		"CHNUNVN2DA16", "CHNUNVO1DA", "CHNUNVO1DA16", "CHNUNVO2DA16", "CT1TEVN2DA", "CT1TEVN2DA16",
+		"DAVBSKN1DA", "DAVBSKN1DA16", "DAVBSKN2DA", "DAVBSKN2DA16", "DNWLAIN1DA", "DNWLAIN1DA16"}:
+			return "Traditional"
 		if filesetId in {"CASNTMP1DA"}:
 			return "Hebrew"
 		# These ENGESV filesets are labeled OTOrder = Hebrew
@@ -669,13 +685,11 @@ class FilenameParser:
 			return "Septuagint"
 		if filesetId in {"HBRHMTO2DA", "HBRHMTC2DA"}:
 			return "Hebrew"
-		#if filesetId in {"TRNNTMP1DA"}:
-		#	return "Hebrew" NOT Traditional, Not Hebrew
-		#result = self.OTOrder()
-		#if result in {"Masoretic-Christian", "Masoretic-Tanakh"}:
-		#	return "Traditional"
-		#return result
+		if filesetId in {"TRNNTMP1DA"}:
+			return "TRNNTM"
 		if lptsRecord != None:
+			if lptsRecord.OTOrder() == "Masoretic-Christian":
+				return "Traditional"
 			return lptsRecord.OTOrder()
 		else:
 			return "Traditional"
