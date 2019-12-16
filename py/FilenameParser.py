@@ -218,7 +218,9 @@ class FilenameParser:
 
 			## {seq}_{bookid}_{chapter}_{verse}_{verse}_Set|SET_{setnum}_damid.mp3  096_GEN_045_1-15_Set_98____SNMNVSP1DA.mp3
 			FilenameRegex("audio109", r"([0-9]{3})_([A-Z1-4]{3})_([0-9]{3})_([0-9]+)[abc]?-([0-9]+)[abc]?_S[Ee][Tt]_?[0-9]+_+([A-Z1])+.(mp3)"),
-		   #FilenameRegex("audio109", r"([0-9]{3})_([A-Z1-4]{3})_([0-9]{3})_([0-9]+)[abc]?-([0-9]+)[abc]?.*(mp3)"),
+
+			## B01___{bookseq}_{bookname}_{chapter}_{verse}_{verse}{title}___{damid}.mp3   B01___13_Genesis_9_8_16GodsPromisetoNoah__S1PRSGNN.mp3
+			FilenameRegex("audio110", r"B01_+([0-9]+)_([A-Za-z]+)_([0-9]+)_.*_+([A-Z0-9]+).(mp3)"),
 		)
 #		self.audioTemplates0 = (
 #			## {bookseq}___{chap}_{bookname}____{damid}.mp3   B01___01_Matthew_____ENGGIDN2DA.mp3
@@ -416,6 +418,12 @@ class FilenameParser:
 				file.setVerseEnd(match.group(5))
 				file.setDamid(match.group(6))
 				file.setType(match.group(7))
+			elif template.name == "audio110":
+				file.setFileSeq(match.group(1))
+				file.setBookName(match.group(2), self.chapterMap)
+				file.setChapter(match.group(3), self.maxChapterMap)
+				file.setDamid(match.group(4))
+				file.setType(match.group(5))
 			else:
 				print("ERROR: unknown templated %s" % (template.name))
 				sys.exit()
