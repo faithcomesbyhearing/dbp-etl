@@ -228,6 +228,9 @@ class FilenameParser:
 
 			## A01_{fileseq}_{bookname}_{chapter}___{damid}.mp3   A01__171_Salmo_51________S1HUVTBL.mp3
 			FilenameRegex("audioHUVTBL", r"A01__([0-9]{3})_([Ss]almo)_([0-9]+)_+(S1HUVTBL).(mp3)"),
+
+			## {fileseq}_O2_KDZ_ESV_{bookname}_{chapter}.(mp3)  1230_O2_KDZ_ESV_PROVERBS_4.mp3
+			FilenameRegex("audioENGEKI", r"([0-9]{4})_O2_KDZ_ESV_([A-Z]+)_([0-9]+).(mp3)")
 		)
 #		self.audioTemplates0 = (
 #			## {bookseq}___{chap}_{bookname}____{damid}.mp3   B01___01_Matthew_____ENGGIDN2DA.mp3
@@ -443,6 +446,11 @@ class FilenameParser:
 				file.setChapter(match.group(3), self.maxChapterMap)
 				file.setDamid(match.group(4))
 				file.setType(match.group(5))
+			elif template.name == "audioENGEKI":
+				file.setFileSeq(match.group(1))
+				file.setBookName(match.group(2), self.chapterMap)
+				file.setChapter(match.group(3), self.maxChapterMap)
+				file.setType(match.group(4))
 			else:
 				print("ERROR: unknown templated %s" % (template.name))
 				sys.exit()
