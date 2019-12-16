@@ -224,7 +224,10 @@ class FilenameParser:
 			FilenameRegex("audioPRSGNN", r"B01_+([0-9]+)_([A-Za-z]+)_([0-9]+)_.*_+([A-Z0-9]+).(mp3)"),
 
 			## {fileseq}__{chapter}_{bookname}_Capitulo___{damid}.mp3  088__05_2Reyes_Capitulo________NHXNTVS1DA.mp3
-			FilenameRegex("audioNHX", r"([0-9]{3})_+([0-9]{2})_([A-Za-z1-4]+)_Capitulo_+([A-Z0-9]+).(mp3)")
+			FilenameRegex("audioNHX", r"([0-9]{3})_+([0-9]{2})_([A-Za-z1-4]+)_Capitulo_+([A-Z0-9]+).(mp3)"),
+
+			## A01_{fileseq}_{bookname}_{chapter}___{damid}.mp3   A01__171_Salmo_51________S1HUVTBL.mp3
+			FilenameRegex("audioHUVTBL", r"A01__([0-9]{3})_([Ss]almo)_([0-9]+)_+(S1HUVTBL).(mp3)"),
 		)
 #		self.audioTemplates0 = (
 #			## {bookseq}___{chap}_{bookname}____{damid}.mp3   B01___01_Matthew_____ENGGIDN2DA.mp3
@@ -432,6 +435,12 @@ class FilenameParser:
 				file.setFileSeq(match.group(1))
 				file.setBookName(match.group(3), self.chapterMap)
 				file.setChapter(match.group(2), self.maxChapterMap)
+				file.setDamid(match.group(4))
+				file.setType(match.group(5))
+			elif template.name == "audioHUVTBL":
+				file.setFileSeq(match.group(1))
+				file.setBookName(match.group(2), self.chapterMap)
+				file.setChapter(match.group(3), self.maxChapterMap)
 				file.setDamid(match.group(4))
 				file.setType(match.group(5))
 			else:
