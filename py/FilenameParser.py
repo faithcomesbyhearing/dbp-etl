@@ -207,6 +207,7 @@ class FilenameParser:
 			## {bookseq}___{chap}_{bookname1}_{bookname2}____{damid}.mp3   B01___01_San_Mateo___ACCIBSN1DA.mp3			
 			FilenameRegex("audio103", r"([AB][0-9]+)_+([0-9]+)_+([1-4]?[A-Za-z]+)_([1-4]?[A-Za-z]+)_+([A-Z0-9]+).(mp3)"),
 
+## Rename 106, 107, 108 to be a specific name
 			## {bookseq}_{bookname}_{chap}_{damid}.mp3   B01_Genesis_01_S1COXWBT.mp3
 			FilenameRegex("audio106", r"([AB][0-9]+)_([1-4]?[A-Za-z]+)_([0-9]+)_([A-Z0-9]+).(mp3)"),
 
@@ -217,10 +218,13 @@ class FilenameParser:
 			FilenameRegex("audio108", r"Set_([0-9]+)_([A-Za-z0-9]+)_([0-9]+)_([0-9]+)-([0-9]+)_+([A-Z0-9]+).(mp3)"),
 
 			## {seq}_{bookid}_{chapter}_{verse}_{verse}_Set|SET_{setnum}_damid.mp3  096_GEN_045_1-15_Set_98____SNMNVSP1DA.mp3
-			FilenameRegex("audio109", r"([0-9]{3})_([A-Z1-4]{3})_([0-9]{3})_([0-9]+)[abc]?-([0-9]+)[abc]?_S[Ee][Tt]_?[0-9]+_+([A-Z1])+.(mp3)"),
+			FilenameRegex("audioSNMNVS", r"([0-9]{3})_([A-Z1-4]{3})_([0-9]{3})_([0-9]+)[abc]?-([0-9]+)[abc]?_S[Ee][Tt]_?[0-9]+_+([A-Z1])+.(mp3)"),
 
 			## B01___{bookseq}_{bookname}_{chapter}_{verse}_{verse}{title}___{damid}.mp3   B01___13_Genesis_9_8_16GodsPromisetoNoah__S1PRSGNN.mp3
-			FilenameRegex("audio110", r"B01_+([0-9]+)_([A-Za-z]+)_([0-9]+)_.*_+([A-Z0-9]+).(mp3)"),
+			FilenameRegex("audioPRSGNN", r"B01_+([0-9]+)_([A-Za-z]+)_([0-9]+)_.*_+([A-Z0-9]+).(mp3)"),
+
+			## {fileseq}__{chapter}_{bookname}_Capitulo___{damid}.mp3  088__05_2Reyes_Capitulo________NHXNTVS1DA.mp3
+			FilenameRegex("audioNHX", r"([0-9]{3})_+([0-9]{2})_([A-Za-z1-4]+)_Capitulo_+([A-Z0-9]+).(mp3)")
 		)
 #		self.audioTemplates0 = (
 #			## {bookseq}___{chap}_{bookname}____{damid}.mp3   B01___01_Matthew_____ENGGIDN2DA.mp3
@@ -410,7 +414,7 @@ class FilenameParser:
 				file.setVerseEnd(match.group(5))
 				file.setDamid(match.group(6))
 				file.setType(match.group(7))
-			elif template.name == "audio109":
+			elif template.name == "audioSNMNVS":
 				file.setFileSeq(match.group(1))
 				file.setBookId(match.group(2), self.chapterMap)
 				file.setChapter(match.group(3), self.maxChapterMap)
@@ -418,10 +422,16 @@ class FilenameParser:
 				file.setVerseEnd(match.group(5))
 				file.setDamid(match.group(6))
 				file.setType(match.group(7))
-			elif template.name == "audio110":
+			elif template.name == "audioPRSGNN":
 				file.setFileSeq(match.group(1))
 				file.setBookName(match.group(2), self.chapterMap)
 				file.setChapter(match.group(3), self.maxChapterMap)
+				file.setDamid(match.group(4))
+				file.setType(match.group(5))
+			elif template.name == "audioNHX":
+				file.setFileSeq(match.group(1))
+				file.setBookName(match.group(3), self.chapterMap)
+				file.setChapter(match.group(2), self.maxChapterMap)
 				file.setDamid(match.group(4))
 				file.setType(match.group(5))
 			else:

@@ -92,6 +92,7 @@ class Booknames:
 			# Spanish
 			'Exodo': 		'EXO',
 			'Levitico': 	'LEV',
+			'Levetico':		'LEV',
 			'Numeros': 		'NUM',
 			'Deuteronomio':	'DEU',
 			'Josue': 		'JOS',
