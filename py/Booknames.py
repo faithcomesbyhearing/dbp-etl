@@ -384,6 +384,10 @@ class Booknames:
 #Septuagint
 #Vulgate
 
+##
+## Old Testament Book orders
+##
+
 	def TraditionalOT(self, sequence):
 		traditional = {
 			'A01':  'GEN',
@@ -427,6 +431,116 @@ class Booknames:
 			'A39':  'MAL'
 		}
 		return traditional.get(sequence, None)
+
+	def MasoreticChristianOT(self, sequence):
+		return self.TraditionalOT(sequence)
+
+
+	def HebrewOT(self, sequence):
+		hebrew = {
+			'A01':  'GEN',
+			'A02':  'EXO',
+			'A03':  'LEV',
+			'A04':  'NUM',
+			'A05':  'DEU',
+			'A06':  'JOS',
+			'A07':  'JDG',
+			'A08':  '1SA',
+			'A09':  '2SA',
+			'A10':  '1KI',
+			'A11':  '2KI',
+			'A12':  'ISA',
+			'A13':  'JER',
+			'A14':  'EZK',
+			'A15':  'HOS',
+			'A16':  'JOL',
+			'A17':  'AMO',
+			'A18':  'OBA',
+			'A19': 	'JON',
+			'A20':  'MIC',
+			'A21':  'NAM',
+			'A22':  'HAB',
+			'A23':  'ZEP',
+			'A24':  'HAG',
+			'A25':  'ZEC',
+			'A26':  'MAL',
+			'A27':  'PSA',
+			'A28':  'PRO',
+			'A29':  'JOB',
+			'A30':  'SNG',
+			'A31':  'RUT',
+			'A32':  'LAM',
+			'A33':  'ECC',
+			'A34':  'EST',
+			'A35':  'DAN',
+			'A36':  'EZR',
+			'A37':  'NEH',					
+			'A38':  '1CH',
+			'A39':  '2CH'
+		}
+		return hebrew.get(sequence, None)
+
+	def MasoreticTanakhOT(self, sequence):
+		return self.HebrewOT(sequence)
+
+
+	def CatholicOT(self, sequence):   # This is my name for it. It must be corrected
+		catholic = {
+			'A01':	'GEN',
+			'A02':	'EXO',
+			'A03':	'LEV',
+			'A04':	'NUM',
+			'A05':	'DEU',
+			'A06':	'JOS',
+			'A07':	'JDG',
+			'A08':	'RUT',
+			'A09':	'1SA',
+			'A10':	'2SA',
+			'A11':	'1KI',
+			'A12':	'2KI',
+			'A13':	'1CH',
+			'A14':	'2CH',
+			'A15':	'EZR',
+			'A16':	'NEH',
+			'A17':	'TOB',
+			'A18':	'JDT',
+			'A19':	'EST',
+			'A20':	'1MA',
+			'A21':	'2MA',
+			'A22':	'JOB',
+			'A23':	'PSA',
+			'A24':	'PRO',
+			'A25':	'ECC',
+			'A26':	'SNG',
+			'A27':	'WIS',
+			'A28':	'SIR',
+			'A29':	'ISA',
+			'A30':	'JER',
+			'A31':	'LAM',
+			'A32':	'BAR',
+			'A33':	'EZK',
+			'A34':	'DAN',
+			'A35':	'HOS',
+			'A36':	'JOL',
+			'A37':	'AMO',
+			'A38':	'OBA',
+			'A39':	'JON',
+			'A40':	'MIC',
+			'A41':	'NAM',
+			'A42':	'HAB',
+			'A43':	'ZEP',
+			'A44':	'HAG',
+			'A45':	'ZEC',
+			'A46':	'MAL'
+		}
+		return catholic.get(sequence, None)
+
+
+	def VulgateOT(self, sequence):
+		vulgate = {
+			## To be added when sequence is known
+		}
+		return vulgate.get(sequence, None)
 
 
 	def SeptuagintOT(self, sequence):
@@ -487,104 +601,11 @@ class Booknames:
 		return septuagint.get(sequence, None)
 
 
-	def HebrewOT(self, sequence):
-		hebrew = {
-			'A01':  'GEN',
-			'A02':  'EXO',
-			'A03':  'LEV',
-			'A04':  'NUM',
-			'A05':  'DEU',
-			'A06':  'JOS',
-			'A07':  'JDG',
-			'A08':  '1SA',
-			'A09':  '2SA',
-			'A10':  '1KI',
-			'A11':  '2KI',
-			'A12':  'ISA',
-			'A13':  'JER',
-			'A14':  'EZK',
-			'A15':  'HOS',
-			'A16':  'JOL',
-			'A17':  'AMO',
-			'A18':  'OBA',
-			'A19': 	'JON',
-			'A20':  'MIC',
-			'A21':  'NAM',
-			'A22':  'HAB',
-			'A23':  'ZEP',
-			'A24':  'HAG',
-			'A25':  'ZEC',
-			'A26':  'MAL',
-			'A27':  'PSA',
-			'A28':  'PRO',
-			'A29':  'JOB',
-			'A30':  'SNG',
-			'A31':  'RUT',
-			'A32':  'LAM',
-			'A33':  'ECC',
-			'A34':  'EST',
-			'A35':  'DAN',
-			'A36':  'EZR',
-			'A37':  'NEH',					
-			'A38':  '1CH',
-			'A39':  '2CH'
+	def DutchTraditionalOT(self, sequence):
+		dutch = {
+			## To be added when sequence is known
 		}
-		return hebrew.get(sequence, None)	
-
-	def MasoreticChristianOT(self, sequence):
-		return self.TraditionalOT(sequence)
-
-
-	def CatholicOT(self, sequence):   # This is my name for it. It must be corrected
-		catholic = {
-			'A01':	'GEN',
-			'A02':	'EXO',
-			'A03':	'LEV',
-			'A04':	'NUM',
-			'A05':	'DEU',
-			'A06':	'JOS',
-			'A07':	'JDG',
-			'A08':	'RUT',
-			'A09':	'1SA',
-			'A10':	'2SA',
-			'A11':	'1KI',
-			'A12':	'2KI',
-			'A13':	'1CH',
-			'A14':	'2CH',
-			'A15':	'EZR',
-			'A16':	'NEH',
-			'A17':	'TOB',
-			'A18':	'JDT',
-			'A19':	'EST',
-			'A20':	'1MA',
-			'A21':	'2MA',
-			'A22':	'JOB',
-			'A23':	'PSA',
-			'A24':	'PRO',
-			'A25':	'ECC',
-			'A26':	'SNG',
-			'A27':	'WIS',
-			'A28':	'SIR',
-			'A29':	'ISA',
-			'A30':	'JER',
-			'A31':	'LAM',
-			'A32':	'BAR',
-			'A33':	'EZK',
-			'A34':	'DAN',
-			'A35':	'HOS',
-			'A36':	'JOL',
-			'A37':	'AMO',
-			'A38':	'OBA',
-			'A39':	'JON',
-			'A40':	'MIC',
-			'A41':	'NAM',
-			'A42':	'HAB',
-			'A43':	'ZEP',
-			'A44':	'HAG',
-			'A45':	'ZEC',
-			'A46':	'MAL'
-		}
-		return catholic.get(sequence, None)
+		return dutch.get(sequence, None)
 
 
 	def TRNNTMOT(self, sequence):
@@ -612,6 +633,9 @@ class Booknames:
 		}
 		return trnntm.get(sequence, None)
 
+##
+## New Testament book orders
+##
 
 	def TraditionalNT(self, sequence):
 		traditional = {
