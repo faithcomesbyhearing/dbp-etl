@@ -187,105 +187,57 @@ class FilenameParser:
 		self.successCount = {}
 
 		self.videoTemplates = (
-			FilenameRegex("video1", r"(.*)_(MAT|MRK|LUK|JHN)_([0-9]+)-([0-9]+)b?-([0-9]+).*.(mp4)"),
+			FilenameRegex("video1", r"(.*)_(MAT|MRK|LUK|JHN)_([0-9]{1,3})-([0-9]{1,2})b?-([0-9]{1,2}).*.(mp4)"),
 			FilenameRegex("video2", r"(.*)_(MAT|MRK|LUK|JHN)_(End_[Cc]redits)()().*.(mp4)"),
-			FilenameRegex("video3", r"(.*)_(Mark)_([0-9]+)-([0-9]+)b?-([0-9]+).*.(mp4)"),
+			FilenameRegex("video3", r"(.*)_(Mark)_([0-9]{1,3})-([0-9]{1,2})b?-([0-9]{1,2}).*.(mp4)"),
 			FilenameRegex("video4", r"(.*)_(MRKZ)_(End_[Cc]redits)()().*.(mp4)"),
 		)
 		self.textTemplates = (
 			## {damid}_{bookseq}_{bookid}_{optionalchap}.html   AAZANT_70_MAT_10.html
-			FilenameRegex("text1", r"([A-Z0-9]+)_([0-9]+)_([A-Z0-9]+)_?([0-9]*).(html)"),
+			FilenameRegex("text1", r"([A-Z0-9]{5,7})_([0-9]{1,3})_([A-Z0-9]{3})_?([0-9]{0,3}).(html)"),
 			## {usfx2}{optionalchap}.html  AC12.html
-			FilenameRegex("text2", r"([A-Z][A-Z0-9])([0-9]*).(html)"),
+			FilenameRegex("text2", r"([A-Z][A-Z0-9])([0-9]{0,3}).(html)"),
 		)
 		self.audioTemplates = (
 			## using three did not pick up more than 2, but I think it will.
 			## {bookseq}___{chap}_{bookname}____{damid}.mp3   B01___01_Matthew_____ENGGIDN2DA.mp3
-			FilenameRegex("audio101", r"([AB][0-9]+)_+([0-9]+)_+([1-4]?[A-Za-z\-]+)_+([A-Z0-9]+).(mp3)"),
+			FilenameRegex("audio101", r"([AB][0-9]{2})_+([0-9]{2,3})_+([1-4]?[A-Za-z\-]+)_+([A-Z0-9]+).(mp3)"),
 			## {bookseq}___{chap}_{bookname}____{damid}.mp3   B01___01_1CorinthiansENGGIDN2DA.mp3
-			FilenameRegex("audio102", r"([AB][0-9]+)_+([0-9]+)_+([1-4]?[A-Za-z\-]+[a-z])([A-Z0-9]+).(mp3)"),
+			FilenameRegex("audio102", r"([AB][0-9]{2})_+([0-9]{2,3})_+([1-4]?[A-Za-z\-]+[a-z])([A-Z0-9]+).(mp3)"),
 			## {bookseq}___{chap}_{bookname1}_{bookname2}____{damid}.mp3   B01___01_San_Mateo___ACCIBSN1DA.mp3			
-			FilenameRegex("audio103", r"([AB][0-9]+)_+([0-9]+)_+([1-4]?[A-Za-z]+)_([1-4]?[A-Za-z]+)_+([A-Z0-9]+).(mp3)"),
+			FilenameRegex("audio103", r"([AB][0-9]{2})_+([0-9]{2,3})_+([1-4]?[A-Za-z]+)_([1-4]?[A-Za-z]+)_+([A-Z0-9]+).(mp3)"),
 
 ## Rename 106, 107, 108 to be a specific name
 			## {bookseq}_{bookname}_{chap}_{damid}.mp3   B01_Genesis_01_S1COXWBT.mp3
-			FilenameRegex("audio106", r"([AB][0-9]+)_([1-4]?[A-Za-z]+)_([0-9]+)_([A-Z0-9]+).(mp3)"),
+			FilenameRegex("audio106", r"([AB][0-9]{1,2})_([1-4]?[A-Za-z]+)_([0-9]+)_([A-Z0-9]+).(mp3)"),
 
 			## {misc}_{damid}_Set_{fileseq}_{bookname}_{chap}_{verse_start}-{verse_end}.mp3   Nikaraj_P2KFTNIE_Set_051_Luke_21_1-19.mp3
-			FilenameRegex("audio107", r"([A-Za-z]+)_([A-Z0-9]+)_Set_([0-9]+)_([A-Za-z]+)_([0-9]+)_([0-9]+)-([0-9]+).(mp3)"),
+			FilenameRegex("audio107", r"([A-Za-z]+)_([A-Z0-9]+)_Set_([0-9]{3})_([A-Za-z]+)_([0-9]{2,3})_([0-9]{1,2})-([0-9]{1,2}).(mp3)"),
 
 			## Set_{fileseq}_{bookname}_{chapter}_{versestart}-{verseend}__{damid}.mp3  Set_003_Luke_01_26-38__YMRWINP1DA.mp3
-			FilenameRegex("audio108", r"Set_([0-9]+)_([A-Za-z0-9]+)_([0-9]+)_([0-9]+)-([0-9]+)_+([A-Z0-9]+).(mp3)"),
+			FilenameRegex("audio108", r"Set_([0-9]{3})_([A-Za-z0-9]+)_([0-9]{2,3})_([0-9]{1,2})-([0-9]{1,2})_+([A-Z0-9]+).(mp3)"),
 
 			## {seq}_{bookid}_{chapter}_{verse}_{verse}_Set|SET_{setnum}_damid.mp3  096_GEN_045_1-15_Set_98____SNMNVSP1DA.mp3
-			FilenameRegex("audioSNMNVS", r"([0-9]{3})_([A-Z1-4]{3})_([0-9]{3})_([0-9]+)[abc]?-([0-9]+)[abc]?_S[Ee][Tt]_?[0-9]+_+([A-Z1])+.(mp3)"),
+			FilenameRegex("audioSNMNVS", r"([0-9]{3})_([A-Z1-4]{3})_([0-9]{3})_([0-9]{1,2})[abc]?-([0-9]{1,2})[abc]?_S[Ee][Tt]_?[0-9]+_+([A-Z1]+).(mp3)"),
 
 			## B01___{bookseq}_{bookname}_{chapter}_{verse}_{verse}{title}___{damid}.mp3   B01___13_Genesis_9_8_16GodsPromisetoNoah__S1PRSGNN.mp3
-			FilenameRegex("audioPRSGNN", r"B01_+([0-9]+)_([A-Za-z]+)_([0-9]+)_.*_+([A-Z0-9]+).(mp3)"),
+			FilenameRegex("audioPRSGNN", r"B01_+([0-9]{2})_([A-Za-z]+)_([0-9]{1,3})_.*_+([A-Z0-9]+).(mp3)"),
 
 			## {fileseq}__{chapter}_{bookname}_Capitulo___{damid}.mp3  088__05_2Reyes_Capitulo________NHXNTVS1DA.mp3
 			FilenameRegex("audioNHX", r"([0-9]{3})_+([0-9]{2})_([A-Za-z1-4]+)_Capitulo_+([A-Z0-9]+).(mp3)"),
 
 			## A01_{fileseq}_{bookname}_{chapter}___{damid}.mp3   A01__171_Salmo_51________S1HUVTBL.mp3
-			FilenameRegex("audioHUVTBL", r"A01__([0-9]{3})_([Ss]almo)_([0-9]+)_+([A-Z0-1]+).(mp3)"),
+			FilenameRegex("audioHUVTBL", r"A01__([0-9]{3})_([Ss]almo)_([0-9]{1,3})_+([A-Z0-1]+).(mp3)"),
 
 			## {fileseq}_O2_KDZ_ESV_{bookname}_{chapter}.(mp3)  1230_O2_KDZ_ESV_PROVERBS_4.mp3
-			FilenameRegex("audioENGEKI", r"([0-9]{4})_O2_KDZ_ESV_([A-Z]+)_([0-9]+).(mp3)"),
+			FilenameRegex("audioENGEKI", r"([0-9]{4})_O2_KDZ_ESV_([A-Z]+)_([0-9]{1,3}).(mp3)"),
 
 			## A01__{fileseq}__{spanishbookid}_{chapter}_{chapter}?__{damid}.mp3  A01__012_GEN_42_50__S1DESWBT.mp3
-			FilenameRegex("audioDESWBT", r"A01__([0-9]{3})_([A-Z1-4]{3})_([0-9]+).*_+([A-Z0-1]+).(mp3)"),
+			FilenameRegex("audioDESWBT", r"A01__([0-9]{3})_([A-Z1-4]{3})_([0-9]{1,3}).*_+([A-Z0-1]+).(mp3)"),
 
 			## {bookseq}_{fileseq}__{bookname}_{chapter}___{damid}.mp3  A13_131__2Reis_02________S2RAMTBL.mp3
-			FilenameRegex("audioRAMWBT", r"([AB][0-9]{2})_([0-9]{3})_+([A-Za-z1-4]+)_([0-9]+)_+([A-Z0-9]+).(mp3)"),
+			FilenameRegex("audioRAMWBT", r"([AB][0-9]{2})_([0-9]{3})_+([A-Za-z1-4]+)_([0-9]{1,3})_+([A-Z0-9]+).(mp3)"),
 		)
-#		self.audioTemplates0 = (
-#			## {bookseq}___{chap}_{bookname}____{damid}.mp3   B01___01_Matthew_____ENGGIDN2DA.mp3
-#			FilenameRegex("audio1", r"([AB][0-9]+)_+([0-9]+)_([1-4]?[A-Za-z\-]+[a-z])_*([A-Z0-9]+).(mp3)"),
-#			## room for audio 2
-#			## {bookseq}___{chap}_{bookname1}_{bookname2}____{damid}.mp3   B01___01_San_Mateo___ACCIBSN1DA.mp3			
-#			FilenameRegex("audio3", r"([AB][0-9]+)_+([0-9]+)_([1-4]?[A-Za-z]+)_([1-4]?[A-Za-z]+)_+([A-Z0-9]+).(mp3)"),
-#			## {bookseq}_{fileseq}__{bookname}_{chapter}___{damid}.mp3  A27_152__Daniel_01_______S2RAMTBL.mp3
-#			FilenameRegex("audio4", r"([AB][0-9]+)_+([0-9]+)_+([A-Za-z0-9]+)_+([0-9]+)_+([A-Z0-9]+).(mp3)"),
-#			## {bookseq}__{chapter},{endchapter}_{bookname}___{damid}.mp3  A23__009,10_Psalms___ENGNABC1DA.mp3
-#			FilenameRegex("audio5", r"([AB][0-9]+)_+([0-9]+),([0-9]+)_([1-4]?[A-Za-z]+)_+([A-Z0-9]+).(mp3)"),
-#
-#			## {bookseq}_{bookname}_{chap}_{damid}.mp3   B01_Genesis_01_S1COXWBT.mp3
-#			FilenameRegex("audio6", r"([AB][0-9]+)_([1-4]?[A-Za-z]+)_([0-9]+)_([A-Z0-9]+).(mp3)"),
-#
-#			## {misc}_{damid}_Set_{fileseq}_{bookname}_{chap}_{verse_start}-{verse_end}.mp3   Nikaraj_P2KFTNIE_Set_051_Luke_21_1-19.mp3
-#			FilenameRegex("audio7", r"([A-Za-z]+)_([A-Z0-9]+)_Set_([0-9]+)_([A-Za-z]+)_([0-9]+)_([0-9]+)-([0-9]+).(mp3)"),
-#
-#			## Set_{fileseq}_{bookname}_{chapter}_{versestart}-{verseend}__{damid}.mp3  Set_003_Luke_01_26-38__YMRWINP1DA.mp3
-#			FilenameRegex("audio8", r"Set_([0-9]+)_([A-Za-z0-9]+)_([0-9]+)_([0-9]+)-([0-9]+)_+([A-Z0-9]+).(mp3)")
-#
-#			## {lang}_{vers}_{bookseq}_{bookname}_{chap}_{versestart}-{verseend}_{unknown}_{unknown}.mp3  audio/SNMNVS/SNMNVSP1DA/SNM_NVS_01_Genesis_041_50-57_SET91_PASSAGE1.mp3
-#			FilenameRegex("audio9", r"([A-Z]+)_([A-Z]+)_([0-9]+)_([1-4]?[A-Za-z]+)_([0-9]+)_([0-9]+[b]?)-([0-9]+[a]?)_.*.(mp3)"),
-#
-#			## Set_{fileseq}_{bookname}_{chapter}_{versestart}-{verseend}__{damid}.mp3  Set_117_Luke_23_32-43__YMRWINP1DA.mp3
-#			FilenameRegex("audio10", r"Set_([0-9]+)_([A-Za-z]+)_([0-9]+)_([0-9]+)-([0-9]+)_+([A-Z0-9]+).(mp3)"),
-#
-#			## {fileseq}_{title}_{damid}.mp3  01_God_S2AIGWBT.mp3
-#			FilenameRegex("audioStory1", r"([AB]?[0-9]+)_([A-Za-z0-9_]+)_([A-Z0-9]+).(mp3)"),
-#			## {fileseq}_{title}.mp3  01_Creation.mp3
-#			FilenameRegex("audioStory2", r"([0-9]+)_([A-Za-z0-9_'\(\)\-& ]+).(mp3)"),
-#
-			## {misc}_{misc}_Set_{fileseq}_{bookname}_{chap}_{verse_start}-{verse_end}.mp3   Nikaraj_P2KFTNIE_Set_051_Luke_21_1-19.mp3
-			##FilenameTemplate("audio1", ("misc", "misc", "misc", "file_seq", "book_name", "chapter", "verse_start", "verse_end", "type"), ()),
-			## {fileseq}_{USFM}_{chap}_{versestart}-{verseend}_SET_{unknown}___{damid}.mp3   audio/SNMNVS/SNMNVSP1DA16/052_GEN_027_18-29_Set_54____SNMNVSP1DA.mp3
-			##FilenameTemplate("audio2", ("file_seq", "book_id", "chapter", "verse_start", "verse_end", "misc", "misc", "damid", "type"), ()),
-			## {bookseq}___{fileseq}_{bookname}_{chap}_{startverse}_{endverse}{name}__damid.mp3   audio/PRSGNN/PRSGNNS1DA/B01___22_Genesis_21_1_10BirthofIsaac__S1PRSGNN.mp3
-			##FilenameTemplate("audio4", ("book_seq", "file_seq", "book_name", "chapter", "verse_start", "verse_end", "title", "damid", "type"), ("verse_end_clean",)),
-			## missing explaination
-			##FilenameTemplate("audio5", ("file_seq", "misc", "misc", "misc", "book_name", "chapter", "type"), ()),
-
-			## {bookseq}__{fileseq}_{non-standar-book-id}_{chapter}_{chapter_end}_{damid}.mp3   A01__002_GEN_1_2__S1DESWBT.mp
-
-			## {bookseq}_{fileseq}__{bookname}_{chap}_____{damid}.mp3   A08_073__Ruth_01_________S2RAMTBL.mp3
-			##FilenameTemplate("audio8", ("book_seq", "file_seq", "book_name", "chapter", "damid", "type"), ()),
-
-			## {file_seq}_{testament}_{KDZ}_{vers}_{bookname}_{chap}.mp3   1215_O2_KDZ_ESV_PSALM_57.mp3
-			##FilenameTemplate("audio9", ("book_seq", "file_seq", "book_name", "chapter", "misc", "damid", "type"), ()),
-#		)
 
 
 	def parse(self, template, filename):
@@ -318,79 +270,6 @@ class FilenameParser:
 				file.setChapter(match.group(2), self.chapterMap)
 				file.setType(match.group(3))
 
-#			elif template.name in {"audio1", "audio2"}:
-#				file.setBookSeq(match.group(1))
-#				file.setBookName(match.group(3), self.chapterMap)
-#				file.setChapter(match.group(2), self.chapterMap)
-#				file.setDamid(match.group(4))
-#				file.setType(match.group(5))
-#			elif template.name == "audio3":
-#				file.setBookSeq(match.group(1))
-#				file.setBookName(match.group(3) + "_" + match.group(4), self.chapterMap)
-#				file.setChapter(match.group(2), self.chapterMap)
-#				file.setDamid(match.group(5))
-#				file.setType(match.group(6))
-#			elif template.name == "audio4":
-#				file.setBookSeq(match.group(1))
-#				file.setFileSeq(match.group(2))
-#				file.setBookName(match.group(3), self.chapterMap)
-#				file.setChapter(match.group(4), self.chapterMap)
-#				file.setDamid(match.group(5))
-#			elif template.name == "audio5":
-#				file.setBookSeq(match.group(1))
-#				file.setChapterEnd(match.group(3), self.chapterMap)
-#				file.setBookName(match.group(4), self.chapterMap)
-#				file.setChapter(match.group(2), self.chapterMap)
-#				file.setDamid(match.group(5))
-#				file.setType(match.group(6))
-#			elif template.name == "audio6":
-#				file.setBookSeq(match.group(1))
-#				file.setBookName(match.group(2), self.chapterMap)
-#				file.setChapter(match.group(3), self.chapterMap)
-#				file.setDamid(match.group(4))
-#				file.setType(match.group(5))
-#			elif template.name == "audio7":
-#				file.addUnknown(match.group(1))
-#				file.setDamid(match.group(2))
-#				file.setFileSeq(match.group(3))
-#				file.setBookName(match.group(4), self.chapterMap)
-#				file.setChapter(match.group(5), self.chapterMap)
-#				file.setVerseStart(match.group(6))
-#				file.setVerseEnd(match.group(7))
-#				file.setType(match.group(8))
-#			elif template.name == "audio8":
-#				file.setFileSeq(match.group(1))
-#				file.setBookName(match.group(2), self.chapterMap)
-#				file.setChapter(match.group(3), self.chapterMap)
-#				file.setVerseEnd(match.group(4))
-#				file.setVerseEnd(match.group(5))
-#				file.setDamid(match.group(6))
-#				file.setType(match.group(7))
-#			elif template.name == "audio9":
-#				file.addUnknown(match.group(1))
-#				file.addUnknown(match.group(2))
-#				file.setBookSeq(match.group(3))
-#				file.setBookName(match.group(4), self.chapterMap)
-#				file.setChapter(match.group(5), self.chapterMap)
-#				file.setVerseStart(match.group(6))
-#				file.setVerseEnd(match.group(7))
-#				file.setType(match.group(8))
-#			elif template.name == "audio10":
-#				file.setFileSeq(match.group(1))
-#				file.setBookName(match.group(2), self.chapterMap)
-#				file.setChapter(match.group(3), self.chapterMap)
-#				file.setVerseStart(match.group(4))
-#				file.setVerseEnd(match.group(5))
-#				file.setDamid(match.group(6))
-#			elif template.name == "audioStory1":
-#				file.setFileSeq(match.group(1))
-#				file.setTitle(match.group(2))
-#				file.setDamid(match.group(3))
-#				file.setType(match.group(4))
-#			elif template.name == "audioStory2":
-#				file.setFileSeq(match.group(1))
-#				file.setTitle(match.group(2))
-#				file.setType(match.group(3))
 			elif template.name == "audio101" or template.name == "audio102":
 				file.setBookBySeq(match.group(1), self.otOrder, self.ntOrder, self.chapterMap)
 				file.setChapter(match.group(2), self.maxChapterMap)
