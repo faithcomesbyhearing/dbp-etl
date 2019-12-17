@@ -75,12 +75,21 @@ class Filename:
 
 
 	# This should only be used in cases where setBookBySeq was used to set bookId
+	# This check does not work for Bibles that contain books like 
 	def checkBookName(self, name):
 		self.name = name
 		book = Booknames().usfmBookId(name)
 		if book == None:
 			self.errors.append("bookname %s is not recognized" % (name))
-		elif book != self.bookId:
+		elif book != self.bookId and self.bookId != "":
+			if self.bookId == "EZA" and book == "EZR":
+				return
+			if self.bookId == "EZR" and book == "NEH":
+				return
+			if self.bookId == "ESG" and book == "EST":
+				return
+			if self.bookId == "DAG" and book == "DAN":
+				return
 			self.errors.append("book id by sequence is %s and book id by name is %s" % (self.bookId, book))
 
 
@@ -247,6 +256,16 @@ class FilenameParser:
 
 			## {bookseq}_{fileseq}__{bookname}_{chapter}___{damid}.mp3  A13_131__2Reis_02________S2RAMTBL.mp3
 			FilenameRegex("audioRAMWBT", r"([AB][0-9]{2})_([0-9]{3})_+([A-Za-z1-4]+)_([0-9]{1,3})_+([A-Z0-9]+).(mp3)"),
+
+			## A01_{seq3}_title_title_title__damid.mp3
+			FilenameRegex("audioStory1", r"A01_+([0-9]{3})_([A-Za-z0-9_]+)_+([A-Z0-9]+).(mp3)"),
+
+			## {seq2,3}_title_title_title_damid.mp3
+			FilenameRegex("audioStory2", r"([0-9]{2,3})_([A-Za-z0-9_]+)_([A-Z0-9]+).(mp3)"),
+
+			## {seq2,4}_title_tiltle_title.mp3
+			FilenameRegex("audioStory3", r"([0-9]{2,4})_([A-Za-z0-9_ \'\-&\(\)]+).(mp3)"),
+
 		)
 
 
@@ -359,6 +378,20 @@ class FilenameParser:
 				file.setChapter(match.group(4), self.maxChapterMap)
 				file.setDamid(match.group(5))
 				file.setType(match.group(6))
+			elif template.name == "audioStory1":
+				file.setFileSeq(match.group(1))
+				file.setTitle(match.group(2))
+				file.setDamid(match.group(3))
+				file.setType(match.group(4))
+			elif template.name == "audioStory2":
+				file.setFileSeq(match.group(1))
+				file.setTitle(match.group(2))
+				file.setDamid(match.group(3))
+				file.setType(match.group(4))
+			elif template.name == "audioStory3":
+				file.setFileSeq(match.group(1))
+				file.setTitle(match.group(2))
+				file.setType(match.group(3))
 			else:
 				print("ERROR: unknown templated %s" % (template.name))
 				sys.exit()
@@ -451,7 +484,8 @@ class FilenameParser:
 
 
 	def validateCompleteness(self, file):
-		if file.template.name != "audioStory1" and file.template.name != "audioStory2":
+		#if file.template.name != "audioStory1" and file.template.name != "audioStory2":
+		if "audioStory" not in file.template.name:
 			if file.bookId == None or file.bookId == "":
 				file.errors.append("book_id is not found")
 			if file.chapter == None or file.chapter == "":
