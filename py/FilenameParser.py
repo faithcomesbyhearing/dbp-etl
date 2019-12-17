@@ -74,6 +74,16 @@ class Filename:
 			self.setBookId(bookId, chapterMap)
 
 
+	# This should only be used in cases where setBookBySeq was used to set bookId
+	def checkBookName(self, name):
+		self.name = name
+		book = Booknames().usfmBookId(name)
+		if book == None:
+			self.errors.append("bookname %s is not recognized" % (name))
+		elif book != self.bookId:
+			self.errors.append("book id by sequence is %s and book id by name is %s" % (self.bookId, book))
+
+
 	def setBookId(self, bookId, chapterMap):
 		self.bookId = bookId
 		if bookId not in chapterMap.keys():
@@ -246,11 +256,6 @@ class FilenameParser:
 		if match != None:
 			if template.name[:3] == "vid":
 				file.addUnknown(match.group(1))
-				file.setChapter(match.group(3), self.chapterMap)
-				file.setType(match.group(6))
-				if file.chapter.isdigit():
-					file.setVerseStart(match.group(4))
-					file.setVerseEnd(match.group(5))
 				if template.name in {"video1", "video2"}:
 					file.setBookId(match.group(2), self.chapterMap)
 				elif template.name == "video3":
@@ -258,28 +263,33 @@ class FilenameParser:
 				elif template.name == "video4":
 					bookId = "MRK" if match.group(2) == "MRKZ" else None
 					file.setBookId(bookId, self.chapterMap)
+				file.setChapter(match.group(3), self.maxChapterMap)
+				file.setType(match.group(6))
+				if file.chapter.isdigit():
+					file.setVerseStart(match.group(4))
+					file.setVerseEnd(match.group(5))
 	
 			elif template.name == "text1":
 				file.setDamid(match.group(1))
 				file.setBookSeq(match.group(2))
 				file.setBookId(match.group(3), self.chapterMap)
-				file.setChapter(match.group(4), self.chapterMap)
+				file.setChapter(match.group(4), self.maxChapterMap)
 				file.setType(match.group(5))
 			elif template.name == "text2":
 				file.setUSFX2(match.group(1), self.chapterMap, self.usfx2Map)
-				file.setChapter(match.group(2), self.chapterMap)
+				file.setChapter(match.group(2), self.maxChapterMap)
 				file.setType(match.group(3))
 
 			elif template.name == "audio101" or template.name == "audio102":
 				file.setBookBySeq(match.group(1), self.otOrder, self.ntOrder, self.chapterMap)
 				file.setChapter(match.group(2), self.maxChapterMap)
-				file.setTitle(match.group(3))
+				file.checkBookName(match.group(3))
 				file.setDamid(match.group(4))
 				file.setType(match.group(5))
 			elif template.name == "audio103":
 				file.setBookBySeq(match.group(1), self.otOrder, self.ntOrder, self.chapterMap)
 				file.setChapter(match.group(2), self.maxChapterMap)
-				file.setTitle(match.group(3) + "_" + match.group(4))
+				file.checkBookName(match.group(3) + "_" + match.group(4))
 				file.setDamid(match.group(5))
 				file.setType(match.group(6))
 			elif template.name == "audio106":

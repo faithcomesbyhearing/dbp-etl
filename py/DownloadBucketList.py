@@ -9,11 +9,17 @@ import io
 import os
 import sys
 
-BUCKET_NAME = "dbp-prod"
+#BUCKET_NAME = "dbp-prod"
 #BUCKET_NAME = "dbp-vid"
 #BUCKET_NAME = "dbs-web"
 #BUCKET_NAME = "bibles.dbs.org"
 #BUCKET_NAME = "downloads.dbs.org"
+
+if len(sys.argv) < 2:
+	print("Usage: DownloadBucketList  bucket_name")
+	sys.exit()
+
+BUCKET_NAME = sys.argv[1]
 
 filename = "new_%s.txt" % (BUCKET_NAME.replace("-", "_"))
 pathname = "%s/FCBH/bucket_data/%s" % (os.environ['HOME'], filename)
