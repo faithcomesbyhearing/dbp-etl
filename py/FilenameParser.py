@@ -470,7 +470,7 @@ class FilenameParser:
 			files.append(file)
 			if file.numErrors() > 0:
 				numErrors += 1
-				print(file.template.name, prefix, file.file, ", ".join(file.errors))
+				#print(file.template.name, prefix, file.file, ", ".join(file.errors))
 			else:
 				self.successCount[file.template.name] = self.successCount.get(file.template.name, 0) + 1
 		return (numErrors, files)
@@ -528,10 +528,10 @@ class FilenameParser:
 				#print(chapter)
 				if chapter > maxChapter:
 					extraChapters.append("%s:%d" % (book, chapter))
-		if len(extraChapters) > 0:
-			self.summaryMessage(prefix, "chapters too large", extraChapters)
-		if len(missingChapters) > 0:
-			self.summaryMessage(prefix, "chapters missing", missingChapters)
+#		if len(extraChapters) > 0:
+#			self.summaryMessage(prefix, "chapters too large", extraChapters)
+#		if len(missingChapters) > 0:
+#			self.summaryMessage(prefix, "chapters missing", missingChapters)
 		return (extraChapters, missingChapters, [])
 
 
@@ -564,70 +564,70 @@ class FilenameParser:
 						missingVerses.append("%s:%d:%d" % (book, chapter, nextVerse))
 						nextVerse += 1
 					nextVerse = verseEnd + 1
-		if len(extraChapters) > 0:
-			self.summaryMessage(prefix, "chapters too large", extraChapters)
-		if len(missingChapters) > 0:
-			self.summaryMessage(prefix, "chapters missing", missingChapters)
-		if len(missingVerses) > 0:
-			self.summaryVerseMessage(prefix, "verses missing", missingVerses)
+#		if len(extraChapters) > 0:
+#			self.summaryMessage(prefix, "chapters too large", extraChapters)
+#		if len(missingChapters) > 0:
+#			self.summaryMessage(prefix, "chapters missing", missingChapters)
+#		if len(missingVerses) > 0:
+#			self.summaryVerseMessage(prefix, "verses missing", missingVerses)
 		return (extraChapters, missingChapters, missingVerses)
 
 
-	# deprecated, moved to FilenameReducer
-	def summaryMessage(self, prefix, message, errors):
-		#print(prefix, message, errors)
-		currBook, chapter = errors[0].split(":")
-		startChap = int(chapter)
-		nextChap = startChap
-		results = []
-		for error in errors:
-			book, chapter = error.split(":")
-			if book == currBook and int(chapter) == nextChap:
-				nextChap += 1
-			else:
-				self.appendError(results, currBook, startChap, nextChap)
-				currBook = book
-				startChap = int(chapter)
-				nextChap = startChap + 1
-		self.appendError(results, currBook, startChap, nextChap)
-		print(prefix, message, ", ".join(results))
-
-
-	def appendError(self, results, book, chapStart, chapEnd):
-		if chapStart == (chapEnd - 1):
-			results.append("%s %d" % (book, chapStart))
-		else:
-			results.append("%s %d-%d" % (book, chapStart, chapEnd - 1))
-
-
-	# deprecated, moved to FilenameReducer
-	def summaryVerseMessage(self, prefix, message, errors):
-		#print(prefix, message, errors)
-		currBook, chapter, verse = errors[0].split(":")
-		startChap = int(chapter)
-		startVerse = int(verse)
-		nextVerse = startVerse
-		results = []
-		for error in errors:
-			book, chapter, verse = error.split(":")
-			if book == currBook and int(chapter) == startChap and int(verse) == nextVerse:
-				nextVerse += 1
-			else:
-				self.appendVerseError(results, currBook, startChap, startVerse, nextVerse)
-				currBook = book
-				startChap = int(chapter)
-				startVerse = int(verse)
-				nextVerse = startVerse + 1
-		self.appendVerseError(results, currBook, startChap, startVerse, nextVerse)
-		print(prefix, message, ", ".join(results))
-
-
-	# deprecated, moved to FilenameReducer
-	def appendVerseError(self, results, book, chapStart, verseStart, verseEnd):
-		if verseStart == (verseEnd - 1):
-			results.append("%s %d:%d" % (book, chapStart, verseStart))
-		else:
-			results.append("%s %d:%d-%d" % (book, chapStart, verseStart, verseEnd - 1))
+#	# deprecated, moved to FilenameReducer
+#	def summaryMessage(self, prefix, message, errors):
+#		#print(prefix, message, errors)
+#		currBook, chapter = errors[0].split(":")
+#		startChap = int(chapter)
+#		nextChap = startChap
+#		results = []
+#		for error in errors:
+#			book, chapter = error.split(":")
+#			if book == currBook and int(chapter) == nextChap:
+#				nextChap += 1
+#			else:
+#				self.appendError(results, currBook, startChap, nextChap)
+#				currBook = book
+#				startChap = int(chapter)
+#				nextChap = startChap + 1
+#		self.appendError(results, currBook, startChap, nextChap)
+#		print(prefix, message, ", ".join(results))
+#
+#
+#	def appendError(self, results, book, chapStart, chapEnd):
+#		if chapStart == (chapEnd - 1):
+#			results.append("%s %d" % (book, chapStart))
+#		else:
+#			results.append("%s %d-%d" % (book, chapStart, chapEnd - 1))
+#
+#
+#	# deprecated, moved to FilenameReducer
+#	def summaryVerseMessage(self, prefix, message, errors):
+#		#print(prefix, message, errors)
+#		currBook, chapter, verse = errors[0].split(":")
+#		startChap = int(chapter)
+#		startVerse = int(verse)
+#		nextVerse = startVerse
+#		results = []
+#		for error in errors:
+#			book, chapter, verse = error.split(":")
+#			if book == currBook and int(chapter) == startChap and int(verse) == nextVerse:
+#				nextVerse += 1
+#			else:
+#				self.appendVerseError(results, currBook, startChap, startVerse, nextVerse)
+#				currBook = book
+#				startChap = int(chapter)
+#				startVerse = int(verse)
+#				nextVerse = startVerse + 1
+#		self.appendVerseError(results, currBook, startChap, startVerse, nextVerse)
+#		print(prefix, message, ", ".join(results))
+#
+#
+#	# deprecated, moved to FilenameReducer
+#	def appendVerseError(self, results, book, chapStart, verseStart, verseEnd):
+#		if verseStart == (verseEnd - 1):
+#			results.append("%s %d:%d" % (book, chapStart, verseStart))
+#		else:
+#			results.append("%s %d:%d-%d" % (book, chapStart, verseStart, verseEnd - 1))
 
 
 	def summary3(self):

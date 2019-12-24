@@ -170,7 +170,6 @@ class FilenameReducer:
 					file.bookId, file.chapter, file.chapterEnd, file.verseStart, file.verseEnd])
 
 
-
 	def writeErrors(self):
 		for file in self.fileList:
 			if len(file.errors) > 0:
