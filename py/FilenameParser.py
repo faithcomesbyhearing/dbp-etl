@@ -7,6 +7,7 @@ from operator import attrgetter
 from Booknames import *
 from LPTSExtractReader import *
 from InputReader import *
+from FilenameReducer import *
 from SQLUtility import *
 
 class Filename:
@@ -75,7 +76,6 @@ class Filename:
 
 
 	# This should only be used in cases where setBookBySeq was used to set bookId
-	# This check does not work for Bibles that contain books like 
 	def checkBookName(self, name):
 		self.name = name
 		book = Booknames().usfmBookId(name)
@@ -184,6 +184,15 @@ class Filename:
 
 	def print(self):
 		print(self.bookSeq, self.fileSeq, self.bookId, self.chapter, self.name, self.damid, self.type, self.file, self.errors)
+
+
+class FilenameError:
+
+	def __init__(self, code, reference, message, status):
+		self.code = code
+		#self.reference = reference
+		self.message = message
+		self.status = status
 
 
 class FilenameRegex:
@@ -427,6 +436,7 @@ class FilenameParser:
 			templates = self.videoTemplates
 		else:
 			print("ERROR: unknown type_code: %s" % (typeCode))
+			sys.exit()
 
 		for prefix in filenamesMap.keys():
 			filesetId = prefix.split("/")[2]
@@ -442,9 +452,13 @@ class FilenameParser:
 				self.unparsedList.append((numErrors, prefix))
 
 			if typeCode in {"text", "audio"}:
-				self.checkBookChapter(prefix, files)
+				(extraChapters, missingChapters, missingVerses) = self.checkBookChapter(prefix, files)
 			elif typeCode == "video":
-				self.checkVideoBookChapterVerse(prefix, files)
+				(extraChapters, missingChapters, missingVerses) = self.checkVideoBookChapterVerse(prefix, files)
+			
+			bucket = "dbp-prod" ## Need to pass this in somewhere
+			reducer = FilenameReducer(bucket, prefix, files, extraChapters, missingChapters, missingVerses)
+			reducer.process()
 
 
 	def parseOneFileset3(self, templates, prefix, filenames):
@@ -518,6 +532,7 @@ class FilenameParser:
 			self.summaryMessage(prefix, "chapters too large", extraChapters)
 		if len(missingChapters) > 0:
 			self.summaryMessage(prefix, "chapters missing", missingChapters)
+		return (extraChapters, missingChapters, [])
 
 
 	def checkVideoBookChapterVerse(self, prefix, files):
@@ -555,8 +570,10 @@ class FilenameParser:
 			self.summaryMessage(prefix, "chapters missing", missingChapters)
 		if len(missingVerses) > 0:
 			self.summaryVerseMessage(prefix, "verses missing", missingVerses)
+		return (extraChapters, missingChapters, missingVerses)
 
 
+	# deprecated, moved to FilenameReducer
 	def summaryMessage(self, prefix, message, errors):
 		#print(prefix, message, errors)
 		currBook, chapter = errors[0].split(":")
@@ -583,6 +600,7 @@ class FilenameParser:
 			results.append("%s %d-%d" % (book, chapStart, chapEnd - 1))
 
 
+	# deprecated, moved to FilenameReducer
 	def summaryVerseMessage(self, prefix, message, errors):
 		#print(prefix, message, errors)
 		currBook, chapter, verse = errors[0].split(":")
@@ -604,6 +622,7 @@ class FilenameParser:
 		print(prefix, message, ", ".join(results))
 
 
+	# deprecated, moved to FilenameReducer
 	def appendVerseError(self, results, book, chapStart, verseStart, verseEnd):
 		if verseStart == (verseEnd - 1):
 			results.append("%s %d:%d" % (book, chapStart, verseStart))
@@ -661,9 +680,11 @@ class FilenameParser:
 			return "Traditional"
 
 config = Config()
+FilenameReducer.openErrorReport()
 parser = FilenameParser(config)
 parser.process3('audio')
 parser.summary3()
+FilenameReducer.closeErrorReport()
 
 
 
