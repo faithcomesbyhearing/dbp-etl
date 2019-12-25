@@ -63,15 +63,11 @@ class FilenameReducer:
 
 	def process(self):
 		errorCount = self.neutralizeAcceptedErrors()
-		quarantineList = []
-		duplicateList = []
-		acceptedList = []
-		errPct = 100.00 * errorCount / len(self.fileList)
-		#print("errPct", errPct)
-		if errPct >= errorPctLimit:
-			quarantineList = self.fileList
+		(acceptedList, quarantineList) = self.quarantineErrors(self.fileList, errorCount)
+		if len(acceptedList) > 0:
+			(acceptedList, duplicateList) = self.removeDuplicates(acceptedList)
 		else:
-			(acceptedList, duplicateList) = self.removeDuplicates(self.fileList)
+			duplicateList = []
 
 		if errorCount > 0:
 			self.writeErrors()
@@ -97,6 +93,24 @@ class FilenameReducer:
 		return errorCount
 
 
+	def quarantineErrors(self, fileList, errorCount):
+		quarantineList = []
+		acceptedList = []
+		errPct = 100.00 * errorCount / len(fileList)
+		if errPct >= errorPctLimit:
+			quarantineList = fileList
+		elif self.filePrefix == "audio/ONBLTC/ONBLTCN2DA16":
+			if fileList[0].damid == "ONBLTCN1DA":
+				quarantineList = fileList
+			else: # damid == ONBLTCN2DA
+				acceptedList = fileList
+		else:
+			acceptedList = fileList
+		return (acceptedList, quarantineList)
+
+
+
+
 	# skipping error check for now.  Need to organize approvedErrorSet
 	def checkErrors(self, filename, errorList):
 		key = "%s:%s" % (self.filePrefix, filename)
@@ -112,32 +126,56 @@ class FilenameReducer:
 
 
 	def removeDuplicates(self, fileList):
+		acceptedList = []
+		duplicateList = []		
 		uniqueMap = {}
 		for file in fileList:
-			# should the key include bucket?
-			key = "%s:%s:%s:%s" % (self.filePrefix, file.bookId, file.chapter, file.verseStart)
-			files = uniqueMap.get(key, [])
-			files.append(file)
-			uniqueMap[key] = files
+			if file.bookId != None and file.bookId != "":
+				# should the key include bucket?
+				key = "%s:%s:%s:%s" % (self.filePrefix, file.bookId, file.chapter, file.verseStart)
+				files = uniqueMap.get(key, [])
+				files.append(file)
+				uniqueMap[key] = files
+			else:
+				acceptedList.append(file)
 
-		processList = []
-		duplicateList = []
 		for key in uniqueMap.keys():
 			files = uniqueMap[key]
 			if len(files) == 1:
-				processList.append(files[0])
+				acceptedList.append(files[0])
 			elif len(files) == 2 and files[0].type == ".html":
 				if len(files[0].file) > len(files[1].file):
-					processList.append(files[0])
+					acceptedList.append(files[0])
 					duplicateList.append(files[1])
 				else:
-					processList.append(files[1])
+					acceptedList.append(files[1])
 					duplicateList.append(files[0])
+			elif self.filePrefix == "audio/NTMWBT/NTMWBTN2DA16":
+				if len(files[0].file) > len(files[1].file):
+					acceptedList.append(files[0])
+					duplicateList.append(files[1])
+				else:
+					acceptedList.append(files[1])
+					duplicateList.append(files[0])
+			elif self.filePrefix == "audio/CWEPBT/CWEPBTN1DA16":
+				if len(files[0].file) < len(files[1].file):
+					acceptedList.append(files[0])
+					duplicateList.append(files[1])
+				else:
+					acceptedList.append(files[1])
+					duplicateList.append(files[0])
+			elif self.filePrefix == "audio/ENGWBT/ENGWBTN2DA":
+				if len(files[0].file) < len(files[1].file):
+					acceptedList.append(files[0])
+					duplicateList.append(files[1])
+				else:
+					acceptedList.append(files[1])
+					duplicateList.append(files[0])					
 			else:
 				print("Unexpected Duplicate %s" % (key))
 				for file in files:
-					print(file)
-		return (sorted(processList, key=attrgetter('file')), sorted(duplicateList, key=attrgetter('file')))
+					print(file.file, file.bookId, file.chapter, file.verseStart, file.damid, file.type, file.template.name)
+		return (sorted(acceptedList, key=attrgetter('file')), sorted(duplicateList, key=attrgetter('file')))
 
 
 	def writeOutput(self, listType, fileList):

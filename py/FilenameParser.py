@@ -263,7 +263,7 @@ class FilenameRegex:
 				file.setFileSeq(match.group(1))
 				file.setBookName(match.group(2), parser.chapterMap)
 				file.setChapter(match.group(3), parser.maxChapterMap)
-				file.setVerseEnd(match.group(4))
+				file.setVerseStart(match.group(4))
 				file.setVerseEnd(match.group(5))
 				file.setDamid(match.group(6))
 				file.setType(match.group(7))
@@ -374,7 +374,7 @@ class FilenameParser:
 			FilenameRegex("audioBJJNEI", r"([A-Za-z]+)_([A-Z0-9]+)_Set_([0-9]{3})_([A-Za-z]+)_([0-9]{2,3})_([0-9]{1,2})-([0-9]{1,2}).(mp3)"),
 
 			## Set_{fileseq}_{bookname}_{chapter}_{versestart}-{verseend}__{damid}.mp3  Set_003_Luke_01_26-38__YMRWINP1DA.mp3
-			FilenameRegex("audioYMRWIN", r"Set_([0-9]{3})_([A-Za-z0-9]+)_([0-9]{2,3})_([0-9]{1,2})-([0-9]{1,2})_+([A-Z0-9]+).(mp3)"),
+			FilenameRegex("audioYMRWIN", r"Set_([0-9]{3})_([A-Za-z0-9]+)_([0-9]{1,3})_([0-9]{1,2})-([0-9]{1,2})_+([A-Z0-9]+).(mp3)"),
 
 			## {seq}_{bookid}_{chapter}_{verse}_{verse}_Set|SET_{setnum}_damid.mp3  096_GEN_045_1-15_Set_98____SNMNVSP1DA.mp3
 			FilenameRegex("audioSNMNVS", r"([0-9]{3})_([A-Z1-4]{3})_([0-9]{3})_([0-9]{1,2})[abc]?-([0-9]{1,2})[abc]?_S[Ee][Tt]_?[0-9]+_+([A-Z1]+).(mp3)"),
@@ -528,10 +528,6 @@ class FilenameParser:
 				#print(chapter)
 				if chapter > maxChapter:
 					extraChapters.append("%s:%d" % (book, chapter))
-#		if len(extraChapters) > 0:
-#			self.summaryMessage(prefix, "chapters too large", extraChapters)
-#		if len(missingChapters) > 0:
-#			self.summaryMessage(prefix, "chapters missing", missingChapters)
 		return (extraChapters, missingChapters, [])
 
 
@@ -564,70 +560,7 @@ class FilenameParser:
 						missingVerses.append("%s:%d:%d" % (book, chapter, nextVerse))
 						nextVerse += 1
 					nextVerse = verseEnd + 1
-#		if len(extraChapters) > 0:
-#			self.summaryMessage(prefix, "chapters too large", extraChapters)
-#		if len(missingChapters) > 0:
-#			self.summaryMessage(prefix, "chapters missing", missingChapters)
-#		if len(missingVerses) > 0:
-#			self.summaryVerseMessage(prefix, "verses missing", missingVerses)
 		return (extraChapters, missingChapters, missingVerses)
-
-
-#	# deprecated, moved to FilenameReducer
-#	def summaryMessage(self, prefix, message, errors):
-#		#print(prefix, message, errors)
-#		currBook, chapter = errors[0].split(":")
-#		startChap = int(chapter)
-#		nextChap = startChap
-#		results = []
-#		for error in errors:
-#			book, chapter = error.split(":")
-#			if book == currBook and int(chapter) == nextChap:
-#				nextChap += 1
-#			else:
-#				self.appendError(results, currBook, startChap, nextChap)
-#				currBook = book
-#				startChap = int(chapter)
-#				nextChap = startChap + 1
-#		self.appendError(results, currBook, startChap, nextChap)
-#		print(prefix, message, ", ".join(results))
-#
-#
-#	def appendError(self, results, book, chapStart, chapEnd):
-#		if chapStart == (chapEnd - 1):
-#			results.append("%s %d" % (book, chapStart))
-#		else:
-#			results.append("%s %d-%d" % (book, chapStart, chapEnd - 1))
-#
-#
-#	# deprecated, moved to FilenameReducer
-#	def summaryVerseMessage(self, prefix, message, errors):
-#		#print(prefix, message, errors)
-#		currBook, chapter, verse = errors[0].split(":")
-#		startChap = int(chapter)
-#		startVerse = int(verse)
-#		nextVerse = startVerse
-#		results = []
-#		for error in errors:
-#			book, chapter, verse = error.split(":")
-#			if book == currBook and int(chapter) == startChap and int(verse) == nextVerse:
-#				nextVerse += 1
-#			else:
-#				self.appendVerseError(results, currBook, startChap, startVerse, nextVerse)
-#				currBook = book
-#				startChap = int(chapter)
-#				startVerse = int(verse)
-#				nextVerse = startVerse + 1
-#		self.appendVerseError(results, currBook, startChap, startVerse, nextVerse)
-#		print(prefix, message, ", ".join(results))
-#
-#
-#	# deprecated, moved to FilenameReducer
-#	def appendVerseError(self, results, book, chapStart, verseStart, verseEnd):
-#		if verseStart == (verseEnd - 1):
-#			results.append("%s %d:%d" % (book, chapStart, verseStart))
-#		else:
-#			results.append("%s %d:%d-%d" % (book, chapStart, verseStart, verseEnd - 1))
 
 
 	def summary3(self):
