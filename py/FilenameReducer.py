@@ -15,20 +15,16 @@ from operator import attrgetter
 import json
 import csv
 from datetime import datetime
-
-quarantineDir = "/Users/garygriswold/FCBH/files/validate/quarantine/"  ## should these be directories, or should this be part of the name
-## so that we can see them side by side.
-duplicateDir = "/Users/garygriswold/FCBH/files/validate/duplicate/"
-acceptedDir = "/Users/garygriswold/FCBH/files/validate/approved/"
-approvedErrorsFile = "/Users/garygriswold/FCBH/files/validate/AcceptErrors.csv"
-errorReportDir = "/Users/garygriswold/FCBH/files/validate/"
-errorPctLimit = 5.0
+from Config import *
 
 class FilenameReducer:
 
 	@classmethod
 	def openErrorReport(klass):
-		path = errorReportDir + "Errors-" + datetime.today().strftime("%y-%m-%dT%H:%M:%S") + ".out"
+		config = Config("dev") ### Error config profile hard-coded
+		errorDir = config.directory_errors
+		pattern = config.filename_datetime 
+		path = errorDir + "Errors-" + datetime.today().strftime(pattern) + ".out"
 		klass.errorFile = open(path, "w")
 		klass.errorFile.write("Test line\n")
 		print("openErrorReport", path)
@@ -38,7 +34,8 @@ class FilenameReducer:
 		klass.errorFile.close()
 
 
-	def __init__(self, bucket, filePrefix, fileList, extraChapters, missingChapters, missingVerses):
+	def __init__(self, config, bucket, filePrefix, fileList, extraChapters, missingChapters, missingVerses):
+		self.config = config
 		self.bucket = bucket
 		self.filePrefix = filePrefix
 		self.fileList = fileList
@@ -74,14 +71,10 @@ class FilenameReducer:
 
 
 	def overrideQuarantine(self):
-		## Belongs in config
-		if not os.path.isfile(approvedErrorsFile):
-			print("%s file does not exist" % (approvedErrorsFile))
-			sys.exit()
+		approvedErrorsFile = self.config.filename_accept_errors
 		with open(approvedErrorsFile, newline='\n') as csvfile:
 			reader = csv.reader(csvfile, delimiter=',', quotechar='"')
 			for row in reader:
-				#print("row", row)
 				prefix = "/".join(row[1:])
 				if row[0] == self.bucket and prefix == self.filePrefix:
 					return True
@@ -92,7 +85,7 @@ class FilenameReducer:
 		quarantineList = []
 		acceptedList = []
 		errPct = 100.00 * errorCount / len(fileList)
-		if errPct >= errorPctLimit:
+		if errPct >= self.config.error_limit_pct:
 			quarantineList = fileList
 		elif self.filePrefix == "audio/ONBLTC/ONBLTCN2DA16":
 			if fileList[0].damid == "ONBLTCN1DA":
@@ -159,16 +152,16 @@ class FilenameReducer:
 
 	def writeOutput(self, listType, fileList):
 		if listType == "accepted":
-			path = acceptedDir
+			path = self.config.directory_accepted
 		elif listType == "duplicate":
-			path = duplicateDir
+			path = self.config.directory_duplicate
 		elif listType == "quarantine":
-			path = quarantineDir
+			path = self.config.directory_quarantine
 		else:
 			print("ERROR: Unknown listType %s" % (listType))
 			sys.exit()
 
-		filename = path + self.bucket + ":" + self.filePrefix.replace("/", ":") + ".csv"
+		filename = path + self.bucket + "_" + self.filePrefix.replace("/", "_") + ".csv"
 		## This test needs to be promoted to Config, so that it fails immediately on start
 		#if not os.path.isfile(filename):
 		#	print("Filename %s does not exist.")

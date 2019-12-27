@@ -24,9 +24,9 @@ class InputReader:
 	## This method is probably only for testing
 	def typeCodeListing(self, typeCode):
 		if typeCode == "video":
-			return self.bucketListing("dbp-vid")
+			return self.bucketListing(self.config.s3_vid_bucket)
 		else:
-			self.bucketListing("dbp-prod")
+			self.bucketListing(self.config.s3_bucket)
 			results2 = {}
 			for key in self.results.keys():
 				if key.startswith(typeCode):
@@ -42,7 +42,7 @@ class InputReader:
 		dropAudioIds = set()
 		dropTextIds = set()
 		dropVideoIds = set()
-		bucketPath = self.config.directory_bucket_list % (bucketName.replace("-", "_"))
+		bucketPath = self.config.directory_bucket_list + bucketName.replace("-", "_") + ".txt"
 		files = io.open(bucketPath, mode="r", encoding="utf-8")
 		for line in files:
 			if "delete" not in line:
@@ -79,8 +79,8 @@ class InputReader:
 						else:
 							dropTypes.add(typeCode)
 					else:
-						dropBibleIds.add("%s/%s" % (typeCode, bibleId))	
-		warningPathName = "output/InputReaderErrors_%s.text" % (bucketName)
+						dropBibleIds.add("%s/%s" % (typeCode, bibleId))
+		warningPathName = self.config.directory_errors + os.sep + "InputReaderErrors_%s.text" % (bucketName)
 		output = io.open(warningPathName, mode="w", encoding="utf-8")
 		self.privateDrop(output, "WARNING: type_code %s was excluded", dropTypes)
 		self.privateDrop(output, "WARNING: bible_id %s was excluded", dropBibleIds)
@@ -115,7 +115,7 @@ class InputReader:
 		return self.results
 
 
-#config = Config()
+#config = Config("dev")
 #reader = InputReader(config)
 #reader.bucketListing('dbp-vid')
 

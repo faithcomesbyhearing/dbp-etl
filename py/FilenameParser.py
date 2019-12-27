@@ -9,6 +9,7 @@ from LPTSExtractReader import *
 from InputReader import *
 from FilenameReducer import *
 from SQLUtility import *
+from Config import *
 
 class Filename:
 
@@ -448,7 +449,7 @@ class FilenameParser:
 				(extraChapters, missingChapters, missingVerses) = self.checkVideoBookChapterVerse(prefix, files)
 			
 			bucket = "dbp-prod" ## Need to pass this in somewhere
-			reducer = FilenameReducer(bucket, prefix, files, extraChapters, missingChapters, missingVerses)
+			reducer = FilenameReducer(self.config, bucket, prefix, files, extraChapters, missingChapters, missingVerses)
 			reducer.process()
 
 
@@ -555,7 +556,8 @@ class FilenameParser:
 
 
 	def summary3(self):
-		file = io.open("FilenameParser.out", mode="w", encoding="utf-8")
+		path = self.config.directory_errors + os.sep + "FilenameParser.out"
+		file = io.open(path, mode="w", encoding="utf-8")
 		for entry in self.parsedList:
 			file.write("%s\n" % entry)
 		file.write("\n\nUnparsed\n\n")
@@ -603,7 +605,7 @@ class FilenameParser:
 		else:
 			return "Traditional"
 
-config = Config()
+config = Config("dev")
 FilenameReducer.openErrorReport()
 parser = FilenameParser(config)
 parser.process3('audio')
