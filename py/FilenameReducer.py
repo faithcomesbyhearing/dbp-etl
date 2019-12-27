@@ -28,7 +28,7 @@ class FilenameReducer:
 
 	@classmethod
 	def openErrorReport(klass):
-		path = errorReportDir + "Errors_" + datetime.today().isoformat() + ".out"
+		path = errorReportDir + "Errors-" + datetime.today().strftime("%y-%m-%dT%H:%M:%S") + ".out"
 		klass.errorFile = open(path, "w")
 		klass.errorFile.write("Test line\n")
 		print("openErrorReport", path)
