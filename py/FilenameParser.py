@@ -186,15 +186,6 @@ class Filename:
 		print(self.bookSeq, self.fileSeq, self.bookId, self.chapter, self.name, self.damid, self.type, self.file, self.errors)
 
 
-class FilenameError:
-
-	def __init__(self, code, reference, message, status):
-		self.code = code
-		#self.reference = reference
-		self.message = message
-		self.status = status
-
-
 class FilenameRegex:
 
 	def __init__(self, name, regex):

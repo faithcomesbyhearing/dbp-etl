@@ -20,7 +20,7 @@ quarantineDir = "/Users/garygriswold/FCBH/files/validate/quarantine/"  ## should
 ## so that we can see them side by side.
 duplicateDir = "/Users/garygriswold/FCBH/files/validate/duplicate/"
 acceptedDir = "/Users/garygriswold/FCBH/files/validate/approved/"
-approvedErrorsFile = "/Users/garygriswold/FCBH/files/validate/AcceptErrors.json"
+approvedErrorsFile = "/Users/garygriswold/FCBH/files/validate/AcceptErrors.csv"
 errorReportDir = "/Users/garygriswold/FCBH/files/validate/"
 errorPctLimit = 5.0
 
@@ -39,20 +39,6 @@ class FilenameReducer:
 
 
 	def __init__(self, bucket, filePrefix, fileList, extraChapters, missingChapters, missingVerses):
-		# Test belongs in config class
-		if not os.path.isfile(approvedErrorsFile):
-			print("ApprovedErrors.json file does not exist")
-			sys.exit()
-		#approved = open(approvedErrorsFile, "r")
-		#for line in approved:
-		#	print(line)
-		#approved.close()
-		with open(approvedErrorsFile) as json_file:
-			data = json.load(json_file)	
-			#print("data", data)
-			#for item, value in data.items():
-			#	print("item", item, value)
-		#self.approvedErrors = json.load(approvedErrorsFile)
 		self.bucket = bucket
 		self.filePrefix = filePrefix
 		self.fileList = fileList
@@ -62,8 +48,16 @@ class FilenameReducer:
 
 
 	def process(self):
-		errorCount = self.neutralizeAcceptedErrors()
-		(acceptedList, quarantineList) = self.quarantineErrors(self.fileList, errorCount)
+		errorCount = len(self.extraChapters) + len(self.missingChapters) + len(self.missingVerses)
+		for file in self.fileList:
+			errorCount += len(file.errors)
+
+		if self.overrideQuarantine():
+			acceptedList = self.fileList
+			quarantineList = []
+		else:
+			(acceptedList, quarantineList) = self.quarantineErrors(self.fileList, errorCount)
+
 		if len(acceptedList) > 0:
 			(acceptedList, duplicateList) = self.removeDuplicates(acceptedList)
 		else:
@@ -79,18 +73,19 @@ class FilenameReducer:
 			self.writeOutput("accepted", acceptedList)
 
 
-	def neutralizeAcceptedErrors(self):
-		errorCount = 0
-		for file in self.fileList:
-			if len(file.errors) > 0:
-				errorCount += self.checkErrors(file.file, file.errors)
-		if len(self.extraChapters) > 0:
-			errorCount += self.checkErrors("", self.extraChapters)
-		if len(self.missingChapters) > 0:
-			errorCount += self.checkErrors("", self.missingChapters)
-		if len(self.missingVerses) > 0:
-			errorCount += self.checkErrors("", self.missingVerses)
-		return errorCount
+	def overrideQuarantine(self):
+		## Belongs in config
+		if not os.path.isfile(approvedErrorsFile):
+			print("%s file does not exist" % (approvedErrorsFile))
+			sys.exit()
+		with open(approvedErrorsFile, newline='\n') as csvfile:
+			reader = csv.reader(csvfile, delimiter=',', quotechar='"')
+			for row in reader:
+				#print("row", row)
+				prefix = "/".join(row[1:])
+				if row[0] == self.bucket and prefix == self.filePrefix:
+					return True
+		return False
 
 
 	def quarantineErrors(self, fileList, errorCount):
@@ -107,22 +102,6 @@ class FilenameReducer:
 		else:
 			acceptedList = fileList
 		return (acceptedList, quarantineList)
-
-
-
-
-	# skipping error check for now.  Need to organize approvedErrorSet
-	def checkErrors(self, filename, errorList):
-		key = "%s:%s" % (self.filePrefix, filename)
-		errorCount = 0
-		for index in range(len(errorList)):
-			error = errorList[index]
-			key2 = key + ":" + error  ## Should this be an error class
-			#if key2 in approvedErrorList:
-			#	errorList[index].status = 'approved'
-			#else:
-			errorCount += 1
-		return errorCount
 
 
 	def removeDuplicates(self, fileList):
