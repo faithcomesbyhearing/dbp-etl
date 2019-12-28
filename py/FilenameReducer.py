@@ -20,13 +20,11 @@ from Config import *
 class FilenameReducer:
 
 	@classmethod
-	def openErrorReport(klass):
-		config = Config("dev") ### Error config profile hard-coded
+	def openErrorReport(klass, config):
 		errorDir = config.directory_errors
 		pattern = config.filename_datetime 
 		path = errorDir + "Errors-" + datetime.today().strftime(pattern) + ".out"
 		klass.errorFile = open(path, "w")
-		klass.errorFile.write("Test line\n")
 		print("openErrorReport", path)
 
 	@classmethod

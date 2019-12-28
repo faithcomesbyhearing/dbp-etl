@@ -20,7 +20,6 @@ class Config:
 		insideProfile = False
 		cfg = open(CONFIG_FILE, "r")
 		for line in cfg:
-			print(len(line), line)
 			line = line.strip()
 			if not line.startswith("#"): # Comment
 				if insideProfile:

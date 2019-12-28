@@ -606,7 +606,7 @@ class FilenameParser:
 			return "Traditional"
 
 config = Config("dev")
-FilenameReducer.openErrorReport()
+FilenameReducer.openErrorReport(config)
 parser = FilenameParser(config)
 parser.process3('audio')
 parser.summary3()
