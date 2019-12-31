@@ -400,7 +400,7 @@ class FilenameParser:
 		)
 
 
-	def process3(self, typeCode):
+	def process3(self, bucket):
 		db = SQLUtility("localhost", 3306, "root", "valid_dbp")
 		self.chapterMap = db.selectMap("SELECT id, chapters FROM books", None)
 		extras = {"FRT":6, "INT":1, "BAK":2, "LXX":1, "CNC":2, "GLO":26, "TDX":1, "NDX":1, "OTH":5, 
@@ -417,21 +417,21 @@ class FilenameParser:
 		self.usfx2Map.update(extras)
 		self.usfx2Map["J1"] = "1JN" ## fix incorrect entry in books table
 		reader = InputReader(self.config)
-		filenamesMap = reader.typeCodeListing(typeCode)
+		filenamesMap = reader.bucketListing(bucket)
 		db.close()
 
-		if typeCode == "audio":
-			templates = self.audioTemplates
-		elif typeCode == "text":
-			templates = self.textTemplates
-		elif typeCode == "video":
-			templates = self.videoTemplates
-		else:
-			print("ERROR: unknown type_code: %s" % (typeCode))
-			sys.exit()
-
 		for prefix in filenamesMap.keys():
-			filesetId = prefix.split("/")[2]
+			(typeCode, bibleId, filesetId) = prefix.split("/")
+			if typeCode == "audio":
+				templates = self.audioTemplates
+			elif typeCode == "text":
+				templates = self.textTemplates
+			elif typeCode == "video":
+				templates = self.videoTemplates
+			else:
+				print("ERROR: unknown type_code: %s" % (typeCode))
+				sys.exit()
+
 			lptsRecord = self.lptsFilesetMap.get(filesetId[0:10], None)
 			self.otOrder = self.OTOrderTemp(filesetId, lptsRecord)
 			self.ntOrder = self.NTOrderTemp(filesetId, lptsRecord)
@@ -448,7 +448,6 @@ class FilenameParser:
 			elif typeCode == "video":
 				(extraChapters, missingChapters, missingVerses) = self.checkVideoBookChapterVerse(prefix, files)
 			
-			bucket = "dbp-prod" ## Need to pass this in somewhere
 			reducer = FilenameReducer(self.config, bucket, prefix, files, extraChapters, missingChapters, missingVerses)
 			reducer.process()
 
@@ -486,7 +485,6 @@ class FilenameParser:
 
 
 	def validateCompleteness(self, file):
-		#if file.template.name != "audioStory1" and file.template.name != "audioStory2":
 		if "audioStory" not in file.template.name:
 			if file.bookId == None or file.bookId == "":
 				file.errors.append("book_id is not found")
@@ -608,7 +606,8 @@ class FilenameParser:
 config = Config("dev")
 FilenameReducer.openErrorReport(config)
 parser = FilenameParser(config)
-parser.process3('audio')
+#parser.process3('dbp-prod')
+parser.process3('dbp-vid')
 parser.summary3()
 FilenameReducer.closeErrorReport()
 

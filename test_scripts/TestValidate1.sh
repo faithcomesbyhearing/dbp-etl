@@ -7,12 +7,9 @@ sort test1.out > test2.out
 wc -l test2.out
 
 grep -v delete ../../bucket_data/dbp-prod.txt > prod1.out
-#grep -v delete ../../bucket_data/dbp-prod.txt | grep audio > prod1.out
 wc -l prod1.out
 
 diff -b test2.out prod1.out > test.diff
 wc -l test.diff
 
-grep -v text test.diff > test2.diff
-wc -l test2.diff
 

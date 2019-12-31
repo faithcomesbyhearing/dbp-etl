@@ -113,7 +113,7 @@ class FilenameReducer:
 			files = uniqueMap[key]
 			if len(files) == 1:
 				acceptedList.append(files[0])
-			elif len(files) == 2 and files[0].type == ".html":
+			elif len(files) == 2 and files[0].type == "html":
 				if len(files[0].file) > len(files[1].file):
 					acceptedList.append(files[0])
 					duplicateList.append(files[1])
