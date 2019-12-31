@@ -5,9 +5,11 @@ mysql -uroot -p   <<END_SQL1
 
 use valid_dbp;
 
-delete from bible_file_video_transport_stream;
+delete from bible_file_stream_bytes;
 
-delete from bible_file_video_resolutions;
+delete from bible_file_stream_ts;
+
+delete from bible_file_stream_bandwidths;
 
 delete from bible_file_tags;
 

@@ -31,8 +31,10 @@ select count(*) as bible_files from bible_files;
 
 select count(*) as bible_file_tags from bible_file_tags;
 
-select count(*) as bible_file_video_resolutions from bible_file_video_resolutions;
+select count(*) as bible_file_stream_bandwidths from bible_file_stream_bandwidths;
 
-select count(*) as bible_file_video_transport_stream from bible_file_video_transport_stream;
+select count(*) as bible_file_stream_bytes from bible_file_stream_bytes;
+
+select count(*) as bible_file_stream_ts from bible_file_stream_ts;
 
 END_SQL1
