@@ -1,23 +1,35 @@
 
 
 import os
+import csv
 
-def outputDir(dirname, outfile):
+def outputDir(dirname):
 	files = os.listdir(dirname)
 	for file in files:
 		if file.endswith("csv"):
-			fp = open(dirname + os.sep + file, "r")
-			for line in fp:  # skip first line fp[1:]?
-				parts = line.split(",")
-				lineout = "/".join(parts[1:5])
-				outfile.write("%s\n" % (lineout))
-			fp.close()
+			with open(dirname + os.sep + file, newline='\n') as csvfile:
+				reader = csv.reader(csvfile, delimiter=',', quotechar='"')
+				firstLine = True
+				for row in reader:
+					if firstLine:
+						firstLine = False
+					else:
+						print("/".join(row[0:4]))
 
 
-outfile = open("test1.out", "w")
-outputDir("../../files/validate/accepted/", outfile)
-outputDir("../../files/validate/duplicate/", outfile)
-outputDir("../../files/validate/quarantine/", outfile)
-outfile.close()
+def outputFile(filename):
+	with open(filename, newline='\n') as csvfile:
+		reader = csv.reader(csvfile, delimiter=',', quotechar='"')
+		firstLine = True
+		for row in reader:
+			if firstLine:
+				firstLine = False
+			else:
+				num = len(row) - 1
+				print("/".join(row[0:num]))
 
 
+outputDir("../../files/validate/accepted/")
+outputDir("../../files/validate/duplicate/")
+outputDir("../../files/validate/quarantine/")
+outputFile("../../files/validate/errors/IgnoredFiles.csv")

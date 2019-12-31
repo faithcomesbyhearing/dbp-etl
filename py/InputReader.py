@@ -130,14 +130,13 @@ class InputReader:
 
 
 	def writeIgnoredCSV(self, ignoredFiles):
-		print("start ignorFiles", len(ignoredFiles))
+		print("IgnorFiles", len(ignoredFiles))
 		filename = self.config.directory_errors + "IgnoredFiles.csv"
 		with open(filename, 'w', newline='\n') as csvfile:
 			writer = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
 			writer.writerow(("typeCode", "bible_id", "fileset_id", "file_name", "error"))
 			for row in ignoredFiles:
 				writer.writerow(row)
-		print("end ignoreFiles")
 
 
 	def countSummary(self):
