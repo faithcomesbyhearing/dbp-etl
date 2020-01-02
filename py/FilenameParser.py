@@ -403,6 +403,7 @@ class FilenameParser:
 	def process3(self, bucket):
 		db = SQLUtility("localhost", 3306, "root", "valid_dbp")
 		self.chapterMap = db.selectMap("SELECT id, chapters FROM books", None)
+		## I am not certain the LXX actually exists
 		extras = {"FRT":6, "INT":1, "BAK":2, "LXX":1, "CNC":2, "GLO":26, "TDX":1, "NDX":1, "OTH":5, 
 			"XXA":4, "XXB":3, "XXC":1, "XXD":1, "XXE":1, "XXF":1, "XXG":1}
 		self.chapterMap.update(extras)
@@ -606,7 +607,7 @@ class FilenameParser:
 config = Config("dev")
 FilenameReducer.openErrorReport(config)
 parser = FilenameParser(config)
-#parser.process3('dbp-prod')
+parser.process3('dbp-prod')
 parser.process3('dbp-vid')
 parser.summary3()
 FilenameReducer.closeErrorReport()

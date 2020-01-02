@@ -101,7 +101,7 @@ class InputReader:
 					#dropNot4Parts.add("%s/%s/%s" % (typeCode, bibleId, filesetId))
 					ignoredFiles.append(parts + ["Not 4 parts"])
 
-		warningPathName = self.config.directory_errors + "InputReaderErrors_%s.text" % (bucketName)
+		warningPathName = self.config.directory_errors + "InputReaderErrors_%s.out" % (bucketName)
 		output = io.open(warningPathName, mode="w", encoding="utf-8")
 		self.privateDrop(output, "WARNING: type_code %s was excluded", dropTypes)
 		self.privateDrop(output, "WARNING: bible_id %s was excluded", dropBibleIds)

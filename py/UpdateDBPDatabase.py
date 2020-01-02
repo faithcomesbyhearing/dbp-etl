@@ -31,8 +31,7 @@ class UpdateDBPDatabase:
 		print("process")
 		dirname = self.config.directory_accepted
 		files = os.listdir(dirname)
-
-		for file in files:
+		for file in sorted(files):
 			if file.endswith("csv"):
 				(bucket, typeCode, bibleId, filesetId) = file.split(".")[0].split("_")
 				print(bucket, typeCode, bibleId, filesetId)
@@ -109,7 +108,7 @@ class UpdateDBPDatabase:
 
 
 	def insertBibleFileset(self, bucket, filesetId, hashId, setTypeCode, setSizeCode):
-		sql = ("REPLACE INTO bible_filesets(id, hash_id, asset_id, set_type_code,"
+		sql = ("INSERT INTO bible_filesets(id, hash_id, asset_id, set_type_code,"
 			" set_size_code, hidden) VALUES (%s, %s, %s, %s, %s, 0)")
 		values = (filesetId, hashId, bucket, setTypeCode, setSizeCode)
 		self.statements.append((sql, [values]))
