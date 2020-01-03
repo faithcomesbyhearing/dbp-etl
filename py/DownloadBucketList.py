@@ -8,12 +8,7 @@ import boto3
 import io
 import os
 import sys
-
-#BUCKET_NAME = "dbp-prod"
-#BUCKET_NAME = "dbp-vid"
-#BUCKET_NAME = "dbs-web"
-#BUCKET_NAME = "bibles.dbs.org"
-#BUCKET_NAME = "downloads.dbs.org"
+import datetime
 
 if len(sys.argv) < 2:
 	print("Usage: DownloadBucketList  bucket_name")
@@ -21,7 +16,7 @@ if len(sys.argv) < 2:
 
 BUCKET_NAME = sys.argv[1]
 
-filename = "new_%s.txt" % (BUCKET_NAME.replace("-", "_"))
+filename = "new-%s.txt" % (BUCKET_NAME)
 pathname = "%s/FCBH/bucket_data/%s" % (os.environ['HOME'], filename)
 print(pathname)
 
@@ -33,7 +28,7 @@ client = session.client('s3')
 
 s3 = session.resource('s3')
 for bucket in s3.buckets.all():
-	print("bucket", bucket.name)
+	print("available bucket", bucket.name)
 
 request = { 'Bucket':BUCKET_NAME, 'MaxKeys':1000 }
 # Bucket, Delimiter, EncodingType, Market, MaxKeys, Prefix
@@ -46,12 +41,12 @@ while hasMore:
 	for item in contents:
 		key = item['Key']
 		size = item['Size']
-		if (size > 0):
-			try:
-				#print(key)
-				out.write("%s\n" % (key))
-			except Exception as err:
-				print("Could not write key %s" % (err))
+		datetime = item['LastModified']
+		try:
+			#print(key, size, datetime)
+			out.write("%s\t%s\t%s\n" % (key, size, datetime))
+		except Exception as err:
+			print("Could not write key %s" % (err))
 
 	if hasMore:
 		request['ContinuationToken'] = response['NextContinuationToken']

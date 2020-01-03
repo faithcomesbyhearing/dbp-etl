@@ -49,8 +49,8 @@ class InputReader:
 		files = io.open(bucketPath, mode="r", encoding="utf-8")
 		for line in files:
 			if "delete" not in line:
-			#if "audio/ENG" in line:   ####### debug
-				parts = line.strip().split("/", 4)
+				(fname, length, datetime) = line.strip().split("\t")
+				parts = fname.split("/", 4)
 				#if len(parts) == 4:
 				if len(parts) == 4 and "/" not in parts[3]:
 					typeCode = parts[0]
@@ -63,7 +63,7 @@ class InputReader:
 						if typeCode == "audio":
 							if fileName.endswith(".mp3"):
 								if filesetId.isupper():
-									self.appendResults(key, fileName)
+									self.appendResults(key, fileName, length, datetime)
 								else:
 									dropAudioIds.add(key)
 									ignoredFiles.append(parts + ["fileset_id is not uppercase"])
@@ -73,7 +73,7 @@ class InputReader:
 							if fileName.endswith(".html"):
 								if filesetId.isupper():
 									if fileNameSansExt not in {"index", "about"}:
-										self.appendResults(key, fileName)
+										self.appendResults(key, fileName, length, datetime)
 									else:
 										ignoredFiles.append(parts + ["ignored meta data file"])
 								else:
@@ -85,7 +85,7 @@ class InputReader:
 							if (fileName.endswith(".mp4") and not fileName.endswith("web.mp4") 
 								and not filesetId.endswith("480") and not filesetId.endswith("720")):
 								if filesetId.isupper():
-									self.appendResults(key, fileName)
+									self.appendResults(key, fileName, length, datetime)
 								else:
 									dropVideoIds.add(key)
 									ignoredFiles.append(parts + ["fileset_id is not uppercase"])
@@ -123,9 +123,9 @@ class InputReader:
 			output.write(message % (dropId))
 
 
-	def appendResults(self, key, filename):
+	def appendResults(self, key, filename, length, datetime):
 		files = self.results.get(key, [])
-		files.append(filename)
+		files.append((filename, length, datetime))
 		self.results[key] = files
 
 

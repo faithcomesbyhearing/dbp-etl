@@ -15,7 +15,9 @@ class Filename:
 
 	def __init__(self, template, filename):
 		self.template = template
-		self.file = filename
+		self.file = filename[0]
+		self.length = filename[1]
+		self.datetime = filename[2]
 		self.bookId = ""
 		self.chapter = ""
 		self.chapterNum = 0
@@ -196,7 +198,7 @@ class FilenameRegex:
 
 	def parse(self, filename, parser):
 		file = Filename(self, filename)
-		match = self.regex.match(filename)
+		match = self.regex.match(filename[0])
 		if match != None:
 			if self.name[:3] == "vid":
 				file.addUnknown(match.group(1))
@@ -456,6 +458,7 @@ class FilenameParser:
 	def parseOneFileset3(self, templates, prefix, filenames):
 		numErrors = 0
 		files = []
+		#for (filename, length, datetime) in filenames:
 		for filename in filenames:
 			file = self.parseOneFilename3(templates, prefix, filename)
 			self.validateCompleteness(file)
@@ -526,11 +529,12 @@ class FilenameParser:
 		filesSorted = sorted(files, key=attrgetter('bookId', 'chapterNum', 'verseStartNum'))
 		books = {}
 		for file in filesSorted:
-			currChaps = books.get(file.bookId, {})
-			currVerses = currChaps.get(file.chapterNum, [])
-			currVerses.append((file.verseStartNum, file.verseEndNum))
-			currChaps[file.chapterNum] = currVerses
-			books[file.bookId] = currChaps
+			if file.bookId not in {None, ""}:
+				currChaps = books.get(file.bookId, {})
+				currVerses = currChaps.get(file.chapterNum, [])
+				currVerses.append((file.verseStartNum, file.verseEndNum))
+				currChaps[file.chapterNum] = currVerses
+				books[file.bookId] = currChaps
 		extraChapters = []
 		missingChapters = []
 		missingVerses = []
