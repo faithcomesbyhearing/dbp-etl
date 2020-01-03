@@ -13,11 +13,11 @@ from Config import *
 
 class Filename:
 
-	def __init__(self, template, filename):
+	def __init__(self, template, filenameTuple):
 		self.template = template
-		self.file = filename[0]
-		self.length = filename[1]
-		self.datetime = filename[2]
+		self.file = filenameTuple[0]
+		self.length = filenameTuple[1]
+		self.datetime = filenameTuple[2]
 		self.bookId = ""
 		self.chapter = ""
 		self.chapterNum = 0
@@ -196,9 +196,9 @@ class FilenameRegex:
 		self.regex = re.compile(regex)
 
 
-	def parse(self, filename, parser):
-		file = Filename(self, filename)
-		match = self.regex.match(filename[0])
+	def parse(self, filenameTuple, parser):
+		file = Filename(self, filenameTuple)
+		match = self.regex.match(filenameTuple[0])
 		if match != None:
 			if self.name[:3] == "vid":
 				file.addUnknown(match.group(1))
@@ -439,8 +439,8 @@ class FilenameParser:
 			self.otOrder = self.OTOrderTemp(filesetId, lptsRecord)
 			self.ntOrder = self.NTOrderTemp(filesetId, lptsRecord)
 
-			filenames = filenamesMap[prefix]
-			(numErrors, files) = self.parseOneFileset3(templates, prefix, filenames)
+			filenamesTuple = filenamesMap[prefix]
+			(numErrors, files) = self.parseOneFileset3(templates, prefix, filenamesTuple)
 			if numErrors == 0:
 				self.parsedList.append((prefix))
 			else:
@@ -455,12 +455,12 @@ class FilenameParser:
 			reducer.process()
 
 
-	def parseOneFileset3(self, templates, prefix, filenames):
+	def parseOneFileset3(self, templates, prefix, filenamesTuple):
 		numErrors = 0
 		files = []
 		#for (filename, length, datetime) in filenames:
-		for filename in filenames:
-			file = self.parseOneFilename3(templates, prefix, filename)
+		for filenameTuple in filenamesTuple:
+			file = self.parseOneFilename3(templates, prefix, filenameTuple)
 			self.validateCompleteness(file)
 			files.append(file)
 			if file.numErrors() > 0:
@@ -471,10 +471,10 @@ class FilenameParser:
 		return (numErrors, files)
 
 
-	def parseOneFilename3(self, templates, prefix, filename):
+	def parseOneFilename3(self, templates, prefix, filenameTuple):
 		parserTries = []
 		for template in templates:
-			file = template.parse(filename, self)
+			file = template.parse(filenameTuple, self)
 			#print("error", filename, template.name, file.errors, file.type)
 			if file.numErrors() == 0:
 				return file
