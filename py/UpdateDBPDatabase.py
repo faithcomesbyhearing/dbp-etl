@@ -108,7 +108,7 @@ class UpdateDBPDatabase:
 
 
 	def insertBibleFileset(self, bucket, filesetId, hashId, setTypeCode, setSizeCode):
-		sql = ("INSERT INTO bible_filesets(id, hash_id, asset_id, set_type_code,"
+		sql = ("REPLACE INTO bible_filesets(id, hash_id, asset_id, set_type_code,"
 			" set_size_code, hidden) VALUES (%s, %s, %s, %s, %s, 0)")
 		values = (filesetId, hashId, bucket, setTypeCode, setSizeCode)
 		self.statements.append((sql, [values]))
