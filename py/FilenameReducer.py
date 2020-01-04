@@ -12,15 +12,16 @@ import sys
 import io
 import os
 from operator import attrgetter
-#import json
 import csv
 from datetime import datetime
 from Config import *
+from FindDuplicateFilesets import *
 
 class FilenameReducer:
 
 	@classmethod
 	def openErrorReport(klass, config):
+		klass.config = config
 		errorDir = config.directory_errors
 		pattern = config.filename_datetime 
 		path = errorDir + "Errors-" + datetime.today().strftime(pattern) + ".out"
@@ -30,6 +31,9 @@ class FilenameReducer:
 	@classmethod
 	def closeErrorReport(klass):
 		klass.errorFile.close()
+		find = FindDuplicateFilesets(klass.config)
+		duplicates = find.findDuplicates()
+		find.moveDuplicates(duplicates)
 
 
 	def __init__(self, config, bucket, filePrefix, fileList, extraChapters, missingChapters, missingVerses):
@@ -101,51 +105,33 @@ class FilenameReducer:
 		uniqueMap = {}
 		for file in fileList:
 			if file.bookId != None and file.bookId != "":
-				# should the key include bucket?
-				key = "%s:%s:%s:%s" % (self.filePrefix, file.bookId, file.chapter, file.verseStart)
+				key = "%s:%s:%s" % (file.bookId, file.chapter, file.verseStart)
 				files = uniqueMap.get(key, [])
 				files.append(file)
 				uniqueMap[key] = files
 			else:
 				acceptedList.append(file)
 
-		for key in uniqueMap.keys():
-			files = uniqueMap[key]
+		for key, files in uniqueMap.items():
 			if len(files) == 1:
 				acceptedList.append(files[0])
-			elif len(files) == 2 and files[0].type == "html":
-				if len(files[0].file) > len(files[1].file):
-					acceptedList.append(files[0])
-					duplicateList.append(files[1])
-				else:
-					acceptedList.append(files[1])
-					duplicateList.append(files[0])
-			elif self.filePrefix == "audio/NTMWBT/NTMWBTN2DA16":
-				if len(files[0].file) > len(files[1].file):
-					acceptedList.append(files[0])
-					duplicateList.append(files[1])
-				else:
-					acceptedList.append(files[1])
-					duplicateList.append(files[0])
-			elif self.filePrefix == "audio/CWEPBT/CWEPBTN1DA16":
-				if len(files[0].file) < len(files[1].file):
-					acceptedList.append(files[0])
-					duplicateList.append(files[1])
-				else:
-					acceptedList.append(files[1])
-					duplicateList.append(files[0])
-			elif self.filePrefix == "audio/ENGWBT/ENGWBTN2DA":
-				if len(files[0].file) < len(files[1].file):
-					acceptedList.append(files[0])
-					duplicateList.append(files[1])
-				else:
-					acceptedList.append(files[1])
-					duplicateList.append(files[0])					
 			else:
-				print("Unexpected Duplicate %s" % (key))
-				for file in files:
-					print(file.file, file.bookId, file.chapter, file.verseStart, file.damid, file.type, file.template.name)
+				indexOfLongest = self.findLongest(files)
+				for index in range(len(files)):
+					if index == indexOfLongest:
+						acceptedList.append(files[index])
+					else:
+						duplicateList.append(files[index])
 		return (sorted(acceptedList, key=attrgetter('file')), sorted(duplicateList, key=attrgetter('file')))
+
+	def findLongest(self, files):
+		lengths = []
+		for file in files:
+			lengths.append(len(file.file))
+		longest = max(lengths)
+		for index in range(len(files)):
+			if len(files[index].file) == longest:
+				return index
 
 
 	def writeOutput(self, listType, fileList):
@@ -165,13 +151,13 @@ class FilenameReducer:
 		with open(filename, 'w', newline='\n') as csvfile:
 			writer = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
 			writer.writerow(("typeCode", "bible_id", "fileset_id", "file_name", "book_id", 
-				"chapter_start", "chapter_end", "verse_start", "verse_end", "errors"))
+				"chapter_start", "chapter_end", "verse_start", "verse_end", "datetime", "errors"))
 			## prefix and some fields are redundant
 			## optional: bookSeq, fileSeq, name, title, usfx2, damid, filetype
 			(typeCode, bibleId, filesetId) = self.filePrefix.split("/")
 			for file in fileList:
 				writer.writerow((typeCode, bibleId, filesetId, file.file, file.bookId, 
-					file.chapter, file.chapterEnd, file.verseStart, file.verseEnd, "; ".join(file.errors)))
+					file.chapter, file.chapterEnd, file.verseStart, file.verseEnd, file.datetime, "; ".join(file.errors)))
 
 
 	def writeErrors(self):

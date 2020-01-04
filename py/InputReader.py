@@ -38,12 +38,6 @@ class InputReader:
 
 
 	def bucketListing(self, bucketName):
-		dropTypes = set()
-		dropBibleIds = set()
-		dropAudioIds = set()
-		dropTextIds = set()
-		dropVideoIds = set()
-		#dropNot4Parts = set()
 		ignoredFiles = []
 		bucketPath = self.config.directory_bucket_list + bucketName + ".txt"
 		files = io.open(bucketPath, mode="r", encoding="utf-8")
@@ -51,12 +45,12 @@ class InputReader:
 			if "delete" not in line:
 				(fname, length, datetime) = line.strip().split("\t")
 				parts = fname.split("/", 4)
-				#if len(parts) == 4:
 				if len(parts) == 4 and "/" not in parts[3]:
 					typeCode = parts[0]
 					bibleId = parts[1]
 					filesetId = parts[2]
 					fileName = parts[3]
+					parts.append(datetime)
 					fileNameSansExt = fileName.split(".")[0]
 					key = "%s/%s/%s" % (typeCode, bibleId, filesetId)
 					if bibleId.isupper():
@@ -65,7 +59,6 @@ class InputReader:
 								if filesetId.isupper():
 									self.appendResults(key, fileName, length, datetime)
 								else:
-									dropAudioIds.add(key)
 									ignoredFiles.append(parts + ["fileset_id is not uppercase"])
 							else:
 								ignoredFiles.append(parts + ["audio is not mp3"])
@@ -77,7 +70,6 @@ class InputReader:
 									else:
 										ignoredFiles.append(parts + ["ignored meta data file"])
 								else:
-									dropTextIds.add(key)
 									ignoredFiles.append(parts + ["fileset_id is not uppercase"])
 							else:
 								ignoredFiles.append(parts + ["text is not .html"])
@@ -87,40 +79,20 @@ class InputReader:
 								if filesetId.isupper():
 									self.appendResults(key, fileName, length, datetime)
 								else:
-									dropVideoIds.add(key)
 									ignoredFiles.append(parts + ["fileset_id is not uppercase"])
-							else:
-								ignoredFiles.append(parts + ["video is not .mp4"])
+							#else:
+								#ignoredFiles.append(parts + ["video is not .mp4"])
 						else:
-							dropTypes.add(typeCode)
 							ignoredFiles.append(parts + ["not audio; text; video"])
 					else:
-						dropBibleIds.add("%s/%s" % (typeCode, bibleId))
 						ignoredFiles.append(parts + ["bible_id is not uppercase"])
 				else:
-					#dropNot4Parts.add("%s/%s/%s" % (typeCode, bibleId, filesetId))
 					ignoredFiles.append(parts + ["Not 4 parts"])
 
-		warningPathName = self.config.directory_errors + "InputReaderErrors_%s.out" % (bucketName)
-		output = io.open(warningPathName, mode="w", encoding="utf-8")
-		self.privateDrop(output, "WARNING: type_code %s was excluded", dropTypes)
-		self.privateDrop(output, "WARNING: bible_id %s was excluded", dropBibleIds)
-		self.privateDrop(output, "WARNING: audio_id %s was excluded", dropAudioIds)
-		self.privateDrop(output, "WARNING: text_id %s was excluded", dropTextIds)
-		self.privateDrop(output, "WARNING: video_id %s was excluded", dropVideoIds)
-		output.close()
 		self.writeIgnoredCSV(ignoredFiles)
 		print("start countSummary", len(self.results.keys()))
 		self.countSummary()
 		return self.results
-
-
-	def privateDrop(self, output, message, dropIds):
-		print("num %d:  %s" % (len(dropIds), message))
-		message += "\n"
-		sortedIds = sorted(list(dropIds))
-		for dropId in sortedIds:
-			output.write(message % (dropId))
 
 
 	def appendResults(self, key, filename, length, datetime):
@@ -130,11 +102,11 @@ class InputReader:
 
 
 	def writeIgnoredCSV(self, ignoredFiles):
-		print("IgnorFiles", len(ignoredFiles))
+		print("IgnoredFiles", len(ignoredFiles))
 		filename = self.config.directory_errors + "IgnoredFiles.csv"
 		with open(filename, 'w', newline='\n') as csvfile:
 			writer = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-			writer.writerow(("typeCode", "bible_id", "fileset_id", "file_name", "error"))
+			writer.writerow(("typeCode", "bible_id", "fileset_id", "file_name", "datetime", "error"))
 			for row in ignoredFiles:
 				writer.writerow(row)
 
