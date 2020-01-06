@@ -25,6 +25,8 @@ class UpdateDBPDatabase:
 		self.config = config
 		self.db = SQLUtility(config.database_host, config.database_port, config.database_user, config.database_db_name)
 		self.statements = []
+		self.OT = self.db.selectSet("SELECT id FROM books WHERE book_testament = 'OT'", ())
+		self.NT = self.db.selectSet("SELECT id FROM books WHERE book_testament = 'NT'", ())
 
 
 	def process(self):
@@ -86,12 +88,37 @@ class UpdateDBPDatabase:
 
 
 	def getSetSizeCode(self, csvFilename):
-		return "C"
 		bookIdSet = set()
 		with open(csvFilename, newline='\n') as csvfile:
 			reader = csv.DictReader(csvfile)
 			for row in reader:
 				bookIdSet.add(row["book_id"])
+		hasOT = len(bookIdSet.intersection(self.OT))
+		hasNT = len(bookIdSet.intersection(self.NT))
+
+		if hasNT >= 27:
+			if hasOT >= 39:
+				return "C"
+			elif hasOT > 0:
+				return "NTOTP"
+			else:
+				return "NT"
+
+		elif hasNT > 0:
+			if hasOT >= 39:
+				return "OTNTP"
+			elif hasOT > 0:
+				return "NTPOTP"
+			else:
+				return "NTP"
+
+		else:
+			if hasOT >= 39:
+				return "OT"
+			elif hasOT > 0:
+				return "OTP"
+			else:
+				return "S"
 
 		## somehow determine the size based upon the number of books?
 		# match to old testament set, and new testament set
