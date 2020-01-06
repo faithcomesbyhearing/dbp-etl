@@ -82,7 +82,7 @@ class SQLUtility:
 
 	def selectRow(self, statement, values):
 		resultSet = self.select(statement, values)
-		return resultSet[0] if len(resultSet) > 0 else [None] * 10
+		return resultSet[0] if len(resultSet) > 0 else None
 
 
 	def selectSet(self, statement, values):

@@ -19,7 +19,7 @@ class CompareTable:
 		self.tables = {}
 		self.tables["bibles"] = [["id"],["language_id", "versification", "numeral_system_id", "date", "scope", 
 			"script", "derived", "copyright", "priority", "reviewed", "notes"]]
-		self.tables["bible_filesets"] = [["hash_id"], ["id", "asset_id", "set_type_code", "hidden"]] # check set_size_code after bible_files
+		#self.tables["bible_filesets"] = [["hash_id"], ["id", "asset_id", "set_type_code", "hidden"]] # check set_size_code after bible_files
 		self.tables["bible_fileset_connections"] = [[], []]
 		self.tables["bible_translations"] = [[], []]
 		self.tables["bible_books"] = [["bible_id", "book_id"], ["name", "name_short", "chapters"]]
@@ -130,19 +130,19 @@ class CompareTable:
 		for prodMismatch in prodMismatches:
 			print("prod mismatch2: %s" % (prodMismatch))
 
-	def filesetId(self):
-		reader = LPTSExtractReader(self.config)
-		audioSet = set(reader.getAudioMap().keys())
-		textSet = set(reader.getTextMap().keys())
-		videoSet = set(reader.getVideoMap().keys())
-		allSet = audioSet.union(textSet, videoSet)
-		sqlMismatch = ("SELECT id FROM dbp_only.bible_filesets WHERE id NOT IN" +
-			" (select id from valid_dbp.bible_filesets)")
-		prodMismatches = self.db.selectList(sqlMismatch, None)
-		for prodMismatch in prodMismatches:
-			if prodMismatch[:10] in allSet:
-				print("Found in fileId %s" % (prodMismatch))
-
+#	def filesetId(self):
+#		reader = LPTSExtractReader(self.config)
+#		audioSet = set(reader.getAudioMap().keys())
+#		textSet = set(reader.getTextMap().keys())
+#		videoSet = set(reader.getVideoMap().keys())
+#		allSet = audioSet.union(textSet, videoSet)
+#		sqlMismatch = ("SELECT id FROM dbp_only.bible_filesets WHERE id NOT IN" +
+#			" (select id from valid_dbp.bible_filesets)")
+#		prodMismatches = self.db.selectList(sqlMismatch, None)
+#		for prodMismatch in prodMismatches:
+#			if prodMismatch[:10] in allSet:
+#				print("Found in fileId %s" % (prodMismatch))
+#
 
 	def close(self):
 		self.db.close()
@@ -153,13 +153,11 @@ compare = CompareTable(config)
 #compare.comparePkey("bibles")
 #compare.compareColumns("bibles")
 #compare.biblesPkey()
-#compare.comparePkey("bible_filesets")
-#compare.compareColumns("bible_filesets")
 #compare.filesetId()
 #compare.comparePkey("bible_books")
 #compare.comparePkeyAndFileset("access_group_filesets")
 #compare.comparePkeyAndFileset("bible_files")
-compare.compareColumns("bible_file_tags")
+#compare.compareColumns("bible_file_tags")
 
 
 compare.close()

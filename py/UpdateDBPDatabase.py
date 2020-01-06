@@ -45,6 +45,8 @@ class UpdateDBPDatabase:
 				self.deleteBibleFiles(hashId)
 				self.insertBibleFileset(bucket, filesetId, hashId, setTypeCode, setSizeCode)
 				self.insertBibleFiles(hashId, csvFilename)
+				self.insertBibles(bibleId)
+				self.insertBibleFilesetConnections(bibleId, hashId)
 				self.db.executeTransaction(self.statements)
 
 
@@ -174,7 +176,6 @@ class UpdateDBPDatabase:
 			return row[name]
 
 
-
 	def convertChapterStart(self, bookId):
 		if bookId == "MAT":
 			return ("28", "21", "21")
@@ -188,11 +189,29 @@ class UpdateDBPDatabase:
 			return ("1", "1", "1")
 
 
+	def insertBibles(self, bibleId):
+		## This is only populating bibleId
+		sql = "SELECT id FROM bibles WHERE id = %s"
+		result = self.db.selectRow(sql, (bibleId,))
+		if result == None:
+			sql = ("INSERT INTO bibles (id, language_id, versification, numeral_system_id, `date`,"
+				" scope, script, derived, copyright, priority, reviewed, notes) VALUES"
+				" (%s, 6414, 'protestant', 'western-arabic', '2020', 'C', 'Latn', NULL, NULL, 0, 1, NULL)")
+			self.statements.append((sql, [(bibleId,)]))
+		## else: check if new column values are different and update or replace if they are
+
+
+	def insertBibleFilesetConnections(self, bibleId, hashId):
+		sql = "SELECT count(*) FROM bible_fileset_connections WHERE bible_id = %s AND hash_id = %s"
+		count = self.db.selectScalar(sql, (bibleId, hashId))
+		if count == 0:
+			sql = "INSERT INTO bible_fileset_connections (hash_id, bible_id) VALUES (%s, %s)"
+			self.statements.append((sql, [(hashId, bibleId)]))
+
+
 
 config = Config("dev")
 update = UpdateDBPDatabase(config)
 update.process()
-
-
 
 
