@@ -123,6 +123,8 @@ class Filename:
 			if maxChapter != None and int(chapter) > int(maxChapter):
 				self.errors.append("chapter too large: %s for %s" % (chapter, self.bookId))
 		self.chapterNum = int(self.chapter)
+		self.verseStart = "1"
+		self.verseStartNum = 1
 
 
 

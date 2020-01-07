@@ -161,8 +161,8 @@ class UpdateDBPDatabase:
 				if row["chapter_start"] == "end":
 					(chapterStart, verseStart, verseEnd) = self.convertChapterStart(bookId)
 				else:
-					chapterStart = row["chapter_start"] if row["chapter_start"] != "" else "1"
-					verseStart = row["verse_start"] if row["verse_start"] != "" else "1"
+					chapterStart = row["chapter_start"] if row["chapter_start"] != "" else None
+					verseStart = row["verse_start"] if row["verse_start"] != "" else None
 					verseEnd = row["verse_end"] if row["verse_end"] != "" else None
 				chapterEnd = row["chapter_end"] if row["chapter_end"] != "" else None
 				value = (hashId, bookId, chapterStart, chapterEnd, verseStart, verseEnd, row["file_name"])

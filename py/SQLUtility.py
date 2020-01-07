@@ -9,14 +9,19 @@ import pymysql
 
 class SQLUtility:
 
-	def __init__(self, host, port, user, db_name):
+	def __init__(self, host, port, user, db_name, cursor = 'list'):
+		if cursor == 'dict':
+			pycursor = pymysql.cursors.DictCursor
+		else:
+			pycursor = pymysql.cursors.Cursor
+					
 		self.conn = pymysql.connect(host = host,
                              		user = user,
                              		password = os.environ['MYSQL_PASSWD'],
                              		db = db_name,
                              		port = port,
                              		charset = 'utf8mb4',
-                             		cursorclass = pymysql.cursors.Cursor)
+                             		cursorclass = pycursor)
 
 
 	def close(self):
