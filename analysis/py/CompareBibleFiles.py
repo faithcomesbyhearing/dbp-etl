@@ -67,8 +67,8 @@ class CompareBibleFiles:
 				verseStartErrors.append((bibleId, filesetId, filename, testLabel, prodLabel))
 			if testVerseEnd != prodVerseEnd:
 				verseEndErrors.append((bibleId, filesetId, filename, testVerseEnd, prodVerseEnd))
-			# if testFileSize != prodFileSize:
-			#	fileSizeErrors.append((bibleId, filesetId, filename, testFileSize, prodFileSize))
+			if testFileSize != prodFileSize:
+				fileSizeErrors.append((bibleId, filesetId, filename, testFileSize, prodFileSize))
 			# if testDuration != prodDuration:
 			#	durationErrors.append((bibleId, filesetId, filename, testDuration, prodDuration))
 

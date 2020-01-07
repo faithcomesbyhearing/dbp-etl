@@ -149,10 +149,9 @@ class UpdateDBPDatabase:
 
 
 	def insertBibleFiles(self, hashId, csvFilename):
-		#typeCode,bible_id,fileset_id,file_name,book_id,chapter_start,chapter_end,verse_start,verse_end,errors
-		## skipped duration and file_size
+		## skipped duration
 		sql = ("INSERT INTO bible_files(hash_id, book_id, chapter_start, chapter_end,"
-			" verse_start, verse_end, file_name) VALUES (%s, %s, %s, %s, %s, %s, %s)")
+			" verse_start, verse_end, file_name, file_size) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)")
 		values = []
 		with open(csvFilename, newline='\n') as csvfile:
 			reader = csv.DictReader(csvfile)
@@ -165,7 +164,7 @@ class UpdateDBPDatabase:
 					verseStart = row["verse_start"] if row["verse_start"] != "" else None
 					verseEnd = row["verse_end"] if row["verse_end"] != "" else None
 				chapterEnd = row["chapter_end"] if row["chapter_end"] != "" else None
-				value = (hashId, bookId, chapterStart, chapterEnd, verseStart, verseEnd, row["file_name"])
+				value = (hashId, bookId, chapterStart, chapterEnd, verseStart, verseEnd, row["file_name"], row["file_size"])
 				values.append(value)
 			self.statements.append((sql, values))
 
