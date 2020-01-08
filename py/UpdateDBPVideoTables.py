@@ -11,13 +11,6 @@ import re
 from Config import *
 from SQLUtility import *
 
-Should I build a map of quarantine, and a map of duplicates from the csv files
-Then when I do not find find a file in the database, but I do find it in duplicates
-or quarantine, I can skip it without error.
-Otherwise, I should stop.
-
-The above logic only works for a full load, but I think that is the only time this program is run.
-
 
 class UpdateDBPVideoTables:
 
@@ -44,6 +37,7 @@ class UpdateDBPVideoTables:
 		tsInsert = ("INSERT INTO bible_file_stream_ts (stream_bandwidth_id, file_name,"
 			" runtime) VALUES (@bandwidth_id, '%s', %d);")
 
+		notProcessedSet = set()
 		statements = []
 		fp = open(config.directory_bucket_list + os.sep + self.config.s3_vid_bucket + ".txt", "r")
 		for line in fp:
@@ -62,8 +56,8 @@ class UpdateDBPVideoTables:
 						filename = line.split("/")[-1]
 						fileId = self.fileIdMap.get(filePathKey)
 						if fileId == None:
-							print("ERROR: FileId is Null", line)
-							#sys.exit()
+							if fileType == "m3u8":
+								notProcessedSet.add(line)
 
 						elif fileType == "m3u8":
 							if not filename.endswith("_stream.m3u8"):
@@ -83,7 +77,10 @@ class UpdateDBPVideoTables:
 						sys.exit()
 
 		fp.close()
-		for line in statements:
+		#for line in statements:
+		#	print(line)
+		print("NOT PROCESSED")
+		for line in notProcessedSet:
 			print(line)
 
 

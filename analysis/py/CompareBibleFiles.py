@@ -11,6 +11,28 @@ class CompareBibleFiles:
 		#self.commonSQL = ("SELECT id, hash_id FROM valid_dbp.bible_filesets WHERE id IN (SELECT id FROM dbp.bible_filesets)")
 
 
+	def compareNotInTest(self):
+		sql = ("SELECT file_name, book_id, chapter_start, verse_start, hash_id"
+			" FROM dbp.bible_files p WHERE NOT EXISTS"
+			" (SELECT 1 FROM valid_dbp.bible_files t WHERE p.hash_id = t.hash_id" 
+			" AND p.file_name = t.file_name)")
+		resultSet = self.db.select(sql, ())
+		for row in resultSet:
+			print(row)
+		print("NUM NOT IN TEST", len(resultSet))
+
+
+	def compareNotInProd(self):
+		sql = ("SELECT file_name, book_id, chapter_start, verse_start, hash_id"
+			" FROM valid_dbp.bible_files t WHERE NOT EXISTS"
+			" (SELECT 1 FROM dbp.bible_files p WHERE p.hash_id = t.hash_id" 
+			" AND p.file_name = t.file_name)")
+		resultSet = self.db.select(sql, ())
+		for row in resultSet:
+			print(row)
+		print("NUM NOT IN PROD", len(resultSet))
+
+
 	def compareCommon(self):
 		bookIdMATErrors = []
 		bookIdErrors = []
@@ -96,6 +118,8 @@ class CompareBibleFiles:
 config = Config("dev")
 compare = CompareBibleFiles(config)
 compare.compareCommon()
+#compare.compareNotInTest()
+#compare.compareNotInProd()
 
 
 """
