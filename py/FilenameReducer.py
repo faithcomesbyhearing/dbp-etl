@@ -27,6 +27,14 @@ class FilenameReducer:
 		path = errorDir + "Errors-" + datetime.today().strftime(pattern) + ".out"
 		klass.errorFile = open(path, "w")
 		print("openErrorReport", path)
+		klass.acceptErrorSet = set()
+		fp = open(config.filename_accept_errors, "r")
+		for row in fp:
+			klass.acceptErrorSet.add(row.strip())
+		fp.close()
+		for item in klass.acceptErrorSet:
+			print("Except Errors:", item)
+
 
 	@classmethod
 	def closeErrorReport(klass):
@@ -47,11 +55,11 @@ class FilenameReducer:
 
 
 	def process(self):
-		errorCount = len(self.extraChapters) + len(self.missingChapters) + len(self.missingVerses)
+		errorCount = len(self.extraChapters) + len(self.missingChapters) + int(len(self.missingVerses) / 20.0)
 		for file in self.fileList:
 			errorCount += len(file.errors)
 
-		if self.overrideQuarantine():
+		if self.bucket + ":" + self.filePrefix in FilenameReducer.acceptErrorSet:
 			acceptedList = self.fileList
 			quarantineList = []
 		else:
@@ -70,17 +78,6 @@ class FilenameReducer:
 			self.writeOutput("duplicate", duplicateList)
 		if len(acceptedList) > 0:
 			self.writeOutput("accepted", acceptedList)
-
-
-	def overrideQuarantine(self):
-		approvedErrorsFile = self.config.filename_accept_errors
-		with open(approvedErrorsFile, newline='\n') as csvfile:
-			reader = csv.reader(csvfile, delimiter=',', quotechar='"')
-			for row in reader:
-				prefix = "/".join(row[1:])
-				if row[0] == self.bucket and prefix == self.filePrefix:
-					return True
-		return False
 
 
 	def quarantineErrors(self, fileList, errorCount):

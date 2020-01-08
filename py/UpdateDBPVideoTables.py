@@ -11,6 +11,13 @@ import re
 from Config import *
 from SQLUtility import *
 
+Should I build a map of quarantine, and a map of duplicates from the csv files
+Then when I do not find find a file in the database, but I do find it in duplicates
+or quarantine, I can skip it without error.
+Otherwise, I should stop.
+
+The above logic only works for a full load, but I think that is the only time this program is run.
+
 
 class UpdateDBPVideoTables:
 
@@ -110,7 +117,6 @@ class UpdateDBPVideoTables:
     ## to be done.  How?
 	def getRuntime(self):
 		return 0
-
 
 
 config = Config("dev")
