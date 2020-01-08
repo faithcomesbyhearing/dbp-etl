@@ -21,7 +21,6 @@ from SQLUtility import *
 class UpdateDBPDatabase:
 
 	def __init__(self, config):
-		print("init")
 		self.config = config
 		self.db = SQLUtility(config.database_host, config.database_port, config.database_user, config.database_db_name)
 		self.statements = []
