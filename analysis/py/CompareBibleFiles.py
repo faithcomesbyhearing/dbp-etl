@@ -1,6 +1,8 @@
 # CompareBibleFiles.py
 
-
+import sys
+import io
+import csv
 from Config import *
 from SQLUtility import *
 
@@ -8,25 +10,49 @@ class CompareBibleFiles:
 
 	def __init__(self, config):
 		self.db = SQLUtility("localhost", 3306, "root", "valid_dbp")
-		#self.commonSQL = ("SELECT id, hash_id FROM valid_dbp.bible_filesets WHERE id IN (SELECT id FROM dbp.bible_filesets)")
+		duplicates = self.loadDirectory(config.directory_duplicate)
+		quarantine = self.loadDirectory(config.directory_quarantine)
+		self.rejects = duplicates.union(quarantine)
+		#for item in self.rejects:
+		#	print(item)
 
 
 	def compareNotInTest(self):
-		sql = ("SELECT file_name, book_id, chapter_start, verse_start, hash_id"
-			" FROM dbp.bible_files p WHERE NOT EXISTS"
-			" (SELECT 1 FROM valid_dbp.bible_files t WHERE p.hash_id = t.hash_id" 
-			" AND p.file_name = t.file_name)")
+		sql = ("SELECT bfc.bible_id, bs.id, p.file_name, p.book_id, p.chapter_start,"
+			" p.verse_start, p.hash_id FROM dbp.bible_files p"
+			" JOIN dbp.bible_filesets bs ON p.hash_id = bs.hash_id"
+			" JOIN dbp.bible_fileset_connections bfc ON bs.hash_id = bfc.hash_id"
+			" WHERE NOT EXISTS (SELECT 1 FROM valid_dbp.bible_files t WHERE p.hash_id = t.hash_id"
+			#" AND p.book_id = t.book_id AND p.chapter_start = t.chapter_start"
+			#" AND p.verse_start = t.verse_start)"
+			" AND p.file_name = t.file_name)"
+			" AND p.hash_id IN (SELECT t.hash_id"
+			" FROM dbp.bible_filesets p, valid_dbp.bible_filesets t"
+			" WHERE t.id = p.id)")
+		#	#" AND t.set_type_code='video_stream'"
+		#	#" AND p.set_type_code='video_stream')")
 		resultSet = self.db.select(sql, ())
+		results = []
 		for row in resultSet:
-			print(row)
-		print("NUM NOT IN TEST", len(resultSet))
+			key = "%s/%s/%s" % (row[0], row[1], row[2])
+			print(key)
+			if not key in self.rejects:
+				results.append(row)
+		print("NUM NOT IN TEST", len(resultSet), len(results))
 
 
 	def compareNotInProd(self):
-		sql = ("SELECT file_name, book_id, chapter_start, verse_start, hash_id"
-			" FROM valid_dbp.bible_files t WHERE NOT EXISTS"
-			" (SELECT 1 FROM dbp.bible_files p WHERE p.hash_id = t.hash_id" 
-			" AND p.file_name = t.file_name)")
+		sql = ("SELECT bfc.bible_id, bs.id, p.file_name, p.book_id, p.chapter_start,"
+			" p.verse_start, p.hash_id FROM valid_dbp.bible_files p"
+			" JOIN valid_dbp.bible_filesets bs ON p.hash_id = bs.hash_id"
+			" JOIN valid_dbp.bible_fileset_connections bfc ON bs.hash_id = bfc.hash_id"
+			" WHERE NOT EXISTS (SELECT 1 FROM dbp.bible_files t WHERE p.hash_id = t.hash_id"
+			#" AND p.book_id = t.book_id AND p.chapter_start = t.chapter_start"
+			#" AND p.verse_start = t.verse_start)"
+			" AND p.file_name = t.file_name)"
+			" AND p.hash_id IN (SELECT t.hash_id"
+			" FROM dbp.bible_filesets p, valid_dbp.bible_filesets t"
+			" WHERE t.id = p.id)")
 		resultSet = self.db.select(sql, ())
 		for row in resultSet:
 			print(row)
@@ -89,7 +115,7 @@ class CompareBibleFiles:
 				verseStartErrors.append((bibleId, filesetId, filename, testLabel, prodLabel))
 			if testVerseEnd != prodVerseEnd:
 				verseEndErrors.append((bibleId, filesetId, filename, testVerseEnd, prodVerseEnd))
-			if testFileSize != prodFileSize:
+			if testFileSize != prodFileSize and prodFileSize != None:
 				fileSizeErrors.append((bibleId, filesetId, filename, testFileSize, prodFileSize))
 			# if testDuration != prodDuration:
 			#	durationErrors.append((bibleId, filesetId, filename, testDuration, prodDuration))
@@ -105,6 +131,22 @@ class CompareBibleFiles:
 		print("%d file matches found" % (len(resultSet)))
 
 
+	def loadDirectory(self, dirname):
+		results = set()
+		files = os.listdir(dirname)
+		for file in sorted(files):
+			if file.endswith("csv"):
+				(bucket, typeCode, bibleId, filesetId) = file.split(".")[0].split("_")
+				csvFilename = dirname + os.sep + file
+				with open(csvFilename, newline='\n') as csvfile:
+					reader = csv.DictReader(csvfile)
+					for row in reader:
+						filename = row["file_name"]
+						key = "%s/%s/%s" % (bibleId, filesetId, filename)
+						results.add(key)
+		return results
+
+
 	def reportErrors(self, message, rows):
 		print("%d %s" % (len(rows), message))
 		for row in rows:
@@ -117,9 +159,9 @@ class CompareBibleFiles:
 
 config = Config("dev")
 compare = CompareBibleFiles(config)
-compare.compareCommon()
+#compare.compareCommon()
 #compare.compareNotInTest()
-#compare.compareNotInProd()
+compare.compareNotInProd()
 
 
 """
