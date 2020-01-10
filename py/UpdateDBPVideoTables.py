@@ -24,9 +24,11 @@ class UpdateDBPVideoTables:
 		resultSet = self.db.select(sql, ())
 		self.fileIdMap = {}
 		for row in resultSet:
-			filename = row[3].split(".")[0]
-			key = "video/%s/%s/%s" % (row[1], row[2], filename)
+			fname = row[3]
+			filePrefix = fname[:fname.rfind("_")]
+			key = "video/%s/%s/%s" % (row[1], row[2], filePrefix)
 			self.fileIdMap[key] = row[0]
+		print("Num Video Files", len(resultSet))
 
 
 	def generateStatements(self):
@@ -57,7 +59,9 @@ class UpdateDBPVideoTables:
 						fileId = self.fileIdMap.get(filePathKey)
 						if fileId == None:
 							if fileType == "m3u8":
-								notProcessedSet.add(line)
+								filesetId = line.split("/")[2]
+								if not filesetId.endswith("DA") and not filesetId.endswith("DA16"):
+									notProcessedSet.add(line)
 
 						elif fileType == "m3u8":
 							if not filename.endswith("_stream.m3u8"):
@@ -79,9 +83,10 @@ class UpdateDBPVideoTables:
 		fp.close()
 		#for line in statements:
 		#	print(line)
-		print("NOT PROCESSED")
-		for line in notProcessedSet:
+		print(len(notProcessedSet), "NOT PROCESSED")
+		for line in sorted(list(notProcessedSet)):
 			print(line)
+		print(len(notProcessedSet))
 
 
 	## to be done.  How?

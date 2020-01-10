@@ -33,6 +33,7 @@ class CompareBibleFiles:
 		#	#" AND p.set_type_code='video_stream')")
 		resultSet = self.db.select(sql, ())
 		results = []
+		## I don't think the following is doing anything???
 		for row in resultSet:
 			key = "%s/%s/%s" % (row[0], row[1], row[2])
 			print(key)
