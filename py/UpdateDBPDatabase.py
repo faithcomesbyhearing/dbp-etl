@@ -26,6 +26,18 @@ class UpdateDBPDatabase:
 		self.statements = []
 		self.OT = self.db.selectSet("SELECT id FROM books WHERE book_testament = 'OT'", ())
 		self.NT = self.db.selectSet("SELECT id FROM books WHERE book_testament = 'NT'", ())
+		self.videoStreamSet = set()
+		bucketPath = config.directory_bucket_list + os.sep + config.s3_vid_bucket + ".txt"
+		fp = open(bucketPath, "r")
+		for line in fp:
+			file = line.split("\t")[0]
+			filename = file.split("/")[-1]
+			if filename.endswith("_stream.m3u8"):
+				self.videoStreamSet.add(file)
+		fp.close()
+		#for item in self.videoStreamSet:
+		#	print(item)
+		#sys.exit()
 
 
 	def process(self):
@@ -148,6 +160,7 @@ class UpdateDBPDatabase:
 
 
 	def insertBibleFiles(self, hashId, csvFilename):
+		isVideoFile = csvFilename.split("_")[1] == "video"
 		## skipped duration
 		sql = ("INSERT INTO bible_files(hash_id, book_id, chapter_start, chapter_end,"
 			" verse_start, verse_end, file_name, file_size) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)")
@@ -163,8 +176,17 @@ class UpdateDBPDatabase:
 					verseStart = row["verse_start"] if row["verse_start"] != "" else None
 					verseEnd = row["verse_end"] if row["verse_end"] != "" else None
 				chapterEnd = row["chapter_end"] if row["chapter_end"] != "" else None
-				value = (hashId, bookId, chapterStart, chapterEnd, verseStart, verseEnd, row["file_name"], row["file_size"])
-				values.append(value)
+				if isVideoFile:
+					filename = row["file_name"].split(".")[0] + "_stream.m3u8"
+					fullname = "%s/%s/%s/%s" % (row["type_code"], row["bible_id"], row["fileset_id"], filename)
+					if fullname in self.videoStreamSet:
+						value = (hashId, bookId, chapterStart, chapterEnd, verseStart, verseEnd, filename, row["file_size"])
+						values.append(value)
+					else:
+						print("ERROR: %s is missing" % (fullname))
+				else:
+					value = (hashId, bookId, chapterStart, chapterEnd, verseStart, verseEnd, row["file_name"], row["file_size"])
+					values.append(value)
 			self.statements.append((sql, values))
 
 

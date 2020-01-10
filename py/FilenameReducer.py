@@ -113,22 +113,47 @@ class FilenameReducer:
 			if len(files) == 1:
 				acceptedList.append(files[0])
 			else:
-				indexOfLongest = self.findLongest(files)
+				indexOfLatest = self.findLatest(files)
 				for index in range(len(files)):
-					if index == indexOfLongest:
+					if index == indexOfLatest:
 						acceptedList.append(files[index])
 					else:
 						duplicateList.append(files[index])
 		return (sorted(acceptedList, key=attrgetter('file')), sorted(duplicateList, key=attrgetter('file')))
 
-	def findLongest(self, files):
-		lengths = []
+
+	def findLatest(self, files):
+		timestamps = []
 		for file in files:
-			lengths.append(len(file.file))
-		longest = max(lengths)
-		for index in range(len(files)):
-			if len(files[index].file) == longest:
-				return index
+			timestamps.append(datetime.fromisoformat(file.datetime))
+		latest = max(timestamps)
+		earliest = min(timestamps)
+		difference = latest - earliest
+		if file.type == "mp4":
+			limit = 5
+		else:
+			limit = 1200
+		if difference.total_seconds() > limit:
+			return timestamps.index(latest)
+		else:
+			lengths = []
+			for file in files:
+				lengths.append(len(file.file))
+			if file.type == "mp4":
+				best = min(lengths)
+			else:
+				best = max(lengths)
+			return lengths.index(best)
+
+
+#	def findLongest(self, files):
+#		lengths = []
+#		for file in files:
+#			lengths.append(len(file.file))
+#		longest = max(lengths)
+#		for index in range(len(files)):
+#			if len(files[index].file) == longest:
+#				return index
 
 
 	def writeOutput(self, listType, fileList):
@@ -147,7 +172,7 @@ class FilenameReducer:
 
 		with open(filename, 'w', newline='\n') as csvfile:
 			writer = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-			writer.writerow(("typeCode", "bible_id", "fileset_id", "file_name", "book_id", 
+			writer.writerow(("type_code", "bible_id", "fileset_id", "file_name", "book_id", 
 				"chapter_start", "chapter_end", "verse_start", "verse_end", "datetime", "file_size", "errors"))
 			## prefix and some fields are redundant
 			## optional: bookSeq, fileSeq, name, title, usfx2, damid, filetype
