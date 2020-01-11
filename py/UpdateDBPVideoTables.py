@@ -8,8 +8,11 @@
 import sys
 import os
 import re
+import subprocess
 from Config import *
 from SQLUtility import *
+
+VIDEO_STMTS_FILE = "VideoStmts.sql"
 
 
 class UpdateDBPVideoTables:
@@ -34,13 +37,13 @@ class UpdateDBPVideoTables:
 	def generateStatements(self):
 		m3u8Insert = ("INSERT INTO bible_file_stream_bandwidths (bible_file_id, file_name,"
 			" bandwidth, resolution_width, resolution_height, codec, stream) VALUES"
-			" (%d, '%s', %d, %d, %d, 'avc1.4d001f,mp4a.40.2', 1);")
-		idLookup = "SELECT @bandwidth_id = lastrowid();"
+			" (%d, '%s', %d, %d, %d, 'avc1.4d001f,mp4a.40.2', 1);\n")
+		idLookup = "SET @bandwidth_id = LAST_INSERT_ID();\n"
 		tsInsert = ("INSERT INTO bible_file_stream_ts (stream_bandwidth_id, file_name,"
-			" runtime) VALUES (@bandwidth_id, '%s', %d);")
+			" runtime) VALUES (@bandwidth_id, '%s', %d);\n")
 
 		notProcessedSet = set()
-		statements = []
+		statements = open(VIDEO_STMTS_FILE, "w")
 		fp = open(config.directory_bucket_list + os.sep + self.config.s3_vid_bucket + ".txt", "r")
 		for line in fp:
 			if line.startswith("video/"):
@@ -69,18 +72,19 @@ class UpdateDBPVideoTables:
 								resolutionHeight = self.getHeight(line)
 								resolutionWidth = self.getWidth(resolutionHeight)
 								sql = m3u8Insert % (fileId, filename, bandwidth, resolutionWidth, resolutionHeight)
-								statements.append(sql)
-								statements.append(idLookup)
+								statements.write(sql)
+								statements.write(idLookup)
 
 						elif fileType == "ts":
 							runtime = self.getRuntime()
 							sql = tsInsert % (filename, runtime)
-							statements.append(sql)
+							statements.write(sql)
 					elif fileType not in {"mp4", "db", "jpg", "tif", "mp3", "png"}:
 						print("Filetype is not expected", fileType, line)
 						sys.exit()
 
 		fp.close()
+		statements.close()
 		#for line in statements:
 		#	print(line)
 		print(len(notProcessedSet), "NOT PROCESSED")
@@ -121,21 +125,21 @@ class UpdateDBPVideoTables:
 		return 0
 
 
+	def executeBatch(self, filename):
+		cmd = ("mysql -u%s -p%s  %s <  %s" % 
+			(self.config.database_user, self.config.database_passwd, self.config.database_db_name, filename))
+		try:
+			response = subprocess.run(cmd, shell=True, capture_output=True)
+			print(response)
+		except Exception as err:
+			print(err)
+		## what happens with bad sql
+		## what happens with duplicate key error
+
+
+
 config = Config("dev")
 update = UpdateDBPVideoTables(config)
-m3u8Files = update.generateStatements()
+update.generateStatements()
+update.executeBatch(VIDEO_STMTS_FILE)
 
-"""
-video/ACCIBS/ACCIBSP2DV/Achi_de_Cubulco_MRK_14-32-52.mp4
-video/ACCIBS/ACCIBSP2DV/Achi_de_Cubulco_MRK_14-32-52_av360p.m3u8
-video/ACCIBS/ACCIBSP2DV/Achi_de_Cubulco_MRK_14-32-52_av360p00000.ts
-video/ACCIBS/ACCIBSP2DV/Achi_de_Cubulco_MRK_14-32-52_av360p00001.ts
-
-video/ABIWBT/ABIWBTP2DV/Abidji_MRK_1-1-13.mp4
-video/ABIWBT/ABIWBTP2DV/Abidji_MRK_1-1-13_av480p.m3u8
-video/ABIWBT/ABIWBTP2DV/Abidji_MRK_1-1-13_av480p00000.ts
-
-video/ABIWBT/ABIWBTP2DV/Abidji_MRK_1-1-13_av720p.m3u8
-video/ABIWBT/ABIWBTP2DV/Abidji_MRK_1-1-13_av720p00000.ts
-video/ABIWBT/ABIWBTP2DV/Abidji_MRK_1-1-13_av720p00001.ts
-"""
