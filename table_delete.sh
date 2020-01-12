@@ -5,6 +5,11 @@ mysql -uroot -p   <<END_SQL1
 
 use valid_dbp;
 
+SET FOREIGN_KEY_CHECKS=0;
+truncate table bible_verses;
+
+SET FOREIGN_KEY_CHECKS=1;
+
 delete from bible_file_stream_bytes;
 
 delete from bible_file_stream_ts;

@@ -20,48 +20,16 @@ from SQLUtility import *
 
 class UpdateDBPDatabase:
 
-	def __init__(self, config):
-		self.config = config
-		self.db = SQLUtility(config.database_host, config.database_port, config.database_user, config.database_db_name)
-		self.statements = []
-		self.OT = self.db.selectSet("SELECT id FROM books WHERE book_testament = 'OT'", ())
-		self.NT = self.db.selectSet("SELECT id FROM books WHERE book_testament = 'NT'", ())
-		self.videoStreamSet = set()
-		bucketPath = config.directory_bucket_list + os.sep + config.s3_vid_bucket + ".txt"
-		fp = open(bucketPath, "r")
-		for line in fp:
-			file = line.split("\t")[0]
-			filename = file.split("/")[-1]
-			if filename.endswith("_stream.m3u8"):
-				self.videoStreamSet.add(file)
-		fp.close()
-		#for item in self.videoStreamSet:
-		#	print(item)
-		#sys.exit()
+	def getHashId(bucket, filesetId, setTypeCode):
+		md5 = hashlib.md5()
+		md5.update(filesetId.encode("latin1"))
+		md5.update(bucket.encode("latin1"))
+		md5.update(setTypeCode.encode("latin1"))
+		hash_id = md5.hexdigest()
+		return hash_id[:12]
 
 
-	def process(self):
-		print("process")
-		dirname = self.config.directory_accepted
-		files = os.listdir(dirname)
-		for file in sorted(files):
-			if file.endswith("csv"):
-				(bucket, typeCode, bibleId, filesetId) = file.split(".")[0].split("_")
-				print(bucket, typeCode, bibleId, filesetId)
-				setTypeCode = self.getSetTypeCode(typeCode, filesetId)
-				hashId = self.getHashId(bucket, filesetId, setTypeCode)
-				csvFilename = dirname + os.sep + file
-				setSizeCode = self.getSetSizeCode(csvFilename)
-				self.statements = []
-				self.deleteBibleFiles(hashId)
-				self.insertBibleFileset(bucket, filesetId, hashId, setTypeCode, setSizeCode)
-				self.insertBibleFiles(hashId, csvFilename)
-				self.insertBibles(bibleId)
-				self.insertBibleFilesetConnections(bibleId, hashId)
-				self.db.executeTransaction(self.statements)
-
-
-	def getSetTypeCode(self, typeCode, filesetId):
+	def getSetTypeCode(typeCode, filesetId):
 		if typeCode == "text":
 			return "text_format"
 		elif typeCode == "video":
@@ -91,24 +59,9 @@ class UpdateDBPDatabase:
 			sys.exit()
 
 
-	def getHashId(self, bucket, filesetId, setTypeCode):
-		md5 = hashlib.md5()
-		md5.update(filesetId.encode("latin1"))
-		md5.update(bucket.encode("latin1"))
-		md5.update(setTypeCode.encode("latin1"))
-		hash_id = md5.hexdigest()
-		return hash_id[:12]
-
-
-	def getSetSizeCode(self, csvFilename):
-		bookIdSet = set()
-		with open(csvFilename, newline='\n') as csvfile:
-			reader = csv.DictReader(csvfile)
-			for row in reader:
-				bookIdSet.add(row["book_id"])
-		hasOT = len(bookIdSet.intersection(self.OT))
-		hasNT = len(bookIdSet.intersection(self.NT))
-
+	def getSetSizeCode(NTBooks, OTBooks):
+		hasNT = len(NTBooks)
+		hasOT = len(OTBooks)
 		if hasNT >= 27:
 			if hasOT >= 39:
 				return "C"
@@ -133,22 +86,58 @@ class UpdateDBPDatabase:
 			else:
 				return "S"
 
-		## somehow determine the size based upon the number of books?
-		# match to old testament set, and new testament set
-		#| C             |      441 |
-		#| NT            |     5535 |
-		#| OT            |       95 |
-		#| NTOTP         |      268 |
-		#| OTNTP         |        2 |
-		#| NTPOTP        |      115 |
-		#| NTP           |      841 |
-		#| OTP           |      177 |
-		#| P             |       13 |
-		#| S             |       24 |
+
+	def __init__(self, config):
+		self.config = config
+		self.db = SQLUtility(config.database_host, config.database_port, config.database_user, config.database_db_name)
+		self.statements = []
+		self.OT = self.db.selectSet("SELECT id FROM books WHERE book_testament = 'OT'", ())
+		self.NT = self.db.selectSet("SELECT id FROM books WHERE book_testament = 'NT'", ())
+		self.videoStreamSet = set()
+		bucketPath = config.directory_bucket_list + os.sep + config.s3_vid_bucket + ".txt"
+		fp = open(bucketPath, "r")
+		for line in fp:
+			file = line.split("\t")[0]
+			filename = file.split("/")[-1]
+			if filename.endswith("_stream.m3u8"):
+				self.videoStreamSet.add(file)
+		fp.close()
+
+
+	def process(self):
+		print("process")
+		dirname = self.config.directory_accepted
+		files = os.listdir(dirname)
+		for file in sorted(files):
+			if file.endswith("csv"):
+				(bucket, typeCode, bibleId, filesetId) = file.split(".")[0].split("_")
+				print(bucket, typeCode, bibleId, filesetId)
+				setTypeCode = UpdateDBPDatabase.getSetTypeCode(typeCode, filesetId)
+				hashId = UpdateDBPDatabase.getHashId(bucket, filesetId, setTypeCode)
+				csvFilename = dirname + os.sep + file
+				setSizeCode = self.getSetSizeCodeByFile(csvFilename)
+				self.statements = []
+				self.deleteBibleFiles(hashId)
+				self.insertBibleFileset(bucket, filesetId, hashId, setTypeCode, setSizeCode)
+				self.insertBibleFiles(hashId, csvFilename)
+				self.insertBibles(bibleId)
+				self.insertBibleFilesetConnections(bibleId, hashId)
+				self.db.executeTransaction(self.statements)
+
+
+	def getSetSizeCodeByFile(self, csvFilename):
+		bookIdSet = set()
+		with open(csvFilename, newline='\n') as csvfile:
+			reader = csv.DictReader(csvfile)
+			for row in reader:
+				bookIdSet.add(row["book_id"])
+		otBooks = bookIdSet.intersection(self.OT)
+		ntBooks = bookIdSet.intersection(self.NT)
+		return UpdateDBPDatabase.getSetSizeCode(ntBooks, otBooks)
 
 
 	def insertBibleFileset(self, bucket, filesetId, hashId, setTypeCode, setSizeCode):
-		sql = ("REPLACE INTO bible_filesets(id, hash_id, asset_id, set_type_code,"
+		sql = ("INSERT INTO bible_filesets(id, hash_id, asset_id, set_type_code,"
 			" set_size_code, hidden) VALUES (%s, %s, %s, %s, %s, 0)")
 		values = (filesetId, hashId, bucket, setTypeCode, setSizeCode)
 		self.statements.append((sql, [values]))
@@ -156,6 +145,10 @@ class UpdateDBPDatabase:
 
 	def deleteBibleFiles(self, hashId):
 		sql = "DELETE FROM bible_files WHERE hash_id = %s"
+		self.statements.append((sql, [(hashId,)]))
+		sql = "DELETE FROM bible_fileset_connections WHERE hash_id = %s"
+		self.statements.append((sql, [(hashId,)]))
+		sql = "DELETE FROM bible_filesets WHERE hash_id = %s"
 		self.statements.append((sql, [(hashId,)]))
 
 
@@ -190,12 +183,6 @@ class UpdateDBPDatabase:
 			self.statements.append((sql, values))
 
 
-	def getValue(row, name):
-		return row[name] if row[name] != "" else None
-		if row[name] != "":
-			return row[name]
-
-
 	def convertChapterStart(self, bookId):
 		if bookId == "MAT":
 			return ("28", "21", "21")
@@ -206,11 +193,12 @@ class UpdateDBPDatabase:
 		elif bookId == "JHN":
 			return ("21", "26", "26")
 		else:
-			return ("1", "1", "1")
+			print("ERROR: Unexpected book %s in UpdateDBPDatabase." % (bookId))
+			sys.exit()
 
 
 	def insertBibles(self, bibleId):
-		## This is only populating bibleId
+		## This is only populating bibleId. It will need to update when it already exists
 		sql = "SELECT id FROM bibles WHERE id = %s"
 		result = self.db.selectRow(sql, (bibleId,))
 		if result == None:
@@ -222,11 +210,11 @@ class UpdateDBPDatabase:
 
 
 	def insertBibleFilesetConnections(self, bibleId, hashId):
-		sql = "SELECT count(*) FROM bible_fileset_connections WHERE bible_id = %s AND hash_id = %s"
-		count = self.db.selectScalar(sql, (bibleId, hashId))
-		if count == 0:
-			sql = "INSERT INTO bible_fileset_connections (hash_id, bible_id) VALUES (%s, %s)"
-			self.statements.append((sql, [(hashId, bibleId)]))
+		#sql = "SELECT count(*) FROM bible_fileset_connections WHERE bible_id = %s AND hash_id = %s"
+		#count = self.db.selectScalar(sql, (bibleId, hashId))
+		#if count == 0:
+		sql = "INSERT INTO bible_fileset_connections (hash_id, bible_id) VALUES (%s, %s)"
+		self.statements.append((sql, [(hashId, bibleId)]))
 
 
 
