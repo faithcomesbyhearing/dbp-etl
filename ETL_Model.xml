@@ -337,10 +337,37 @@
 	<!--
 		These table look like they are updated by lpts, but I can't find them.
 		bible_equivalents, last updated 2018-11-21 17:07:08 
-		bible_file_timestamps, last updated 2018-11-08 11:34:25
 		bible_file_titles, last updated 2018-03-05 03:32:33
 		bible_links, last updated 2019-04-26 15:48:17
 		bible_organizations, last updated 2019-04-30 10:49:05
-		bible_verses, no last updated date column
 	-->
 </database>
+
+<!--
+
+	Other columns that are needed 
+	Bibles table
+
+column: versification - has the following values:  finnish, messianic, protestant, synodal, but the current load only ever enters ‘protestant’, which is most often correct, but not always.  It seems like the LPTS fields OTOrder and NTOrder could be used, but this field requires one value.
+
+column: numeral_system_id - whose values can be seen in the table “numeral_systems”.  The current load is entering a constant.
+
+column: date - appears to be the year of origin of the Bible.
+
+column: derived - usually NULL, but occasionally shows the name of another bible version, for example: English Living Bible.  The current LPTS load ignores this field.
+
+column: priority, integer 0 or larger.  Not updated by current load program.
+
+column: reviewed, integer 0 or 1.   Not updated by current load program.
+
+column: notes descriptive notes about bible, usually null   Not updated by current load program.
+
+Bible_Translations table
+
+column: vernacular 0 or 1   Not updated by current load program.
+
+column: description. this is usually null, but occasionally contains a lengthy description.   Not updated by current load program.
+
+There might be more such questions in the future, because there are a number of tables that are not updated by the current load program.  They are bible_equivalents, bible_file_titles, bible_links, and bible_organizations.  I will ignore them for now until I am certain that they are needed.  
+
+-->

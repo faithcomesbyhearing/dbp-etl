@@ -73,8 +73,8 @@ class UpdateDBPVerseTable:
 
 config = Config("dev")
 verses = UpdateDBPVerseTable(config)
-#verses.dropIndex()
-#verses.loadVerseTable()
-verses.addIndex()
+verses.dropIndex()
+verses.loadVerseTable()
+#verses.addIndex()
 
 				

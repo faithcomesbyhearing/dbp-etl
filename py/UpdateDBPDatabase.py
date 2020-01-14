@@ -217,7 +217,6 @@ class UpdateDBPDatabase:
 		self.statements.append((sql, [(hashId, bibleId)]))
 
 
-
 config = Config("dev")
 update = UpdateDBPDatabase(config)
 update.process()

@@ -33,7 +33,7 @@ class LPTSExtractReader:
 
 						self.resultSet.append(LPTSRecord(resultRow))
 
-
+    ## def not used
 	def getStockNoMap(self):
 		stockNoMap = {}
 		for rec in self.resultSet:
@@ -53,7 +53,7 @@ class LPTSExtractReader:
 				bibleIdMap[bibleId2] = rec
 		return bibleIdMap
 
-
+    ## def not used
 	def getAudioMap(self):
 		audioDic = {
 			"CAudioDAMID1": "CAudioStatus1",
@@ -68,7 +68,7 @@ class LPTSExtractReader:
 			"Reg_OTAudioDamID2": "Reg_OTAudioDamIDStatus2"}
 		return self.isInMap(audioDic)
 
-
+    ## def not used
 	def getTextMap(self):
 		textDic = {
 			"ND_NTTextDamID1": "ND_NTTextDamIDStatus1",
@@ -95,7 +95,7 @@ class LPTSExtractReader:
 					resultMap[damId[:6]] = rec # Truncated to 6 chars to match bucket
 		return resultMap
 	
-
+    ## not used
 	def getVideoMap(self):
 		videoDic = {
 			"Video_John_DamStockNo": "Video_John_DamStatus",
