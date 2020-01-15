@@ -89,7 +89,7 @@ class InputReader:
 				else:
 					ignoredFiles.append(parts + ["Not 4 parts"])
 
-		self.writeIgnoredCSV(ignoredFiles)
+		self.writeIgnoredCSV(bucketName, ignoredFiles)
 		print("start countSummary", len(self.results.keys()))
 		self.countSummary()
 		return self.results
@@ -101,9 +101,9 @@ class InputReader:
 		self.results[key] = files
 
 
-	def writeIgnoredCSV(self, ignoredFiles):
+	def writeIgnoredCSV(self, bucketName, ignoredFiles):
 		print("IgnoredFiles", len(ignoredFiles))
-		filename = self.config.directory_errors + "IgnoredFiles.csv"
+		filename = self.config.directory_errors + bucketName + "_IgnoredFiles.csv"
 		with open(filename, 'w', newline='\n') as csvfile:
 			writer = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
 			writer.writerow(("typeCode", "bible_id", "fileset_id", "file_name", "datetime", "error"))

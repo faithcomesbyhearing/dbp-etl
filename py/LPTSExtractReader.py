@@ -32,28 +32,69 @@ class LPTSExtractReader:
 								resultRow[fldNode.nodeName] = fldNode.firstChild.nodeValue
 
 						self.resultSet.append(LPTSRecord(resultRow))
+		print(len(self.resultSet), " LPTS Records.")
 
-    ## def not used
-	def getStockNoMap(self):
-		stockNoMap = {}
+
+    ## StockNum is the offical unique identifier of LPTS
+	def getStockNumMap(self):
+		stockNumMap = {}
 		for rec in self.resultSet:
 			stockNum = rec.Reg_StockNumber()
-			stockNoMap[stockNum] = rec
-		return stockNoMap
+			stockNumMap[stockNum] = rec
+		return stockNumMap
 
 
+    ## BibleId is not unique, so I return an array of values
 	def getBibleIdMap(self):
 		bibleIdMap = {}
 		for rec in self.resultSet:
 			bibleId = rec.DBP_Equivalent()
 			if bibleId != None:
-				bibleIdMap[bibleId] = rec
-			bibleId2 = rec.DBP_Equivalent2()
-			if bibleId2 != None:
-				bibleIdMap[bibleId2] = rec
+				records = bibleIdMap.get(bibleId, [])
+				records.append(rec)
+				bibleIdMap[bibleId] = records
+			bibleId = rec.DBP_Equivalent2() # Should I use DBP_Equivalent2 here?
+			if bibleId != None:
+				records = bibleIdMap.get(bibleId, [])
+				records.append(rec)
+				bibleIdMap[bibleId] = records
 		return bibleIdMap
 
-    ## def not used
+
+	## FilesetId is not unique, so I return an array of records
+	def getFilesetIdMap(self):
+		filesetIdMap = {}
+		for rec in self.resultSet:
+			filesetList = rec.DamIds()
+			for fileset in filesetList:
+				filesetId = fileset[0]
+				record = fileset[4]
+				filesetRecords = filesetIdMap.get(filesetId, [])
+				filesetRecords.append(record)
+				filesetIdMap[filesetId] = filesetRecords
+		return filesetIdMap
+
+
+	def checkUniqueNames(self):
+		self.checkUniqueName("DBP_Equivalent")
+
+
+	def checkUniqueName(self, name):
+		occurrances = {}
+		for rec in self.resultSet:
+			value = rec.record.get(name)
+			if not value in {None, "", "N/A", "#N/A", "NA"}:
+				stockList = occurrances.get(value, [])
+				stockList.append(rec.Reg_StockNumber())
+				occurrances[value] = stockList
+		results = {}
+		for name, stockNums in occurrances.items():
+			if len(stockNums) > 1:
+				results[name] = stockNums
+				print(name, "->", stockNums)
+		return results
+
+
 	def getAudioMap(self):
 		audioDic = {
 			"CAudioDAMID1": "CAudioStatus1",
@@ -68,7 +109,7 @@ class LPTSExtractReader:
 			"Reg_OTAudioDamID2": "Reg_OTAudioDamIDStatus2"}
 		return self.isInMap(audioDic)
 
-    ## def not used
+
 	def getTextMap(self):
 		textDic = {
 			"ND_NTTextDamID1": "ND_NTTextDamIDStatus1",
@@ -95,7 +136,7 @@ class LPTSExtractReader:
 					resultMap[damId[:6]] = rec # Truncated to 6 chars to match bucket
 		return resultMap
 	
-    ## not used
+
 	def getVideoMap(self):
 		videoDic = {
 			"Video_John_DamStockNo": "Video_John_DamStatus",
@@ -156,6 +197,55 @@ class LPTSRecord:
 	# This field was added to record when indexed by damId.  It is the status associated with that damId
 	def thisDamIdStatus(self):
 		return self.record.get("THIS_DAMID_STATUS")
+
+	## Return the damId's of a record in a list of tuples
+	## (damId, status, name, statusName, record)
+	def DamIds(self):
+		damIdDict = {
+			"CAudioDAMID1": "CAudioStatus1",
+			"CAudioDamStockNo": "CAudioDamStatus",
+			"ND_NTAudioDamID1": "ND_NTAudioDamIDStatus1",
+			"ND_NTAudioDamID2": "ND_NTAudioDamIDStatus2",
+			"ND_OTAudioDamID1": "ND_OTAudioDamIDStatus1",
+			"ND_OTAudioDamID2": "ND_OTAudioDamIDStatus2",
+			"Reg_NTAudioDamID1": "Reg_NTAudioDamIDStatus1",
+			"Reg_NTAudioDamID2": "Reg_NTAudioDamIDStatus2",
+			"Reg_OTAudioDamID1": "Reg_OTAudioDamIDStatus1",
+			"Reg_OTAudioDamID2": "Reg_OTAudioDamIDStatus2",
+			"ND_NTTextDamID1": "ND_NTTextDamIDStatus1",
+			"ND_NTTextDamID2": "ND_NTTextDamIDStatus2", 
+			"ND_NTTextDamID3": "ND_NTTextDamIDStatus3",
+			"ND_OTTextDamID1": "ND_OTTextDamIDStatus1",
+			"ND_OTTextDamID2": "ND_OTTextDamIDStatus2", 
+			"ND_OTTextDamID3": "ND_OTTextDamIDStatus3",
+			"Reg_NTTextDamID1": "Reg_NTTextDamIDStatus1",
+			"Reg_NTTextDamID2": "Reg_NTTextDamIDStatus2",
+			"Reg_NTTextDamID3": "Reg_NTTextDamIDStatus3", 
+			"Reg_OTTextDamID1": "Reg_OTTextDamIDStatus1", 
+			"Reg_OTTextDamID2": "Reg_OTTextDamIDStatus2",  
+			"Reg_OTTextDamID3": "Reg_OTTextDamIDStatus3",
+			"Video_John_DamStockNo": "Video_John_DamStatus",
+			"Video_Luke_DamStockNo": "Video_Luke_DamStatus",
+			"Video_Mark_DamStockNo": "Video_Mark_DamStatus",
+			"Video_Matt_DamStockNo": "Video_Matt_DamStatus"}
+		hasKeys = set(damIdDict.keys()).intersection(set(self.record.keys()))
+		results = []
+		for key in hasKeys:
+			#print("key", key)
+			statusKey = damIdDict[key]
+			#print("statusKey", statusKey)
+			damId = self.record[key]
+			#print("damId", damId)
+			status = self.record.get(statusKey)
+			if status == None:
+				print("WARN: Status null for damId %s in key %s" % (damId, key))
+			#print("status", status)
+			results.append((damId, status, key, statusKey, self))
+		#print(hasKeys)
+		#print("hasKeys", len(hasKeys))
+		#print(results)
+		return results
+
 
 	def LangName(self):
 		return self.record.get("LangName")

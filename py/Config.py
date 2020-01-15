@@ -32,6 +32,10 @@ class Config:
 					insideProfile = True
 		cfg.close()
 
+		if len(self.hashMap) == 0:
+			print("ERROR: Config profile %s does not exist in $HOME/fcbh_dbp.cfg" % (profileLabel))
+			sys.exit()
+
 		self.database_host = self._get("database.host")
 		self.database_user = self._get("database.user")
 		self.database_passwd = self._get("database.passwd")
@@ -53,17 +57,23 @@ class Config:
 		#self.permission_bibleis_hide = self.get("permission.bibleis_hide")
 
 		self.directory_bucket_list = self._getPath("directory.bucket_list")
+		self.filename_lpts_xml = self._getPath("filename.lpts_xml")
+
+		self.directory_validate	= self._getPath("directory.validate")
+		self.directory_upload	= self._getPath("directory.upload")
+		self.directory_database	= self._getPath("directory.database")
+		self.directory_complete	= self._getPath("directory.complete")
+
 		self.directory_quarantine = self._getPath("directory.quarantine")
 		self.directory_duplicate = self._getPath("directory.duplicate")
 		self.directory_accepted = self._getPath("directory.accepted")
-		self.directory_errors = self._getPath("directory.errors")
 
-		#self.directory_sql_output = self.getPath("directory.sql_output")
-		self.filename_lpts_xml = self._getPath("filename.lpts_xml")
+		self.directory_errors = self._getPath("directory.errors")
+		self.error_limit_pct = self._getFloat("error.limit.pct")
 		self.filename_accept_errors = self._getPath("filename.accept.errors")
+
 		self.filename_datetime = self._get("filename.datetime")
 
-		self.error_limit_pct = self._getFloat("error.limit.pct")
 
 
 	def _get(self, name):
@@ -94,3 +104,5 @@ class Config:
 config = Config("dev")
 print config
 """
+
+

@@ -1,36 +1,131 @@
 # Validate.py
 
+import os
+import sys
+import zipfile
+from datetime import datetime
+from Config import *
+from InputReader import *
+from LPTSExtractReader import *
 
 
 class Validate:
 
-	def __init__(self, config, args):
+	def parseCommandLine():
+		if len(sys.argv) != 3:
+			print("Usage: python3 py/Validate.py  config_profile  run_type")
+			print("\tconfig_profile: e.g. dev, test, stage, prod")
+			print("\trun_type: files, bucketlists")
+			sys.exit()
+		elif not sys.argv[2] in {"files", "bucketlists"}:
+			print("2nd parameter must be files or bucketlists")
+			sys.exit()
+		elif not sys.argv[1] in {"dev", "test", "stage", "prod"}:
+			print("1st parameter is expected to be dev, test, stage, prod")
+		results = {}
+		results["config"] = sys.argv[1]
+		results["run"] = sys.argv[2]
+		return results
+			
 
+	def __init__(self, args):
+		self.config = Config(args["config"])
+		self.runType = args["run"]
+		self.lpts = LPTSExtractReader(self.config)
+		#self.lpts.checkUniqueNames()
+		self.bibleIdMap = self.lpts.getBibleIdMap()
+		print(len(self.bibleIdMap.keys()), " BibleId Nums found")
+		#for (bibleId, recs) in results.items():
+		#	if len(recs) > 1:
+		#		print(bibleId)
+		#		for rec in recs:
+		#			print("\t", rec.Reg_StockNumber())
+		self.filesetIdMap = self.lpts.getFilesetIdMap()
+		for filesetId, records in self.filesetIdMap.items():
+			if len(records) > 1:
+				uniqueBibleId = set()
+				#print(filesetId)
+				for rec in records:
+					uniqueBibleId.add(rec.DBP_Equivalent())
+					#print("\t", rec.DBP_Equivalent(), rec.Reg_StockNumber())
+				if len(uniqueBibleId) > 1:
+					print(filesetId)
+					for bibleId in uniqueBibleId:
+						print("\t", bibleId)
+		sys.exit()
 
 
 	def process(self):
-		## prepare directories
-		## Invoke the correct reader based upon command line options
-		## build a map of types, bibleIds, filesetId, or possibly a map for each type
+		self.prepareDirectory(self.config.directory_validate)
+		self.prepareDirectory(self.config.directory_accepted)
+		self.prepareDirectory(self.config.directory_quarantine)
+		self.prepareDirectory(self.config.directory_duplicate)
+		self.prepareDirectory(self.config.directory_errors)
+
+		## get filesets: a map typeCode/bibleId/filesetId: [(filename, fileSize, datetime)]
+		reader = InputReader(self.config)
+		if self.runType == "bucketlists":
+#			filesets = reader.bucketListing(self.config.s3_bucket)
+			filesets = reader.bucketListing(self.config.s3_vid_bucket)
+
+		elif self.runType == "files":
+			print("do it")
+			## In reader move the core section into a common routine
+			## that processes filenames
+			## In reader add new method to read directory of files
+			## read a directory listing into the identical form
+
+		else:
+			print("ERROR: run_type must be files or bucketlists.")
+			sys.exit()
+
+		## create bibles map bibleId: [filesetid]
+		bibles = {}
+		for filePrefix in filesets.keys():
+			(typeCode, bibleId, filesetId) = filePrefix.split("/")
+			filesetList = bibles.get(bibleId, [])
+			filesetList.append(filesetId)
+			bibles[bibleId] = filesetList
+
+		for bibleId, filesets in bibles.items():
+			print(bibleId, filesets)
+
 		## validate the LPTS data
 		## filenameParser
 		## prepare errors
 		## report on what is accept, what is quarantine and what is duplicated
 
 
-	def parseCommandLine(self):
-		## parse command line, possibly this should be done outside of class
-		## parse command line
-		## 1. Parse profile name
-		## 2. parse -d directoryName
-		## 2b. or parse -b bucketList name
-
-
+	## prepareDirectory 1. Makes sure a directory exists. 2. If it contains .csv files,
+	## they are packaged up into a zip file using the timestamp of the first csv file.
 	def prepareDirectory(self, directory):
-		## ensure that it exists
-		XXos.remove(directory + os.sep + "*.csv")
-		## prepare output directory, zip up prior contents of validate directories
-		## create new directories
+		if not os.path.isdir(directory):
+			os.makedirs(directory)
+		else:
+			modifiedTime = self.getModifiedTime(directory)
+			if modifiedTime != None:
+				pattern = self.config.filename_datetime 
+				zipfilePath = directory + modifiedTime.strftime(pattern) + ".zip"
+
+				zipDir = zipfile.ZipFile(zipfilePath, "w")
+				with zipDir:
+					for file in os.listdir(directory):
+						if file.endswith("csv"):
+							fullPath = directory + os.sep + file
+							zipDir.write(fullPath, file)
+							os.remove(fullPath)
+ 
+
+	def getModifiedTime(self, directory):
+		listDir = os.listdir(directory)
+		if len(listDir) > 0:
+			for file in listDir:
+				if file.endswith("csv"):
+					filePath = directory + os.sep + file
+					filetime = os.path.getmtime(filePath)
+					return datetime.fromtimestamp(filetime)
+		return None
+
 
 
 	def validateLPTSExtract(self, directory):
@@ -56,12 +151,15 @@ class Validate:
 
 
 
-## parse command line
-## config profile is required
+args = Validate.parseCommandLine()
+print(args)
 
-config = Config(profile)
-validate = Validate(config, args)
+validate = Validate(args)
 validate.process()
+
+#config = Config(profile)
+#validate = Validate(config, args)
+#validate.process()
 
 """
 DBP_Equivalent - required  count 3805
