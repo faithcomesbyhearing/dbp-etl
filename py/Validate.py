@@ -34,29 +34,35 @@ class Validate:
 		self.lpts = LPTSExtractReader(self.config)
 		#self.lpts.checkUniqueNames()
 		self.bibleIdMap = self.lpts.getBibleIdMap()
-		print(len(self.bibleIdMap.keys()), " BibleId Nums found")
+		print(len(self.bibleIdMap.keys()), " BibleIds found.")
 		#for (bibleId, recs) in bibleIdMap.items():
 		#	if len(recs) > 1:
 		#		print(bibleId)
 		#		for rec in recs:
 		#			print("\t", rec.Reg_StockNumber())
 		self.bibleId2Map = self.lpts.getBibleId2Map()
-		for (bibleId, recs) in self.bibleId2Map.items():
-			print(bibleId)
-			for rec in recs:
-				print("\t", "bibleId:", rec.DBP_Equivalent(), " stockno:", rec.Reg_StockNumber())
-				print("\t\t", "3 Orthographys:", rec.x0031_Orthography(), ";", rec.x0032_Orthography(), ";", rec.x0033_Orthography(), ";")
-				filesetIds = rec.DamIds()
-				for filesetId in filesetIds.keys():
-					print("\t\t", filesetId)
-		sys.exit()
+		print(len(self.bibleId2Map.keys()), " BibleId2s found.")
+		#for (bibleId, recs) in self.bibleId2Map.items():
+		#	print(bibleId)
+		#	for rec in recs:
+		#		print("\t", "bibleId:", rec.DBP_Equivalent(), " stockno:", rec.Reg_StockNumber())
+		#		print("\t\t", "3 Orthographys:", rec.x0031_Orthography(), ";", rec.x0032_Orthography(), ";", rec.x0033_Orthography(), ";")
+		#		filesetIds = rec.DamIds()
+		#		for filesetId in filesetIds.keys():
+		#			print("\t\t", filesetId)
+		#sys.exit()
 		self.filesetIdMap = self.lpts.getFilesetIdMap()
+		print(len(self.filesetIdMap.keys()), " FilesetIds found.")
 		#for filesetId, records in self.filesetIdMap.items():
 		#	if len(records) > 1:
 		#		print(filesetId)
 		#		for rec in records:
 		#			print("\t", rec.DBP_Equivalent(), rec.Reg_StockNumber())
 		#sys.exit()
+		self.missingBibleIds = []
+		self.missingFilesetIds = []
+		self.requiredFields = []
+		self.suggestedFields = []
 
 
 	def process(self):
@@ -83,21 +89,15 @@ class Validate:
 			print("ERROR: run_type must be files or bucketlists.")
 			sys.exit()
 
-		## create bibles map bibleId: [filesetid]
-		bibles = {}
+		## Reduce input files to bibleId: [filesetId]
+		inputIdMap = {}
 		for filePrefix in filesets.keys():
 			(typeCode, bibleId, filesetId) = filePrefix.split("/")
-			filesetList = bibles.get(bibleId, [])
-			filesetList.append(filesetId)
-			bibles[bibleId] = filesetList
+			filesetIdList = inputIdMap.get(bibleId, [])
+			filesetIdList.append(filesetId)
+			inputIdMap[bibleId] = filesetIdList
 
-		for bibleId, filesets in bibles.items():
-			print(bibleId, filesets)
-
-		## validate the LPTS data
-		## filenameParser
-		## prepare errors
-		## report on what is accept, what is quarantine and what is duplicated
+		self.validateLPTS(inputIdMap)
 
 
 	## prepareDirectory 1. Makes sure a directory exists. 2. If it contains .csv files,
@@ -131,84 +131,73 @@ class Validate:
 		return None
 
 
+	def validateLPTS(self, inputIdMap):
+		for bibleId in sorted(inputIdMap.keys()):
 
-	def validateLPTSExtract(self, directory):
-		required = {"Copyrightc", "Copyrightp", "Copyright_Video", "DBP_Equivalent", 
-				"ISO", "LangName", "Licensor", "Reg_StockNumber", "Volumne_Name"}
-		possible = {"_x0031_Orthography"}
-		## build map of extract by DBP_Equivalent, include DBP_Equivalent2, but report as warning
-		## check DBP2 for uniqueness also
-		## look for duplicate bible_id's
-		## look for duplicate fileset_id's
-		## look for duplicate stock nos
-		## 
-		## create error messages for all duplicates
-		## for each bible_id, lookup in extract.  i.e. extract must have a map by DBP_Equivanent
-		## have set of names required, and set of names not-required, but expected
-		## check that all required fields are present, and prepare error messages, but continue
-		## check that all non-required fields are present, and prepare error messages, and continue
-		## Use damid fieldname to lookup filesets, and prepare an error for any missing.
-		## Possibly prepare a warning for any that are NOT included
+			## Validate bibleId agains LPTS
+			lptsRecords = self.bibleIdMap.get(bibleId)
+			if lptsRecords == None:
+				self.missingBibleIds.append(bibleId)
+			else:
+
+				## Validate filesetIds against LPTS
+				lptsFilesetIdSet = self.getFilesetIdSet(lptsRecords)
+				filesetIds = inputIdMap[bibleId]
+				for filesetId in filesetIds:
+					if not filesetId in lptsFilesetIdSet:
+						self.missingFilesetIds.append((filesetId, bibleId))
+
+				## Validate Required fields are present
+				for record in lptsRecords:
+					if record.Copyrightc() == None:
+						self.requiredFields.append(("Copyrightc", bibleId))
+					if record.Copyrightp() == None:
+						self.requiredFields.append(("Copyrightp", bibleId))
+					if record.Copyright_Video() == None:
+						self.requiredFields.append(("Copyright_Video", bibleId))
+					if record.ISO() == None:
+						self.requiredFields.append(("ISO", bibleId))
+					if record.LangName() == None:
+						self.requiredFields.append(("LangName", bibleId))
+					if record.Licensor() == None:
+						self.requiredFields.append(("Licensor", bibleId))
+					if record.Reg_StockNumber() == None:
+						self.requiredFields.append(("Reg_StockNumber", bibleId))
+					if record.Volumne_Name() == None:
+						self.requiredFields.append(("Volumne_Name", bibleId))
+
+					if record.x0031_Orthography() == None:
+						self.suggestedFields.append(("_x0031_Orthography", bibleId))
 
 
+	def getFilesetIdSet(self, lptsRecordList):
+		if len(lptsRecordList) == 0:
+			return set()
+		elif len(lptsRecordList) == 1:
+			return set(lptsRecordList[0].DamIds().keys())
+		else:
+			result = set()
+			for record in lptsRecordList:
+				result.union(set(record.DamIds().keys()))
+			return result
+
+
+	def reportErrors(self):
+		for bibleId in self.missingBibleIds:
+			print("%s bibleId is not in LPTS." % (bibleId,))
+		for (filesetId, bibleId) in self.missingFilesetIds:
+			print("%s filesetId is not in LPTS record of %s" % (filesetId, bibleId))
+		for (fieldName, bibleId) in self.requiredFields:
+			print("%s field is not in LPTS record of %s" % (fieldName, bibleId))
+		for (fieldName, bibleId) in self.suggestedFields:
+			print("%s field is suggested for LPTS record of %s" % (fieldName, bibleId))		
 
 
 
 
 args = Validate.parseCommandLine()
-print(args)
-
 validate = Validate(args)
 validate.process()
-
-#config = Config(profile)
-#validate = Validate(config, args)
-#validate.process()
-
-"""
-DBP_Equivalent - required  count 3805
-DBP_Equivalent2 - what is this count 16
-ISO - required - count 3947
-LangName - required - count 3953
-_x0031_Orthography - not required - count 1568
-_x0032 - count 128
-x_0033 - count 42
-Volumne_Name - required I think - count 3468
-Copyrightc - required for what? - count 4226
-Copyrightp - required for what? - count 3983
-Copyright_Video - required for video - count 3953
-Licensor - required ? count 2804
-Reg_StockNumber - required - count 3953
+validate.reportErrors()
 
 
-
-Compare these to damId’s being loaded
-Reg_NTAudioDamID1" validate="tbd" clean="nullify1"/>
-Reg_NTAudioDamID2" validate="tbd" clean="nullify1"/>
-ND_NTAudioDamID1" validate="tbd" clean="nullify1"/>
-ND_NTAudioDamID2" validate="tbd" clean="nullify1"/>
-			<lptsXML name="ND_NTAudioDamID3" validate="tbd" clean="nullify1"/>
-			<lptsXML name="Reg_OTAudioDamID1" validate="tbd" clean="nullify1"/>
-			<lptsXML name="Reg_OTAudioDamID2" validate="tbd" clean="nullify1"/>
-			<lptsXML name="CAudioDAMID1" validate="tbd" clean="nullify1"/>
-			<lptsXML name="CAudioDamStockNo" validate="tbd" clean="nullify1"/>
-			<lptsXML name="ND_OTAudioDamID1" validate="tbd" clean="nullify1"/>
-			<lptsXML name="ND_OTAudioDamID2" validate="tbd" clean="nullify1"/>
-			<lptsXML name="ND_OTAudioDamID3" validate="tbd" clean="nullify1"/>
-			<lptsXML name="Reg_NTTextDamID1" validate="tbd" clean="nullify1"/>
-			<lptsXML name="Reg_NTTextDamID2" validate="tbd" clean="nullify1"/>
-			<lptsXML name="Reg_NTTextDamID3" validate="tbd" clean="nullify1"/>
-			<lptsXML name="ND_NTTextDamID1" validate="tbd" clean="nullify1"/>
-			<lptsXML name="ND_NTTextDamID2" validate="tbd" clean="nullify1"/>
-			<lptsXML name="ND_NTTextDamID3" validate="tbd" clean="nullify1"/>
-			<lptsXML name="Reg_OTTextDamID1" validate="tbd" clean="nullify1"/>
-			<lptsXML name="Reg_OTTextDamID2" validate="tbd" clean="nullify1"/>
-			<lptsXML name="Reg_OTTextDamID3" validate="tbd" clean="nullify1"/>
-			<lptsXML name="ND_OTTextDamID1" validate="tbd" clean="nullify1"/>
-			<lptsXML name="ND_OTTextDamID2" validate="tbd" clean="nullify1"/>
-			<lptsXML name="ND_OTTextDamID3" validate="tbd" clean="nullify1"/>
-			<lptsXML name="Video_Matthew_DamStockNo" validate="tbd" clean="nullify1"/>
-			<lptsXML name="Video_Mark_DamStockNo" validate="tbd" clean="nullify1"/>
-			<lptsXML name="Video_Luke_DamStockNo" validate="tbd" clean="nullify1"/>
-			<lptsXML name="Video_John_DamStockNo" validate="tbd" clean="nullify1"/>
-"""
