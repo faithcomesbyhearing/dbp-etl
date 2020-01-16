@@ -35,24 +35,28 @@ class Validate:
 		#self.lpts.checkUniqueNames()
 		self.bibleIdMap = self.lpts.getBibleIdMap()
 		print(len(self.bibleIdMap.keys()), " BibleId Nums found")
-		#for (bibleId, recs) in results.items():
+		#for (bibleId, recs) in bibleIdMap.items():
 		#	if len(recs) > 1:
 		#		print(bibleId)
 		#		for rec in recs:
 		#			print("\t", rec.Reg_StockNumber())
-		self.filesetIdMap = self.lpts.getFilesetIdMap()
-		for filesetId, records in self.filesetIdMap.items():
-			if len(records) > 1:
-				uniqueBibleId = set()
-				#print(filesetId)
-				for rec in records:
-					uniqueBibleId.add(rec.DBP_Equivalent())
-					#print("\t", rec.DBP_Equivalent(), rec.Reg_StockNumber())
-				if len(uniqueBibleId) > 1:
-					print(filesetId)
-					for bibleId in uniqueBibleId:
-						print("\t", bibleId)
+		self.bibleId2Map = self.lpts.getBibleId2Map()
+		for (bibleId, recs) in self.bibleId2Map.items():
+			print(bibleId)
+			for rec in recs:
+				print("\t", "bibleId:", rec.DBP_Equivalent(), " stockno:", rec.Reg_StockNumber())
+				print("\t\t", "3 Orthographys:", rec.x0031_Orthography(), ";", rec.x0032_Orthography(), ";", rec.x0033_Orthography(), ";")
+				filesetIds = rec.DamIds()
+				for filesetId in filesetIds.keys():
+					print("\t\t", filesetId)
 		sys.exit()
+		self.filesetIdMap = self.lpts.getFilesetIdMap()
+		#for filesetId, records in self.filesetIdMap.items():
+		#	if len(records) > 1:
+		#		print(filesetId)
+		#		for rec in records:
+		#			print("\t", rec.DBP_Equivalent(), rec.Reg_StockNumber())
+		#sys.exit()
 
 
 	def process(self):

@@ -44,7 +44,7 @@ class LPTSExtractReader:
 		return stockNumMap
 
 
-    ## BibleId is not unique, so I return an array of values
+    ## BibleId is not unique, so I return an array of records
 	def getBibleIdMap(self):
 		bibleIdMap = {}
 		for rec in self.resultSet:
@@ -61,22 +61,31 @@ class LPTSExtractReader:
 		return bibleIdMap
 
 
+	def getBibleId2Map(self):
+		bibleIdMap = {}
+		for rec in self.resultSet:
+			bibleId = rec.DBP_Equivalent2()
+			if bibleId != None:
+				records = bibleIdMap.get(bibleId, [])
+				records.append(rec)
+				bibleIdMap[bibleId] = records
+		return bibleIdMap
+
+
 	## FilesetId is not unique, so I return an array of records
 	def getFilesetIdMap(self):
 		filesetIdMap = {}
 		for rec in self.resultSet:
-			filesetList = rec.DamIds()
-			for fileset in filesetList:
-				filesetId = fileset[0]
-				record = fileset[4]
+			filesetIds = rec.DamIds()
+			for (filesetId, statuses) in filesetIds.items():
 				filesetRecords = filesetIdMap.get(filesetId, [])
-				filesetRecords.append(record)
+				filesetRecords.append(rec)
 				filesetIdMap[filesetId] = filesetRecords
 		return filesetIdMap
 
 
-	def checkUniqueNames(self):
-		self.checkUniqueName("DBP_Equivalent")
+#	def checkUniqueNames(self):
+#		self.checkUniqueName("DBP_Equivalent")
 
 
 	def checkUniqueName(self, name):
@@ -94,7 +103,7 @@ class LPTSExtractReader:
 				print(name, "->", stockNums)
 		return results
 
-
+	## deprecated, replaced by getFilesetIdMap
 	def getAudioMap(self):
 		audioDic = {
 			"CAudioDAMID1": "CAudioStatus1",
@@ -109,7 +118,7 @@ class LPTSExtractReader:
 			"Reg_OTAudioDamID2": "Reg_OTAudioDamIDStatus2"}
 		return self.isInMap(audioDic)
 
-
+	## deprecated, replaced by getFilesetIdMap
 	def getTextMap(self):
 		textDic = {
 			"ND_NTTextDamID1": "ND_NTTextDamIDStatus1",
@@ -131,12 +140,12 @@ class LPTSExtractReader:
 				if damIdKey in row:
 					damId = row[damIdKey]
 					statusName = textDic[damIdKey]
-					rec.record["THIS_DAMID"] = damId
-					rec.record["THIS_DAMID_STATUS"] = row.get(statusName)
+					#rec.record["THIS_DAMID"] = damId
+					#rec.record["THIS_DAMID_STATUS"] = row.get(statusName)
 					resultMap[damId[:6]] = rec # Truncated to 6 chars to match bucket
 		return resultMap
 	
-
+	## deprecated, replaced by getFilesetIdMap
 	def getVideoMap(self):
 		videoDic = {
 			"Video_John_DamStockNo": "Video_John_DamStatus",
@@ -145,7 +154,7 @@ class LPTSExtractReader:
 			"Video_Matt_DamStockNo": "Video_Matt_DamStatus"}
 		return self.isInMap(videoDic)
 
-
+	## deprecated, replaced by getFilesetIdMap
 	def getAllFilesetMap(self):
 		hashMap = {}
 		audioMap = self.getAudioMap()
@@ -163,7 +172,7 @@ class LPTSExtractReader:
 		return hashMap
 
 
-
+	## deprecated, replaced by LPTSRecord.DamIds()
 	def isInMap(self, damIdMap):
 		resultMap = {}
 		for rec in self.resultSet:
@@ -172,16 +181,16 @@ class LPTSExtractReader:
 				if damIdKey in row:
 					damId = row[damIdKey]
 					statusName = damIdMap[damIdKey]
-					rec.record["THIS_DAMID"] = damId
-					rec.record["THIS_DAMID_STATUS"] = row.get(statusName)
+					#rec.record["THIS_DAMID"] = damId
+					#rec.record["THIS_DAMID_STATUS"] = row.get(statusName)
 					resultMap[damId] = rec
 		return resultMap	
 
 
 #
-# Should rewrite this to hide LPTS details as much as possible
-# isDBPText() -> bool
-# isCatholic() -> looks for evidence of catholic in multiple sources
+# The LPTSRecord matches one record in the Extract, and provides a type safe way
+# to access it in order to prevent bugs by spelling errors, and to perform
+# data cleanup.
 # 
 
 class LPTSRecord:
@@ -195,11 +204,11 @@ class LPTSRecord:
 	# Deprecated.  This does not work, because there on one record, and many damId keys point to it.
 	# This status is just the status of the last key added.
 	# This field was added to record when indexed by damId.  It is the status associated with that damId
-	def thisDamIdStatus(self):
-		return self.record.get("THIS_DAMID_STATUS")
+#	def thisDamIdStatus(self):
+#		return self.record.get("THIS_DAMID_STATUS")
 
-	## Return the damId's of a record in a list of tuples
-	## (damId, status, name, statusName, record)
+	## Return the damId's of a record in a map of damId keys
+	## pointing to an array (name, statusName, status)
 	def DamIds(self):
 		damIdDict = {
 			"CAudioDAMID1": "CAudioStatus1",
@@ -229,7 +238,7 @@ class LPTSRecord:
 			"Video_Mark_DamStockNo": "Video_Mark_DamStatus",
 			"Video_Matt_DamStockNo": "Video_Matt_DamStatus"}
 		hasKeys = set(damIdDict.keys()).intersection(set(self.record.keys()))
-		results = []
+		results = {}
 		for key in hasKeys:
 			#print("key", key)
 			statusKey = damIdDict[key]
@@ -240,12 +249,10 @@ class LPTSRecord:
 			if status == None:
 				print("WARN: Status null for damId %s in key %s" % (damId, key))
 			#print("status", status)
-			results.append((damId, status, key, statusKey, self))
-		#print(hasKeys)
-		#print("hasKeys", len(hasKeys))
-		#print(results)
+			statuses = results.get(damId, [])
+			statuses.append((key, statusKey, status))
+			results[damId] = statuses
 		return results
-
 
 	def LangName(self):
 		return self.record.get("LangName")
@@ -406,35 +413,7 @@ class LPTSRecord:
 			return result
 
 
-#<OTOrder>Dutch Traditional</OTOrder>
-#<OTOrder>Hebrew</OTOrder>
-#<OTOrder>Masoretic-Christian</OTOrder>
-#<OTOrder>Masoretic-Tanakh</OTOrder>
-#<OTOrder>NA</OTOrder>
-#<OTOrder>Panoramic</OTOrder>
-#<OTOrder>Septuagint</OTOrder>
-#<OTOrder>Traditional</OTOrder>
-#<OTOrder>Vulgate</OTOrder>
 
-#<NTOrder>Finnish</NTOrder>
-#<NTOrder>Plautdietsch</NTOrder>
-#<NTOrder>Russian</NTOrder>
-#<NTOrder>Traditional</NTOrder>
-#<NTOrder>Western Arabic</NTOrder>
-
-"""
-config = Config()
-reader = LPTSExtractReader(config)
-#for item in reader.resultSet:
-#	print(item)
-#stMap = reader.getStockNoMap()
-#bibleMap = reader.getBibleIdMap()
-#for item in bibleMap.keys():
-#	print(item, bibleMap[item])
-#audioMap = reader.getAudioMap()
-#textMap = reader.getTextMap()
-videoMap = reader.getVideoMap()
-"""
 
 
 
