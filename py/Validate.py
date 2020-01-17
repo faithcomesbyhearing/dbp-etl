@@ -32,33 +32,8 @@ class Validate:
 		self.config = Config(args["config"])
 		self.runType = args["run"]
 		self.lpts = LPTSExtractReader(self.config)
-		#self.lpts.checkUniqueNames()
 		self.bibleIdMap = self.lpts.getBibleIdMap()
 		print(len(self.bibleIdMap.keys()), " BibleIds found.")
-		#for (bibleId, recs) in bibleIdMap.items():
-		#	if len(recs) > 1:
-		#		print(bibleId)
-		#		for rec in recs:
-		#			print("\t", rec.Reg_StockNumber())
-		self.bibleId2Map = self.lpts.getBibleId2Map()
-		print(len(self.bibleId2Map.keys()), " BibleId2s found.")
-		#for (bibleId, recs) in self.bibleId2Map.items():
-		#	print(bibleId)
-		#	for rec in recs:
-		#		print("\t", "bibleId:", rec.DBP_Equivalent(), " stockno:", rec.Reg_StockNumber())
-		#		print("\t\t", "3 Orthographys:", rec.x0031_Orthography(), ";", rec.x0032_Orthography(), ";", rec.x0033_Orthography(), ";")
-		#		filesetIds = rec.DamIds()
-		#		for filesetId in filesetIds.keys():
-		#			print("\t\t", filesetId)
-		#sys.exit()
-		self.filesetIdMap = self.lpts.getFilesetIdMap()
-		print(len(self.filesetIdMap.keys()), " FilesetIds found.")
-		#for filesetId, records in self.filesetIdMap.items():
-		#	if len(records) > 1:
-		#		print(filesetId)
-		#		for rec in records:
-		#			print("\t", rec.DBP_Equivalent(), rec.Reg_StockNumber())
-		#sys.exit()
 		self.missingBibleIds = []
 		self.missingFilesetIds = []
 		self.requiredFields = []
@@ -148,7 +123,7 @@ class Validate:
 						self.missingFilesetIds.append((filesetId, bibleId))
 
 				## Validate Required fields are present
-				for record in lptsRecords:
+				for (index, record) in lptsRecords:
 					if record.Copyrightc() == None:
 						self.requiredFields.append(("Copyrightc", bibleId))
 					if record.Copyrightp() == None:
@@ -166,19 +141,21 @@ class Validate:
 					if record.Volumne_Name() == None:
 						self.requiredFields.append(("Volumne_Name", bibleId))
 
-					if record.x0031_Orthography() == None:
-						self.suggestedFields.append(("_x0031_Orthography", bibleId))
+					if record.Orthography(index) == None:
+						fieldName = "_x003%d_Orthography" % (index)
+						self.suggestedFields.append((fieldName, bibleId))
 
 
 	def getFilesetIdSet(self, lptsRecordList):
 		if len(lptsRecordList) == 0:
 			return set()
 		elif len(lptsRecordList) == 1:
-			return set(lptsRecordList[0].DamIds().keys())
+			(index, record) = lptsRecordList[0]
+			return set(record.DamIds(index).keys())
 		else:
 			result = set()
-			for record in lptsRecordList:
-				result.union(set(record.DamIds().keys()))
+			for (index, record) in lptsRecordList:
+				result.union(set(record.DamIds(index).keys()))
 			return result
 
 

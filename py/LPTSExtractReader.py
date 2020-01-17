@@ -44,44 +44,38 @@ class LPTSExtractReader:
 		return stockNumMap
 
 
-    ## BibleId is not unique, so I return an array of records
+    ## Generates Map bibleId: [LPTSRecord]
 	def getBibleIdMap(self):
 		bibleIdMap = {}
 		for rec in self.resultSet:
 			bibleId = rec.DBP_Equivalent()
 			if bibleId != None:
 				records = bibleIdMap.get(bibleId, [])
-				records.append(rec)
+				records.append((1, rec))
 				bibleIdMap[bibleId] = records
-			bibleId = rec.DBP_Equivalent2() # Should I use DBP_Equivalent2 here?
-			if bibleId != None:
-				records = bibleIdMap.get(bibleId, [])
-				records.append(rec)
-				bibleIdMap[bibleId] = records
-		return bibleIdMap
-
-
-	def getBibleId2Map(self):
-		bibleIdMap = {}
-		for rec in self.resultSet:
 			bibleId = rec.DBP_Equivalent2()
 			if bibleId != None:
 				records = bibleIdMap.get(bibleId, [])
-				records.append(rec)
+				records.append((2, rec))
+				bibleIdMap[bibleId] = records
+			bibleId = rec.DBP_Equivalent3()
+			if bibleId != None:
+				records = bibleIdMap.get(bibleId, [])
+				records.append((3, rec))
 				bibleIdMap[bibleId] = records
 		return bibleIdMap
 
 
-	## FilesetId is not unique, so I return an array of records
-	def getFilesetIdMap(self):
-		filesetIdMap = {}
-		for rec in self.resultSet:
-			filesetIds = rec.DamIds()
-			for (filesetId, statuses) in filesetIds.items():
-				filesetRecords = filesetIdMap.get(filesetId, [])
-				filesetRecords.append(rec)
-				filesetIdMap[filesetId] = filesetRecords
-		return filesetIdMap
+#	## Generated Map filesetId: [LPTSRecord]
+#	def getFilesetIdMap(self):
+#		filesetIdMap = {}
+#		for rec in self.resultSet:
+#			filesetIds = rec.DamIds()
+#			for (filesetId, statuses) in filesetIds.items():
+#				filesetRecords = filesetIdMap.get(filesetId, [])
+#				filesetRecords.append(rec)
+#				filesetIdMap[filesetId] = filesetRecords
+#		return filesetIdMap
 
 
 #	def checkUniqueNames(self):
@@ -208,35 +202,54 @@ class LPTSRecord:
 #		return self.record.get("THIS_DAMID_STATUS")
 
 	## Return the damId's of a record in a map of damId keys
-	## pointing to an array (name, statusName, status)
-	def DamIds(self):
-		damIdDict = {
+	## result = [(statusKey, status)]
+	def DamIds(self, index):
+		damIdDict1 = {
 			"CAudioDAMID1": "CAudioStatus1",
-			"CAudioDamStockNo": "CAudioDamStatus",
-			"ND_NTAudioDamID1": "ND_NTAudioDamIDStatus1",
-			"ND_NTAudioDamID2": "ND_NTAudioDamIDStatus2",
-			"ND_OTAudioDamID1": "ND_OTAudioDamIDStatus1",
-			"ND_OTAudioDamID2": "ND_OTAudioDamIDStatus2",
-			"Reg_NTAudioDamID1": "Reg_NTAudioDamIDStatus1",
-			"Reg_NTAudioDamID2": "Reg_NTAudioDamIDStatus2",
-			"Reg_OTAudioDamID1": "Reg_OTAudioDamIDStatus1",
-			"Reg_OTAudioDamID2": "Reg_OTAudioDamIDStatus2",
-			"ND_NTTextDamID1": "ND_NTTextDamIDStatus1",
-			"ND_NTTextDamID2": "ND_NTTextDamIDStatus2", 
-			"ND_NTTextDamID3": "ND_NTTextDamIDStatus3",
-			"ND_OTTextDamID1": "ND_OTTextDamIDStatus1",
-			"ND_OTTextDamID2": "ND_OTTextDamIDStatus2", 
-			"ND_OTTextDamID3": "ND_OTTextDamIDStatus3",
-			"Reg_NTTextDamID1": "Reg_NTTextDamIDStatus1",
-			"Reg_NTTextDamID2": "Reg_NTTextDamIDStatus2",
-			"Reg_NTTextDamID3": "Reg_NTTextDamIDStatus3", 
-			"Reg_OTTextDamID1": "Reg_OTTextDamIDStatus1", 
-			"Reg_OTTextDamID2": "Reg_OTTextDamIDStatus2",  
-			"Reg_OTTextDamID3": "Reg_OTTextDamIDStatus3",
+			"CAudioDamStockNo": 	"CAudioDamStatus",
+			"ND_NTAudioDamID1": 	"ND_NTAudioDamIDStatus1",
+			"ND_OTAudioDamID1": 	"ND_OTAudioDamIDStatus1",
+			"Reg_NTAudioDamID1": 	"Reg_NTAudioDamIDStatus1",
+			"Reg_OTAudioDamID1": 	"Reg_OTAudioDamIDStatus1",
+			"ND_NTTextDamID1": 		"ND_NTTextDamIDStatus1",
+			"ND_OTTextDamID1": 		"ND_OTTextDamIDStatus1",
+			"Reg_NTTextDamID1": 	"Reg_NTTextDamIDStatus1",
+			"Reg_OTTextDamID1": 	"Reg_OTTextDamIDStatus1", 
 			"Video_John_DamStockNo": "Video_John_DamStatus",
 			"Video_Luke_DamStockNo": "Video_Luke_DamStatus",
 			"Video_Mark_DamStockNo": "Video_Mark_DamStatus",
 			"Video_Matt_DamStockNo": "Video_Matt_DamStatus"}
+		damIdDict2 = {
+			"ND_CAudioDamID2": 		"ND_CAudioDamIDStatus2",
+			"ND_NTAudioDamID2": 	"ND_NTAudioDamIDStatus2",
+			"ND_OTAudioDamID2": 	"ND_OTAudioDamIDStatus2",
+			"Reg_CAudioDamID2": 	"Reg_CAudioDamIDStatus2",
+			"Reg_NTAudioDamID2": 	"Reg_NTAudioDamIDStatus2",
+			"Reg_OTAudioDamID2": 	"Reg_OTAudioDamIDStatus2",
+			"ND_NTTextDamID2": 		"ND_NTTextDamIDStatus2",
+			"ND_OTTextDamID2": 		"ND_OTTextDamIDStatus2", 
+			"Reg_NTTextDamID2": 	"Reg_NTTextDamIDStatus2",
+			"Reg_OTTextDamID2": 	"Reg_OTTextDamIDStatus2"}
+		damIdDict3 = {
+			"ND_CAudioDamID3": 		"ND_CAudioDamIDStatus3",
+			"ND_NTAudioDamID3": 	"ND_NTAudioDamIDStatus3",
+			"ND_OTAudioDamID3": 	"ND_OTAudioDamIDStatus3",
+			"Reg_CAudioDamID3": 	"Reg_CAudioDamIDStatus3",
+			"Reg_NTAudioDamID3":	"Reg_NTAudioDamIDStatus3",
+			"Reg_OTAudioDamID3":	"Reg_OTAudioDamIDStatus3",
+			"ND_NTTextDamID3": 		"ND_NTTextDamIDStatus3",
+			"ND_OTTextDamID3": 		"ND_OTTextDamIDStatus3",
+			"Reg_NTTextDamID3": 	"Reg_NTTextDamIDStatus3", 
+			"Reg_OTTextDamID3": 	"Reg_OTTextDamIDStatus3"}
+		if index == 1:
+			damIdDict = damIdDict1
+		elif index == 2:
+			damIdDict = damIdDict2
+		elif index == 3:
+			damIdDict = damIdDict3
+		else:
+			print("ERROR: Unknown DamId index '%s', 1,2, or 3 expected." % (index))
+			sys.exit()
 		hasKeys = set(damIdDict.keys()).intersection(set(self.record.keys()))
 		results = {}
 		for key in hasKeys:
@@ -250,7 +263,7 @@ class LPTSRecord:
 				print("WARN: Status null for damId %s in key %s" % (damId, key))
 			#print("status", status)
 			statuses = results.get(damId, [])
-			statuses.append((key, statusKey, status))
+			statuses.append((statusKey, status))
 			results[damId] = statuses
 		return results
 
@@ -283,7 +296,21 @@ class LPTSRecord:
 
 	def DBP_Equivalent(self):
 		result = self.record.get("DBP_Equivalent")
-		if result == "N/A" or result == "#N/A":
+		if result in {"N/A", "#N/A"}:
+			return None
+		else:
+			return result
+
+	def DBP_Equivalent2(self):
+		result = self.record.get("DBP_Equivalent2")
+		if result in {"N/A", "#N/A"}:
+			return None
+		else:
+			return result
+
+	def DBP_Equivalent3(self):
+		result = self.record.get("DBP_Equivalent3")
+		if result in {"N/A", "#N/A"}:
 			return None
 		else:
 			return result
@@ -362,23 +389,27 @@ class LPTSRecord:
 	def Copyright_Video(self):
 		return self.record.get("Copyright_Video")
 
-	def x0031_Orthography(self):
-		return self.record.get("_x0031_Orthography")
+	def Orthography(self, index):
+		if index == 1:
+			return self.record.get("_x0031_Orthography")
+		elif index == 2:
+			return self.record.get("_x0032_Orthography")
+		elif index == 3:
+			return self.record.get("_x0033_Orthography")
+		else:
+			print("ERROR: Orthography index must be 1, 2, or 3.")
+			sys.exit()
 
-	def x0032_Orthography(self):
-		return self.record.get("_x0032_Orthography")
-
-	def x0033_Orthography(self):
-		return self.record.get("_x0033_Orthography")
-
-	def DBPFont2(self):
-		return self.record.get("DBPFont2")
-
-	def DBPFont3(self):
-		return self.record.get("DBPFont3")
-
-	def DBP_Equivalent2(self):
-		return self.record.get("DBP_Equivalent2")
+	def DBPFont(self, index):
+		if index == 1:
+			return self.record.get("DBPFont")
+		elif index == 2:
+			return self.record.get("DBPFont2")
+		elif index == 3:
+			return self.record.get("DBPFont3")
+		else:
+			print("ERROR: DBFont index must be 1, 2, or 3.")
+			sys.exit()
 
 	def USX_Date1(self):
 		return self.record.get("USX_Date1")
