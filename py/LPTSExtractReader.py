@@ -203,53 +203,69 @@ class LPTSRecord:
 
 	## Return the damId's of a record in a map of damId keys
 	## result = [(statusKey, status)]
-	def DamIds(self, index):
-		damIdDict1 = {
-			"CAudioDAMID1": "CAudioStatus1",
-			"CAudioDamStockNo": 	"CAudioDamStatus",
-			"ND_NTAudioDamID1": 	"ND_NTAudioDamIDStatus1",
-			"ND_OTAudioDamID1": 	"ND_OTAudioDamIDStatus1",
-			"Reg_NTAudioDamID1": 	"Reg_NTAudioDamIDStatus1",
-			"Reg_OTAudioDamID1": 	"Reg_OTAudioDamIDStatus1",
-			"ND_NTTextDamID1": 		"ND_NTTextDamIDStatus1",
-			"ND_OTTextDamID1": 		"ND_OTTextDamIDStatus1",
-			"Reg_NTTextDamID1": 	"Reg_NTTextDamIDStatus1",
-			"Reg_OTTextDamID1": 	"Reg_OTTextDamIDStatus1", 
-			"Video_John_DamStockNo": "Video_John_DamStatus",
-			"Video_Luke_DamStockNo": "Video_Luke_DamStatus",
-			"Video_Mark_DamStockNo": "Video_Mark_DamStatus",
-			"Video_Matt_DamStockNo": "Video_Matt_DamStatus"}
-		damIdDict2 = {
-			"ND_CAudioDamID2": 		"ND_CAudioDamIDStatus2",
-			"ND_NTAudioDamID2": 	"ND_NTAudioDamIDStatus2",
-			"ND_OTAudioDamID2": 	"ND_OTAudioDamIDStatus2",
-			"Reg_CAudioDamID2": 	"Reg_CAudioDamIDStatus2",
-			"Reg_NTAudioDamID2": 	"Reg_NTAudioDamIDStatus2",
-			"Reg_OTAudioDamID2": 	"Reg_OTAudioDamIDStatus2",
-			"ND_NTTextDamID2": 		"ND_NTTextDamIDStatus2",
-			"ND_OTTextDamID2": 		"ND_OTTextDamIDStatus2", 
-			"Reg_NTTextDamID2": 	"Reg_NTTextDamIDStatus2",
-			"Reg_OTTextDamID2": 	"Reg_OTTextDamIDStatus2"}
-		damIdDict3 = {
-			"ND_CAudioDamID3": 		"ND_CAudioDamIDStatus3",
-			"ND_NTAudioDamID3": 	"ND_NTAudioDamIDStatus3",
-			"ND_OTAudioDamID3": 	"ND_OTAudioDamIDStatus3",
-			"Reg_CAudioDamID3": 	"Reg_CAudioDamIDStatus3",
-			"Reg_NTAudioDamID3":	"Reg_NTAudioDamIDStatus3",
-			"Reg_OTAudioDamID3":	"Reg_OTAudioDamIDStatus3",
-			"ND_NTTextDamID3": 		"ND_NTTextDamIDStatus3",
-			"ND_OTTextDamID3": 		"ND_OTTextDamIDStatus3",
-			"Reg_NTTextDamID3": 	"Reg_NTTextDamIDStatus3", 
-			"Reg_OTTextDamID3": 	"Reg_OTTextDamIDStatus3"}
-		if index == 1:
-			damIdDict = damIdDict1
-		elif index == 2:
-			damIdDict = damIdDict2
-		elif index == 3:
-			damIdDict = damIdDict3
-		else:
+	def DamIds(self, typeCode, index):
+		if not typeCode in {"audio", "text", "video"}:
+			print("ERROR: Unknown typeCode '%s', audio, text, or video is expected." % (typeCode))
+		if not index in {1, 2, 3}:
 			print("ERROR: Unknown DamId index '%s', 1,2, or 3 expected." % (index))
 			sys.exit()
+		if typeCode == "audio":
+			if index == 1:
+				damIdDict = {
+					"CAudioDAMID1": 		"CAudioStatus1",
+					"CAudioDamStockNo": 	"CAudioDamStatus",
+					"ND_NTAudioDamID1": 	"ND_NTAudioDamIDStatus1",
+					"ND_OTAudioDamID1": 	"ND_OTAudioDamIDStatus1",
+					"Reg_NTAudioDamID1": 	"Reg_NTAudioDamIDStatus1",
+					"Reg_OTAudioDamID1": 	"Reg_OTAudioDamIDStatus1"
+					}
+			elif index == 2:
+				damIdDict = {
+					"ND_CAudioDamID2": 		"ND_CAudioDamIDStatus2",
+					"ND_NTAudioDamID2": 	"ND_NTAudioDamIDStatus2",
+					"ND_OTAudioDamID2": 	"ND_OTAudioDamIDStatus2",
+					"Reg_CAudioDamID2": 	"Reg_CAudioDamIDStatus2",
+					"Reg_NTAudioDamID2": 	"Reg_NTAudioDamIDStatus2",
+					"Reg_OTAudioDamID2": 	"Reg_OTAudioDamIDStatus2"
+					}
+			elif index == 3:
+				damIdDict = {
+					"ND_CAudioDamID3": 		"ND_CAudioDamIDStatus3",
+					"ND_NTAudioDamID3": 	"ND_NTAudioDamIDStatus3",
+					"ND_OTAudioDamID3": 	"ND_OTAudioDamIDStatus3",
+					"Reg_CAudioDamID3": 	"Reg_CAudioDamIDStatus3",
+					"Reg_NTAudioDamID3":	"Reg_NTAudioDamIDStatus3",
+					"Reg_OTAudioDamID3":	"Reg_OTAudioDamIDStatus3"
+					}
+		elif typeCode == "text":
+			if index == 1:
+				damIdDict = {
+					"ND_NTTextDamID1": 		"ND_NTTextDamIDStatus1",
+					"ND_OTTextDamID1": 		"ND_OTTextDamIDStatus1",
+					"Reg_NTTextDamID1": 	"Reg_NTTextDamIDStatus1",
+					"Reg_OTTextDamID1": 	"Reg_OTTextDamIDStatus1"
+					}
+			elif index == 2:
+				damIdDict = {
+					"ND_NTTextDamID2": 		"ND_NTTextDamIDStatus2",
+					"ND_OTTextDamID2": 		"ND_OTTextDamIDStatus2", 
+					"Reg_NTTextDamID2": 	"Reg_NTTextDamIDStatus2",
+					"Reg_OTTextDamID2": 	"Reg_OTTextDamIDStatus2"
+					}
+			elif index == 3:
+				damIdDict = {
+					"ND_NTTextDamID3": 		"ND_NTTextDamIDStatus3",
+					"ND_OTTextDamID3": 		"ND_OTTextDamIDStatus3",
+					"Reg_NTTextDamID3": 	"Reg_NTTextDamIDStatus3", 
+					"Reg_OTTextDamID3": 	"Reg_OTTextDamIDStatus3"
+					}
+		elif typeCode == "video":
+			damIdDict = {
+				"Video_John_DamStockNo": "Video_John_DamStatus",
+				"Video_Luke_DamStockNo": "Video_Luke_DamStatus",
+				"Video_Mark_DamStockNo": "Video_Mark_DamStatus",
+				"Video_Matt_DamStockNo": "Video_Matt_DamStatus"
+			}	
 		hasKeys = set(damIdDict.keys()).intersection(set(self.record.keys()))
 		results = {}
 		for key in hasKeys:

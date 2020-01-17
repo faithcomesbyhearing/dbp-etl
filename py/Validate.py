@@ -34,6 +34,7 @@ class Validate:
 		self.lpts = LPTSExtractReader(self.config)
 		self.bibleIdMap = self.lpts.getBibleIdMap()
 		print(len(self.bibleIdMap.keys()), " BibleIds found.")
+		self.validating = [] # debug only
 		self.missingBibleIds = []
 		self.missingFilesetIds = []
 		self.requiredFields = []
@@ -42,7 +43,6 @@ class Validate:
 
 
 	def process(self):
-		self.prepareDirectory(self.config.directory_validate)
 		self.prepareDirectory(self.config.directory_accepted)
 		self.prepareDirectory(self.config.directory_quarantine)
 		self.prepareDirectory(self.config.directory_duplicate)
@@ -65,13 +65,14 @@ class Validate:
 			print("ERROR: run_type must be files or bucketlists.")
 			sys.exit()
 
-		## Reduce input files to bibleId: [filesetId]
+		## Reduce input files to typeCode/bibleId: [filesetId]
 		inputIdMap = {}
 		for filePrefix in filesets.keys():
 			(typeCode, bibleId, filesetId) = filePrefix.split("/")
-			filesetIdList = inputIdMap.get(bibleId, [])
+			key = typeCode + "/" + bibleId
+			filesetIdList = inputIdMap.get(key, [])
 			filesetIdList.append(filesetId)
-			inputIdMap[bibleId] = filesetIdList
+			inputIdMap[key] = filesetIdList
 
 		self.validateLPTS(inputIdMap)
 
@@ -108,85 +109,92 @@ class Validate:
 
 
 	def validateLPTS(self, inputIdMap):
-		for bibleId in sorted(inputIdMap.keys()):
+		for biblePrefix in sorted(inputIdMap.keys()):
+			(typeCode, bibleId) = biblePrefix.split("/")
+			self.validating.append((typeCode, bibleId, ""))
 
 			## Validate bibleId agains LPTS
 			lptsRecords = self.bibleIdMap.get(bibleId)
 			if lptsRecords == None:
-				self.missingBibleIds.append(bibleId)
+				self.missingBibleIds.append((typeCode, bibleId))
 			else:
 
 				## Validate filesetIds against LPTS
-				lptsFilesetIdSet = self.getFilesetIdSet(bibleId, lptsRecords)
-				filesetIds = inputIdMap[bibleId]
+				lptsFilesetIdSet = self.getFilesetIdSet(typeCode, bibleId, lptsRecords)
+				filesetIds = inputIdMap[biblePrefix]
 				for filesetId in filesetIds:
+					self.validating.append((typeCode, bibleId, filesetId))
 					if not filesetId in lptsFilesetIdSet:
-						self.missingFilesetIds.append((bibleId, filesetId))
+						self.missingFilesetIds.append((typeCode, bibleId, filesetId))
 
 				## Validate Required fields are present
 				for (index, record) in lptsRecords:
 					if record.Copyrightc() == None:
-						self.requiredFields.append((bibleId, "Copyrightc"))
+						self.requiredFields.append((typeCode, bibleId, "Copyrightc"))
 					if record.Copyrightp() == None:
-						self.requiredFields.append((bibleId, "Copyrightp"))
+						self.requiredFields.append((typeCode, bibleId, "Copyrightp"))
 					if record.Copyright_Video() == None:
-						self.requiredFields.append((bibleId, "Copyright_Video"))
+						self.requiredFields.append((typeCode, bibleId, "Copyright_Video"))
 					if record.ISO() == None:
-						self.requiredFields.append((bibleId, "ISO"))
+						self.requiredFields.append((typeCode, bibleId, "ISO"))
 					if record.LangName() == None:
-						self.requiredFields.append((bibleId, "LangName"))
+						self.requiredFields.append((typeCode, bibleId, "LangName"))
 					if record.Licensor() == None:
-						self.requiredFields.append((bibleId, "Licensor"))
+						self.requiredFields.append((typeCode, bibleId, "Licensor"))
 					if record.Reg_StockNumber() == None:
-						self.requiredFields.append((bibleId, "Reg_StockNumber"))
+						self.requiredFields.append((typeCode, bibleId, "Reg_StockNumber"))
 					if record.Volumne_Name() == None:
-						self.requiredFields.append((bibleId, "Volumne_Name"))
+						self.requiredFields.append((typeCode, bibleId, "Volumne_Name"))
 
-					if record.Orthography(index) == None:
-						fieldName = "_x003%d_Orthography" % (index)
-						self.suggestedFields.append((bibleId, fieldName))
+					if typeCode == "text":
+						if record.Orthography(index) == None:
+							fieldName = "_x003%d_Orthography" % (index)
+							self.suggestedFields.append((typeCode, bibleId, fieldName))
+					elif typeCode == "audio":
+						if record.Orthography(index) == None:
+							fieldName = "_x003%d_Orthography" % (index)							
+							self.requiredFields.append((typeCode, bibleId, fieldName))
 
-
-	def getFilesetIdSet(self, bibleId, lptsRecordList):
+	def getFilesetIdSet(self, typeCode, bibleId, lptsRecordList):
 		if len(lptsRecordList) == 0:
 			return set()
 		elif len(lptsRecordList) == 1:
 			(index, record) = lptsRecordList[0]
-			damIdMap = record.DamIds(index)
-			self.validateStatus(bibleId, damIdMap)
+			damIdMap = record.DamIds(typeCode, index)
+			self.validateStatus(typeCode, bibleId, damIdMap)
 			return set(damIdMap.keys())
 		else:
 			result = set()
 			for (index, record) in lptsRecordList:
-				damIdMap = record.DamIds(index)
-				self.validateStatus(bibleId, damIdMap)
+				damIdMap = record.DamIds(typeCode, index)
+				self.validateStatus(typeCode, bibleId, damIdMap)
 				result.union(set(damIdMap.keys()))
 			return result
 
 
-	def validateStatus(self, bibleId, damIdMap):
+	def validateStatus(self, typeCode, bibleId, damIdMap):
 		for (filesetId, statuses) in damIdMap.items():
 			for (statusKey, status) in statuses:
-				if not status in {"Live"}:
-					self.damIdStatus.append((bibleId, filesetId, statusKey, status))
+				if not status in {"Live", "live"}:
+					self.damIdStatus.append((typeCode, bibleId, filesetId, statusKey, status))
 
 
 	def reportErrors(self):
 		messages = []
-		for bibleId in self.missingBibleIds:
-			messages.append("%s bibleId is not in LPTS." % (bibleId,))
-		for (bibleId, filesetId) in self.missingFilesetIds:
-			messages.append("%s / %s filesetId is not in LPTS record." % (bibleId, filesetId))
-		for (bibleId, fieldName) in self.requiredFields:
-			messages.append("%s LPTS field %s is required." % (bibleId, fieldName))
-		for (bibleId, fieldName) in self.suggestedFields:
-			messages.append("%s LPTS field %s is missing." % (bibleId, fieldName))
-		for (bibleId, filesetId, statusName, status) in self.damIdStatus:
-			messages.append("%s / %s has status %s = %s." % (bibleId, filesetId, statusName, status))
+		for (typeCode, bibleId, filesetId) in self.validating:
+			messages.append("%s/%s/%s   Begin Validate." % (typeCode, bibleId, filesetId))
+		for (typeCode, bibleId) in self.missingBibleIds:
+			messages.append("%s/%s bibleId is not in LPTS." % (typeCode, bibleId,))
+		for (typeCode, bibleId, filesetId) in self.missingFilesetIds:
+			messages.append("%s/%s/%s filesetId is not in LPTS record." % (typeCode, bibleId, filesetId))
+		for (typeCode, bibleId, fieldName) in self.requiredFields:
+			messages.append("%s/%s LPTS field %s is required." % (typeCode, bibleId, fieldName))
+		for (typeCode, bibleId, fieldName) in self.suggestedFields:
+			messages.append("%s/%s LPTS field %s is missing." % (typeCode, bibleId, fieldName))
+		for (typeCode, bibleId, filesetId, statusName, status) in self.damIdStatus:
+			messages.append("%s/%s/%s has %s = %s." % (typeCode, bibleId, filesetId, statusName, status))
 		for message in sorted(messages):
 			print(message)	
-
-
 
 
 args = Validate.parseCommandLine()
