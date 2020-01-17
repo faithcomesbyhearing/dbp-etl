@@ -129,31 +129,33 @@ class Validate:
 
 				## Validate Required fields are present
 				for (index, record) in lptsRecords:
+					stockNo = record.Reg_StockNumber()
 					if record.Copyrightc() == None:
-						self.requiredFields.append((typeCode, bibleId, "Copyrightc"))
+						self.requiredFields.append((typeCode, bibleId, stockNo, "Copyrightc"))
 					if record.Copyrightp() == None:
-						self.requiredFields.append((typeCode, bibleId, "Copyrightp"))
+						self.requiredFields.append((typeCode, bibleId, stockNo, "Copyrightp"))
 					if record.Copyright_Video() == None:
-						self.requiredFields.append((typeCode, bibleId, "Copyright_Video"))
+						self.requiredFields.append((typeCode, bibleId, stockNo, "Copyright_Video"))
 					if record.ISO() == None:
-						self.requiredFields.append((typeCode, bibleId, "ISO"))
+						self.requiredFields.append((typeCode, bibleId, stockNo, "ISO"))
 					if record.LangName() == None:
-						self.requiredFields.append((typeCode, bibleId, "LangName"))
+						self.requiredFields.append((typeCode, bibleId, stockNo, "LangName"))
 					if record.Licensor() == None:
-						self.requiredFields.append((typeCode, bibleId, "Licensor"))
+						self.requiredFields.append((typeCode, bibleId, stockNo, "Licensor"))
 					if record.Reg_StockNumber() == None:
-						self.requiredFields.append((typeCode, bibleId, "Reg_StockNumber"))
+						self.requiredFields.append((typeCode, bibleId, stockNo, "Reg_StockNumber"))
 					if record.Volumne_Name() == None:
-						self.requiredFields.append((typeCode, bibleId, "Volumne_Name"))
+						self.requiredFields.append((typeCode, bibleId, stockNo, "Volumne_Name"))
 
 					if typeCode == "text":
 						if record.Orthography(index) == None:
 							fieldName = "_x003%d_Orthography" % (index)
-							self.suggestedFields.append((typeCode, bibleId, fieldName))
+							self.requiredFields.append((typeCode, bibleId, stockNo, fieldName))
 					elif typeCode == "audio":
 						if record.Orthography(index) == None:
 							fieldName = "_x003%d_Orthography" % (index)							
-							self.requiredFields.append((typeCode, bibleId, fieldName))
+							self.suggestedFields.append((typeCode, bibleId, stockNo, fieldName))
+
 
 	def getFilesetIdSet(self, typeCode, bibleId, lptsRecordList):
 		if len(lptsRecordList) == 0:
@@ -161,38 +163,38 @@ class Validate:
 		elif len(lptsRecordList) == 1:
 			(index, record) = lptsRecordList[0]
 			damIdMap = record.DamIds(typeCode, index)
-			self.validateStatus(typeCode, bibleId, damIdMap)
+			self.validateStatus(typeCode, bibleId, damIdMap, record)
 			return set(damIdMap.keys())
 		else:
 			result = set()
 			for (index, record) in lptsRecordList:
 				damIdMap = record.DamIds(typeCode, index)
-				self.validateStatus(typeCode, bibleId, damIdMap)
-				result.union(set(damIdMap.keys()))
+				self.validateStatus(typeCode, bibleId, damIdMap, record)
+				result = result.union(set(damIdMap.keys()))
 			return result
 
 
-	def validateStatus(self, typeCode, bibleId, damIdMap):
+	def validateStatus(self, typeCode, bibleId, damIdMap, record):
 		for (filesetId, statuses) in damIdMap.items():
 			for (statusKey, status) in statuses:
 				if not status in {"Live", "live"}:
-					self.damIdStatus.append((typeCode, bibleId, filesetId, statusKey, status))
+					self.damIdStatus.append((typeCode, bibleId, filesetId, record.Reg_StockNumber(), statusKey, status))
 
 
 	def reportErrors(self):
 		messages = []
-		for (typeCode, bibleId, filesetId) in self.validating:
-			messages.append("%s/%s/%s   Begin Validate." % (typeCode, bibleId, filesetId))
+		#for (typeCode, bibleId, filesetId) in self.validating:
+		#	messages.append("%s/%s/%s   Begin Validate." % (typeCode, bibleId, filesetId))
 		for (typeCode, bibleId) in self.missingBibleIds:
 			messages.append("%s/%s bibleId is not in LPTS." % (typeCode, bibleId,))
 		for (typeCode, bibleId, filesetId) in self.missingFilesetIds:
 			messages.append("%s/%s/%s filesetId is not in LPTS record." % (typeCode, bibleId, filesetId))
-		for (typeCode, bibleId, fieldName) in self.requiredFields:
-			messages.append("%s/%s LPTS field %s is required." % (typeCode, bibleId, fieldName))
-		for (typeCode, bibleId, fieldName) in self.suggestedFields:
-			messages.append("%s/%s LPTS field %s is missing." % (typeCode, bibleId, fieldName))
-		for (typeCode, bibleId, filesetId, statusName, status) in self.damIdStatus:
-			messages.append("%s/%s/%s has %s = %s." % (typeCode, bibleId, filesetId, statusName, status))
+		for (typeCode, bibleId, stockNo, fieldName) in self.requiredFields:
+			messages.append("%s/%s LPTS %s field %s is required." % (typeCode, bibleId, stockNo, fieldName))
+		for (typeCode, bibleId, stockNo, fieldName) in self.suggestedFields:
+			messages.append("%s/%s LPTS %s field %s is missing." % (typeCode, bibleId, stockNo, fieldName))
+		for (typeCode, bibleId, filesetId, stockNo, statusName, status) in self.damIdStatus:
+			messages.append("%s/%s/%s LPTS %s has %s = %s." % (typeCode, bibleId, filesetId, stockNo, statusName, status))
 		for message in sorted(messages):
 			print(message)	
 
