@@ -121,30 +121,30 @@ class Validate:
 				filesetIds = inputIdMap[bibleId]
 				for filesetId in filesetIds:
 					if not filesetId in lptsFilesetIdSet:
-						self.missingFilesetIds.append((filesetId, bibleId))
+						self.missingFilesetIds.append((bibleId, filesetId))
 
 				## Validate Required fields are present
 				for (index, record) in lptsRecords:
 					if record.Copyrightc() == None:
-						self.requiredFields.append(("Copyrightc", bibleId))
+						self.requiredFields.append((bibleId, "Copyrightc"))
 					if record.Copyrightp() == None:
-						self.requiredFields.append(("Copyrightp", bibleId))
+						self.requiredFields.append((bibleId, "Copyrightp"))
 					if record.Copyright_Video() == None:
-						self.requiredFields.append(("Copyright_Video", bibleId))
+						self.requiredFields.append((bibleId, "Copyright_Video"))
 					if record.ISO() == None:
-						self.requiredFields.append(("ISO", bibleId))
+						self.requiredFields.append((bibleId, "ISO"))
 					if record.LangName() == None:
-						self.requiredFields.append(("LangName", bibleId))
+						self.requiredFields.append((bibleId, "LangName"))
 					if record.Licensor() == None:
-						self.requiredFields.append(("Licensor", bibleId))
+						self.requiredFields.append((bibleId, "Licensor"))
 					if record.Reg_StockNumber() == None:
-						self.requiredFields.append(("Reg_StockNumber", bibleId))
+						self.requiredFields.append((bibleId, "Reg_StockNumber"))
 					if record.Volumne_Name() == None:
-						self.requiredFields.append(("Volumne_Name", bibleId))
+						self.requiredFields.append((bibleId, "Volumne_Name"))
 
 					if record.Orthography(index) == None:
 						fieldName = "_x003%d_Orthography" % (index)
-						self.suggestedFields.append((fieldName, bibleId))
+						self.suggestedFields.append((bibleId, fieldName))
 
 
 	def getFilesetIdSet(self, bibleId, lptsRecordList):
@@ -172,16 +172,19 @@ class Validate:
 
 
 	def reportErrors(self):
+		messages = []
 		for bibleId in self.missingBibleIds:
-			print("%s bibleId is not in LPTS." % (bibleId,))
-		for (filesetId, bibleId) in self.missingFilesetIds:
-			print("%s filesetId is not in LPTS record of %s" % (filesetId, bibleId))
-		for (fieldName, bibleId) in self.requiredFields:
-			print("%s field is not in LPTS record of %s" % (fieldName, bibleId))
-		for (fieldName, bibleId) in self.suggestedFields:
-			print("%s field is suggested for LPTS record of %s" % (fieldName, bibleId))
+			messages.append("%s bibleId is not in LPTS." % (bibleId,))
+		for (bibleId, filesetId) in self.missingFilesetIds:
+			messages.append("%s / %s filesetId is not in LPTS record." % (bibleId, filesetId))
+		for (bibleId, fieldName) in self.requiredFields:
+			messages.append("%s LPTS field %s is required." % (bibleId, fieldName))
+		for (bibleId, fieldName) in self.suggestedFields:
+			messages.append("%s LPTS field %s is missing." % (bibleId, fieldName))
 		for (bibleId, filesetId, statusName, status) in self.damIdStatus:
-			print("%s / %s has status %s = %s" % (bibleId, filesetId, statusName, status))	
+			messages.append("%s / %s has status %s = %s." % (bibleId, filesetId, statusName, status))
+		for message in sorted(messages):
+			print(message)	
 
 
 
