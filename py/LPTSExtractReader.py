@@ -259,9 +259,6 @@ class LPTSRecord:
 			damId = self.record[key]
 			#print("damId", damId)
 			status = self.record.get(statusKey)
-			if status == None:
-				print("WARN: Status null for damId %s in key %s" % (damId, key))
-			#print("status", status)
 			statuses = results.get(damId, [])
 			statuses.append((statusKey, status))
 			results[damId] = statuses

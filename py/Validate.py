@@ -38,6 +38,7 @@ class Validate:
 		self.missingFilesetIds = []
 		self.requiredFields = []
 		self.suggestedFields = []
+		self.damIdStatus = []
 
 
 	def process(self):
@@ -116,7 +117,7 @@ class Validate:
 			else:
 
 				## Validate filesetIds against LPTS
-				lptsFilesetIdSet = self.getFilesetIdSet(lptsRecords)
+				lptsFilesetIdSet = self.getFilesetIdSet(bibleId, lptsRecords)
 				filesetIds = inputIdMap[bibleId]
 				for filesetId in filesetIds:
 					if not filesetId in lptsFilesetIdSet:
@@ -146,17 +147,28 @@ class Validate:
 						self.suggestedFields.append((fieldName, bibleId))
 
 
-	def getFilesetIdSet(self, lptsRecordList):
+	def getFilesetIdSet(self, bibleId, lptsRecordList):
 		if len(lptsRecordList) == 0:
 			return set()
 		elif len(lptsRecordList) == 1:
 			(index, record) = lptsRecordList[0]
-			return set(record.DamIds(index).keys())
+			damIdMap = record.DamIds(index)
+			self.validateStatus(bibleId, damIdMap)
+			return set(damIdMap.keys())
 		else:
 			result = set()
 			for (index, record) in lptsRecordList:
-				result.union(set(record.DamIds(index).keys()))
+				damIdMap = record.DamIds(index)
+				self.validateStatus(bibleId, damIdMap)
+				result.union(set(damIdMap.keys()))
 			return result
+
+
+	def validateStatus(self, bibleId, damIdMap):
+		for (filesetId, statuses) in damIdMap.items():
+			for (statusKey, status) in statuses:
+				if not status in {"Live"}:
+					self.damIdStatus.append((bibleId, filesetId, statusKey, status))
 
 
 	def reportErrors(self):
@@ -167,7 +179,9 @@ class Validate:
 		for (fieldName, bibleId) in self.requiredFields:
 			print("%s field is not in LPTS record of %s" % (fieldName, bibleId))
 		for (fieldName, bibleId) in self.suggestedFields:
-			print("%s field is suggested for LPTS record of %s" % (fieldName, bibleId))		
+			print("%s field is suggested for LPTS record of %s" % (fieldName, bibleId))
+		for (bibleId, filesetId, statusName, status) in self.damIdStatus:
+			print("%s / %s has status %s = %s" % (bibleId, filesetId, statusName, status))	
 
 
 
