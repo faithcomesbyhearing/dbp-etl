@@ -34,7 +34,6 @@ class Validate:
 		self.lpts = LPTSExtractReader(self.config)
 		self.bibleIdMap = self.lpts.getBibleIdMap()
 		print(len(self.bibleIdMap.keys()), " BibleIds found.")
-		self.validating = [] # debug only
 		self.missingBibleIds = []
 		self.missingFilesetIds = []
 		self.requiredFields = []
@@ -107,7 +106,6 @@ class Validate:
 	def validateLPTS(self, inputIdMap):
 		for biblePrefix in sorted(inputIdMap.keys()):
 			(typeCode, bibleId) = biblePrefix.split("/")
-			self.validating.append((typeCode, bibleId, ""))
 
 			## Validate bibleId agains LPTS
 			lptsRecords = self.bibleIdMap.get(bibleId)
@@ -116,12 +114,9 @@ class Validate:
 			else:
 
 				## Validate filesetIds against LPTS
-				lptsFilesetIdSet = self.getFilesetIdSet(typeCode, bibleId, lptsRecords)
 				filesetIds = inputIdMap[biblePrefix]
-				for filesetId in filesetIds:
-					self.validating.append((typeCode, bibleId, filesetId))
-					if not filesetId in lptsFilesetIdSet:
-						self.missingFilesetIds.append((typeCode, bibleId, filesetId))
+				lptsFilesetIdSet = self.getFilesetIdSet(typeCode, bibleId, lptsRecords)
+				self.validateFilesetIds(typeCode, filesetIds, lptsFilesetIdSet)
 
 				## Validate Required fields are present
 				for (index, record) in lptsRecords:
@@ -177,10 +172,29 @@ class Validate:
 					self.damIdStatus.append((typeCode, bibleId, filesetId, record.Reg_StockNumber(), statusKey, status))
 
 
+	def validateFilesetIds(self, typeCode, inputFilesetIdList, lptsFilesetIdSet):
+		if typeCode == "audio":
+			inputFilesetIds = []
+			for filesetId in inputFilesetIdList:
+				inputFilesetIds.append(filesetId[:10]) # reduce input filesetId to 10 char
+			lptsFilesetIds = lptsFilesetIdSet
+
+		elif typeCode == "text":
+			inputFilesetIds = inputFilesetIdList
+			lptsFilesetIds = set()
+			for filesetId in lptsFilesetIdSet:
+				lptsFilesetIds.add(filesetId[:6]) # reduce lpts filesetId to 6 char
+		else:
+			inputFilesetIds = inputFilesetIdList
+			lptsFilesetIds = lptsFilesetIdSet
+
+		for filesetId in inputFilesetIds:
+			if not filesetId in lptsFilesetIds:
+				self.missingFilesetIds.append((typeCode, bibleId, filesetId))
+
+
 	def reportErrors(self):
 		messages = []
-		#for (typeCode, bibleId, filesetId) in self.validating:
-		#	messages.append("%s/%s/%s   Begin Validate." % (typeCode, bibleId, filesetId))
 		for (typeCode, bibleId) in self.missingBibleIds:
 			messages.append("%s/%s bibleId is not in LPTS." % (typeCode, bibleId,))
 		for (typeCode, bibleId, filesetId) in self.missingFilesetIds:
