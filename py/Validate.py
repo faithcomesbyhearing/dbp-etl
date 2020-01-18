@@ -50,7 +50,7 @@ class Validate:
 		## get filesets: a map typeCode/bibleId/filesetId: [(filename, fileSize, datetime)]
 		reader = InputReader(self.config)
 		if self.runType == "bucketlists":
-#			filesets = reader.bucketListing(self.config.s3_bucket)
+			filesets = reader.bucketListing(self.config.s3_bucket)
 			filesets = reader.bucketListing(self.config.s3_vid_bucket)
 
 		elif self.runType == "files":
@@ -116,7 +116,7 @@ class Validate:
 				## Validate filesetIds against LPTS
 				filesetIds = inputIdMap[biblePrefix]
 				lptsFilesetIdSet = self.getFilesetIdSet(typeCode, bibleId, lptsRecords)
-				self.validateFilesetIds(typeCode, filesetIds, lptsFilesetIdSet)
+				self.validateFilesetIds(typeCode, bibleId, filesetIds, lptsFilesetIdSet)
 
 				## Validate Required fields are present
 				for (index, record) in lptsRecords:
@@ -172,7 +172,7 @@ class Validate:
 					self.damIdStatus.append((typeCode, bibleId, filesetId, record.Reg_StockNumber(), statusKey, status))
 
 
-	def validateFilesetIds(self, typeCode, inputFilesetIdList, lptsFilesetIdSet):
+	def validateFilesetIds(self, typeCode, bibleId, inputFilesetIdList, lptsFilesetIdSet):
 		if typeCode == "audio":
 			inputFilesetIds = []
 			for filesetId in inputFilesetIdList:
