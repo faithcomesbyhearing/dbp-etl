@@ -55,11 +55,7 @@ class Validate:
 			filesets = reader.bucketListing(self.config.s3_vid_bucket)
 
 		elif self.runType == "files":
-			print("do it")
-			## In reader move the core section into a common routine
-			## that processes filenames
-			## In reader add new method to read directory of files
-			## read a directory listing into the identical form
+			filesets = reader.fileListing(self.config.directory_validate)
 
 		else:
 			print("ERROR: run_type must be files or bucketlists.")
