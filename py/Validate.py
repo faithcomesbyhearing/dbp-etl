@@ -7,6 +7,8 @@ from datetime import datetime
 from Config import *
 from InputReader import *
 from LPTSExtractReader import *
+from FilenameParser import *
+from FilenameReducer import *
 
 
 class Validate:
@@ -70,6 +72,12 @@ class Validate:
 			inputIdMap[key] = filesetIdList
 
 		self.validateLPTS(inputIdMap)
+
+		FilenameReducer.openErrorReport(self.config)
+		parser = FilenameParser(self.config)
+		parser.process3(filesets)
+		parser.summary3()
+		FilenameReducer.closeErrorReport()
 
 
 	## prepareDirectory 1. Makes sure a directory exists. 2. If it contains .csv files,

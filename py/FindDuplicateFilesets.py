@@ -14,7 +14,6 @@
 import os
 import csv
 from Config import *
-#from SQLUtility import *
 
 class FindDuplicateFilesets:
 
@@ -30,7 +29,7 @@ class FindDuplicateFilesets:
 			if file.endswith("csv"):
 				file = file.split(".")[0]
 				parts = file.split("_")
-				filesetId = parts[3]
+				filesetId = parts[2]
 				filenames = filesets.get(filesetId, [])
 				filenames.append(file)
 				filesets[filesetId] = filenames
@@ -71,11 +70,11 @@ class FindDuplicateFilesets:
 	def findMostRecent(self, filenames):
 		# These are exceptions that are to be selected even though they
 		# are not the most current
-		acceptedHacks = {"dbp-prod_audio_ENGESV_ENGESVN1DA16",
-					"dbp-prod_audio_KMYWBT_KMAWBTN2DA",
-					"dbp-prod_audio_PORNLE_PO1NLHC1DA",
-					"dbp-prod_audio_PORNLE_PO1NLHN1DA",
-					"dbp-prod_audio_PORNLE_PO1NLHO1DA"}
+		acceptedHacks = {"audio_ENGESV_ENGESVN1DA16",
+					"audio_KMYWBT_KMAWBTN2DA",
+					"audio_PORNLE_PO1NLHC1DA",
+					"audio_PORNLE_PO1NLHN1DA",
+					"audio_PORNLE_PO1NLHO1DA"}
 		datetimes = []
 		for index in range(len(filenames)):
 			print("filename to compare", filenames[index][0])

@@ -44,9 +44,8 @@ class FilenameReducer:
 		find.moveDuplicates(duplicates)
 
 
-	def __init__(self, config, bucket, filePrefix, fileList, extraChapters, missingChapters, missingVerses):
+	def __init__(self, config, filePrefix, fileList, extraChapters, missingChapters, missingVerses):
 		self.config = config
-		self.bucket = bucket
 		self.filePrefix = filePrefix
 		self.fileList = fileList
 		self.extraChapters = extraChapters
@@ -59,7 +58,7 @@ class FilenameReducer:
 		for file in self.fileList:
 			errorCount += len(file.errors)
 
-		if self.bucket + ":" + self.filePrefix in FilenameReducer.acceptErrorSet:
+		if self.filePrefix in FilenameReducer.acceptErrorSet:
 			acceptedList = self.fileList
 			quarantineList = []
 		else:
@@ -146,16 +145,6 @@ class FilenameReducer:
 			return lengths.index(best)
 
 
-#	def findLongest(self, files):
-#		lengths = []
-#		for file in files:
-#			lengths.append(len(file.file))
-#		longest = max(lengths)
-#		for index in range(len(files)):
-#			if len(files[index].file) == longest:
-#				return index
-
-
 	def writeOutput(self, listType, fileList):
 		if listType == "accepted":
 			path = self.config.directory_accepted
@@ -167,7 +156,7 @@ class FilenameReducer:
 			print("ERROR: Unknown listType %s" % (listType))
 			sys.exit()
 
-		filename = path + self.bucket + "_" + self.filePrefix.replace("/", "_") + ".csv"
+		filename = path + self.filePrefix.replace("/", "_") + ".csv"
 		self.ensureDirectory(filename)
 
 		with open(filename, 'w', newline='\n') as csvfile:

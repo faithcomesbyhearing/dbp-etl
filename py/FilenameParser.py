@@ -404,7 +404,7 @@ class FilenameParser:
 		)
 
 
-	def process3(self, bucket):
+	def process3(self, filenamesMap):
 		db = SQLUtility("localhost", 3306, "root", "valid_dbp")
 		self.chapterMap = db.selectMap("SELECT id, chapters FROM books", None)
 		## I am not certain the LXX actually exists
@@ -421,8 +421,6 @@ class FilenameParser:
 			"XA":"XXA", "XB":"XXB", "XC":"XXC", "XD":"XXD", "XE":"XXE", "XF":"XXF", "XG":"XXG"}
 		self.usfx2Map.update(extras)
 		self.usfx2Map["J1"] = "1JN" ## fix incorrect entry in books table
-		reader = InputReader(self.config)
-		filenamesMap = reader.bucketListing(bucket)
 		db.close()
 
 		for prefix in filenamesMap.keys():
@@ -453,7 +451,7 @@ class FilenameParser:
 			elif typeCode == "video":
 				(extraChapters, missingChapters, missingVerses) = self.checkVideoBookChapterVerse(prefix, files)
 			
-			reducer = FilenameReducer(self.config, bucket, prefix, files, extraChapters, missingChapters, missingVerses)
+			reducer = FilenameReducer(self.config, prefix, files, extraChapters, missingChapters, missingVerses)
 			reducer.process()
 
 
@@ -610,13 +608,20 @@ class FilenameParser:
 		else:
 			return "Traditional"
 
-config = Config("dev")
-FilenameReducer.openErrorReport(config)
-parser = FilenameParser(config)
-parser.process3('dbp-prod')
-parser.process3('dbp-vid')
-parser.summary3()
-FilenameReducer.closeErrorReport()
+
+#config = Config("dev")
+#FilenameReducer.openErrorReport(config)
+#reader = InputReader(config)
+#parser = FilenameParser(config)
+#bucket = config.s3_bucket
+#filenamesMap = reader.bucketListing(bucket)
+#parser.process3(filenamesMap)
+#reader = InputReader(config)
+#bucket = config.s3_vid_bucket
+#filenamesMap = reader.bucketListing(bucket)
+#parser.process3(filenamesMap)
+#parser.summary3()
+#FilenameReducer.closeErrorReport()
 
 
 
