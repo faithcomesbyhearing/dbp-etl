@@ -33,8 +33,8 @@ class Validate:
 	def __init__(self, args):
 		self.config = Config(args["config"])
 		self.runType = args["run"]
-		self.lpts = LPTSExtractReader(self.config)
-		self.bibleIdMap = self.lpts.getBibleIdMap()
+		lpts = LPTSExtractReader(self.config)
+		self.bibleIdMap = lpts.getBibleIdMap()
 		print(len(self.bibleIdMap.keys()), " BibleIds found.")
 		self.missingBibleIds = []
 		self.missingFilesetIds = []
@@ -75,7 +75,7 @@ class Validate:
 
 		FilenameReducer.openErrorReport(self.config)
 		parser = FilenameParser(self.config)
-		parser.process3(filesets)
+		parser.process3(filesets, self.bibleIdMap)
 		parser.summary3()
 		FilenameReducer.closeErrorReport()
 
