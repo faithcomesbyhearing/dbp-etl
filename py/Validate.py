@@ -36,6 +36,7 @@ class Validate:
 		lpts = LPTSExtractReader(self.config)
 		self.bibleIdMap = lpts.getBibleIdMap()
 		print(len(self.bibleIdMap.keys()), " BibleIds found.")
+		self.invalidFileExt = []
 		self.missingBibleIds = []
 		self.missingFilesetIds = []
 		self.requiredFields = []
@@ -61,6 +62,20 @@ class Validate:
 		else:
 			print("ERROR: run_type must be files or bucketlists.")
 			sys.exit()
+
+		## Validate filetypes
+		for (filePrefix, filenames) in filesets.items():
+			(typeCode, bibleId, filesetId) = filePrefix.split("/")
+			for (filename, filesize, lastmodified) in filenames:
+				ext = os.path.splitext(filename)[1]
+				if typeCode == "audio" and ext != ".mp3":
+					self.invalidFileExt.append((typeCode, bibleId, filesetId, filename))
+				elif typeCode == "text" and not ext in {".html", ".json"}:
+					self.invalidFileExt.append((typeCode, bibleId, filesetId, filename))
+				elif typeCode == "video" and ext != ".mp4":
+					self.invalidFileExt.append((typeCode, bibleId, filesetId, filename))
+
+
 
 		## Reduce input files to typeCode/bibleId: [filesetId]
 		inputIdMap = {}
@@ -203,6 +218,8 @@ class Validate:
 
 	def reportErrors(self):
 		messages = []
+		for (typeCode, bibleId, filesetId, filename) in self.invalidFileExt:
+			messages.append("%s/%s/%s/%s has an invalid file ext." % (typeCode, bibleId, filesetId, filename))
 		for (typeCode, bibleId) in self.missingBibleIds:
 			messages.append("%s/%s bibleId is not in LPTS." % (typeCode, bibleId,))
 		for (typeCode, bibleId, filesetId) in self.missingFilesetIds:
