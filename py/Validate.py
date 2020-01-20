@@ -36,6 +36,7 @@ class Validate:
 		lpts = LPTSExtractReader(self.config)
 		self.bibleIdMap = lpts.getBibleIdMap()
 		print(len(self.bibleIdMap.keys()), " BibleIds found.")
+		self.errorMessages = []
 		self.invalidFileExt = []
 		self.missingBibleIds = []
 		self.missingFilesetIds = []
@@ -88,11 +89,14 @@ class Validate:
 
 		self.validateLPTS(inputIdMap)
 
-		FilenameReducer.openErrorReport(self.config)
+		FilenameReducer.openAcceptErrorSet(self.config)
 		parser = FilenameParser(self.config)
-		parser.process3(filesets, self.bibleIdMap)
+		parser.process3(filesets, self.bibleIdMap, self.errorMessages)
 		parser.summary3()
-		FilenameReducer.closeErrorReport()
+
+		find = FindDuplicateFilesets(self.config)
+		duplicates = find.findDuplicates()
+		find.moveDuplicates(duplicates, self.errorMessages)
 
 
 	## prepareDirectory 1. Makes sure a directory exists. 2. If it contains .csv files,
@@ -217,20 +221,19 @@ class Validate:
 
 
 	def reportErrors(self):
-		messages = []
 		for (typeCode, bibleId, filesetId, filename) in self.invalidFileExt:
-			messages.append("%s/%s/%s/%s has an invalid file ext." % (typeCode, bibleId, filesetId, filename))
+			self.errorMessages.append("%s/%s/%s/%s has an invalid file ext." % (typeCode, bibleId, filesetId, filename))
 		for (typeCode, bibleId) in self.missingBibleIds:
-			messages.append("%s/%s bibleId is not in LPTS." % (typeCode, bibleId,))
+			self.errorMessages.append("%s/%s bibleId is not in LPTS." % (typeCode, bibleId,))
 		for (typeCode, bibleId, filesetId) in self.missingFilesetIds:
-			messages.append("%s/%s/%s filesetId is not in LPTS record." % (typeCode, bibleId, filesetId))
+			self.errorMessages.append("%s/%s/%s filesetId is not in LPTS record." % (typeCode, bibleId, filesetId))
 		for (typeCode, bibleId, stockNo, fieldName) in self.requiredFields:
-			messages.append("%s/%s LPTS %s field %s is required." % (typeCode, bibleId, stockNo, fieldName))
+			self.errorMessages.append("%s/%s LPTS %s field %s is required." % (typeCode, bibleId, stockNo, fieldName))
 		for (typeCode, bibleId, stockNo, fieldName) in self.suggestedFields:
-			messages.append("%s/%s LPTS %s field %s is missing." % (typeCode, bibleId, stockNo, fieldName))
+			self.errorMessages.append("%s/%s LPTS %s field %s is missing." % (typeCode, bibleId, stockNo, fieldName))
 		for (typeCode, bibleId, filesetId, stockNo, statusName, status) in self.damIdStatus:
-			messages.append("%s/%s/%s LPTS %s has %s = %s." % (typeCode, bibleId, filesetId, stockNo, statusName, status))
-		for message in sorted(messages):
+			self.errorMessages.append("%s/%s/%s LPTS %s has %s = %s." % (typeCode, bibleId, filesetId, stockNo, statusName, status))
+		for message in sorted(self.errorMessages):
 			print(message)	
 
 

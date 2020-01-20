@@ -20,13 +20,13 @@ from FindDuplicateFilesets import *
 class FilenameReducer:
 
 	@classmethod
-	def openErrorReport(klass, config):
+	def openAcceptErrorSet(klass, config):
 		klass.config = config
-		errorDir = config.directory_errors
-		pattern = config.filename_datetime 
-		path = errorDir + "Errors-" + datetime.today().strftime(pattern) + ".out"
-		klass.errorFile = open(path, "w")
-		print("openErrorReport", path)
+#		errorDir = config.directory_errors
+#		pattern = config.filename_datetime 
+#		path = errorDir + "Errors-" + datetime.today().strftime(pattern) + ".out"
+#		klass.errorFile = open(path, "w")
+#		print("openErrorReport", path)
 		klass.acceptErrorSet = set()
 		fp = open(config.filename_accept_errors, "r")
 		for row in fp:
@@ -34,14 +34,6 @@ class FilenameReducer:
 		fp.close()
 		for item in klass.acceptErrorSet:
 			print("Except Errors:", item)
-
-
-	@classmethod
-	def closeErrorReport(klass):
-		klass.errorFile.close()
-		find = FindDuplicateFilesets(klass.config)
-		duplicates = find.findDuplicates()
-		find.moveDuplicates(duplicates)
 
 
 	def __init__(self, config, filePrefix, fileList, extraChapters, missingChapters, missingVerses):
@@ -53,7 +45,7 @@ class FilenameReducer:
 		self.missingVerses = missingVerses
 
 
-	def process(self):
+	def process(self, errorMessages):
 		errorCount = len(self.extraChapters) + len(self.missingChapters) + int(len(self.missingVerses) / 20.0)
 		for file in self.fileList:
 			errorCount += len(file.errors)
@@ -70,7 +62,7 @@ class FilenameReducer:
 			duplicateList = []
 
 		if errorCount > 0:
-			self.writeErrors()
+			self.writeErrors(errorMessages)
 		if len(quarantineList) > 0:
 			self.writeOutput("quarantine", quarantineList)
 		if len(duplicateList) > 0:
@@ -171,28 +163,26 @@ class FilenameReducer:
 					file.chapter, file.chapterEnd, file.verseStart, file.verseEnd, file.datetime, file.length, "; ".join(file.errors)))
 
 
-	def writeErrors(self):
+	def writeErrors(self, errorMessages):
 		for file in self.fileList:
 			if len(file.errors) > 0:
-				FilenameReducer.errorFile.write("%s %s %s\n" % (file.template.name, self.filePrefix + " " + file.file, ", ".join(file.errors)))
-				#FilenameReducer.errorFile.write("%s %s %s\n" % (self.filePrefix + "/" + file.file, ", ".join(file.errors), file.template.name))
+				errorMessages.append("%s/%s %s" % (self.filePrefix, file.file, ", ".join(file.errors)))
 
 		if self.filePrefix.startswith("video"):
 			if len(self.extraChapters) > 0:
-				self.summaryMessage("chapters too large", self.extraChapters)
+				self.summaryMessage("chapters too large", self.extraChapters, errorMessages)
 			if len(self.missingChapters) > 0:
-				self.summaryMessage("chapters missing", self.missingChapters)
+				self.summaryMessage("chapters missing", self.missingChapters, errorMessages)
 			if len(self.missingVerses) > 0:
-				self.summaryVerseMessage("verses missing", self.missingVerses)
+				self.summaryVerseMessage("verses missing", self.missingVerses, errorMessages)
 		else:
 			if len(self.extraChapters) > 0:
-				self.summaryMessage("chapters too large", self.extraChapters)
+				self.summaryMessage("chapters too large", self.extraChapters, errorMessages)
 			if len(self.missingChapters) > 0:
-				self.summaryMessage("chapters missing", self.missingChapters)			
+				self.summaryMessage("chapters missing", self.missingChapters, errorMessages)			
 
 
-	def summaryMessage(self, message, errors):
-		#print(prefix, message, errors)
+	def summaryMessage(self, message, errors, errorMessages):
 		currBook, chapter = errors[0].split(":")
 		startChap = int(chapter)
 		nextChap = startChap
@@ -207,7 +197,7 @@ class FilenameReducer:
 				startChap = int(chapter)
 				nextChap = startChap + 1
 		self.appendError(results, currBook, startChap, nextChap)
-		FilenameReducer.errorFile.write("%s %s %s\n" % (self.filePrefix, message, ", ".join(results)))
+		errorMessages.append("%s %s %s\n" % (self.filePrefix, message, ", ".join(results)))
 
 
 	def appendError(self, results, book, chapStart, chapEnd):
@@ -217,8 +207,7 @@ class FilenameReducer:
 			results.append("%s %d-%d" % (book, chapStart, chapEnd - 1))
 
 
-	def summaryVerseMessage(self, message, errors):
-		#print(prefix, message, errors)
+	def summaryVerseMessage(self, message, errors, errorMessages):
 		currBook, chapter, verse = errors[0].split(":")
 		startChap = int(chapter)
 		startVerse = int(verse)
@@ -235,7 +224,7 @@ class FilenameReducer:
 				startVerse = int(verse)
 				nextVerse = startVerse + 1
 		self.appendVerseError(results, currBook, startChap, startVerse, nextVerse)
-		FilenameReducer.errorFile.write("%s %s %s\n" % (self.filePrefix, message, ", ".join(results)))
+		errorMessages.append("%s %s %s\n" % (self.filePrefix, message, ", ".join(results)))
 
 
 	def appendVerseError(self, results, book, chapStart, verseStart, verseEnd):

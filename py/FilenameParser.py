@@ -400,7 +400,7 @@ class FilenameParser:
 		)
 
 
-	def process3(self, filenamesMap, lptsBibleIdMap):
+	def process3(self, filenamesMap, lptsBibleIdMap, errorMessages):
 		db = SQLUtility("localhost", 3306, "root", "valid_dbp")
 		self.chapterMap = db.selectMap("SELECT id, chapters FROM books", None)
 		## I am not certain the LXX actually exists
@@ -448,7 +448,7 @@ class FilenameParser:
 				(extraChapters, missingChapters, missingVerses) = self.checkVideoBookChapterVerse(prefix, files)
 			
 			reducer = FilenameReducer(self.config, prefix, files, extraChapters, missingChapters, missingVerses)
-			reducer.process()
+			reducer.process(errorMessages)
 
 
 	def parseOneFileset3(self, templates, prefix, filenamesTuple):
