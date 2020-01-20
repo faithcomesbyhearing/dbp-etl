@@ -236,6 +236,15 @@ class Validate:
 		for message in sorted(self.errorMessages):
 			print(message)	
 
+		errorDir = self.config.directory_errors
+		pattern = self.config.filename_datetime 
+		path = errorDir + "Errors-" + datetime.today().strftime(pattern) + ".out"
+		print("openErrorReport", path)
+		errorFile = open(path, "w")
+		for message in sorted(self.errorMessages):
+			errorFile.write(message + "\n")
+		errorFile.close()		
+
 
 args = Validate.parseCommandLine()
 validate = Validate(args)

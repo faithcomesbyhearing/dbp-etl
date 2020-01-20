@@ -22,11 +22,6 @@ class FilenameReducer:
 	@classmethod
 	def openAcceptErrorSet(klass, config):
 		klass.config = config
-#		errorDir = config.directory_errors
-#		pattern = config.filename_datetime 
-#		path = errorDir + "Errors-" + datetime.today().strftime(pattern) + ".out"
-#		klass.errorFile = open(path, "w")
-#		print("openErrorReport", path)
 		klass.acceptErrorSet = set()
 		fp = open(config.filename_accept_errors, "r")
 		for row in fp:
