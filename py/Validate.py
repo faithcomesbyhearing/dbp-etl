@@ -233,8 +233,6 @@ class Validate:
 			self.errorMessages.append("%s/%s LPTS %s field %s is missing." % (typeCode, bibleId, stockNo, fieldName))
 		for (typeCode, bibleId, filesetId, stockNo, statusName, status) in self.damIdStatus:
 			self.errorMessages.append("%s/%s/%s LPTS %s has %s = %s." % (typeCode, bibleId, filesetId, stockNo, statusName, status))
-		for message in sorted(self.errorMessages):
-			print(message)	
 
 		errorDir = self.config.directory_errors
 		pattern = self.config.filename_datetime 
@@ -243,6 +241,7 @@ class Validate:
 		errorFile = open(path, "w")
 		for message in sorted(self.errorMessages):
 			errorFile.write(message + "\n")
+			print(message)
 		errorFile.close()		
 
 

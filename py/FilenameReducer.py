@@ -60,10 +60,14 @@ class FilenameReducer:
 			self.writeErrors(errorMessages)
 		if len(quarantineList) > 0:
 			self.writeOutput("quarantine", quarantineList)
+			errorMessages.append("%s %d Files moved to quarantine" % (self.filePrefix, len(quarantineList)))
 		if len(duplicateList) > 0:
 			self.writeOutput("duplicate", duplicateList)
+			errorMessages.append("%s %d Files moved to duplicate" % (self.filePrefix, len(duplicateList)))
 		if len(acceptedList) > 0:
 			self.writeOutput("accepted", acceptedList)
+			if len(quarantineList) > 0 or len(duplicateList) > 0:
+				errorMessages.append("%s %d Files moved to accepted" % (self.filePrefix, len(acceptedList)))
 
 
 	def quarantineErrors(self, fileList, errorCount):
