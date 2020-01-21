@@ -571,7 +571,7 @@ class Booknames:
 			'A21': 	'1MA', # 1Maccabees
 			'A22': 	'2MA', # 2Maccabees
 			'A23': 	'3MA', # 3Maccabees
-			'A24':  'PSA', # is there a special code for PSA 151
+			'A24':  'PSA',
 			# I think prayer of Manassa goes here
 			'A25':  'JOB',
 			'A26':  'PRO',
@@ -600,6 +600,65 @@ class Booknames:
 			'A48':  'EZK',
 			'A49':  'DAG', # DAN with additions
 			'A50': 	'4MA' # 4Maccabees
+		}
+		return septuagint.get(sequence, None)
+
+
+	def Septuagint2OT(self, sequence):
+		septuagint = {
+			'A01':  'GEN',
+			'A02':  'EXO',
+			'A03':  'LEV',
+			'A04':  'NUM',
+			'A05':  'DEU',
+			'A06':  'JOS',
+			'A07':  'JDG',
+			'A08':  'RUT',
+			'A09':  '1SA',
+			'A10':  '2SA',
+			'A11':  '1KI',
+			'A12':  '2KI',
+			'A13':  '1CH',
+			'A14':  '2CH',
+			'A15':  'EZA', # Not sure EZA is correct codeEsdras 1
+			'A16':	'EZR',
+			'A17':  'NEH',
+			'A18': 	'TOB', # Tobit
+			'A19': 	'JDT', # Judith
+			'A20':  'ESG', # EST with additions
+			'A21': 	'1MA', # 1Maccabees
+			'A22': 	'2MA', # 2Maccabees
+			'A23': 	'3MA', # 3Maccabees
+			'A24':  'PSA',
+			'A25':	'PS2', # special code for PSA 151
+			'A26':  'JOB',
+			'A27':  'PRO',
+			'A28':  'ECC',
+			'A29':  'SNG',
+			'A30':	'WIS', # Wisdom of Solomon
+			'A31': 	'SIR', # Sirach
+			# Does Psalm of Solomon go here
+			'A32':  'HOS',
+			'A33':  'AMO',	
+			'A34':  'MIC',
+			'A35':  'JOL',
+			'A36':  'OBA',	
+			'A37': 	'JON',
+			'A38':  'NAM',	
+			'A39':  'HAB',
+			'A40':  'ZEP',
+			'A41':  'HAG',
+			'A42':  'ZEC',
+			'A43':  'MAL',
+			'A44':  'ISA',
+			'A45':  'JER',
+			'A46': 	'BAR', # First book of Baruch
+			'A47':  'LAM',
+			'A48': 	'LJE', # Epistle Jeremiah
+			'A49':  'EZK',
+			'A50':  'DAG', # DAN with additions
+			'A51':	'SUS', # Susanna
+			'A52': 	'4MA' # 4Maccabees
 		}
 		return septuagint.get(sequence, None)
 

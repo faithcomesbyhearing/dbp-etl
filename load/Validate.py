@@ -33,9 +33,7 @@ class Validate:
 	def __init__(self, args):
 		self.config = Config(args["config"])
 		self.runType = args["run"]
-		lpts = LPTSExtractReader(self.config)
-		self.bibleIdMap = lpts.getBibleIdMap()
-		print(len(self.bibleIdMap.keys()), " BibleIds found.")
+		self.lptsReader = LPTSExtractReader(self.config)
 		self.errorMessages = []
 		self.invalidFileExt = []
 		self.missingBibleIds = []
@@ -91,7 +89,8 @@ class Validate:
 
 		FilenameReducer.openAcceptErrorSet(self.config)
 		parser = FilenameParser(self.config)
-		parser.process3(filesets, self.bibleIdMap, self.errorMessages)
+		#parser.process3(filesets, lpts.bibleIdMap, self.errorMessages)
+		parser.process3(filesets, self.lptsReader, self.errorMessages)
 		parser.summary3()
 
 		find = FindDuplicateFilesets(self.config)
@@ -135,7 +134,8 @@ class Validate:
 			(typeCode, bibleId) = biblePrefix.split("/")
 
 			## Validate bibleId agains LPTS
-			lptsRecords = self.bibleIdMap.get(bibleId)
+			#lptsRecords = lpts.bibleIdMap.get(bibleId)
+			lptsRecords = self.lptsReader.bibleIdMap.get(bibleId)
 			if lptsRecords == None:
 				self.missingBibleIds.append((typeCode, bibleId))
 			else:
@@ -242,7 +242,8 @@ class Validate:
 		for message in sorted(self.errorMessages):
 			errorFile.write(message + "\n")
 			print(message)
-		errorFile.close()		
+		errorFile.close()
+		print("Num Errors ", len(self.errorMessages))		
 
 
 args = Validate.parseCommandLine()

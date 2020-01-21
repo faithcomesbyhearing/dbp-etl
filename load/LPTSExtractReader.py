@@ -33,15 +33,8 @@ class LPTSExtractReader:
 
 						self.resultSet.append(LPTSRecord(resultRow))
 		print(len(self.resultSet), " LPTS Records.")
-
-
-    ## StockNum is the offical unique identifier of LPTS
-	def getStockNumMap(self):
-		stockNumMap = {}
-		for rec in self.resultSet:
-			stockNum = rec.Reg_StockNumber()
-			stockNumMap[stockNum] = rec
-		return stockNumMap
+		self.bibleIdMap = self.getBibleIdMap()
+		print(len(self.bibleIdMap.keys()), " BibleIds found.")
 
 
     ## Generates Map bibleId: [LPTSRecord]
@@ -66,6 +59,19 @@ class LPTSExtractReader:
 		return bibleIdMap
 
 
+	## Returns one record for bibleId, filesetId pair
+	def getLPTSRecord(self, typeCode, bibleId, filesetId):
+		normFilesetId = filesetId[:10]
+		lptsRecords = self.bibleIdMap.get(bibleId)
+		if lptsRecords != None:
+			for (index, record) in lptsRecords:
+				damIdMap = record.DamIds(typeCode, index)
+				# Need to shorten text damId's to six for match
+				if normFilesetId in damIdMap.keys():
+					return record
+		return None
+
+
 class LPTSRecord:
 
 	def __init__(self, record):
@@ -75,7 +81,7 @@ class LPTSRecord:
 		return len(self.record.keys())
 
 	## Return the damId's of a record in a map of damId keys
-	## result = [(statusKey, status)]
+	## result is map damId: [(statusKey, status)]
 	def DamIds(self, typeCode, index):
 		if not typeCode in {"audio", "text", "video"}:
 			print("ERROR: Unknown typeCode '%s', audio, text, or video is expected." % (typeCode))

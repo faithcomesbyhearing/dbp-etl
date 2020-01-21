@@ -196,7 +196,7 @@ class FilenameReducer:
 				startChap = int(chapter)
 				nextChap = startChap + 1
 		self.appendError(results, currBook, startChap, nextChap)
-		errorMessages.append("%s %s %s\n" % (self.filePrefix, message, ", ".join(results)))
+		errorMessages.append("%s %s %s" % (self.filePrefix, message, ", ".join(results)))
 
 
 	def appendError(self, results, book, chapStart, chapEnd):
@@ -223,7 +223,7 @@ class FilenameReducer:
 				startVerse = int(verse)
 				nextVerse = startVerse + 1
 		self.appendVerseError(results, currBook, startChap, startVerse, nextVerse)
-		errorMessages.append("%s %s %s\n" % (self.filePrefix, message, ", ".join(results)))
+		errorMessages.append("%s %s %s" % (self.filePrefix, message, ", ".join(results)))
 
 
 	def appendVerseError(self, results, book, chapStart, verseStart, verseEnd):

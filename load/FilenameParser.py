@@ -400,7 +400,7 @@ class FilenameParser:
 		)
 
 
-	def process3(self, filenamesMap, lptsBibleIdMap, errorMessages):
+	def process3(self, filenamesMap, lptsReader, errorMessages):
 		db = SQLUtility("localhost", 3306, "root", "valid_dbp")
 		self.chapterMap = db.selectMap("SELECT id, chapters FROM books", None)
 		## I am not certain the LXX actually exists
@@ -431,9 +431,9 @@ class FilenameParser:
 				print("ERROR: unknown type_code: %s" % (typeCode))
 				sys.exit()
 
-			lptsRecords = lptsBibleIdMap.get(bibleId)
-			self.otOrder = self.OTOrderTemp(filesetId, lptsRecords)
-			self.ntOrder = self.NTOrderTemp(filesetId, lptsRecords)
+			lptsRecord = lptsReader.getLPTSRecord(typeCode, bibleId, filesetId)
+			self.otOrder = self.OTOrderTemp(filesetId, lptsRecord)
+			self.ntOrder = self.NTOrderTemp(filesetId, lptsRecord)
 
 			filenamesTuple = filenamesMap[prefix]
 			(numErrors, files) = self.parseOneFileset3(templates, prefix, filenamesTuple)
@@ -567,28 +567,26 @@ class FilenameParser:
 			print("Success Count: %s -> %s" % (parser, count))
 
 
-	def NTOrderTemp(self, filesetId, lptsRecords):
+	def NTOrderTemp(self, filesetId, lptsRecord):
 		# This fileset is missing any NTOrder
-		if filesetId in {"AZEIBTN2DA", "BLGAMBN1DA"}:
-			return "Russian"
+		#if filesetId in {"AZEIBTN2DA", "BLGAMBN1DA"}:
+		#	return "Russian"
 		# Note BLGAMB has different order from 16 than 64
 		if filesetId in {"BLGAMBN1DA16"}:
 			return "Traditional"
-		#return self.NTOrder()
+		if filesetId in {"GAGIBTN2DA", "GAGIBTN2DA16", "GAGIB1N2DA", "GAGIBTN1DA", "GAGIB1N1DA"}:
+			return "Russian"
 		if filesetId in {"RUSBIBN1DA", "RUSBIBN1DA16"}:
 			return "Traditional"
 		if filesetId in {"RU1IBSN2DA", "RUSSVRN1DA"}:
 			return "Russian"
-		if lptsRecords != None:
-			for (index, record) in lptsRecords:
-				if record.NTOrder() != None:
-					return record.NTOrder()
-			return "Traditional"
+		if lptsRecord != None and lptsRecord.NTOrder() != None:
+			return lptsRecord.NTOrder()
 		else:
 			return "Traditional"
 
 
-	def OTOrderTemp(self, filesetId, lptsRecords):
+	def OTOrderTemp(self, filesetId, lptsRecord):
 		if filesetId in {"CASNTMP1DA"}:
 			return "Hebrew"
 		# These ENGESV filesets are labeled OTOrder = Hebrew
@@ -597,16 +595,15 @@ class FilenameParser:
 		if filesetId in {"ENGNABC1DA"}:
 			return "Catholic"
 		if filesetId in {"GRKEPTC1DA", "GRKEPTO1DA"}:
+			return "Septuagint2"
+		if filesetId in {"GRKAVSO1DA"}:
 			return "Septuagint"
 		if filesetId in {"HBRHMTO2DA", "HBRHMTC2DA"}:
 			return "Hebrew"
 		if filesetId in {"TRNNTMP1DA"}:
 			return "TRNNTM"
-		if lptsRecords != None:
-			for (index, record) in lptsRecords:
-				if record.OTOrder() != None:
-					return record.OTOrder()
-			return "Traditional"
+		if lptsRecord != None and lptsRecord.OTOrder() != None:
+			return lptsRecord.OTOrder()
 		else:
 			return "Traditional"
 
