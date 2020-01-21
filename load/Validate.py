@@ -89,7 +89,6 @@ class Validate:
 
 		FilenameReducer.openAcceptErrorSet(self.config)
 		parser = FilenameParser(self.config)
-		#parser.process3(filesets, lpts.bibleIdMap, self.errorMessages)
 		parser.process3(filesets, self.lptsReader, self.errorMessages)
 		parser.summary3()
 
@@ -134,7 +133,6 @@ class Validate:
 			(typeCode, bibleId) = biblePrefix.split("/")
 
 			## Validate bibleId agains LPTS
-			#lptsRecords = lpts.bibleIdMap.get(bibleId)
 			lptsRecords = self.lptsReader.bibleIdMap.get(bibleId)
 			if lptsRecords == None:
 				self.missingBibleIds.append((typeCode, bibleId))
@@ -142,82 +140,87 @@ class Validate:
 
 				## Validate filesetIds against LPTS
 				filesetIds = inputIdMap[biblePrefix]
-				lptsFilesetIdSet = self.getFilesetIdSet(typeCode, bibleId, lptsRecords)
-				self.validateFilesetIds(typeCode, bibleId, filesetIds, lptsFilesetIdSet)
+				for filesetId in filesetIds:
+					(lptsRecord, index, status) = self.lptsReader.getLPTSRecord(typeCode, bibleId, filesetId)
+					if lptsRecord == None:
+						self.missingFilesetIds.append((typeCode, bibleId, filesetId))
+					else:
 
-				## Validate Required fields are present
-				for (index, record) in lptsRecords:
-					stockNo = record.Reg_StockNumber()
-					if record.Copyrightc() == None:
-						self.requiredFields.append((typeCode, bibleId, stockNo, "Copyrightc"))
-					if record.Copyrightp() == None:
-						self.requiredFields.append((typeCode, bibleId, stockNo, "Copyrightp"))
-					if record.Copyright_Video() == None:
-						self.requiredFields.append((typeCode, bibleId, stockNo, "Copyright_Video"))
-					if record.ISO() == None:
-						self.requiredFields.append((typeCode, bibleId, stockNo, "ISO"))
-					if record.LangName() == None:
-						self.requiredFields.append((typeCode, bibleId, stockNo, "LangName"))
-					if record.Licensor() == None:
-						self.requiredFields.append((typeCode, bibleId, stockNo, "Licensor"))
-					if record.Reg_StockNumber() == None:
-						self.requiredFields.append((typeCode, bibleId, stockNo, "Reg_StockNumber"))
-					if record.Volumne_Name() == None:
-						self.requiredFields.append((typeCode, bibleId, stockNo, "Volumne_Name"))
+						stockNo = lptsRecord.Reg_StockNumber()
+						if not status in {"Live", "live"}:
+							self.damIdStatus.append((typeCode, bibleId, filesetId, stockNo, status))
 
-					if typeCode == "text":
-						if record.Orthography(index) == None:
-							fieldName = "_x003%d_Orthography" % (index)
-							self.requiredFields.append((typeCode, bibleId, stockNo, fieldName))
-					elif typeCode == "audio":
-						if record.Orthography(index) == None:
-							fieldName = "_x003%d_Orthography" % (index)							
-							self.suggestedFields.append((typeCode, bibleId, stockNo, fieldName))
+						## Validate Required fields are present
+						if lptsRecord.Copyrightc() == None:
+							self.requiredFields.append((typeCode, bibleId, filesetId, stockNo, "Copyrightc"))
+						if lptsRecord.Copyrightp() == None:
+							self.requiredFields.append((typeCode, bibleId, filesetId, stockNo, "Copyrightp"))
+						if lptsRecord.Copyright_Video() == None:
+							self.requiredFields.append((typeCode, bibleId, filesetId, stockNo, "Copyright_Video"))
+						if lptsRecord.ISO() == None:
+							self.requiredFields.append((typeCode, bibleId, filesetId, stockNo, "ISO"))
+						if lptsRecord.LangName() == None:
+							self.requiredFields.append((typeCode, bibleId, filesetId, stockNo, "LangName"))
+						if lptsRecord.Licensor() == None:
+							self.requiredFields.append((typeCode, bibleId, filesetId, stockNo, "Licensor"))
+						if lptsRecord.Reg_StockNumber() == None:
+							self.requiredFields.append((typeCode, bibleId, filesetId, stockNo, "Reg_StockNumber"))
+						if lptsRecord.Volumne_Name() == None:
+							self.requiredFields.append((typeCode, bibleId, filesetId, stockNo, "Volumne_Name"))
 
-
-	def getFilesetIdSet(self, typeCode, bibleId, lptsRecordList):
-		if len(lptsRecordList) == 0:
-			return set()
-		elif len(lptsRecordList) == 1:
-			(index, record) = lptsRecordList[0]
-			damIdMap = record.DamIds(typeCode, index)
-			self.validateStatus(typeCode, bibleId, damIdMap, record)
-			return set(damIdMap.keys())
-		else:
-			result = set()
-			for (index, record) in lptsRecordList:
-				damIdMap = record.DamIds(typeCode, index)
-				self.validateStatus(typeCode, bibleId, damIdMap, record)
-				result = result.union(set(damIdMap.keys()))
-			return result
+						if typeCode == "text":
+							if lptsRecord.Orthography(index) == None:
+								fieldName = "_x003%d_Orthography" % (index)
+								self.requiredFields.append((typeCode, bibleId, filesetId, stockNo, fieldName))
+						elif typeCode == "audio":
+							if lptsRecord.Orthography(index) == None:
+								fieldName = "_x003%d_Orthography" % (index)							
+								self.suggestedFields.append((typeCode, bibleId, filesetId, stockNo, fieldName))
 
 
-	def validateStatus(self, typeCode, bibleId, damIdMap, record):
-		for (filesetId, statuses) in damIdMap.items():
-			for (statusKey, status) in statuses:
-				if not status in {"Live", "live"}:
-					self.damIdStatus.append((typeCode, bibleId, filesetId, record.Reg_StockNumber(), statusKey, status))
-
-
-	def validateFilesetIds(self, typeCode, bibleId, inputFilesetIdList, lptsFilesetIdSet):
-		if typeCode == "audio":
-			inputFilesetIds = []
-			for filesetId in inputFilesetIdList:
-				inputFilesetIds.append(filesetId[:10]) # reduce input filesetId to 10 char
-			lptsFilesetIds = lptsFilesetIdSet
-
-		elif typeCode == "text":
-			inputFilesetIds = inputFilesetIdList
-			lptsFilesetIds = set()
-			for filesetId in lptsFilesetIdSet:
-				lptsFilesetIds.add(filesetId[:6]) # reduce lpts filesetId to 6 char
-		else:
-			inputFilesetIds = inputFilesetIdList
-			lptsFilesetIds = lptsFilesetIdSet
-
-		for filesetId in inputFilesetIds:
-			if not filesetId in lptsFilesetIds:
-				self.missingFilesetIds.append((typeCode, bibleId, filesetId))
+#	def getFilesetIdSet(self, typeCode, bibleId, lptsRecordList):
+#		if len(lptsRecordList) == 0:
+#			return set()
+#		elif len(lptsRecordList) == 1:
+#			(index, record) = lptsRecordList[0]
+#			damIdMap = record.DamIds(typeCode, index)
+#			self.validateStatus(typeCode, bibleId, damIdMap, record)
+#			return set(damIdMap.keys())
+#		else:
+#			result = set()
+#			for (index, record) in lptsRecordList:
+#				damIdMap = record.DamIds(typeCode, index)
+#				self.validateStatus(typeCode, bibleId, damIdMap, record)
+#				result = result.union(set(damIdMap.keys()))
+#			return result
+#
+#
+#	def validateStatus(self, typeCode, bibleId, damIdMap, record):
+#		for (filesetId, statuses) in damIdMap.items():
+#			for (statusKey, status) in statuses:
+#				if not status in {"Live", "live"}:
+#					self.damIdStatus.append((typeCode, bibleId, filesetId, record.Reg_StockNumber(), statusKey, status))
+#
+#
+#	def validateFilesetIds(self, typeCode, bibleId, inputFilesetIdList, lptsFilesetIdSet):
+#		if typeCode == "audio":
+#			inputFilesetIds = []
+#			for filesetId in inputFilesetIdList:
+#				inputFilesetIds.append(filesetId[:10]) # reduce input filesetId to 10 char
+#			lptsFilesetIds = lptsFilesetIdSet
+#
+#		elif typeCode == "text":
+#			inputFilesetIds = inputFilesetIdList
+#			lptsFilesetIds = set()
+#			for filesetId in lptsFilesetIdSet:
+#				lptsFilesetIds.add(filesetId[:6]) # reduce lpts filesetId to 6 char
+#		else:
+#			inputFilesetIds = inputFilesetIdList
+#			lptsFilesetIds = lptsFilesetIdSet
+#
+#		for filesetId in inputFilesetIds:
+#			if not filesetId in lptsFilesetIds:
+#				self.missingFilesetIds.append((typeCode, bibleId, filesetId))
 
 
 	def reportErrors(self):
@@ -227,12 +230,12 @@ class Validate:
 			self.errorMessages.append("%s/%s bibleId is not in LPTS." % (typeCode, bibleId,))
 		for (typeCode, bibleId, filesetId) in self.missingFilesetIds:
 			self.errorMessages.append("%s/%s/%s filesetId is not in LPTS record." % (typeCode, bibleId, filesetId))
-		for (typeCode, bibleId, stockNo, fieldName) in self.requiredFields:
-			self.errorMessages.append("%s/%s LPTS %s field %s is required." % (typeCode, bibleId, stockNo, fieldName))
-		for (typeCode, bibleId, stockNo, fieldName) in self.suggestedFields:
-			self.errorMessages.append("%s/%s LPTS %s field %s is missing." % (typeCode, bibleId, stockNo, fieldName))
-		for (typeCode, bibleId, filesetId, stockNo, statusName, status) in self.damIdStatus:
-			self.errorMessages.append("%s/%s/%s LPTS %s has %s = %s." % (typeCode, bibleId, filesetId, stockNo, statusName, status))
+		for (typeCode, bibleId, filesetId, stockNo, fieldName) in self.requiredFields:
+			self.errorMessages.append("%s/%s/%s LPTS %s field %s is required." % (typeCode, bibleId, filesetId, stockNo, fieldName))
+		for (typeCode, bibleId, filesetId, stockNo, fieldName) in self.suggestedFields:
+			self.errorMessages.append("%s/%s/%s LPTS %s field %s is missing." % (typeCode, bibleId, filesetId, stockNo, fieldName))
+		for (typeCode, bibleId, filesetId, stockNo, status) in self.damIdStatus:
+			self.errorMessages.append("%s/%s/%s LPTS %s has status = %s." % (typeCode, bibleId, filesetId, stockNo, status))
 
 		errorDir = self.config.directory_errors
 		pattern = self.config.filename_datetime 

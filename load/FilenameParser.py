@@ -431,7 +431,7 @@ class FilenameParser:
 				print("ERROR: unknown type_code: %s" % (typeCode))
 				sys.exit()
 
-			lptsRecord = lptsReader.getLPTSRecord(typeCode, bibleId, filesetId)
+			(lptsRecord, index, status) = lptsReader.getLPTSRecord(typeCode, bibleId, filesetId)
 			self.otOrder = self.OTOrderTemp(filesetId, lptsRecord)
 			self.ntOrder = self.NTOrderTemp(filesetId, lptsRecord)
 

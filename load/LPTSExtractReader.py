@@ -66,10 +66,10 @@ class LPTSExtractReader:
 		if lptsRecords != None:
 			for (index, record) in lptsRecords:
 				damIdMap = record.DamIds(typeCode, index)
-				# Need to shorten text damId's to six for match
-				if normFilesetId in damIdMap.keys():
-					return record
-		return None
+				(statusKey, status) = damIdMap.get(normFilesetId, (None, None))
+				if statusKey != None:
+					return (record, index, status)
+		return (None, None, None)
 
 
 class LPTSRecord:
@@ -148,15 +148,12 @@ class LPTSRecord:
 		hasKeys = set(damIdDict.keys()).intersection(set(self.record.keys()))
 		results = {}
 		for key in hasKeys:
-			#print("key", key)
 			statusKey = damIdDict[key]
-			#print("statusKey", statusKey)
 			damId = self.record[key]
-			#print("damId", damId)
+			if typeCode == "text":
+				damId = damId[:6]
 			status = self.record.get(statusKey)
-			statuses = results.get(damId, [])
-			statuses.append((statusKey, status))
-			results[damId] = statuses
+			results[damId] = (statusKey, status)
 		return results
 
 	def LangName(self):
