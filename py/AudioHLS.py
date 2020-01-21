@@ -130,7 +130,7 @@ class AudioHLS:
 		try:
 			print("%s/%s: " % (bibleId, origFilesetId), end="", flush=True)
 			fileset = self.adapter.selectFileset(origFilesetId)
-			filesetId = origFilesetId[0:8] + "SA"
+                        filesetId = origFilesetId[0:8] + "SA" + origFilesetId[10:]
 			assetId = fileset[0]
 			if fileset[1] == "audio":
 				setTypeCode = "audio_stream"
