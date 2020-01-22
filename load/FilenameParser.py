@@ -564,7 +564,7 @@ class FilenameParser:
 			file.write("%d  %s\n" % entry)
 		file.close()
 		for parser, count in self.successCount.items():
-			print("Success Count: %s -> %s" % (parser, count))
+			print("Parser Success Count: %s -> %s" % (parser, count))
 
 
 	def NTOrderTemp(self, filesetId, lptsRecord):

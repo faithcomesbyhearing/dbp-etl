@@ -172,10 +172,10 @@ class Validate:
 							if lptsRecord.Orthography(index) == None:
 								fieldName = "_x003%d_Orthography" % (index)
 								self.requiredFields.append((typeCode, bibleId, filesetId, stockNo, fieldName))
-						elif typeCode == "audio":
-							if lptsRecord.Orthography(index) == None:
-								fieldName = "_x003%d_Orthography" % (index)							
-								self.suggestedFields.append((typeCode, bibleId, filesetId, stockNo, fieldName))
+						#elif typeCode == "audio":
+						#	if lptsRecord.Orthography(index) == None:
+						#		fieldName = "_x003%d_Orthography" % (index)							
+						#		self.suggestedFields.append((typeCode, bibleId, filesetId, stockNo, fieldName))
 
 
 #	def getFilesetIdSet(self, typeCode, bibleId, lptsRecordList):
@@ -225,17 +225,17 @@ class Validate:
 
 	def reportErrors(self):
 		for (typeCode, bibleId, filesetId, filename) in self.invalidFileExt:
-			self.errorMessages.append("%s/%s/%s/%s has an invalid file ext." % (typeCode, bibleId, filesetId, filename))
+			self.errorMessages.append("%s/%s/%s/%s has an invalid file ext.\tEROR" % (typeCode, bibleId, filesetId, filename))
 		for (typeCode, bibleId) in self.missingBibleIds:
-			self.errorMessages.append("%s/%s bibleId is not in LPTS." % (typeCode, bibleId,))
+			self.errorMessages.append("%s/%s bibleId is not in LPTS.\tEROR" % (typeCode, bibleId,))
 		for (typeCode, bibleId, filesetId) in self.missingFilesetIds:
-			self.errorMessages.append("%s/%s/%s filesetId is not in LPTS record." % (typeCode, bibleId, filesetId))
+			self.errorMessages.append("%s/%s/%s filesetId is not in LPTS record.\tEROR" % (typeCode, bibleId, filesetId))
 		for (typeCode, bibleId, filesetId, stockNo, fieldName) in self.requiredFields:
-			self.errorMessages.append("%s/%s/%s LPTS %s field %s is required." % (typeCode, bibleId, filesetId, stockNo, fieldName))
+			self.errorMessages.append("%s/%s/%s LPTS %s field %s is required.\tEROR" % (typeCode, bibleId, filesetId, stockNo, fieldName))
 		for (typeCode, bibleId, filesetId, stockNo, fieldName) in self.suggestedFields:
-			self.errorMessages.append("%s/%s/%s LPTS %s field %s is missing." % (typeCode, bibleId, filesetId, stockNo, fieldName))
+			self.errorMessages.append("%s/%s/%s LPTS %s field %s is missing.\tWARN" % (typeCode, bibleId, filesetId, stockNo, fieldName))
 		for (typeCode, bibleId, filesetId, stockNo, status) in self.damIdStatus:
-			self.errorMessages.append("%s/%s/%s LPTS %s has status = %s." % (typeCode, bibleId, filesetId, stockNo, status))
+			self.errorMessages.append("%s/%s/%s LPTS %s has status = %s.\tWARN" % (typeCode, bibleId, filesetId, stockNo, status))
 
 		errorDir = self.config.directory_errors
 		pattern = self.config.filename_datetime 
@@ -243,8 +243,10 @@ class Validate:
 		print("openErrorReport", path)
 		errorFile = open(path, "w")
 		for message in sorted(self.errorMessages):
-			errorFile.write(message + "\n")
-			print(message)
+			(text, level) = message.split("\t", 2)
+			formatted = "%s  %s\n" % (level, text)
+			errorFile.write(formatted)
+			print(formatted, end='')
 		errorFile.close()
 		print("Num Errors ", len(self.errorMessages))		
 

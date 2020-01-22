@@ -28,7 +28,7 @@ class FilenameReducer:
 			klass.acceptErrorSet.add(row.strip())
 		fp.close()
 		for item in klass.acceptErrorSet:
-			print("Except Errors:", item)
+			print("Accept Errors:", item)
 
 
 	def __init__(self, config, filePrefix, fileList, extraChapters, missingChapters, missingVerses):
@@ -60,14 +60,12 @@ class FilenameReducer:
 			self.writeErrors(errorMessages)
 		if len(quarantineList) > 0:
 			self.writeOutput("quarantine", quarantineList)
-			errorMessages.append("%s %d Files moved to quarantine" % (self.filePrefix, len(quarantineList)))
+			errorMessages.append("%s %d Files moved to quarantine %d accepted.\tINFO" % (self.filePrefix, len(quarantineList), len(acceptedList)))
 		if len(duplicateList) > 0:
 			self.writeOutput("duplicate", duplicateList)
-			errorMessages.append("%s %d Files moved to duplicate" % (self.filePrefix, len(duplicateList)))
+			errorMessages.append("%s %d Files moved to duplicate %d accepted.\tINFO" % (self.filePrefix, len(duplicateList), len(acceptedList)))
 		if len(acceptedList) > 0:
 			self.writeOutput("accepted", acceptedList)
-			if len(quarantineList) > 0 or len(duplicateList) > 0:
-				errorMessages.append("%s %d Files moved to accepted" % (self.filePrefix, len(acceptedList)))
 
 
 	def quarantineErrors(self, fileList, errorCount):
@@ -165,7 +163,7 @@ class FilenameReducer:
 	def writeErrors(self, errorMessages):
 		for file in self.fileList:
 			if len(file.errors) > 0:
-				errorMessages.append("%s/%s %s" % (self.filePrefix, file.file, ", ".join(file.errors)))
+				errorMessages.append("%s/%s %s\tEROR" % (self.filePrefix, file.file, ", ".join(file.errors)))
 
 		if self.filePrefix.startswith("video"):
 			if len(self.extraChapters) > 0:
@@ -196,7 +194,7 @@ class FilenameReducer:
 				startChap = int(chapter)
 				nextChap = startChap + 1
 		self.appendError(results, currBook, startChap, nextChap)
-		errorMessages.append("%s %s %s" % (self.filePrefix, message, ", ".join(results)))
+		errorMessages.append("%s %s %s\tEROR" % (self.filePrefix, message, ", ".join(results)))
 
 
 	def appendError(self, results, book, chapStart, chapEnd):
@@ -223,7 +221,7 @@ class FilenameReducer:
 				startVerse = int(verse)
 				nextVerse = startVerse + 1
 		self.appendVerseError(results, currBook, startChap, startVerse, nextVerse)
-		errorMessages.append("%s %s %s" % (self.filePrefix, message, ", ".join(results)))
+		errorMessages.append("%s %s %s\tEROR" % (self.filePrefix, message, ", ".join(results)))
 
 
 	def appendVerseError(self, results, book, chapStart, verseStart, verseEnd):

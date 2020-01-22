@@ -269,6 +269,26 @@ class LPTSRecord:
 	def CreativeCommonsAudioWaiver(self):
 		return self.record.get("CreativeCommonsAudioWaiver")
 
+	def ElectronicPublisher(self, index):
+		if index == 1:
+			return self.record.get("ElectronicPublisher1")
+		elif index == 2:
+			return self.record.get("ElectronicPublisher2")
+		elif index == 3:
+			return self.record.get("ElectronicPublisher3")
+		else:
+			return None
+
+	def ElectronicPublisherWebsite(self, index):
+		if index == 1:
+			return self.record.get("ElectronicPublisherWebsite1")
+		elif index == 2:
+			return self.record.get("ElectronicPublisherWebsite2")
+		elif index == 3:
+			return self.record.get("ElectronicPublisherWebsite3")
+		else:
+			return None
+
 	def ItunesPodcast(self):
 		return self.record.get("ItunesPodcast")
 	
@@ -300,17 +320,28 @@ class LPTSRecord:
 			print("ERROR: DBFont index must be 1, 2, or 3.")
 			sys.exit()
 
-	def USX_Date1(self):
-		return self.record.get("USX_Date1")
+	def USX_Date(self, index):
+		if index == 1:
+			return self.record.get("USX_Date1")
+		elif index == 2:
+			return self.record.get("USX_Date2")
+		elif index == 3:
+			return self.record.get("USX_Date3")
+		else:
+			return None
 
 	def PostedToServer(self):
 		return self.record.get("PostedToServer")
 
-	def DBPDate(self):
-		return self.record.get("DBPDate")
-
-	def DBPDate2(self):
-		return self.record.get("DBPDate2")
+	def DBPDate(self, index):
+		if index == 1:
+			return self.record.get("DBPDate")
+		elif index == 2:
+			return self.record.get("DBPDate2")
+		elif index == 3:
+			return self.record.get("DBPDate")
+		else:
+			return None
 
 	def Version(self):
 		return self.record.get("Version")
@@ -333,7 +364,12 @@ class LPTSRecord:
 			return result
 
 
+"""
+The following fields should be indexed
 
+<HUBLink>https://live.bible.is/bible/PIBWBT/MAT/1?audio_type=audio_drama</HUBLink>
+<HUBLink1>https://live.bible.is/bible/PIBWBT/MAT/1?audio_type=audio</HUBLink1>
+"""
 
 
 
