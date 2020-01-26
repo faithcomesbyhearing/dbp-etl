@@ -35,19 +35,10 @@ import boto3
 import subprocess
 from subprocess import Popen, PIPE
 import hashlib
+from Config import *
 
 ## insert into bible_fileset_types (set_type_code, name) values ('audio_stream','HLS Audio Stream');
 ## insert into bible_fileset_types (set_type_code, name) values ('audio_drama_stream', 'HLS Audio Stream Drama');
-
-HLS_HOST = "localhost"
-HLS_USER = "root"
-HLS_PORT = 3306
-HLS_DB_NAME = "hls_dbp"
-#HLS_CODEC = ""
-HLS_STREAM = "1"
-HLS_MP3_DIRECTORY = "%s/FCBH/files/tmp" % (os.environ["HOME"])
-HLS_AWS_PROFILE = "FCBH_Gary"
-
 
 ## Lambda entry point
 def handler(event, context):
@@ -62,14 +53,15 @@ def handler(event, context):
 
 class AudioHLS:
 
-	def __init__(self):
-		self.adapter = AudioHLSAdapter() # This class is found later in this file
-		session = boto3.Session(profile_name=HLS_AWS_PROFILE) # needs config
+
+	def __init__(self, config):
+		self.adapter = AudioHLSAdapter(config) # This class is found later in this file
+		session = boto3.Session(profile_name=config.s3_aws_profile)
 		self.s3Client = session.client("s3")
 		self.bitrateRegex = re.compile(r"bit_rate=([0-9]+)")
 		self.timesRegex = re.compile(r"best_effort_timestamp_time=([0-9.]+)\|pkt_pos=([0-9]+)")
-
-		self.durationErrLimit = 10  #### Must become command line param
+		self.directory_audio_hls = config.directory_audio_hls
+		self.audio_hls_duration_limit = config.audio_hls_duration_limit
 
 
 	def close(self):
@@ -78,10 +70,10 @@ class AudioHLS:
 
 	## Command line entry point
 	def processCommandLine(self):
-		if len(sys.argv) < 2:
-			print("ERROR: Enter bibleids or bibleid/filesetids to process on command line.")
+		if len(sys.argv) < 3:
+			print("ERROR: Enter config_profile and any number of bibleids or bibleid/filesetids to process on command line.")
 			sys.exit()
-		arguments = sys.argv[1:]
+		arguments = sys.argv[2:]
 		self.validateArguments(arguments)
 		for arg in arguments:
 			parts = arg.split("/")
@@ -147,7 +139,7 @@ class AudioHLS:
 		for row in resultSet:
 			minDuration = row[1]
 			maxDuration = row[2]
-			if (maxDuration - minDuration) > self.durationErrLimit:
+			if (maxDuration - minDuration) > self.audio_hls_duration_limit:
 				fileName = row[0]
 				toDelete.append(fileName)
 				print("WARN: %s was dropped, because of duration difference %d to %d" % (fileName, minDuration, maxDuration))
@@ -196,7 +188,7 @@ class AudioHLS:
 				
 				for bitrate in bitrateMap.keys():
 					(bitrateFilesetId, bitrateHashId) = bitrateMap[bitrate]
-					bitrateFilesetId = origFilesetId ######## DEBUG ONLY
+					#bitrateFilesetId = origFilesetId ######## DEBUG ONLY
 					mp3FilePath = self.getMP3File(assetId, bibleId, bitrateFilesetId, origFilename)
 					realBitrate = self.getBitrate(mp3FilePath)
 					bitrateFilename = filename.split(".")[0] + "-" + bitrate + "kbs.m3u8"
@@ -226,9 +218,9 @@ class AudioHLS:
 
 	def getMP3File(self, s3Bucket, bibleId, filesetId, filename):
 		s3Key = "audio/%s/%s/%s" % (bibleId, filesetId, filename)
-		filepath = HLS_MP3_DIRECTORY + os.sep + s3Key
+		filepath = self.directory_audio_hls + os.sep + s3Key
 		if not os.access(filepath, os.R_OK):
-			print("Must download %s" % (s3Key))
+			#print("Must download %s" % (s3Key))
 			directory = filepath[:filepath.rfind("/")]
 			if not os.access(directory, os.R_OK):
 				os.makedirs(directory)
@@ -277,12 +269,12 @@ class AudioHLS:
 
 class AudioHLSAdapter:
 
-	def __init__(self):
-		self.db = pymysql.connect(host = HLS_HOST,
-                             		user = HLS_USER,
-                             		password = os.environ['MYSQL_PASSWD'],
-                             		db = HLS_DB_NAME,
-                             		port = HLS_PORT,
+	def __init__(self, config):
+		self.db = pymysql.connect(host = config.database_host,
+                             		user = config.database_user,
+                             		password = config.database_passwd,
+                             		db = config.database_db_name,
+                             		port = config.database_port,
                              		charset = 'utf8mb4',
                              		cursorclass = pymysql.cursors.Cursor)
 		self.tranCursor = None
@@ -515,9 +507,9 @@ class AudioHLSAdapter:
 	## Inserts a new row into the bible_file_stream_bandwidth table
 	def insertBandwidth(self, values):
 		sql = ("INSERT INTO bible_file_stream_bandwidths (bible_file_id, file_name, bandwidth, codec, stream)"
-			" VALUES (%s, %s, %s, %s, %s)")
+			" VALUES (%s, %s, %s, '', 1)")
 		try:
-			values = (self.currFileId,) + values + ("", HLS_STREAM)
+			values = (self.currFileId,) + values
 			self.sqlLog.write((sql + "\n") % values)
 			self.tranCursor.execute(sql, values)
 			self.currBandwidthId = self.tranCursor.lastrowid
@@ -651,7 +643,8 @@ class AudioHLSAdapter:
 		sys.exit()
 
 
-hls = AudioHLS()
+config = Config()
+hls = AudioHLS(config)
 hls.processCommandLine()
 
 
