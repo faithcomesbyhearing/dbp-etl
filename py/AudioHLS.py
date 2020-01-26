@@ -43,7 +43,7 @@ HLS_HOST = "localhost"
 HLS_USER = "root"
 HLS_PORT = 3306
 HLS_DB_NAME = "hls_dbp"
-HLS_CODEC = "avc1.4d001f,mp4a.40.2"
+#HLS_CODEC = ""
 HLS_STREAM = "1"
 HLS_MP3_DIRECTORY = "%s/FCBH/files/tmp" % (os.environ["HOME"])
 HLS_AWS_PROFILE = "FCBH_Gary"
@@ -68,6 +68,8 @@ class AudioHLS:
 		self.s3Client = session.client("s3")
 		self.bitrateRegex = re.compile(r"bit_rate=([0-9]+)")
 		self.timesRegex = re.compile(r"best_effort_timestamp_time=([0-9.]+)\|pkt_pos=([0-9]+)")
+
+		self.durationErrLimit = 10  #### Must become command line param
 
 
 	def close(self):
@@ -117,6 +119,7 @@ class AudioHLS:
 				print("ERROR: argument: %s is invalid and was not processed." % (arg))
 		if errorCount > 0:
 			sys.exit()
+# Add check that reduces filesetId back to 10 char, if addl left on.  Or, require it to be 10 char id
 
 
 	def processBibleId(self, bibleId):
@@ -126,31 +129,57 @@ class AudioHLS:
 
 
 	def processFilesetId(self, bibleId, origFilesetId):
+		self.adapter.createAudioHLSWork(origFilesetId)
+		bitrateMap = self.adapter.getBitrateMap() ## bitrate: (filesetId, hashId)
+
+		## Check for dropped files
+		(filesetId, origHashId) = bitrateMap["64"]
+		sql = ("SELECT distinct file_name FROM bible_files WHERE hash_id = %s"
+			" AND id NOT IN (SELECT file_id FROM Audio_HLS_Work)")
+		missingList = self.adapter.selectList(sql, (origHashId,))
+		for missing in missingList:
+			print("WARN: %s was dropped, because it was not present in all bitrates." % (missing))
+
+		## check for duration mismatch
+		sql = ("SELECT file_name, MIN(duration), MAX(duration), count(*) FROM audio_hls_work GROUP BY file_name")
+		toDelete = []
+		resultSet = self.adapter.select(sql, ())
+		for row in resultSet:
+			minDuration = row[1]
+			maxDuration = row[2]
+			if (maxDuration - minDuration) > self.durationErrLimit:
+				fileName = row[0]
+				toDelete.append(fileName)
+				print("WARN: %s was dropped, because of duration difference %d to %d" % (fileName, minDuration, maxDuration))
+
+		## Remove those that fail duration match
+		if len(toDelete) > 0:
+			self.adapter.executeBatch("DELETE FROM Audio_HLS_Work WHERE file_name = %s", toDelete)
+
+		print("%s/%s: " % (bibleId, origFilesetId), end="", flush=True)
+		fileset = self.adapter.selectFileset(origHashId)
+		filesetId = origFilesetId[0:8] + "SA"
+		assetId = fileset[0]
+		if fileset[1] == "audio":
+			setTypeCode = "audio_stream"
+		elif fileset[1] == "audio_drama":
+			setTypeCode = "audio_drama_stream"
+		else:
+			raise("Invalid set_type_code %s" % (fileset[1]))
+		setSizeCode = fileset[2]
+		hashId = self.hashId(assetId, filesetId, setTypeCode)
+
+		## Select all needed data before transaction starts
+		files = self.adapter.selectBibleFiles(origHashId)
+		timestampMap = self.adapter.selectTimestamps(origHashId) # book:chapter : [(timestamp_id, timestamp)]
+
 		origFilename = None
 		try:
-			print("%s/%s: " % (bibleId, origFilesetId), end="", flush=True)
-			fileset = self.adapter.selectFileset(origFilesetId)
-			filesetId = origFilesetId[0:8] + "SA"
-			assetId = fileset[0]
-			if fileset[1] == "audio":
-				setTypeCode = "audio_stream"
-			elif fileset[1] == "audio_drama":
-				setTypeCode = "audio_drama_stream"
-			else:
-				raise("Invalid set_type_code %s" % (fileset[1]))
-			setSizeCode = fileset[2]
-			origHashId = fileset[3]
-			hashId = self.hashId(assetId, filesetId, setTypeCode)
-			bitrate = origFilesetId[10:] if origFilesetId[10:] != "" else "64"
-
-			## Select all needed data before transaction starts
-			files = self.adapter.selectBibleFiles(origFilesetId) 
-			timestampMap = self.adapter.selectTimestamps(origFilesetId) # could use origHashId instead
-
+			## Insert SA Filesets and Tags
 			self.adapter.beginFilesetInsertTran()
-			self.adapter.replaceFileset((hashId, filesetId, assetId, setTypeCode, setSizeCode))
+			self.adapter.deleteSAFilesetFiles(hashId)
+			self.adapter.insertFileset((hashId, filesetId, assetId, setTypeCode, setSizeCode))
 			self.adapter.copyFilesetTables(hashId, origHashId)
-			self.adapter.deleteFilesBandwidthsSegments(filesetId, bitrate)
 
 			currBook = None
 			for file in files:
@@ -162,19 +191,22 @@ class AudioHLS:
 				origFilename = file[1]
 				filename = origFilename.split(".")[0][:-2] + "SA.m3u8"
 				values = (filename,) + file[2:]
-				self.adapter.replaceFile(values)
+				self.adapter.insertFiles(values)
 				self.adapter.copyFileTags(origFileId)
-
-				mp3FilePath = self.getMP3File(assetId, bibleId, origFilesetId, origFilename)
-				bitrate = self.getBitrate(mp3FilePath)
-				filename = filename.split(".")[0] + "-" + str(int(int(bitrate)/1000)) + "kbs.m3u8"
-				self.adapter.insertBandwidth((filename, bitrate))
-
-				key = "%s:%s" % (file[2], file[3]) # book:chapter
-				timestamps = timestampMap[key]
-				for segment in self.getBoundaries(mp3FilePath, timestamps):
-					self.adapter.addSegment(segment)
-				self.adapter.insertSegments()
+				
+				for bitrate in bitrateMap.keys():
+					(bitrateFilesetId, bitrateHashId) = bitrateMap[bitrate]
+					bitrateFilesetId = origFilesetId ######## DEBUG ONLY
+					mp3FilePath = self.getMP3File(assetId, bibleId, bitrateFilesetId, origFilename)
+					realBitrate = self.getBitrate(mp3FilePath)
+					bitrateFilename = filename.split(".")[0] + "-" + bitrate + "kbs.m3u8"
+					self.adapter.insertBandwidth((bitrateFilename, realBitrate))
+					
+					key = "%s:%s" % (file[2], file[3]) # book:chapter
+					timestamps = timestampMap[key]
+					for segment in self.getBoundaries(mp3FilePath, timestamps):
+						self.adapter.addSegment(segment)
+					self.adapter.insertSegments()
 			self.adapter.commitFilesetInsertTran()
 			print("", end="\n", flush=True)
 		except Exception as error:
@@ -315,29 +347,67 @@ class AudioHLSAdapter:
 			" AND bf.set_type_code IN ('audio', 'audio_drama')")
 		return self.selectList(sql, (bibleId,))
 
+	## Creates a temporary table that contains the matching DA files that will be used to generate the SA fileset
+## Change this to TEMPORARY
+	def createAudioHLSWork(self, filesetId):
+		sql1 = "DROP TABLE IF EXISTS Audio_HLS_work"
+		try:
+			self.execute(sql1, ())
+		except MySQLdb.Warning:
+			a=1 # silence warning
+		sql2 = ("CREATE TABLE Audio_HLS_work(fileset_id VARCHAR(16) NOT NULL, hash_id VARCHAR(16) NOT NULL,"
+			" file_id int NOT NULL, file_name VARCHAR(128) NOT NULL, duration int NULL)"
+			" SELECT bs2.id AS fileset_id, bs2.hash_id, bf2.id AS file_id, bf2.file_name, bf2.duration"
+			" FROM bible_filesets bs1, bible_filesets bs2, bible_files bf1, bible_files bf2"
+			" WHERE bs1.id = LEFT(bs2.id, 10)"
+			" AND bs1.set_type_code = bs2.set_type_code"
+			" AND bs1.id = %s"
+			" AND bs1.hash_id = bf1.hash_id"
+			" AND bs2.hash_id = bf2.hash_id"
+			" AND bf1.book_id = bf2.book_id"
+			" AND bf1.chapter_start = bf2.chapter_start"
+			" AND bf1.verse_start = bf2.verse_start"
+			" AND bf1.file_name = bf2.file_name")
+		self.execute(sql2, (filesetId,))
 
-	def selectFileset(self, filesetId):
-		sql = "SELECT asset_id, set_type_code, set_size_code, hash_id FROM bible_filesets WHERE id=%s"
-		return self.selectRow(sql, (filesetId,))
+
+	def getBitrateMap(self):
+		resultSet = self.select("SELECT distinct fileset_id, hash_id FROM Audio_HLS_work", ())
+		result = {}
+		for row in resultSet:
+			filesetId = row[0]
+			hashId = row[1]
+			bitrate = filesetId[10:]
+			if bitrate == "":
+				bitrate = "64"
+			result[bitrate] = (filesetId, hashId)
+		return result
 
 
-    ## Returns the files associated with a fileset
-	def selectBibleFiles(self, filesetId):
-		sql = ("SELECT bf.id, bf.file_name, bf.book_id, bf.chapter_start, bf.chapter_end, bf.verse_start," 
-			" bf.verse_end, bf.file_size, bf.duration"
-			" FROM bible_files bf, bible_filesets bfs"
-			" WHERE bf.hash_id=bfs.hash_id AND bfs.id=%s"
-			" ORDER BY bf.file_name")
-		return self.select(sql, (filesetId,))
+	def selectFileset(self, hashId):
+		sql = "SELECT asset_id, set_type_code, set_size_code, hash_id FROM bible_filesets WHERE hash_id=%s"
+		return self.selectRow(sql, (hashId,))
 
 
-    ## Returns the timestamps of a fileset in a map[book:chapter:verse] = timestamp
-	def selectTimestamps(self, filesetId):
+    ## Returns the common DA files associated with a fileset
+	def selectBibleFiles(self, hashId):
+		sql = ("SELECT id, file_name, book_id, chapter_start, chapter_end, verse_start,"
+				" verse_end, file_size, duration"
+				" FROM bible_files WHERE id IN"
+				" (SELECT file_id FROM Audio_HLS_work WHERE hash_id = %s) ORDER BY file_name")
+		return self.select(sql, (hashId,))
+
+
+    ## Returns the timestamps of a fileset in a map  book:chapter : [(timestamp_id, timestamp)]
+	def selectTimestamps(self, hashId):
 		sql = ("SELECT bf.file_name, bf.book_id, bf.chapter_start, ft.id, ft.verse_start, ft.timestamp"
-			" FROM bible_file_timestamps ft, bible_files bf, bible_filesets bfs"
-			" WHERE bf.id=ft.bible_file_id AND bfs.hash_id=bf.hash_id"
-			" AND bfs.id=%s ORDER BY bf.file_name, ft.verse_start")
-		resultSet = self.select(sql, (filesetId,))
+			" FROM bible_files bf, Audio_HLS_Work work, bible_file_timestamps ft"
+			" WHERE bf.hash_id = work.hash_id"
+			" AND bf.id = work.file_id"
+			" AND bf.id = ft.bible_file_id"
+			" AND work.hash_id = %s"
+			" ORDER BY bf.file_name, ft.verse_start")
+		resultSet = self.select(sql, (hashId,))
 		results = {}
 		for row in resultSet:
 			key = "%s:%d" % (row[1], row[2]) # book:chapter
@@ -355,9 +425,33 @@ class AudioHLSAdapter:
 			self.error(None, sql, err)
 
 
+	def deleteSAFilesetFiles(self, hashId):
+		sql = []
+		sql.append("DELETE bfss FROM bible_file_stream_bytes AS bfss"
+			" JOIN bible_file_stream_bandwidths AS bfsb ON bfss.stream_bandwidth_id = bfsb.id"
+			" JOIN bible_files AS bf ON bfsb.bible_file_id = bf.id"
+			" WHERE bf.hash_id = %s")
+		sql.append("DELETE bfsb FROM bible_file_stream_bandwidths AS bfsb"
+			" JOIN bible_files AS bf ON bfsb.bible_file_id = bf.id"
+			" WHERE bf.hash_id = %s")
+		sql.append("DELETE bft FROM bible_file_tags AS bft"
+			" JOIN bible_files AS bf ON bft.file_id = bf.id"
+			" WHERE bf.hash_id = %s")
+		sql.append("DELETE FROM bible_files WHERE hash_id = %s")
+		sql.append("DELETE FROM access_group_filesets WHERE hash_id = %s")
+		sql.append("DELETE FROM bible_fileset_connections WHERE hash_id = %s")
+		sql.append("DELETE FROM bible_fileset_tags WHERE hash_id = %s")
+		sql.append("DELETE FROM bible_filesets WHERE hash_id = %s")
+		try:
+			for stmt in sql:
+				self.tranCursor.execute(stmt, (hashId,))
+		except Exception as err:
+			self.error(self.tranCursor, sql, err)
+
+
     ## Inserts a new row into the fileset table
-	def replaceFileset(self, values):
-		sql = ("REPLACE INTO bible_filesets (hash_id, id, asset_id, set_type_code, set_size_code)"
+	def insertFileset(self, values):
+		sql = ("INSERT INTO bible_filesets (hash_id, id, asset_id, set_type_code, set_size_code)"
 			" VALUES (%s, %s, %s, %s, %s)")
 		try:
 			self.sqlLog.write((sql + "\n") % values)
@@ -372,19 +466,19 @@ class AudioHLSAdapter:
 		sql = ""
 		try:
 			# pkey hash_id, name, language_id
-			sql = ("REPLACE INTO bible_fileset_tags (hash_id, name, description,"
+			sql = ("INSERT INTO bible_fileset_tags (hash_id, name, description,"
 				" admin_only, notes, iso, language_id)"
 				" SELECT %s, name, description, admin_only, notes, iso, language_id"
-				" FROM bible_fileset_tags WHERE hash_id = %s")
+				" FROM bible_fileset_tags WHERE hash_id = %s AND name != 'bitrate'")
 			self.tranCursor.execute(sql, values)
 			# pkey hash_id, bible_id
-			sql = ("REPLACE INTO bible_fileset_connections (hash_id, bible_id)"
+			sql = ("INSERT INTO bible_fileset_connections (hash_id, bible_id)"
 				" SELECT %s, bible_id" 
 				" FROM bible_fileset_connections"
 				" WHERE hash_id = %s")
 			self.tranCursor.execute(sql, values)
 			# pkey access_group_id, hash_id
-			sql = ("REPLACE INTO access_group_filesets (hash_id, access_group_id)"
+			sql = ("INSERT INTO access_group_filesets (hash_id, access_group_id)"
 				" SELECT %s, access_group_id"
 				" FROM access_group_filesets"
 				" WHERE hash_id = %s")
@@ -394,8 +488,8 @@ class AudioHLSAdapter:
 
 
     ## Inserts a new row into the bible_files table
-	def replaceFile(self, values):
-		sql = ("REPLACE INTO bible_files (hash_id, file_name, book_id, chapter_start, chapter_end,"
+	def insertFiles(self, values):
+		sql = ("INSERT INTO bible_files (hash_id, file_name, book_id, chapter_start, chapter_end,"
 			" verse_start, verse_end, file_size, duration) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)")
 		try:
 			values = (self.currHashId,) + values
@@ -423,7 +517,7 @@ class AudioHLSAdapter:
 		sql = ("INSERT INTO bible_file_stream_bandwidths (bible_file_id, file_name, bandwidth, codec, stream)"
 			" VALUES (%s, %s, %s, %s, %s)")
 		try:
-			values = (self.currFileId,) + values + (HLS_CODEC, HLS_STREAM)
+			values = (self.currFileId,) + values + ("", HLS_STREAM)
 			self.sqlLog.write((sql + "\n") % values)
 			self.tranCursor.execute(sql, values)
 			self.currBandwidthId = self.tranCursor.lastrowid
@@ -436,7 +530,7 @@ class AudioHLSAdapter:
 		self.segments.append((self.currBandwidthId,) + values)
 
 
-    ## Inserts a collection of rows into the bible_file_stream_segments table
+    ## Inserts a collection of rows into the bible_file_stream_bytes table
 	def insertSegments(self):
 		sql = ("INSERT INTO bible_file_stream_bytes (stream_bandwidth_id, timestamp_id, runtime, offset, bytes)"
 			+ " VALUES (%s, %s, %s, %s, %s)")
@@ -447,7 +541,7 @@ class AudioHLSAdapter:
 			self.segments = []
 		except Exception as err:
 			self.error(self.tranCursor, sql, err)
-
+	
 
 	def commitFilesetInsertTran(self):
 		try:
@@ -462,9 +556,10 @@ class AudioHLSAdapter:
 			self.db.rollback()
 			self.tranCursor.close()
 		except Exception as err:
-			self.error(self.tranCursor, sql, err)		
+			self.error(self.tranCursor, sql, err)
 
 
+	## deprecated, but keep in case we add a bitrate insert feature
 	def deleteFilesBandwidthsSegments(self, filesetId, bitrate):
 		#print(("DELETE %s" % (filesetId)), end="", flush=True)
 		cursor = self.tranCursor
@@ -489,6 +584,7 @@ class AudioHLSAdapter:
 				" WHERE bs.id = %s AND bfsb.bandwidth BETWEEN %s AND %s")
 		cursor.execute(sql, (filesetId, bitrateIn[0], bitrateIn[1]))
 		#print("  bandwidths", end="", flush=True)
+
 ##
 ## Convenience Methods
 ##
@@ -527,6 +623,26 @@ class AudioHLSAdapter:
 		return results
 
 
+	def execute(self, statement, values):
+		cursor = self.db.cursor()
+		try :
+			cursor.execute(statement, values)
+			self.db.commit()
+			cursor.close()
+		except Exception as err:
+			self.error(cursor, statement, err)
+
+
+	def executeBatch(self, statement, valuesList):
+		cursor = self.db.cursor()
+		try:
+			cursor.executemany(statement, valuesList)
+			self.db.commit()
+			cursor.close()
+		except Exception as err:
+			self.error(cursor, statement, err)
+
+
 	def error(self, cursor, statement, err):
 		if cursor != None:
 			cursor.close()	
@@ -535,11 +651,7 @@ class AudioHLSAdapter:
 		sys.exit()
 
 
-
 hls = AudioHLS()
 hls.processCommandLine()
-#hls.processBibleId("ENGESV")
-#hls.processFilesetId("ENGESV", "ENGESVN2DA")
-#hls.close()
 
 
