@@ -135,7 +135,7 @@ class AudioHLS:
 			print("WARN: %s was dropped, because it was not present in all bitrates." % (missing))
 
 		## check for duration mismatch
-		sql = ("SELECT file_name, MIN(duration), MAX(duration), count(*) FROM audio_hls_work"
+		sql = ("SELECT file_name, MIN(duration), MAX(duration), count(*) FROM Audio_HLS_Work"
 			" WHERE hash_id IN (%s, %s) GROUP BY file_name")
 		toDelete = []
 		for bitrate in bitrateMap.keys():
@@ -349,7 +349,7 @@ class AudioHLSAdapter:
 
 	## Creates a temporary table that contains the matching DA files that will be used to generate the SA fileset
 	def createAudioHLSWork(self, filesetId):
-		sql2 = ("CREATE TEMPORARY TABLE Audio_HLS_work(fileset_id VARCHAR(16) NOT NULL, hash_id VARCHAR(16) NOT NULL,"
+		sql2 = ("CREATE TEMPORARY TABLE Audio_HLS_Work(fileset_id VARCHAR(16) NOT NULL, hash_id VARCHAR(16) NOT NULL,"
 			" file_id int NOT NULL, file_name VARCHAR(128) NOT NULL, duration int NULL)"
 			" SELECT bs2.id AS fileset_id, bs2.hash_id, bf2.id AS file_id, bf2.file_name, bf2.duration"
 			" FROM bible_filesets bs1, bible_filesets bs2, bible_files bf1, bible_files bf2"
@@ -364,14 +364,14 @@ class AudioHLSAdapter:
 			" AND bf1.file_name = bf2.file_name")
 		self.execute(sql2, (filesetId,))
 
-	## Debug method to display contents of Audio_HLS_work
+	## Debug method to display contents of Audio_HLS_Work
 	def printAudioHLSWork(self):
-		resultSet = self.select("SELECT * FROM Audio_HLS_work ORDER BY file_name", ())
+		resultSet = self.select("SELECT * FROM Audio_HLS_Work ORDER BY file_name", ())
 		for row in resultSet:
 			print(row)
 
 	def getBitrateMap(self):
-		resultSet = self.select("SELECT distinct fileset_id, hash_id FROM Audio_HLS_work", ())
+		resultSet = self.select("SELECT distinct fileset_id, hash_id FROM Audio_HLS_Work", ())
 		result = {}
 		for row in resultSet:
 			filesetId = row[0]
@@ -393,7 +393,7 @@ class AudioHLSAdapter:
 		sql = ("SELECT id, file_name, book_id, chapter_start, chapter_end, verse_start,"
 				" verse_end, file_size, duration"
 				" FROM bible_files WHERE id IN"
-				" (SELECT file_id FROM Audio_HLS_work WHERE hash_id = %s) ORDER BY file_name")
+				" (SELECT file_id FROM Audio_HLS_Work WHERE hash_id = %s) ORDER BY file_name")
 		return self.select(sql, (hashId,))
 
 
