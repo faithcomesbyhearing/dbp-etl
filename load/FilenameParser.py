@@ -431,6 +431,18 @@ class FilenameParser:
 				print("ERROR: unknown type_code: %s" % (typeCode))
 				sys.exit()
 
+			if typeCode == "audio" or typeCode == "video":
+				## Validate filesetId
+				if not filesetId[6:7] in {"C","N","O","P","S"}:
+					errorMessages.append("%s filesetId must be C,N,O,P, or S in 7th position.\tEROR" % (prefix))
+				if not filesetId[7:8] in {"1", "2"}:
+					errorMessages.append("%s filesetId must be 1 or 2 in the 8th position.\tEROR" % (prefix))
+				if not filesetId[8:10] in {"DA", "DV"}:
+					errorMessages.append("%s filesetId must be DA or DV.\tEROR" % (prefix))
+				bitrateSuffix = filesetId[10:12]
+				if bitrateSuffix != '' and not bitrateSuffix.isdigit():
+					errorMessages.append("%s filesetId positions 11,12 must be a bitrate number if present.\tEROR" % (prefix))
+
 			(lptsRecord, index, status) = lptsReader.getLPTSRecord(typeCode, bibleId, filesetId)
 			self.otOrder = self.OTOrderTemp(filesetId, lptsRecord)
 			self.ntOrder = self.NTOrderTemp(filesetId, lptsRecord)
