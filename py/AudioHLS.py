@@ -97,6 +97,9 @@ class AudioHLS:
 					errorCount += 1
 					print("ERROR: bibleid: %s has no timestamp data." % (arg))
 			elif len(parts) == 2:
+				if len(parts[1]) != 10:
+					errorCount += 1
+					print("ERROR: filesetid must be 10 characters.")
 				if parts[1][8:10] != "DA":
 					errorCount += 1
 					print("ERROR: filesetid: %s must have DA in 8,9 position.")
@@ -111,7 +114,6 @@ class AudioHLS:
 				print("ERROR: argument: %s is invalid and was not processed." % (arg))
 		if errorCount > 0:
 			sys.exit()
-# Add check that reduces filesetId back to 10 char, if addl left on.  Or, require it to be 10 char id
 
 
 	def processBibleId(self, bibleId):
@@ -340,14 +342,8 @@ class AudioHLSAdapter:
 		return self.selectList(sql, (bibleId,))
 
 	## Creates a temporary table that contains the matching DA files that will be used to generate the SA fileset
-## Change this to TEMPORARY
 	def createAudioHLSWork(self, filesetId):
-		sql1 = "DROP TABLE IF EXISTS Audio_HLS_work"
-		try:
-			self.execute(sql1, ())
-		except MySQLdb.Warning:
-			a=1 # silence warning
-		sql2 = ("CREATE TABLE Audio_HLS_work(fileset_id VARCHAR(16) NOT NULL, hash_id VARCHAR(16) NOT NULL,"
+		sql2 = ("CREATE TEMPORARY TABLE Audio_HLS_work(fileset_id VARCHAR(16) NOT NULL, hash_id VARCHAR(16) NOT NULL,"
 			" file_id int NOT NULL, file_name VARCHAR(128) NOT NULL, duration int NULL)"
 			" SELECT bs2.id AS fileset_id, bs2.hash_id, bf2.id AS file_id, bf2.file_name, bf2.duration"
 			" FROM bible_filesets bs1, bible_filesets bs2, bible_files bf1, bible_files bf2"
@@ -549,33 +545,6 @@ class AudioHLSAdapter:
 			self.tranCursor.close()
 		except Exception as err:
 			self.error(self.tranCursor, sql, err)
-
-
-	## deprecated, but keep in case we add a bitrate insert feature
-	def deleteFilesBandwidthsSegments(self, filesetId, bitrate):
-		#print(("DELETE %s" % (filesetId)), end="", flush=True)
-		cursor = self.tranCursor
-		if bitrate == "64":
-			bitrateIn = ("48001", "96000")
-		elif bitrate == "32":
-			bitrateIn = ("24001", "48000")
-		elif bitrate == "16":
-			bitrateIn = ("0", "24000")
-		else:
-			self.error(cursor, "DELETE fileset", "Unknown bitrate %s" % (bitrate))
-		sql = ("DELETE bfss FROM bible_file_stream_bytes AS bfss" 
-				" INNER JOIN bible_file_stream_bandwidths AS bfsb ON bfss.stream_bandwidth_id = bfsb.id"
-				" INNER JOIN bible_files AS bf ON bfsb.bible_file_id = bf.id"
-				" INNER JOIN bible_filesets AS bs ON bf.hash_id = bs.hash_id"
-				" WHERE bs.id = %s AND bfsb.bandwidth BETWEEN %s AND %s")
-		cursor.execute(sql, (filesetId, bitrateIn[0], bitrateIn[1]))
-		#print("  segments", end="", flush=True)
-		sql = ("DELETE bfsb FROM bible_file_stream_bandwidths AS bfsb"
-				" INNER JOIN bible_files AS bf ON bfsb.bible_file_id = bf.id"
-				" INNER JOIN bible_filesets AS bs ON bf.hash_id = bs.hash_id"
-				" WHERE bs.id = %s AND bfsb.bandwidth BETWEEN %s AND %s")
-		cursor.execute(sql, (filesetId, bitrateIn[0], bitrateIn[1]))
-		#print("  bandwidths", end="", flush=True)
 
 ##
 ## Convenience Methods
