@@ -135,20 +135,26 @@ class AudioHLS:
 			print("WARN: %s was dropped, because it was not present in all bitrates." % (missing))
 
 		## check for duration mismatch
-		sql = ("SELECT file_name, MIN(duration), MAX(duration), count(*) FROM audio_hls_work GROUP BY file_name")
+		sql = ("SELECT file_name, MIN(duration), MAX(duration), count(*) FROM audio_hls_work"
+			" WHERE hash_id IN (%s, %s) GROUP BY file_name")
 		toDelete = []
-		resultSet = self.adapter.select(sql, ())
-		for row in resultSet:
-			minDuration = row[1]
-			maxDuration = row[2]
-			if (maxDuration - minDuration) > self.audio_hls_duration_limit:
-				fileName = row[0]
-				toDelete.append(fileName)
-				print("WARN: %s was dropped, because of duration difference %d to %d" % (fileName, minDuration, maxDuration))
+		for bitrate in bitrateMap.keys():
+			if bitrate != "64":
+				(bitrateFilesetId, bitrateHashId) = bitrateMap[bitrate]
+				resultSet = self.adapter.select(sql, (bitrateHashId, origHashId))
+				for row in resultSet:
+					minDuration = row[1]
+					maxDuration = row[2]
+					if (maxDuration - minDuration) > self.audio_hls_duration_limit:
+						fileName = row[0]
+						toDelete.append((bitrateFilesetId, fileName))
+						print("WARN: %s/%s/%s was dropped, because of duration difference %d to %d" % (bibleId, bitrateFilesetId, fileName, minDuration, maxDuration))
 
 		## Remove those that fail duration match
 		if len(toDelete) > 0:
-			self.adapter.executeBatch("DELETE FROM Audio_HLS_Work WHERE file_name = %s", toDelete)
+			for aDelete in toDelete:
+				self.adapter.execute("DELETE FROM Audio_HLS_Work WHERE fileset_id = %s AND file_name = %s", aDelete)
+		#self.adapter.printAudioHLSWork()
 
 		print("%s/%s: " % (bibleId, origFilesetId), end="", flush=True)
 		fileset = self.adapter.selectFileset(origHashId)
@@ -358,6 +364,11 @@ class AudioHLSAdapter:
 			" AND bf1.file_name = bf2.file_name")
 		self.execute(sql2, (filesetId,))
 
+	## Debug method to display contents of Audio_HLS_work
+	def printAudioHLSWork(self):
+		resultSet = self.select("SELECT * FROM Audio_HLS_work ORDER BY file_name", ())
+		for row in resultSet:
+			print(row)
 
 	def getBitrateMap(self):
 		resultSet = self.select("SELECT distinct fileset_id, hash_id FROM Audio_HLS_work", ())
@@ -493,7 +504,7 @@ class AudioHLSAdapter:
 		sql = ("INSERT INTO bible_file_tags (file_id, tag, value, admin_only)"
 			" SELECT '%s', tag, value, admin_only"
 			" FROM bible_file_tags"
-			" WHERE file_id = %s")
+			" WHERE file_id = %s AND tag != 'duration'")
 		try:
 			self.tranCursor.execute(sql, (self.currFileId, origFileId))
 		except Exception as err:
@@ -503,7 +514,7 @@ class AudioHLSAdapter:
 	## Inserts a new row into the bible_file_stream_bandwidth table
 	def insertBandwidth(self, values):
 		sql = ("INSERT INTO bible_file_stream_bandwidths (bible_file_id, file_name, bandwidth, codec, stream)"
-			" VALUES (%s, %s, %s, '', 1)")
+			" VALUES (%s, %s, %s, 'avc1.4d001f,mp4a.40.2', 1)")
 		try:
 			values = (self.currFileId,) + values
 			self.sqlLog.write((sql + "\n") % values)
