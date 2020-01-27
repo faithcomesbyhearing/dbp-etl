@@ -126,11 +126,12 @@ class InputReader:
 					resultFileList = []
 					for file in files:
 						if not file.startswith("."):
-							filePath = root + os.sep + file
-							filesize = os.path.getsize(filePath)
-							modifiedTS = os.path.getmtime(filePath)
-							lastModified = datetime.fromtimestamp(modifiedTS)
-							resultFileList.append((file, filesize, lastModified))
+							if file not in {"about.html", "index.html", "info.json", "title.json"}:
+								filePath = root + os.sep + file
+								filesize = os.path.getsize(filePath)
+								modifiedTS = os.path.getmtime(filePath)
+								lastModified = datetime.fromtimestamp(modifiedTS)
+								resultFileList.append((file, filesize, lastModified))
 					result[relDirName] = sorted(resultFileList)
 		return result
 
