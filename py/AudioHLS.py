@@ -129,13 +129,13 @@ class AudioHLS:
 		## Check for dropped files
 		(filesetId, origHashId) = bitrateMap["64"]
 		sql = ("SELECT distinct file_name FROM bible_files WHERE hash_id = %s"
-			" AND id NOT IN (SELECT file_id FROM Audio_HLS_Work)")
+			" AND id NOT IN (SELECT file_id FROM audio_hls_work)")
 		missingList = self.adapter.selectList(sql, (origHashId,))
 		for missing in missingList:
 			print("WARN: %s was dropped, because it was not present in all bitrates." % (missing))
 
 		## check for duration mismatch
-		sql = ("SELECT file_name, MIN(duration), MAX(duration), count(*) FROM Audio_HLS_Work"
+		sql = ("SELECT file_name, MIN(duration), MAX(duration), count(*) FROM audio_hls_work"
 			" WHERE hash_id IN (%s, %s) GROUP BY file_name")
 		toDelete = []
 		for bitrate in bitrateMap.keys():
@@ -153,7 +153,7 @@ class AudioHLS:
 		## Remove those that fail duration match
 		if len(toDelete) > 0:
 			for aDelete in toDelete:
-				self.adapter.execute("DELETE FROM Audio_HLS_Work WHERE fileset_id = %s AND file_name = %s", aDelete)
+				self.adapter.execute("DELETE FROM audio_hls_work WHERE fileset_id = %s AND file_name = %s", aDelete)
 		#self.adapter.printAudioHLSWork()
 
 		print("%s/%s: " % (bibleId, origFilesetId), end="", flush=True)
@@ -349,7 +349,7 @@ class AudioHLSAdapter:
 
 	## Creates a temporary table that contains the matching DA files that will be used to generate the SA fileset
 	def createAudioHLSWork(self, filesetId):
-		sql2 = ("CREATE TEMPORARY TABLE Audio_HLS_Work(fileset_id VARCHAR(16) NOT NULL, hash_id VARCHAR(16) NOT NULL,"
+		sql2 = ("CREATE TEMPORARY TABLE audio_hls_work(fileset_id VARCHAR(16) NOT NULL, hash_id VARCHAR(16) NOT NULL,"
 			" file_id int NOT NULL, file_name VARCHAR(128) NOT NULL, duration int NULL)"
 			" SELECT bs2.id AS fileset_id, bs2.hash_id, bf2.id AS file_id, bf2.file_name, bf2.duration"
 			" FROM bible_filesets bs1, bible_filesets bs2, bible_files bf1, bible_files bf2"
@@ -360,18 +360,17 @@ class AudioHLSAdapter:
 			" AND bs2.hash_id = bf2.hash_id"
 			" AND bf1.book_id = bf2.book_id"
 			" AND bf1.chapter_start = bf2.chapter_start"
-			" AND bf1.verse_start = bf2.verse_start"
-			" AND bf1.file_name = bf2.file_name")
+			" AND bf1.verse_start = bf2.verse_start")
 		self.execute(sql2, (filesetId,))
 
-	## Debug method to display contents of Audio_HLS_Work
+	## Debug method to display contents of audio_hls_work
 	def printAudioHLSWork(self):
-		resultSet = self.select("SELECT * FROM Audio_HLS_Work ORDER BY file_name", ())
+		resultSet = self.select("SELECT * FROM audio_hls_work ORDER BY file_name", ())
 		for row in resultSet:
 			print(row)
 
 	def getBitrateMap(self):
-		resultSet = self.select("SELECT distinct fileset_id, hash_id FROM Audio_HLS_Work", ())
+		resultSet = self.select("SELECT distinct fileset_id, hash_id FROM audio_hls_work", ())
 		result = {}
 		for row in resultSet:
 			filesetId = row[0]
@@ -393,14 +392,14 @@ class AudioHLSAdapter:
 		sql = ("SELECT id, file_name, book_id, chapter_start, chapter_end, verse_start,"
 				" verse_end, file_size, duration"
 				" FROM bible_files WHERE id IN"
-				" (SELECT file_id FROM Audio_HLS_Work WHERE hash_id = %s) ORDER BY file_name")
+				" (SELECT file_id FROM audio_hls_work WHERE hash_id = %s) ORDER BY file_name")
 		return self.select(sql, (hashId,))
 
 
     ## Returns the timestamps of a fileset in a map  book:chapter : [(timestamp_id, timestamp)]
 	def selectTimestamps(self, hashId):
 		sql = ("SELECT bf.file_name, bf.book_id, bf.chapter_start, ft.id, ft.verse_start, ft.timestamp"
-			" FROM bible_files bf, Audio_HLS_Work work, bible_file_timestamps ft"
+			" FROM bible_files bf, audio_hls_work work, bible_file_timestamps ft"
 			" WHERE bf.hash_id = work.hash_id"
 			" AND bf.id = work.file_id"
 			" AND bf.id = ft.bible_file_id"
