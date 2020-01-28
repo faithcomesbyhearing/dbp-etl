@@ -170,7 +170,8 @@ class AudioHLS:
 		hashId = self.hashId(assetId, filesetId, setTypeCode)
 
 		## Select all needed data before transaction starts
-		files = self.adapter.selectBibleFiles(origHashId)
+		files = self.adapter.selectBibleFiles(origHashId) # list of files
+		allFilesMap = self.adapter.selectAllBitrateBibleFiles() # filesetId:book_id:chapter:verse : file_name
 		timestampMap = self.adapter.selectTimestamps(origHashId) # book:chapter : [(timestamp_id, timestamp)]
 
 		origFilename = None
@@ -191,22 +192,26 @@ class AudioHLS:
 				origFilename = file[1]
 				filename = origFilename.split(".")[0][:-2] + "SA.m3u8"
 				values = (filename,) + file[2:]
+				chapterStart = file[3]
+				verseStart = file[5]
 				self.adapter.insertFiles(values)
 				self.adapter.copyFileTags(origFileId)
 				
 				for bitrate in bitrateMap.keys():
 					(bitrateFilesetId, bitrateHashId) = bitrateMap[bitrate]
-					#bitrateFilesetId = origFilesetId ######## DEBUG ONLY
-					mp3FilePath = self.getMP3File(assetId, bibleId, bitrateFilesetId, origFilename)
-					realBitrate = self.getBitrate(mp3FilePath)
-					bitrateFilename = filename.split(".")[0] + "-" + bitrate + "kbs.m3u8"
-					self.adapter.insertBandwidth((bitrateFilename, realBitrate))
-					
-					key = "%s:%s" % (file[2], file[3]) # book:chapter
-					timestamps = timestampMap[key]
-					for segment in self.getBoundaries(mp3FilePath, timestamps):
-						self.adapter.addSegment(segment)
-					self.adapter.insertSegments()
+					key = "%s:%s:%d:%d" % (bitrateFilesetId, currBook, chapterStart, verseStart)
+					bitrateFilename = allFilesMap.get(key)
+					if bitrateFilename != None:
+						mp3FilePath = self.getMP3File(assetId, bibleId, bitrateFilesetId, bitrateFilename)
+						realBitrate = self.getBitrate(mp3FilePath)
+						outputFilename = filename.split(".")[0] + "-" + bitrate + "kbs.m3u8"
+						self.adapter.insertBandwidth((outputFilename, realBitrate))
+						
+						key = "%s:%s" % (file[2], file[3]) # book:chapter
+						timestamps = timestampMap[key]
+						for segment in self.getBoundaries(mp3FilePath, timestamps):
+							self.adapter.addSegment(segment)
+						self.adapter.insertSegments()
 			self.adapter.commitFilesetInsertTran()
 			print("", end="\n", flush=True)
 		except Exception as error:
@@ -260,7 +265,7 @@ class AudioHLS:
 			if (time >= bound):
 				duration = time - prevtime
 				nbytes = pos - prevpos
-				yield (timestamp_id, duration, prevpos, nbytes)
+				yield (timestamp_id, round(duration, 4), prevpos, nbytes)
 				prevtime, prevpos = time, pos
 				if (i+1 != len(times)):
 					i += 1
@@ -271,7 +276,7 @@ class AudioHLS:
 			raise Exception("ffprobe failed to return position data.")
 		duration = time - prevtime
 		nbytes = pos - prevpos
-		yield (timestamp_id, duration, prevpos, nbytes)
+		yield (timestamp_id, round(duration, 4), prevpos, nbytes)
 
 
 
@@ -394,6 +399,20 @@ class AudioHLSAdapter:
 				" FROM bible_files WHERE id IN"
 				" (SELECT file_id FROM audio_hls_work WHERE hash_id = %s) ORDER BY file_name")
 		return self.select(sql, (hashId,))
+
+
+	## Returns a Map of all bible files files being processed: fileset_id/book_id/chapter/verse: filename
+	def selectAllBitrateBibleFiles(self):
+		sql = ("SELECT w.fileset_id, bf.book_id, bf.chapter_start, bf.verse_start, w.file_name"
+			" FROM audio_hls_work w, bible_files bf"
+			" WHERE w.hash_id = bf.hash_id"
+			" AND w.file_id = bf.id")
+		results = {}
+		resultSet = self.select(sql, ())
+		for row in resultSet:
+			key = "%s:%s:%d:%d" % (row[0], row[1], row[2], row[3])
+			results[key] = row[4]
+		return results
 
 
     ## Returns the timestamps of a fileset in a map  book:chapter : [(timestamp_id, timestamp)]
