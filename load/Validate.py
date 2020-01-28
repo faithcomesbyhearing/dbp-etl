@@ -31,7 +31,7 @@ class Validate:
 			
 
 	def __init__(self, args):
-		self.config = Config(args["config"])
+		self.config = Config()
 		self.runType = args["run"]
 		self.lptsReader = LPTSExtractReader(self.config)
 		self.errorMessages = []

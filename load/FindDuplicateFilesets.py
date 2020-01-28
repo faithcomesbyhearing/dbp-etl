@@ -61,7 +61,7 @@ class FindDuplicateFilesets:
 			acceptedPrefix = resultFilenames[indexOfAccepted][0].replace("_", "/")
 			for index in range(len(resultFilenames)):
 				if index != indexOfAccepted:
-					print("Move %s %sfile to duplicate" % (filesetId, resultFilenames[index]))
+					#print("Move %s %sfile to duplicate" % (filesetId, resultFilenames[index]))
 					filesetPrefix = resultFilenames[index][0].replace("_", "/")
 					errorMessages.append("%s Entire Fileset moved to duplicate, %s accepted.\tINFO" % (filesetPrefix, acceptedPrefix))
 					filename = resultFilenames[index][0] + ".csv"
@@ -80,7 +80,7 @@ class FindDuplicateFilesets:
 					"audio_PORNLE_PO1NLHO1DA"}
 		datetimes = []
 		for index in range(len(filenames)):
-			print("filename to compare", filenames[index][0])
+			#print("filename to compare", filenames[index][0])
 			if filenames[index][0] in acceptedHacks:
 				return index
 			datetimes.append(filenames[index][1])
@@ -90,6 +90,7 @@ class FindDuplicateFilesets:
 		return datetimes.index(mostRecent)
 
 
+	## debug only
 	def report(self, duplicates):
 		for filesetId, filenames in duplicates.items():
 			print(filesetId)
