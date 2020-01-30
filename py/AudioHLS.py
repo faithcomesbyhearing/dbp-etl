@@ -126,6 +126,16 @@ class AudioHLS:
 		self.adapter.createAudioHLSWork(origFilesetId)
 		bitrateMap = self.adapter.getBitrateMap() ## bitrate: (filesetId, hashId)
 
+		## check for the presence of timestamp for each fileset
+		countError = False
+		for bitrate, (bitrateFilesetId, bitrateHashId) in bitrateMap.items():
+			count = self.adapter.checkFilesetTimestamps(bitrateFilesetId)
+			if count < 10:
+				countError = True
+				print("ERROR: filesetId %s has %d rows of timestamp data." % (bitrateFilesetId, count))
+		if countError:
+			sys.exit()
+
 		## Check for dropped files
 		(filesetId, origHashId) = bitrateMap["64"]
 		sql = ("SELECT distinct file_name FROM bible_files WHERE hash_id = %s"
@@ -172,7 +182,7 @@ class AudioHLS:
 		## Select all needed data before transaction starts
 		files = self.adapter.selectBibleFiles(origHashId) # list of files
 		allFilesMap = self.adapter.selectAllBitrateBibleFiles() # filesetId:book_id:chapter:verse : file_name
-		timestampMap = self.adapter.selectTimestamps(origHashId) # book:chapter : [(timestamp_id, timestamp)]
+		timestampMap = self.adapter.selectTimestamps() # filesetId:book:chapter : [(timestamp_id, timestamp)]
 
 		origFilename = None
 		try:
@@ -207,7 +217,7 @@ class AudioHLS:
 						outputFilename = filename.split(".")[0] + "-" + bitrate + "kbs.m3u8"
 						self.adapter.insertBandwidth((outputFilename, realBitrate))
 						
-						key = "%s:%s" % (file[2], file[3]) # book:chapter
+						key = "%s:%s:%s" % (bitrateFilesetId, file[2], file[3]) # filesetId:book:chapter
 						timestamps = timestampMap[key]
 						for segment in self.getBoundaries(mp3FilePath, timestamps):
 							self.adapter.addSegment(segment)
@@ -274,9 +284,9 @@ class AudioHLS:
 					bound = 99999999 # search to end of pipe
 		if not hasResults:
 			raise Exception("ffprobe failed to return position data.")
-		duration = time - prevtime
-		nbytes = pos - prevpos
-		yield (timestamp_id, round(duration, 4), prevpos, nbytes)
+		#duration = time - prevtime
+		#nbytes = pos - prevpos
+		#yield (timestamp_id, round(duration, 4), prevpos, nbytes)
 
 
 
@@ -415,19 +425,18 @@ class AudioHLSAdapter:
 		return results
 
 
-    ## Returns the timestamps of a fileset in a map  book:chapter : [(timestamp_id, timestamp)]
-	def selectTimestamps(self, hashId):
-		sql = ("SELECT bf.file_name, bf.book_id, bf.chapter_start, ft.id, ft.verse_start, ft.timestamp"
+    ## Returns the timestamps of a fileset in a map  fileset_id:book:chapter : [(timestamp_id, timestamp)]
+	def selectTimestamps(self):
+		sql = ("SELECT work.fileset_id, bf.book_id, bf.chapter_start, ft.id, ft.verse_start, ft.timestamp"
 			" FROM bible_files bf, audio_hls_work work, bible_file_timestamps ft"
 			" WHERE bf.hash_id = work.hash_id"
 			" AND bf.id = work.file_id"
 			" AND bf.id = ft.bible_file_id"
-			" AND work.hash_id = %s"
 			" ORDER BY bf.file_name, ft.verse_start")
-		resultSet = self.select(sql, (hashId,))
+		resultSet = self.select(sql, ())
 		results = {}
 		for row in resultSet:
-			key = "%s:%d" % (row[1], row[2]) # book:chapter
+			key = "%s:%s:%d" % (row[0], row[1], row[2]) # fileset_id:book:chapter
 			times = results.get(key, [])
 			times.append((row[3], row[5]))
 			results[key] = times
