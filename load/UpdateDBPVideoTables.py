@@ -19,7 +19,7 @@ class UpdateDBPVideoTables:
 
 	def __init__(self, config):
 		self.config = config
-		self.db = SQLUtility(config.database_host, config.database_port, config.database_user, config.database_db_name)
+		self.db = SQLUtility(config)
 		sql = ("SELECT bf.id, bfc.bible_id, bs.id, bf.file_name"
 			" FROM bible_files bf, bible_filesets bs, bible_fileset_connections bfc"
 			" WHERE bf.hash_id = bs.hash_id AND bfc.hash_id = bs.hash_id"

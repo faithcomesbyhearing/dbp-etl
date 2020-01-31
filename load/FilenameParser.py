@@ -401,7 +401,7 @@ class FilenameParser:
 
 
 	def process3(self, filenamesMap, lptsReader, errorMessages):
-		db = SQLUtility("localhost", 3306, "root", "valid_dbp")
+		db = SQLUtility(self.config)
 		self.chapterMap = db.selectMap("SELECT id, chapters FROM books", None)
 		## I am not certain the LXX actually exists
 		extras = {"FRT":6, "INT":1, "BAK":2, "LXX":1, "CNC":2, "GLO":26, "TDX":1, "NDX":1, "OTH":5, 

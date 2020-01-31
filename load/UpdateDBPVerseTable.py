@@ -19,7 +19,7 @@ TARGET_ASSET_ID = "db"
 class UpdateDBPVerseTable:
 
 	def __init__(self, config):
-		self.db = SQLUtility(config.database_host, config.database_port, config.database_user, config.database_db_name)
+		self.db = SQLUtility(config)
 		self.OT = self.db.selectSet("SELECT id FROM books WHERE book_testament = 'OT'", ())
 		self.NT = self.db.selectSet("SELECT id FROM books WHERE book_testament = 'NT'", ())
 		self.statements = []
