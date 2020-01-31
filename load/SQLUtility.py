@@ -17,7 +17,7 @@ class SQLUtility:
 					
 		self.conn = pymysql.connect(host = config.database_host,
                              		user = config.database_user,
-                             		password = os.environ['MYSQL_PASSWD'],
+                             		password = config.database_passwd,
                              		db = config.database_db_name,
                              		port = config.database_port,
                              		charset = 'utf8mb4',

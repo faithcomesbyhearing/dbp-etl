@@ -56,7 +56,9 @@ class Config:
 
 		self.database_host = self._get("database.host")
 		self.database_user = self._get("database.user")
-		self.database_passwd = self._get("database.passwd")
+		self.database_passwd = os.environ.get('MYSQL_PASSWD')
+		if self.database_passwd == None:
+			self.database_passwd = self._get("database.passwd")
 		self.database_db_name = self._get("database.db_name")
 		self.database_port = self._getInt("database.port")
 
