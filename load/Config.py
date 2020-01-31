@@ -11,13 +11,19 @@
 import os
 import sys
 
-CONFIG_FILE = os.path.join(os.environ['HOME'], "fcbh_dbp.cfg")
-
 class Config:
 
 	def __init__(self):
-		if not os.path.exists(CONFIG_FILE):
-			print("ERROR: Config file '%s' does not exist." % (CONFIG_FILE))
+		home = os.environ.get('HOME') # unix
+		if home == None:
+			home = os.environ.get('HOMEPATH') # windows
+		if home == None:
+			print("ERROR: Environment variable HOME or HOMEPATH must be set to a directory.")
+			sys.exit()
+
+		configFile = os.path.join(home, "fcbh_dbp.cfg")
+		if not os.path.exists(configFile):
+			print("ERROR: Config file '%s' does not exist." % (configFile))
 			sys.exit()
 
 		if len(sys.argv) < 2:
@@ -28,7 +34,7 @@ class Config:
 		profile = sys.argv[1]
 		profileLabel = "[" + profile + "]"
 		insideProfile = False
-		cfg = open(CONFIG_FILE, "r")
+		cfg = open(configFile, "r")
 		for line in cfg:
 			line = line.strip()
 			if not line.startswith("#"): # Comment
@@ -43,7 +49,7 @@ class Config:
 		cfg.close()
 
 		if len(self.hashMap) == 0:
-			print("ERROR: Config profile %s does not exist in '%s'." % (profileLabel, CONFIG_FILE))
+			print("ERROR: Config profile %s does not exist in '%s'." % (profileLabel, configFile))
 			sys.exit()
 
 		programRunning = sys.argv[0].split(os.sep)[-1]
