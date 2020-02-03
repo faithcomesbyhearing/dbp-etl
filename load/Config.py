@@ -10,6 +10,7 @@
 
 import os
 import sys
+import re
 
 class Config:
 
@@ -52,7 +53,8 @@ class Config:
 			print("ERROR: Config profile %s does not exist in '%s'." % (profileLabel, configFile))
 			sys.exit()
 
-		programRunning = sys.argv[0].split(os.sep)[-1]
+		splitPattern = re.compile("\\\\|/") # I have no idea why \\\\ escapes to one \
+		programRunning = splitPattern.split(sys.argv[0])[-1]
 
 		self.database_host = self._get("database.host")
 		self.database_user = self._get("database.user")
