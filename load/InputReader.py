@@ -121,8 +121,9 @@ class InputReader:
 		lenDirectory = len(directory)
 		for root, dirs, files in os.walk(directory):
 			relDirName = root[lenDirectory:]
-			if relDirName.count("/") == 2:
+			if relDirName.count("/") == 2 or relDirName.count("\\") == 2:
 				if relDirName[:4] in {"audi", "text", "vide"}:
+					normDirName = relDirName.replace("\\", "/")
 					resultFileList = []
 					for file in files:
 						if not file.startswith("."):
@@ -132,7 +133,7 @@ class InputReader:
 								modifiedTS = os.path.getmtime(filePath)
 								lastModified = datetime.fromtimestamp(modifiedTS)
 								resultFileList.append((file, filesize, lastModified))
-					result[relDirName] = sorted(resultFileList)
+					result[normDirName] = sorted(resultFileList)
 		return result
 
 
