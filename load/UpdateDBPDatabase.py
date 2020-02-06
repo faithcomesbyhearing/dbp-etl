@@ -16,6 +16,8 @@ import hashlib
 import csv
 from Config import *
 from SQLUtility import *
+from LPTSExtractReader import *
+from LookupTables import *
 
 
 class UpdateDBPDatabase:
@@ -91,8 +93,10 @@ class UpdateDBPDatabase:
 		self.config = config
 		self.db = SQLUtility(config)
 		self.statements = []
+		self.rejectStatements = []
 		self.OT = self.db.selectSet("SELECT id FROM books WHERE book_testament = 'OT'", ())
 		self.NT = self.db.selectSet("SELECT id FROM books WHERE book_testament = 'NT'", ())
+		self.numeralIdMap = self.db.selectMap("SELECT script_id, numeral_system_id FROM alphabet_numeral_systems", ())
 		self.videoStreamSet = set()
 		bucketPath = config.directory_bucket_list + os.sep + config.s3_vid_bucket + ".txt"
 		fp = open(bucketPath, "r")
@@ -104,25 +108,36 @@ class UpdateDBPDatabase:
 		fp.close()
 
 
-	def process(self):
+	def process(self, lptsReader):
 		print("process")
 		dirname = self.config.directory_accepted
 		files = os.listdir(dirname)
-		for file in sorted(files):
+		#for file in sorted(files):
+		for file in sorted(files[:10]): # do 10
 			if file.endswith("csv"):
-				(bucket, typeCode, bibleId, filesetId) = file.split(".")[0].split("_")
+				(typeCode, bibleId, filesetId) = file.split(".")[0].split("_")
+				bucket = self.config.s3_vid_bucket if typeCode == "video" else self.config.s3_bucket
 				print(bucket, typeCode, bibleId, filesetId)
+				(lptsRecord, lptsIndex, damIdStatus) = lptsReader.getLPTSRecord(typeCode, bibleId, filesetId)
+				print("LPTS", lptsRecord, lptsIndex, damIdStatus)
 				setTypeCode = UpdateDBPDatabase.getSetTypeCode(typeCode, filesetId)
 				hashId = UpdateDBPDatabase.getHashId(bucket, filesetId, setTypeCode)
 				csvFilename = dirname + os.sep + file
 				setSizeCode = self.getSetSizeCodeByFile(csvFilename)
 				self.statements = []
+				#self.rejectStatements = []
 				self.deleteBibleFiles(hashId)
 				self.insertBibleFileset(bucket, filesetId, hashId, setTypeCode, setSizeCode)
 				self.insertBibleFiles(hashId, csvFilename)
-				self.insertBibles(bibleId)
+				self.insertBibles(bibleId, lptsRecord, lptsIndex, setSizeCode)
 				self.insertBibleFilesetConnections(bibleId, hashId)
-				self.db.executeTransaction(self.statements)
+				#if len(rejectStatements) == 0:
+					#self.db.executeTransaction(self.statements)
+				self.db.displayTransaction(self.statements)
+
+		if len(self.rejectStatements) > 0:
+			print("\n\nREJECT\n\n")
+			self.db.displayTransaction(self.rejectStatements)
 
 
 	def getSetSizeCodeByFile(self, csvFilename):
@@ -197,28 +212,105 @@ class UpdateDBPDatabase:
 			sys.exit()
 
 
-	def insertBibles(self, bibleId):
+	def insertBibles(self, bibleId, lptsRecord, lptsIndex, setSizeCode):
+		languageId = self.bibles_languageId(bibleId, lptsRecord)
+		versification = ""#"protestant" ## need input from Alan
+		script = self.bibles_script(bibleId, lptsRecord, lptsIndex)
+		## Bug: Arab and Deva have 2 numeral systems and I have no way to choose
+		numeralSystemId = self.numeralIdMap.get(script) 
+		date = self.bibles_date(lptsRecord)
+		scope = setSizeCode
+		derived = None
+		copyright = self.bibles_copyright(lptsRecord)
+		priority = self.bibles_priority(bibleId)
+		reviewed = ""#self.bibles_reviewed(lptsRecord)
+		notes = None
 		## This is only populating bibleId. It will need to update when it already exists
-		sql = "SELECT id FROM bibles WHERE id = %s"
-		result = self.db.selectRow(sql, (bibleId,))
-		if result == None:
-			sql = ("INSERT INTO bibles (id, language_id, versification, numeral_system_id, `date`,"
+		#sql = "SELECT id FROM bibles WHERE id = %s"
+		#result = self.db.selectRow(sql, (bibleId,))
+		#if result == None:
+		sql = ("INSERT INTO bibles (id, language_id, versification, numeral_system_id, `date`,"
 				" scope, script, derived, copyright, priority, reviewed, notes) VALUES"
-				" (%s, 6414, 'protestant', 'western-arabic', '2020', 'C', 'Latn', NULL, NULL, 0, 1, NULL)")
-			self.statements.append((sql, [(bibleId,)]))
+				" (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)")
+		values = [(bibleId, languageId, versification, numeralSystemId, date,
+				scope, script, derived, copyright, priority, reviewed, notes)]
+		if languageId == None or script == None or numeralSystemId == None:
+			self.rejectStatements.append((sql, values))
+		else:
+			self.statements.append((sql, values))
 		## else: check if new column values are different and update or replace if they are
 
 
+	def bibles_languageId(self, bibleId, lptsRecord):
+		result = None
+		if lptsRecord != None:
+			iso = lptsRecord.ISO()
+			langName = lptsRecord.LangName()
+			result = self.db.selectScalar("SELECT l.id FROM languages l,language_translations t WHERE l.iso=%s AND t.name=%s AND l.id=t.language_source_id", (iso, langName))
+			if result != None:
+				return result
+			result = self.db.selectScalar("SELECT id FROM languages WHERE iso=%s AND name=%s", (iso, langName))
+			if result != None:
+				return result
+		else:
+			iso = bibleId[:3].lower()
+		result = self.db.selectScalar("SELECT id FROM languages WHERE iso=%s", (iso))
+		return result
+
+
+	def bibles_script(self, bibleId, lptsRecord, lptsIndex):
+		result = None
+		script = lptsRecord.Orthography(lptsIndex)
+		if script != None:
+			result = LookupTables.scriptCode(script)
+		return result
+
+
+	def bibles_date(self, lptsRecord):
+		volume = lptsRecord.Volumne_Name()
+		yearPattern = re.compile("([0-9]+)")
+		match = yearPattern.search(volume)
+		if match != None:
+			return match.group(1)
+		else:
+			return None
+
+
+	def bibles_copyright(self, lptsRecord):
+		if "Wycliffe" in lptsRecord.Copyrightc() and "Hosana" in lptsRecord.Copyrightp():
+			return "BY-NC-ND"
+		else:
+			return "'" + lptsRecord.Copyrightc() + "'"
+
+
+	def bibles_priority(self, bibleId):
+		priority = {"ENGESV": 20,
+					"ENGNIV": 19,
+					"ENGKJV": 18,
+					"ENGCEV": 17,
+					"ENGNRSV": 16,
+					"ENGNAB": 15,
+					"ENGWEB": 14,
+					"ENGNAS": 13,
+					"ENGNLV": 11,
+					"ENGEVD": 10}
+		return priority.get(bibleId, 0)
+
+
+	def bibles_reviewed(self, bible):
+		result = 1
+		# This is a boolean 0 or 1. 1 is by far the most common
+		return result
+
+
 	def insertBibleFilesetConnections(self, bibleId, hashId):
-		#sql = "SELECT count(*) FROM bible_fileset_connections WHERE bible_id = %s AND hash_id = %s"
-		#count = self.db.selectScalar(sql, (bibleId, hashId))
-		#if count == 0:
 		sql = "INSERT INTO bible_fileset_connections (hash_id, bible_id) VALUES (%s, %s)"
 		self.statements.append((sql, [(hashId, bibleId)]))
 
 
-config = Config("dev")
+config = Config()
+lptsReader = LPTSExtractReader(config)
 update = UpdateDBPDatabase(config)
-update.process()
+update.process(lptsReader)
 
 

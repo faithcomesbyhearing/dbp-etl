@@ -60,6 +60,12 @@ class SQLUtility:
 			self.error(cursor, statement, err)
 
 
+	def displayTransaction(self, statements):
+		for statement in statements:
+			for values in statement[1][:10]: # do first 10 only
+				print(statement[0] % values)
+
+
 	def select(self, statement, values):
 		#print("SQL:", statement, values)
 		cursor = self.conn.cursor()

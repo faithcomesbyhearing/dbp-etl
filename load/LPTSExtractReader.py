@@ -59,7 +59,7 @@ class LPTSExtractReader:
 		return bibleIdMap
 
 
-	## Returns one record for bibleId, filesetId pair
+	## Returns one (record, index, status) for typeCode, bibleId, filesetId
 	def getLPTSRecord(self, typeCode, bibleId, filesetId):
 		normFilesetId = filesetId[:10]
 		lptsRecords = self.bibleIdMap.get(bibleId)

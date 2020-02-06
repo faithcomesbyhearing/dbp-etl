@@ -68,7 +68,7 @@ class Config:
 		self.s3_vid_bucket = self._get("s3.vid_bucket")
 		self.s3_aws_profile = self._get("s3.aws_profile")
 
-		if programRunning in {"Validate.py"}:
+		if programRunning in {"Validate.py", "UpdateDBPDatabase.py"}:
 
 			self.directory_bucket_list = self._getPath("directory.bucket_list")
 			self.filename_lpts_xml = self._getPath("filename.lpts_xml")
