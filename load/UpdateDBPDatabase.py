@@ -223,7 +223,7 @@ class UpdateDBPDatabase:
 		derived = None
 		copyright = self.bibles_copyright(lptsRecord)
 		priority = self.bibles_priority(bibleId)
-		reviewed = ""#self.bibles_reviewed(lptsRecord)
+		reviewed = 0#self.bibles_reviewed(lptsRecord)
 		notes = None
 		## This is only populating bibleId. It will need to update when it already exists
 		#sql = "SELECT id FROM bibles WHERE id = %s"
@@ -297,20 +297,16 @@ class UpdateDBPDatabase:
 		return priority.get(bibleId, 0)
 
 
-	def bibles_reviewed(self, bible):
-		result = 1
-		# This is a boolean 0 or 1. 1 is by far the most common
-		return result
-
-
 	def insertBibleFilesetConnections(self, bibleId, hashId):
 		sql = "INSERT INTO bible_fileset_connections (hash_id, bible_id) VALUES (%s, %s)"
 		self.statements.append((sql, [(hashId, bibleId)]))
 
 
-config = Config()
-lptsReader = LPTSExtractReader(config)
-update = UpdateDBPDatabase(config)
-update.process(lptsReader)
+## Unit Test
+if (__name__ == '__main__'):
+	config = Config()
+	lptsReader = LPTSExtractReader(config)
+	update = UpdateDBPDatabase(config)
+	update.process(lptsReader)
 
 

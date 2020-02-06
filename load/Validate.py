@@ -90,7 +90,7 @@ class Validate:
 		FilenameReducer.openAcceptErrorSet(self.config)
 		parser = FilenameParser(self.config)
 		parser.process3(filesets, self.lptsReader, self.errorMessages)
-		parser.summary3()
+		#parser.summary3()
 
 		find = FindDuplicateFilesets(self.config)
 		duplicates = find.findDuplicates()
@@ -172,55 +172,6 @@ class Validate:
 							if lptsRecord.Orthography(index) == None:
 								fieldName = "_x003%d_Orthography" % (index)
 								self.requiredFields.append((typeCode, bibleId, filesetId, stockNo, fieldName))
-						#elif typeCode == "audio":
-						#	if lptsRecord.Orthography(index) == None:
-						#		fieldName = "_x003%d_Orthography" % (index)							
-						#		self.suggestedFields.append((typeCode, bibleId, filesetId, stockNo, fieldName))
-
-
-#	def getFilesetIdSet(self, typeCode, bibleId, lptsRecordList):
-#		if len(lptsRecordList) == 0:
-#			return set()
-#		elif len(lptsRecordList) == 1:
-#			(index, record) = lptsRecordList[0]
-#			damIdMap = record.DamIds(typeCode, index)
-#			self.validateStatus(typeCode, bibleId, damIdMap, record)
-#			return set(damIdMap.keys())
-#		else:
-#			result = set()
-#			for (index, record) in lptsRecordList:
-#				damIdMap = record.DamIds(typeCode, index)
-#				self.validateStatus(typeCode, bibleId, damIdMap, record)
-#				result = result.union(set(damIdMap.keys()))
-#			return result
-#
-#
-#	def validateStatus(self, typeCode, bibleId, damIdMap, record):
-#		for (filesetId, statuses) in damIdMap.items():
-#			for (statusKey, status) in statuses:
-#				if not status in {"Live", "live"}:
-#					self.damIdStatus.append((typeCode, bibleId, filesetId, record.Reg_StockNumber(), statusKey, status))
-#
-#
-#	def validateFilesetIds(self, typeCode, bibleId, inputFilesetIdList, lptsFilesetIdSet):
-#		if typeCode == "audio":
-#			inputFilesetIds = []
-#			for filesetId in inputFilesetIdList:
-#				inputFilesetIds.append(filesetId[:10]) # reduce input filesetId to 10 char
-#			lptsFilesetIds = lptsFilesetIdSet
-#
-#		elif typeCode == "text":
-#			inputFilesetIds = inputFilesetIdList
-#			lptsFilesetIds = set()
-#			for filesetId in lptsFilesetIdSet:
-#				lptsFilesetIds.add(filesetId[:6]) # reduce lpts filesetId to 6 char
-#		else:
-#			inputFilesetIds = inputFilesetIdList
-#			lptsFilesetIds = lptsFilesetIdSet
-#
-#		for filesetId in inputFilesetIds:
-#			if not filesetId in lptsFilesetIds:
-#				self.missingFilesetIds.append((typeCode, bibleId, filesetId))
 
 
 	def reportErrors(self):

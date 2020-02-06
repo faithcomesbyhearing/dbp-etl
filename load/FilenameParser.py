@@ -419,7 +419,9 @@ class FilenameParser:
 		self.usfx2Map["J1"] = "1JN" ## fix incorrect entry in books table
 		db.close()
 
+		print("\nFound %s filesets to process" % (len(filenamesMap.keys())))
 		for prefix in filenamesMap.keys():
+			print(prefix)
 			(typeCode, bibleId, filesetId) = prefix.split("/")
 			if typeCode == "audio":
 				templates = self.audioTemplates
@@ -461,6 +463,7 @@ class FilenameParser:
 			
 			reducer = FilenameReducer(self.config, prefix, files, extraChapters, missingChapters, missingVerses)
 			reducer.process(errorMessages)
+		print("")
 
 
 	def parseOneFileset3(self, templates, prefix, filenamesTuple):
@@ -566,17 +569,17 @@ class FilenameParser:
 		return (extraChapters, missingChapters, missingVerses)
 
 
-	def summary3(self):
-		path = self.config.directory_errors + os.sep + "FilenameParser.out"
-		file = io.open(path, mode="w", encoding="utf-8")
-		for entry in self.parsedList:
-			file.write("%s\n" % entry)
-		file.write("\n\nUnparsed\n\n")
-		for entry in self.unparsedList:
-			file.write("%d  %s\n" % entry)
-		file.close()
-		for parser, count in self.successCount.items():
-			print("Parser Success Count: %s -> %s" % (parser, count))
+#	def summary3(self):
+#		path = self.config.directory_errors + os.sep + "FilenameParser.out"
+#		file = io.open(path, mode="w", encoding="utf-8")
+#		for entry in self.parsedList:
+#			file.write("%s\n" % entry)
+#		file.write("\n\nUnparsed\n\n")
+#		for entry in self.unparsedList:
+#			file.write("%d  %s\n" % entry)
+#		file.close()
+#		for parser, count in self.successCount.items():
+#			print("Parser Success Count: %s -> %s" % (parser, count))
 
 
 	def NTOrderTemp(self, filesetId, lptsRecord):
