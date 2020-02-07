@@ -112,14 +112,13 @@ class UpdateDBPDatabase:
 		print("process")
 		dirname = self.config.directory_accepted
 		files = os.listdir(dirname)
-		#for file in sorted(files):
-		for file in sorted(files[:10]): # do 10
+		for file in sorted(files):
 			if file.endswith("csv"):
 				(typeCode, bibleId, filesetId) = file.split(".")[0].split("_")
 				bucket = self.config.s3_vid_bucket if typeCode == "video" else self.config.s3_bucket
 				print(bucket, typeCode, bibleId, filesetId)
 				(lptsRecord, lptsIndex, damIdStatus) = lptsReader.getLPTSRecord(typeCode, bibleId, filesetId)
-				print("LPTS", lptsRecord, lptsIndex, damIdStatus)
+				print("LPTS", lptsRecord.Reg_StockNumber(), lptsIndex, damIdStatus)
 				setTypeCode = UpdateDBPDatabase.getSetTypeCode(typeCode, filesetId)
 				hashId = UpdateDBPDatabase.getHashId(bucket, filesetId, setTypeCode)
 				csvFilename = dirname + os.sep + file
@@ -131,9 +130,10 @@ class UpdateDBPDatabase:
 				self.insertBibleFiles(hashId, csvFilename)
 				self.insertBibles(bibleId, lptsRecord, lptsIndex, setSizeCode)
 				self.insertBibleFilesetConnections(bibleId, hashId)
-				#if len(rejectStatements) == 0:
-					#self.db.executeTransaction(self.statements)
 				self.db.displayTransaction(self.statements)
+				#if len(self.rejectStatements) == 0:
+				self.db.executeTransaction(self.statements)
+
 
 		if len(self.rejectStatements) > 0:
 			print("\n\nREJECT\n\n")
@@ -159,12 +159,31 @@ class UpdateDBPDatabase:
 
 
 	def deleteBibleFiles(self, hashId):
-		sql = "DELETE FROM bible_files WHERE hash_id = %s"
-		self.statements.append((sql, [(hashId,)]))
-		sql = "DELETE FROM bible_fileset_connections WHERE hash_id = %s"
-		self.statements.append((sql, [(hashId,)]))
-		sql = "DELETE FROM bible_filesets WHERE hash_id = %s"
-		self.statements.append((sql, [(hashId,)]))
+		sql = []
+		sql.append("DELETE bfss FROM bible_file_stream_bytes AS bfss"
+			" JOIN bible_file_stream_bandwidths AS bfsb ON bfss.stream_bandwidth_id = bfsb.id"
+			" JOIN bible_files AS bf ON bfsb.bible_file_id = bf.id"
+			" WHERE bf.hash_id = %s")
+		sql.append("DELETE bfsb FROM bible_file_stream_bandwidths AS bfsb"
+			" JOIN bible_files AS bf ON bfsb.bible_file_id = bf.id"
+			" WHERE bf.hash_id = %s")
+		sql.append("DELETE bft FROM bible_file_tags AS bft"
+			" JOIN bible_files AS bf ON bft.file_id = bf.id"
+			" WHERE bf.hash_id = %s")
+		sql.append("DELETE FROM bible_files WHERE hash_id = %s")
+		sql.append("DELETE FROM access_group_filesets WHERE hash_id = %s")
+		sql.append("DELETE FROM bible_fileset_connections WHERE hash_id = %s")
+		sql.append("DELETE FROM bible_fileset_tags WHERE hash_id = %s")
+		sql.append("DELETE FROM bible_filesets WHERE hash_id = %s")
+		for stmt in sql:
+			self.statements.append((stmt, [(hashId,)]))
+
+		#sql = "DELETE FROM bible_files WHERE hash_id = %s"
+		#self.statements.append((sql, [(hashId,)]))
+		#sql = "DELETE FROM bible_fileset_connections WHERE hash_id = %s"
+		#self.statements.append((sql, [(hashId,)]))
+		#sql = "DELETE FROM bible_filesets WHERE hash_id = %s"
+		#self.statements.append((sql, [(hashId,)]))
 
 
 	def insertBibleFiles(self, hashId, csvFilename):
@@ -225,15 +244,18 @@ class UpdateDBPDatabase:
 		priority = self.bibles_priority(bibleId)
 		reviewed = 0#self.bibles_reviewed(lptsRecord)
 		notes = None
-		## This is only populating bibleId. It will need to update when it already exists
-		#sql = "SELECT id FROM bibles WHERE id = %s"
-		#result = self.db.selectRow(sql, (bibleId,))
-		#if result == None:
-		sql = ("INSERT INTO bibles (id, language_id, versification, numeral_system_id, `date`,"
-				" scope, script, derived, copyright, priority, reviewed, notes) VALUES"
+		sql = "SELECT id FROM bibles WHERE id = %s"
+		result = self.db.selectRow(sql, (bibleId,))
+		if result == None:
+			sql = ("INSERT INTO bibles (language_id, versification, numeral_system_id, `date`,"
+				" scope, script, derived, copyright, priority, reviewed, notes, id) VALUES"
 				" (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)")
-		values = [(bibleId, languageId, versification, numeralSystemId, date,
-				scope, script, derived, copyright, priority, reviewed, notes)]
+		else:
+			sql = ("UPDATE bibles SET language_id = %s, versification = %s, numeral_system_id = %s,"
+				" `date` = %s, scope = %s, script = %s, derived = %s, copyright = %s, priority = %s,"
+				" reviewed = %s, notes = %s WHERE id = %s")
+		values = [(languageId, versification, numeralSystemId, date,
+			scope, script, derived, copyright, priority, reviewed, notes, bibleId)]
 		if languageId == None or script == None or numeralSystemId == None:
 			self.rejectStatements.append((sql, values))
 		else:
@@ -268,12 +290,12 @@ class UpdateDBPDatabase:
 
 	def bibles_date(self, lptsRecord):
 		volume = lptsRecord.Volumne_Name()
-		yearPattern = re.compile("([0-9]+)")
-		match = yearPattern.search(volume)
-		if match != None:
-			return match.group(1)
-		else:
-			return None
+		if volume != None:
+			yearPattern = re.compile("([0-9]+)")
+			match = yearPattern.search(volume)
+			if match != None:
+				return match.group(1)
+		return None
 
 
 	def bibles_copyright(self, lptsRecord):
