@@ -127,7 +127,9 @@ class UpdateDBPDatabase:
 				#self.rejectStatements = []
 				self.deleteBibleFiles(hashId)
 				self.insertBibleFileset(bucket, filesetId, hashId, setTypeCode, setSizeCode)
+				self.insertBibleFilesetTags(typeCode, filesetId, hashId, lptsRecord)
 				self.insertBibleFiles(hashId, csvFilename)
+				##self.insertBibleFileTags(hashId) Develop if needed
 				self.insertBibles(bibleId, lptsRecord, lptsIndex, setSizeCode)
 				self.insertBibleFilesetConnections(bibleId, hashId)
 				self.db.displayTransaction(self.statements)
@@ -151,13 +153,6 @@ class UpdateDBPDatabase:
 		return UpdateDBPDatabase.getSetSizeCode(ntBooks, otBooks)
 
 
-	def insertBibleFileset(self, bucket, filesetId, hashId, setTypeCode, setSizeCode):
-		sql = ("INSERT INTO bible_filesets(id, hash_id, asset_id, set_type_code,"
-			" set_size_code, hidden) VALUES (%s, %s, %s, %s, %s, 0)")
-		values = (filesetId, hashId, bucket, setTypeCode, setSizeCode)
-		self.statements.append((sql, [values]))
-
-
 	def deleteBibleFiles(self, hashId):
 		sql = []
 		sql.append("DELETE bfss FROM bible_file_stream_ts AS bfss"
@@ -178,12 +173,31 @@ class UpdateDBPDatabase:
 		for stmt in sql:
 			self.statements.append((stmt, [(hashId,)]))
 
-		#sql = "DELETE FROM bible_files WHERE hash_id = %s"
-		#self.statements.append((sql, [(hashId,)]))
-		#sql = "DELETE FROM bible_fileset_connections WHERE hash_id = %s"
-		#self.statements.append((sql, [(hashId,)]))
-		#sql = "DELETE FROM bible_filesets WHERE hash_id = %s"
-		#self.statements.append((sql, [(hashId,)]))
+
+	def insertBibleFileset(self, bucket, filesetId, hashId, setTypeCode, setSizeCode):
+		sql = ("INSERT INTO bible_filesets(id, hash_id, asset_id, set_type_code,"
+			" set_size_code, hidden) VALUES (%s, %s, %s, %s, %s, 0)")
+		values = (filesetId, hashId, bucket, setTypeCode, setSizeCode)
+		self.statements.append((sql, [values]))
+
+
+	def insertBibleFilesetTags(self, typeCode, filesetId, hashId, lptsRecord):
+		sql = ("INSERT INTO bible_fileset_tags(hash_id, name, description, admin_only,"
+			" notes, iso, language_id) VALUES (%s, %s, %s, 0, NULL, 'eng', 6414)")
+		values = []
+		if typeCode == "audio":
+			bitrate = filesetId[10:]
+			if bitrate == "":
+				bitrate = "64"
+			values.append((hashId, 'bitrate', bitrate + "kbs"))
+		stockNo = lptsRecord.Reg_StockNumber()
+		if stockNo != None:
+			values.append((hashId, 'sku', stockNo.replace("/", "")))
+		volume = lptsRecord.Volumne_Name()
+		if volume != None:
+			values.append((hashId, 'volume', volume))
+		self.statements.append((sql, values))
+
 
 
 	def insertBibleFiles(self, hashId, csvFilename):
@@ -228,7 +242,7 @@ class UpdateDBPDatabase:
 			return ("21", "26", "26")
 		else:
 			print("ERROR: Unexpected book %s in UpdateDBPDatabase." % (bookId))
-			sys.exit()
+			sys.exit()	
 
 
 	def insertBibles(self, bibleId, lptsRecord, lptsIndex, setSizeCode):
