@@ -160,7 +160,7 @@ class UpdateDBPDatabase:
 
 	def deleteBibleFiles(self, hashId):
 		sql = []
-		sql.append("DELETE bfss FROM bible_file_stream_bytes AS bfss"
+		sql.append("DELETE bfss FROM bible_file_stream_ts AS bfss"
 			" JOIN bible_file_stream_bandwidths AS bfsb ON bfss.stream_bandwidth_id = bfsb.id"
 			" JOIN bible_files AS bf ON bfsb.bible_file_id = bf.id"
 			" WHERE bf.hash_id = %s")
