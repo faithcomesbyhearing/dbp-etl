@@ -202,9 +202,10 @@ class Validate:
 		print("Num Errors ", len(self.errorMessages))		
 
 
-args = Validate.parseCommandLine()
-validate = Validate(args)
-validate.process()
-validate.reportErrors()
+if (__name__ == '__main__'):
+	args = Validate.parseCommandLine()
+	validate = Validate(args)
+	validate.process()
+	validate.reportErrors()
 
 

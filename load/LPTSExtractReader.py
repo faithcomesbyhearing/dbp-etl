@@ -156,32 +156,76 @@ class LPTSRecord:
 			results[damId] = (statusKey, status)
 		return results
 
-	def LangName(self):
-		return self.record.get("LangName")
+	def AltName(self):
+		result = self.record.get("AltName")
+		if result == "N/A" or result == "#N/A":
+			return None
+		else:
+			return result
 
-	def Reg_StockNumber(self):
-		return self.record.get("Reg_StockNumber")
+	def APIDevAudio(self):
+		return self.record.get("APIDevAudio")
 
-	def Reg_Recording_Status(self):
-		return self.record.get("Reg_Recording_Status")
+	def APIDevText(self):
+		return self.record.get("APIDevText")
 
-	def ND_StockNumber(self):
-		return self.record.get("ND_StockNumber")
-
-	def HeartName(self):
-		return self.record.get("HeartName")
-
-	def ISO(self):
-		return self.record.get("ISO")
-
-	def Licensor(self):
-		return self.record.get("Licensor")
+	def APIDevVideo(self):
+		return self.record.get("APIDevVideo")
 
 	def Copyrightc(self):
 		return self.record.get("Copyrightc")
 
 	def Copyrightp(self):
 		return self.record.get("Copyrightp")
+
+	def Copyright_Video(self):
+		return self.record.get("Copyright_Video")
+
+	def Country(self):
+		return self.record.get("Country")
+
+	def CreativeCommonsAudioWaiver(self):
+		return self.record.get("CreativeCommonsAudioWaiver")
+
+	def CreativeCommonsText(self):
+		return self.record.get("CreativeCommonsText")
+
+	def DBPAudio(self):
+		return self.record.get("DBPAudio")
+
+	def DBPDate(self, index):
+		if index == 1:
+			return self.record.get("DBPDate") or self.record.get("DBPDate1")
+		elif index == 2:
+			return self.record.get("DBPDate2")
+		elif index == 3:
+			return self.record.get("DBPDate")
+		else:
+			return None
+
+	def DBPFont(self, index):
+		if index == 1:
+			return self.record.get("DBPFont") or self.record.get("DBPFont1")
+		elif index == 2:
+			return self.record.get("DBPFont2")
+		elif index == 3:
+			return self.record.get("DBPFont3")
+		else:
+			print("ERROR: DBFont index must be 1, 2, or 3.")
+			sys.exit()
+
+	def DBPMobile(self):
+		return self.record.get("DBPMobile")
+
+	def DBPText(self):
+		return self.record.get("DBPText")
+
+	def DBPTextOT(self):
+		return self.record.get("DBPTextOT")
+
+	def DBPWebHub(self):
+		return self.record.get("DBPWebHub")
+
 
 	def DBP_Equivalent(self):
 		result = self.record.get("DBP_Equivalent")
@@ -204,70 +248,8 @@ class LPTSRecord:
 		else:
 			return result
 
-	def Volumne_Name(self):
-		result = self.record.get("Volumne_Name")
-		if result == "N/A" or result == "#N/A":
-			return None
-		else:
-			return result
-
-	def Country(self):
-		return self.record.get("Country")
-
-	def DBPText(self):
-		return self.record.get("DBPText")
-
-	def DBPTextOT(self):
-		return self.record.get("DBPTextOT")
-
-	def DBPAudio(self):
-		return self.record.get("DBPAudio")
-
-	def DBPMobile(self):
-		return self.record.get("DBPMobile")
-
-	def DBPWebHub(self):
-		return self.record.get("DBPWebHub")
-
 	def Download(self):
 		return self.record.get("Download")
-
-	def Streaming(self):
-		return self.record.get("Streaming")
-
-	def MobileText(self):
-		return self.record.get("MobileText")
-
-	def HubText(self):
-		return self.record.get("HubText")
-
-	def APIDevText(self):
-		return self.record.get("APIDevText")
-
-	def APIDevAudio(self):
-		return self.record.get("APIDevAudio")
-
-	def FairUseLimitValue(self):
-		return self.record.get("FairUseLimitValue")
-
-	def FairUseLimit(self):
-		return self.record.get("FairUseLimit")
-
-	def EthName(self):
-		return self.record.get("EthName")
-
-	def AltName(self):
-		result = self.record.get("AltName")
-		if result == "N/A" or result == "#N/A":
-			return None
-		else:
-			return result
-
-	def CreativeCommonsText(self):
-		return self.record.get("CreativeCommonsText")
-
-	def CreativeCommonsAudioWaiver(self):
-		return self.record.get("CreativeCommonsAudioWaiver")
 
 	def ElectronicPublisher(self, index):
 		if index == 1:
@@ -289,14 +271,55 @@ class LPTSRecord:
 		else:
 			return None
 
+	def EthName(self):
+		return self.record.get("EthName")
+
+	def FairUseLimit(self):
+		return self.record.get("FairUseLimit")
+
+	def FairUseLimitValue(self):
+		return self.record.get("FairUseLimitValue")
+
+	def HeartName(self):
+		return self.record.get("HeartName")
+
+	def HUBLink(self, index):
+		if index == 1:
+			return self.record.get("HUBLink") or self.record.get("HUBLink1")
+		elif index == 2:
+			return self.record.get("HUBLink2")
+		elif index == 3:
+			return self.record.get("HUBLink3")
+		else:
+			return None
+
+	def HubText(self):
+		return self.record.get("HubText")
+
 	def ItunesPodcast(self):
 		return self.record.get("ItunesPodcast")
-	
-	def WebHubVideo(self):
-		return self.record.get("WebHubVideo")
 
-	def Copyright_Video(self):
-		return self.record.get("Copyright_Video")
+	def ISO(self):
+		return self.record.get("ISO")
+
+	def LangName(self):
+		return self.record.get("LangName")
+
+	def Licensor(self):
+		return self.record.get("Licensor")
+
+	def MobileText(self):
+		return self.record.get("MobileText")
+
+	def ND_StockNumber(self):
+		return self.record.get("ND_StockNumber")
+
+	def NTOrder(self):
+		result = self.record.get("NTOrder")
+		if result == None or result == "NA":
+			return "Traditional"
+		else:
+			return result
 
 	def Orthography(self, index):
 		if index == 1:
@@ -309,53 +332,6 @@ class LPTSRecord:
 			print("ERROR: Orthography index must be 1, 2, or 3.")
 			sys.exit()
 
-	def DBPFont(self, index):
-		if index == 1:
-			return self.record.get("DBPFont")
-		elif index == 2:
-			return self.record.get("DBPFont2")
-		elif index == 3:
-			return self.record.get("DBPFont3")
-		else:
-			print("ERROR: DBFont index must be 1, 2, or 3.")
-			sys.exit()
-
-	def USX_Date(self, index):
-		if index == 1:
-			return self.record.get("USX_Date1")
-		elif index == 2:
-			return self.record.get("USX_Date2")
-		elif index == 3:
-			return self.record.get("USX_Date3")
-		else:
-			return None
-
-	def PostedToServer(self):
-		return self.record.get("PostedToServer")
-
-	def DBPDate(self, index):
-		if index == 1:
-			return self.record.get("DBPDate")
-		elif index == 2:
-			return self.record.get("DBPDate2")
-		elif index == 3:
-			return self.record.get("DBPDate")
-		else:
-			return None
-
-	def Version(self):
-		return self.record.get("Version")
-
-	def APIDevVideo(self):
-		return self.record.get("APIDevVideo")
-
-	def NTOrder(self):
-		result = self.record.get("NTOrder")
-		if result == None or result == "NA":
-			return "Traditional"
-		else:
-			return result
-
 	def OTOrder(self):
 		result = self.record.get("OTOrder")
 		if result == None or result == "NA":
@@ -363,16 +339,39 @@ class LPTSRecord:
 		else:
 			return result
 
+	def PostedToServer(self):
+		return self.record.get("PostedToServer")
 
-"""
-The following fields should be indexed
+	def Reg_StockNumber(self):
+		return self.record.get("Reg_StockNumber")
 
-<HUBLink>https://live.bible.is/bible/PIBWBT/MAT/1?audio_type=audio_drama</HUBLink>
-<HUBLink1>https://live.bible.is/bible/PIBWBT/MAT/1?audio_type=audio</HUBLink1>
-"""
+	def Reg_Recording_Status(self):
+		return self.record.get("Reg_Recording_Status")
 
+	def Streaming(self):
+		return self.record.get("Streaming")
 
+	def USX_Date(self, index):
+		if index == 1:
+			return self.record.get("USX_Date") or self.record.get("USX_Date1")
+		elif index == 2:
+			return self.record.get("USX_Date2")
+		elif index == 3:
+			return self.record.get("USX_Date3")
+		else:
+			return None
 
+	def Version(self):
+		return self.record.get("Version")
 
+	def Volumne_Name(self):
+		result = self.record.get("Volumne_Name")
+		if result == "N/A" or result == "#N/A":
+			return None
+		else:
+			return result
+
+	def WebHubVideo(self):
+		return self.record.get("WebHubVideo")
 
 

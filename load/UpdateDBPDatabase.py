@@ -14,6 +14,7 @@ import io
 import sys
 import hashlib
 import csv
+import re
 from Config import *
 from SQLUtility import *
 from LPTSExtractReader import *
@@ -128,10 +129,18 @@ class UpdateDBPDatabase:
 				self.deleteBibleFiles(hashId)
 				self.insertBibleFileset(bucket, filesetId, hashId, setTypeCode, setSizeCode)
 				self.insertBibleFilesetTags(typeCode, filesetId, hashId, lptsRecord)
+				self.insertBibleFilesetCopyrights(typeCode, hashId, lptsRecord)
+				self.insertBibleFilesetCopyrightOrganizations()
+				self.insertAccessGroupFilesets()
 				self.insertBibleFiles(hashId, csvFilename)
 				##self.insertBibleFileTags(hashId) Develop if needed
 				self.insertBibles(bibleId, lptsRecord, lptsIndex, setSizeCode)
 				self.insertBibleFilesetConnections(bibleId, hashId)
+				self.insertBibleTranslations()
+				self.insertBibleEquivalents() #last updated 2018-11-21 17:07:08 
+				self.insertBibleFileTitles() #last updated 2018-03-05 03:32:33
+				self.insertBibleLinks() #last updated 2019-04-26 15:48:17
+				self.insertBibleOrganizations() # last updated 2019-04-30 10:49:05
 				self.db.displayTransaction(self.statements)
 				#if len(self.rejectStatements) == 0:
 				self.db.executeTransaction(self.statements)
@@ -199,6 +208,47 @@ class UpdateDBPDatabase:
 		self.statements.append((sql, values))
 
 
+	def insertBibleFilesetCopyrights(self, typeCode, hashId, lptsRecord):
+		## primary key is hash_id
+		sql = ("INSERT INTO bible_fileset_copyrights(hash_id, copyright_date,"
+			" copyright, copyright_description) VALUES (%s, %s, %s, %s)")
+		copyrightText = lptsRecord.Copyrightc()
+		copyrightAudio = lptsRecord.Copyrightp()
+		copyrightVideo = lptsRecord.Copyright_Video()
+
+		if typeCode == "text":
+			copyright = copyrightText
+			copyrightMsg = copyrightText
+		elif typeCode == "audio":
+			copyright = copyrightAudio
+			copyrightMsg = "Text: %s\nAudio: %s" % (copyrightText, copyrightAudio)
+		elif typeCode == "video":
+			copyright = copyrightVideo
+			copyrightMsg = "Text: %s\nAudio: %s\nVideo: %s" % (copyrightText, copyrightAudio, copyrightVideo)
+
+		copyrightDate = None
+		if copyright != None:
+			datePattern = re.compile("([0-9]+)")
+			year = datePattern.search(copyright)
+			if year != None:
+				copyrightDate = year.group(1)
+				## Should I work on finding multiple dates?
+		values = (hashId, copyrightDate, copyrightMsg, "")
+		self.statements.append((sql, [values]))
+
+
+	def insertBibleFilesetCopyrightOrganizations(self):
+		## primary key is hash_id, organization_id
+		sql = ("INSERT INTO bible_fileset_copyright_organizations(hash_id,"
+			" organization_id, organization_role) VALUES (%s, %s, %s)")
+		# Not implemented
+
+
+	def insertAccessGroupFilesets(self):
+		## primary key is access_group_id, hash_id
+		sql = ("INSERT INTO access_group_filesets(access_group_id, hash_id) VALUES (%s, %s)")
+		# Not implemented
+
 
 	def insertBibleFiles(self, hashId, csvFilename):
 		isVideoFile = csvFilename.split("_")[1] == "video"
@@ -246,6 +296,7 @@ class UpdateDBPDatabase:
 
 
 	def insertBibles(self, bibleId, lptsRecord, lptsIndex, setSizeCode):
+		## primary key is id (bibleId)
 		languageId = self.bibles_languageId(bibleId, lptsRecord)
 		versification = ""#"protestant" ## need input from Alan
 		script = self.bibles_script(bibleId, lptsRecord, lptsIndex)
@@ -334,8 +385,44 @@ class UpdateDBPDatabase:
 
 
 	def insertBibleFilesetConnections(self, bibleId, hashId):
+		## primary key hash_id, bible_id
 		sql = "INSERT INTO bible_fileset_connections (hash_id, bible_id) VALUES (%s, %s)"
 		self.statements.append((sql, [(hashId, bibleId)]))
+
+
+	def insertBibleTranslations(self):
+		## primary key id is auto increment
+		sql = ("INSERT INTO bible_translations(language_id, bible_id, vernacular, vernacular_trade,"
+			" name, description, background, notes) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)")
+		# Not implemented
+
+
+	def insertBibleEquivalents(self): #last updated 2018-11-21 17:07:08 
+		## No primary or unique key
+		sql = ("INSERT INTO bible_equivalents(bible_id, equivalent_id, organization_id,"
+			" type, site, suffix) VALUES (%s, %s, %s, %s, %s, %s)")
+		# Not implemented
+
+
+	def insertBibleFileTitles(self): #last updated 2018-03-05 03:32:33
+		## No primary or unique key
+		sql = ("INSERT INTO bible_file_titles(file_id, iso, title, description, key_words)"
+			" VALUES (%s, %s, %s, %s, %s)")
+		# Not implemented
+
+
+	def insertBibleLinks(self): #last updated 2019-04-26 15:48:17
+		## primary key id is auto increment
+		sql = ("INSERT INTO bible_links(bible_id, type, url, title, provider, visible,"
+			" organization_id) VALUES (%s, %s, %s, %s, %s, %s, %s)")
+		# Not implemented
+
+
+	def insertBibleOrganizations(self): # last updated 2019-04-30 10:49:05
+		## No primary or unique key
+		sql = ("INSERT INTO bible_organizations(bible_id, organization_id, relationship_type)"
+			" VALUES (%s, %s, %s)")
+		# Not implemented
 
 
 ## Unit Test
