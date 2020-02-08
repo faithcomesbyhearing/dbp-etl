@@ -9,15 +9,19 @@ import pymysql
 
 class SQLUtility:
 
-	def __init__(self, host, port, user, db_name):
-		self.conn = pymysql.connect(host = host,
-                             		user = user,
-                             		password = os.environ['MYSQL_PASSWD'],
-                             		db = db_name,
-                             		port = port,
+	def __init__(self, config, cursor = 'list'):
+		if cursor == 'dict':
+			pycursor = pymysql.cursors.DictCursor
+		else:
+			pycursor = pymysql.cursors.Cursor
+					
+		self.conn = pymysql.connect(host = config.database_host,
+                             		user = config.database_user,
+                             		password = config.database_passwd,
+                             		db = config.database_db_name,
+                             		port = config.database_port,
                              		charset = 'utf8mb4',
-                             		cursorclass = pymysql.cursors.Cursor)
-
+                             		cursorclass = pycursor)
 
 	def close(self):
 		if self.conn != None:
@@ -45,6 +49,23 @@ class SQLUtility:
 			self.error(cursor, statement, err)
 
 
+	def executeTransaction(self, statements):
+		cursor = self.conn.cursor()
+		try:
+			for statement in statements:
+				cursor.executemany(statement[0], statement[1])
+			self.conn.commit()
+			cursor.close()
+		except Exception as err:
+			self.error(cursor, statement, err)
+
+
+	def displayTransaction(self, statements):
+		for statement in statements:
+			for values in statement[1][:10]: # do first 10 only
+				print(statement[0] % values)
+
+
 	def select(self, statement, values):
 		#print("SQL:", statement, values)
 		cursor = self.conn.cursor()
@@ -66,7 +87,12 @@ class SQLUtility:
 			cursor.close()
 			return result[0] if result != None else None
 		except Exception as err:
-			self.error(cursor, statement, err)	
+			self.error(cursor, statement, err)
+
+
+	def selectRow(self, statement, values):
+		resultSet = self.select(statement, values)
+		return resultSet[0] if len(resultSet) > 0 else None
 
 
 	def selectSet(self, statement, values):

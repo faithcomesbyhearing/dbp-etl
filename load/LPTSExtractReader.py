@@ -172,6 +172,9 @@ class LPTSRecord:
 	def APIDevVideo(self):
 		return self.record.get("APIDevVideo")
 
+	def CoLicensor(self):
+		return self.record.get("CoLicensor")
+
 	def Copyrightc(self):
 		return self.record.get("Copyrightc")
 
