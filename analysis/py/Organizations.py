@@ -12,7 +12,7 @@ from Config import *
 from LPTSExtractReader import *
 from SQLUtility import *
 
-DROP_CHARS = r"[.,-]"
+#DROP_CHARS = r"[.,-]"
 
 class Organizations:
 
@@ -28,9 +28,12 @@ class Organizations:
 		## This logic assumes there are no names with multiple org ids
 		resultSet = self.db.select("SELECT name, organization_id FROM organization_translations", ())
 		for row in resultSet:
-			#name = re.sub(DROP_CHARS, '', row[0])
-			#orgIdMap[name] = row[1]
-			orgIdMap[row[0]] = row[1]
+			name = row[0].lower()
+			#name = name.replace(" ", "")
+			#name = name.replace("the", "")
+			#name = row[0].replace("the")
+			#name = row[0].strip()
+			orgIdMap[name.strip()] = row[1]
 		
 		self.possibleMapList = self.db.selectMapList("SELECT organization_id, name FROM organization_translations", ())
 		sql = ("SELECT bf.id AS fileset_id, bf.hash_id, bf.set_type_code, bfco.organization_role,"
@@ -69,19 +72,19 @@ class Organizations:
 					if typeCode == "audio" and organizationRole == 1:
 						orgName = self.parseCopyright(record.Copyrightp())
 					elif typeCode == "audio" and organizationRole == 2:
-						orgName = self.parseCopyright(record.Licensor())
+						orgName = self.parseLicensor(record.Licensor())
 					elif typeCode == "audio" and organizationRole == 3:
 						orgName = "I don't know"
 					elif typeCode == "text" and organizationRole == 1:
 						orgName = self.parseCopyright(record.Copyrightc())
 					elif typeCode == "text" and organizationRole == 2:
-						orgName = self.parseCopyright(record.Licensor())
+						orgName = self.parseLicensor(record.Licensor())
 					elif typeCode == "text" and organizationRole == 3:
 						orgName = "I don't know"
 					elif typeCode == "video" and organizationRole == 1:
 						orgName = self.parseCopyright(record.Copyright_Video())
 					elif typeCode == "video" and organizationRole == 2:
-						orgName = self.parseCopyright(record.licensor())
+						orgName = self.parseLicensor(record.licensor())
 					elif typeCode == "video" and organizationRole == 3:
 						orgName = "I don't know"
 					else:
@@ -134,7 +137,10 @@ class Organizations:
 	###orgName in tempDic['Copyrightc']:
 
 	def parseCopyright(self, copyright):
-		return copyright
+		if copyright != None:
+			return copyright.lower()
+		else:
+			return None
 		"""
 		result = None
 		if copyright != None:
@@ -146,47 +152,34 @@ class Organizations:
 		return result
 		"""
 
+	def parseLicensor(self, licensor):
+		print("** input ", licensor)
+		if licensor != None:
+			parts = licensor.lower().split(",", 2)
+			if len(parts) > 1:
+				print("** output", parts[1] + " " + parts[0])
+				return parts[1] + " " + parts[0]
+			else:
+				return parts[0]
+		return None
+
 	def matchName(self, orgIdMap, orgName):
 		if orgName != None:
-			if orgName == "SIL":
+			if orgName == "sil":
 				return 30
-			#elif orgName == "Aramaic Bible Translation, N.F.P.":
-			#	return 588
-			#elif orgName == "Davar Partners International":
-			#	return 7
 			for name in orgIdMap.keys():
 				if name in orgName:
 					orgId = orgIdMap[name]
-					#if orgId==81:
-					#	return 848
 					if orgId==144:
 						return 745
-					#elif orgId==48:
-					#	return 856
 					elif orgId==72:
 						return 727
 					elif orgId==127:
 						return 750
-					#elif orgId==132:
-					#	return 622
-					#elif orgId==254:
-					#	return 255
-					#elif orgId==915:
-					#	return 847
-
-					#elif orgId==440:
-					#	return 7
-					#elif orgId==81:
-					#	return 848
 					elif orgId==527:
 						return 20
-					#elif orgId==703:
-					#	return 20
-					#elif orgId==254:
-					#	return 255
 					else:
 						return orgId
-					#return orgId
 		return None
 
 	def displayNames(self, bibleId, filesetId, hashId, typeCode, organizationRole, slug, organizationId,
@@ -209,29 +202,6 @@ class Organizations:
 			print("\tLPTS ElectronicPublisher:", electronicPub)
 		for possibleName in self.possibleMapList[organizationId]:
 			print("\torganization_translations.name for %s: %s" % (organizationId, possibleName))		
-
-
-"""
-
-
-SELECT bf.id, bf.hash_id, bf.set_type_code, bfco.organization_role, o.slug, o.id, ot.name
-FROM bible_filesets bf
-JOIN bible_fileset_copyright_organizations bfco ON bfco.hash_id = bf.hash_id
-JOIN organizations o ON bfco.organization_id = o.id
-JOIN organization_translations ot ON o.id = ot.organization_id 
-ORDER BY bf.id, bf.set_type_code
-
-
-What I need as a solution to organizations
-
-I need to be able to see side by side
-filesetId
-each of up to 3 oranizations.slug, organization_role
-organizations_translation name
-LPTS Copyrightc, Copyrightp, VideoCopyright,
-Licensor, CoLicensor, CreativeCommonsText,
-ElectronicPublisher1, ElectronicPublisher2, ElectronicPublisher3
-"""
 
 
 if (__name__ == '__main__'):
