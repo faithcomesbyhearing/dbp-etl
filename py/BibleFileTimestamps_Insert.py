@@ -17,15 +17,16 @@ from SQLUtility import *
 
 
 TIM_HOST = "localhost"
-TIM_USER = "root"
-TIM_PORT = 3306
-TIM_DB_NAME = "dbp"
+TIM_USER = "sa"
+TIM_PORT = 3320
+TIM_DB_NAME = "dbp_200116"
 
 
 class BibleFileTimestamps_Insert:
 
 	def __init__(self):
 		self.db = SQLUtility(TIM_HOST, TIM_PORT, TIM_USER, TIM_DB_NAME)
+		self.filesetRegex = re.compile(r"([A-Z1-2]+)\.mp3")
 		self.xmlRegex = re.compile(r"<filename src.*>(.*)</filename>")
 		self.filenameRegex = re.compile(r"[A-Z0-9]+-[0-9]+-([A-Z1-4]+)-([0-9]+)-timing.txt")
 		self.timingRegex = re.compile(r"([0-9\.]+)\t([0-9\.]+)\t([0-9]+)([a-z]?)")
@@ -49,14 +50,12 @@ class BibleFileTimestamps_Insert:
 		xml = io.open(path, mode="r")
 		for line in xml:
 			if line.strip().startswith("<filename src"):
-				audioPath = self.xmlRegex.search(line)
-				parts = audioPath.group(1).split("\\")
-				result = parts[-2]
+				result = self.filesetRegex.search(line).group(1)
 				if filesetId == None:
 					filesetId = result
 				elif filesetId != result:
 					print("ERROR: multiple filsetid in appDev file", filesetId, result)
-		return filesetId + "16"
+		return filesetId
 
 
 	def getFileId(self, filesetId, bookId, chapter):
@@ -95,7 +94,7 @@ class BibleFileTimestamps_Insert:
 						timings = io.open(path + os.sep + file, mode="r")
 						priorVerse = 0
 						for line in timings:
-							result = self.timingRegex.match(line)
+							result = self.timingRegex.search(line)
 							timing = round(float(result.group(1)), 2)
 							verseStart = int(result.group(3))
 							versePart = result.group(4)
