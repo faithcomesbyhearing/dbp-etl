@@ -12,6 +12,8 @@ from Config import *
 from LPTSExtractReader import *
 from SQLUtility import *
 
+DROP_CHARS = r"[.,-]"
+
 class Organizations:
 
 	def __init__(self, config):
@@ -22,7 +24,14 @@ class Organizations:
 
 
 	def process(self, lptsReader):
-		orgIdMapList = self.db.selectMapList("SELECT name, organization_id FROM organization_translations", ())
+		orgIdMap = {}
+		## This logic assumes there are no names with multiple org ids
+		resultSet = self.db.select("SELECT name, organization_id FROM organization_translations", ())
+		for row in resultSet:
+			#name = re.sub(DROP_CHARS, '', row[0])
+			#orgIdMap[name] = row[1]
+			orgIdMap[row[0]] = row[1]
+		
 		self.possibleMapList = self.db.selectMapList("SELECT organization_id, name FROM organization_translations", ())
 		sql = ("SELECT bf.id AS fileset_id, bf.hash_id, bf.set_type_code, bfco.organization_role,"
 			" o.slug, o.id AS organization_id, bfc.bible_id"
@@ -56,64 +65,67 @@ class Organizations:
 					coLicensor = record.CoLicensor()
 					creativeCommons = record.CreativeCommonsText()
 					electronicPub = record.ElectronicPublisher(index)
-					#if textCopyright != None:
-					#	print("\ttextCopyright", textCopyright)
-					#if audioCopyright != None:
-					#	print("\taudioCopyright", audioCopyright)
-					#if videoCopyright != None:
-					#	print("\tvideoCopyright", videoCopyright)
-					#if licensor != None:
-					#	print("\tlicensor", licensor)
-					#if coLicensor != None:
-					#	print("\tcoLicensor", coLicensor)
-					#if creativeCommons != None:
-					#	print("\tcreativeCommons", creativeCommons)
-					#if electronicPub != None:
-					#	print("\telectronicPub", electronicPub)
 
 					if typeCode == "audio" and organizationRole == 1:
-						copyright = self.parseCopyright(audioCopyright)
-						#print("\tParsed Copyright:", copyright)
-						orgIds = orgIdMapList.get(copyright)
-						if orgIds != None and len(orgIds) == 1 and orgIds[0] == organizationId:
-							matchCount += 1
-							#print("\tmatched:", organizationId, copyright)
-						else:
-							unMatchCount += 1
-							self.displayNames(bibleId, filesetId, hashId, typeCode, organizationRole, slug, organizationId,
-								textCopyright, audioCopyright, videoCopyright, licensor, coLicensor,
-								creativeCommons, electronicPub, copyright)
-							#if orgIds != None and len(orgIds) > 0:
-							#	for orgId in orgIds:
-							#		print("\t*** Found ID", orgId)
-
+						orgName = self.parseCopyright(record.Copyrightp())
+					elif typeCode == "audio" and organizationRole == 2:
+						orgName = self.parseCopyright(record.Licensor())
+					elif typeCode == "audio" and organizationRole == 3:
+						orgName = "I don't know"
 					elif typeCode == "text" and organizationRole == 1:
-						copyright = self.parseCopyright(textCopyright)
-						#print("\tParsed Copyright:", copyright)
-						orgIds = orgIdMapList.get(copyright)
-						if orgIds != None and len(orgIds) == 1 and orgIds[0] == organizationId:
-							matchCount += 1
-							#print("\tmatched:", organizationId, copyright)
-						else:
-							unMatchCount += 1
-							self.displayNames(bibleId, filesetId, hashId, typeCode, organizationRole, slug, organizationId,
-								textCopyright, audioCopyright, videoCopyright, licensor, coLicensor,
-								creativeCommons, electronicPub, copyright)
-							#if orgIds != None and len(orgIds) > 0:
-							#	for orgId in orgIds:
-							#		print("\t*** Found ID", orgId)
+						orgName = self.parseCopyright(record.Copyrightc())
+					elif typeCode == "text" and organizationRole == 2:
+						orgName = self.parseCopyright(record.Licensor())
+					elif typeCode == "text" and organizationRole == 3:
+						orgName = "I don't know"
+					elif typeCode == "video" and organizationRole == 1:
+						orgName = self.parseCopyright(record.Copyright_Video())
+					elif typeCode == "video" and organizationRole == 2:
+						orgName = self.parseCopyright(record.licensor())
+					elif typeCode == "video" and organizationRole == 3:
+						orgName = "I don't know"
+					else:
+						print("ERROR: unexpected typeCode", typeCode)
+						sys.exit()
 
+
+					#orgId = orgIdMap.get(orgName)
+					orgId = self.matchName(orgIdMap, orgName)
+					if orgId != None and orgId == organizationId:
+						matchCount += 1
+						#print("\tmatched:", organizationId, orgName)
 					else:
 						unMatchCount += 1
-						self.displayNames(bibleId, filesetId, hashId, typeCode, organizationRole, slug, organizationId,
-							textCopyright, audioCopyright, videoCopyright, licensor, coLicensor,
-							creativeCommons, electronicPub, None)
+						#self.displayNames(bibleId, filesetId, hashId, typeCode, organizationRole, slug, organizationId,
+						#	textCopyright, audioCopyright, videoCopyright, licensor, coLicensor,
+						#	creativeCommons, electronicPub, orgName)
+						print("DBP: %s/%s/%s hash:%s, role: %s, orgId: %s, orgSlug: %s" %(typeCode, bibleId, filesetId, hashId, organizationRole, organizationId, slug))
+						if orgId != None:
+							print("\tOrg Lookup Result: %d found for %s" % (orgId, orgName))
+						else:
+							print("\tOrg Lookup Result: No orgId for %s" % (orgName))
+						if textCopyright != None:
+							print("\tLPTS Copyrightc:", textCopyright)
+						if audioCopyright != None:
+							print("\tLPTS Copyrightp:", audioCopyright)
+						if videoCopyright != None:
+							print("\tLPTS Copyright_Video:", videoCopyright)
+						if licensor != None:
+							print("\tLPTS Licensor:", licensor)
+						if coLicensor != None:
+							print("\tLPTS CoLicensor:", coLicensor)
+						if creativeCommons != None:
+							print("\tLPTS CreativeCommonsText:", creativeCommons)
+						if electronicPub != None:
+							print("\tLPTS ElectronicPublisher:", electronicPub)
+						for possibleName in self.possibleMapList[organizationId]:
+							print("\torganization_translations.name for %s: %s" % (organizationId, possibleName))		
 
 				else:
-					print("\t*** NO LPTS")
+					#print("\t*** NO LPTS")
 					skipCount += 1
 			else:
-				print("\t SKIP typecode", typeCode)
+				#print("\t SKIP typecode", typeCode)
 				skipCount += 1
 
 		print("total=", len(resultSet), " matched=", matchCount, " unmatched=", unMatchCount, " skiped=", skipCount)
@@ -122,39 +134,81 @@ class Organizations:
 	###orgName in tempDic['Copyrightc']:
 
 	def parseCopyright(self, copyright):
+		return copyright
+		"""
+		result = None
 		if copyright != None:
-			print("** input", copyright)
-			pattern = re.compile(r".*([A-Za-z]+).*")
-			match = pattern.match(copyright)
+			match = re.search(r"[A-Za-z]", copyright)
 			if match != None:
-				print("** output", match.group(1))
-				return match.group(1)
-		print("** output", "None")
-		return None
+				result = copyright[match.start():]
+				result = re.sub(DROP_CHARS, "", result)
+			print("*** %s -> |%s|" % (copyright, result))
+		return result
+		"""
 
+	def matchName(self, orgIdMap, orgName):
+		if orgName != None:
+			if orgName == "SIL":
+				return 30
+			#elif orgName == "Aramaic Bible Translation, N.F.P.":
+			#	return 588
+			#elif orgName == "Davar Partners International":
+			#	return 7
+			for name in orgIdMap.keys():
+				if name in orgName:
+					orgId = orgIdMap[name]
+					#if orgId==81:
+					#	return 848
+					if orgId==144:
+						return 745
+					#elif orgId==48:
+					#	return 856
+					elif orgId==72:
+						return 727
+					elif orgId==127:
+						return 750
+					#elif orgId==132:
+					#	return 622
+					#elif orgId==254:
+					#	return 255
+					#elif orgId==915:
+					#	return 847
+
+					#elif orgId==440:
+					#	return 7
+					#elif orgId==81:
+					#	return 848
+					elif orgId==527:
+						return 20
+					#elif orgId==703:
+					#	return 20
+					#elif orgId==254:
+					#	return 255
+					else:
+						return orgId
+					#return orgId
+		return None
 
 	def displayNames(self, bibleId, filesetId, hashId, typeCode, organizationRole, slug, organizationId,
 		textCopyright, audioCopyright, videoCopyright, licensor, coLicensor,
-		creativeCommons, electronicPub, parsedCopyright):
-		print(bibleId, filesetId, hashId, typeCode, organizationRole, slug, organizationId)
-		if parsedCopyright != None:
-			print("\tParsed Copyright", parsedCopyright)
+		creativeCommons, electronicPub, parsedOrgName):
+		print("DBP: %s/%s/%s hash:%s, role: %s, orgId: %s, orgSlug: %s" %(typeCode, bibleId, filesetId, hashId, organizationRole, organizationId, slug))
 		if textCopyright != None:
-			print("\ttextCopyright", textCopyright)
+			print("\tLPTS Copyrightc:", textCopyright)
 		if audioCopyright != None:
-			print("\taudioCopyright", audioCopyright)
+			print("\tLPTS Copyrightp:", audioCopyright)
 		if videoCopyright != None:
-			print("\tvideoCopyright", videoCopyright)
+			print("\tLPTS Copyright_Video:", videoCopyright)
 		if licensor != None:
-			print("\tlicensor", licensor)
+			print("\tLPTS Licensor:", licensor)
 		if coLicensor != None:
-			print("\tcoLicensor", coLicensor)
+			print("\tLPTS CoLicensor:", coLicensor)
 		if creativeCommons != None:
-			print("\tcreativeCommons", creativeCommons)
+			print("\tLPTS CreativeCommonsText:", creativeCommons)
 		if electronicPub != None:
-			print("\telectronicPub", electronicPub)
+			print("\tLPTS ElectronicPublisher:", electronicPub)
 		for possibleName in self.possibleMapList[organizationId]:
-			print("\tPossible: ", possibleName)		
+			print("\torganization_translations.name for %s: %s" % (organizationId, possibleName))		
 
 
 """
