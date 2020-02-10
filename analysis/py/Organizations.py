@@ -25,12 +25,10 @@ class Organizations:
 		orgIdMapList = self.db.selectMapList("SELECT name, organization_id FROM organization_translations", ())
 		self.possibleMapList = self.db.selectMapList("SELECT organization_id, name FROM organization_translations", ())
 		sql = ("SELECT bf.id AS fileset_id, bf.hash_id, bf.set_type_code, bfco.organization_role,"
-			#" o.slug, o.id AS organization_id, ot.name, bfc.bible_id"
 			" o.slug, o.id AS organization_id, bfc.bible_id"
 			" FROM bible_filesets bf"
 			" JOIN bible_fileset_copyright_organizations bfco ON bfco.hash_id = bf.hash_id"
 			" JOIN organizations o ON bfco.organization_id = o.id"
-			#" JOIN organization_translations ot ON o.id = ot.organization_id"
 			" JOIN bible_fileset_connections bfc ON bfc.hash_id = bf.hash_id"
 			" ORDER BY bf.id, bf.hash_id")
 		resultSet = self.db.select(sql, ())
@@ -75,25 +73,41 @@ class Organizations:
 
 					if typeCode == "audio" and organizationRole == 1:
 						copyright = self.parseCopyright(audioCopyright)
-						print("\tParsed Copyright:", copyright)
+						#print("\tParsed Copyright:", copyright)
 						orgIds = orgIdMapList.get(copyright)
 						if orgIds != None and len(orgIds) == 1 and orgIds[0] == organizationId:
 							matchCount += 1
-							print("\tmatched:", organizationId, copyright)
+							#print("\tmatched:", organizationId, copyright)
 						else:
 							unMatchCount += 1
 							self.displayNames(bibleId, filesetId, hashId, typeCode, organizationRole, slug, organizationId,
 								textCopyright, audioCopyright, videoCopyright, licensor, coLicensor,
-								creativeCommons, electronicPub)
-							if orgIds != None and len(orgIds) > 0:
-								for orgId in orgIds:
-									print("\t*** Found ID", orgId)
+								creativeCommons, electronicPub, copyright)
+							#if orgIds != None and len(orgIds) > 0:
+							#	for orgId in orgIds:
+							#		print("\t*** Found ID", orgId)
+
+					elif typeCode == "text" and organizationRole == 1:
+						copyright = self.parseCopyright(textCopyright)
+						#print("\tParsed Copyright:", copyright)
+						orgIds = orgIdMapList.get(copyright)
+						if orgIds != None and len(orgIds) == 1 and orgIds[0] == organizationId:
+							matchCount += 1
+							#print("\tmatched:", organizationId, copyright)
+						else:
+							unMatchCount += 1
+							self.displayNames(bibleId, filesetId, hashId, typeCode, organizationRole, slug, organizationId,
+								textCopyright, audioCopyright, videoCopyright, licensor, coLicensor,
+								creativeCommons, electronicPub, copyright)
+							#if orgIds != None and len(orgIds) > 0:
+							#	for orgId in orgIds:
+							#		print("\t*** Found ID", orgId)
 
 					else:
 						unMatchCount += 1
 						self.displayNames(bibleId, filesetId, hashId, typeCode, organizationRole, slug, organizationId,
 							textCopyright, audioCopyright, videoCopyright, licensor, coLicensor,
-							creativeCommons, electronicPub)
+							creativeCommons, electronicPub, None)
 
 				else:
 					print("\t*** NO LPTS")
@@ -104,20 +118,27 @@ class Organizations:
 
 		print("total=", len(resultSet), " matched=", matchCount, " unmatched=", unMatchCount, " skiped=", skipCount)
 
+	#### this is the way that it is done in lptsmanager
+	###orgName in tempDic['Copyrightc']:
 
 	def parseCopyright(self, copyright):
 		if copyright != None:
-			pattern = re.compile("([A-Za-z]+)")
-			match = pattern.search(copyright)
+			print("** input", copyright)
+			pattern = re.compile(r".*([A-Za-z]+).*")
+			match = pattern.match(copyright)
 			if match != None:
+				print("** output", match.group(1))
 				return match.group(1)
+		print("** output", "None")
 		return None
 
 
 	def displayNames(self, bibleId, filesetId, hashId, typeCode, organizationRole, slug, organizationId,
 		textCopyright, audioCopyright, videoCopyright, licensor, coLicensor,
-		creativeCommons, electronicPub):
+		creativeCommons, electronicPub, parsedCopyright):
 		print(bibleId, filesetId, hashId, typeCode, organizationRole, slug, organizationId)
+		if parsedCopyright != None:
+			print("\tParsed Copyright", parsedCopyright)
 		if textCopyright != None:
 			print("\ttextCopyright", textCopyright)
 		if audioCopyright != None:
