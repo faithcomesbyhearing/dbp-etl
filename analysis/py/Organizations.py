@@ -12,8 +12,6 @@ from Config import *
 from LPTSExtractReader import *
 from SQLUtility import *
 
-#DROP_CHARS = r"[.,-]"
-
 class Organizations:
 
 	def __init__(self, config):
@@ -21,6 +19,12 @@ class Organizations:
 		self.db.execute("use dbp", ())
 		count = self.db.selectScalar("select count(*) from bibles", ())
 		print("count", count)
+		self.textCopyrightSet = set()
+		self.audioCopyrightSet = set()
+		self.videoCopyrightSet = set()
+		self.licensorSet = set()
+		self.coLicensorSet = set()
+		self.stripChars = r"[.,©℗\d/\-_\(\)]"
 
 
 	def process(self, lptsReader):
@@ -29,6 +33,7 @@ class Organizations:
 		resultSet = self.db.select("SELECT name, organization_id FROM organization_translations", ())
 		for row in resultSet:
 			name = row[0].lower()
+			#name = name.replace("la ", "")
 			#name = name.replace(" ", "")
 			#name = name.replace("the", "")
 			#name = row[0].replace("the")
@@ -71,37 +76,37 @@ class Organizations:
 
 					if typeCode == "audio" and organizationRole == 1:
 						orgName = self.parseCopyright(record.Copyrightp())
+						self.addAudioCopyright(record.Copyrightp())
 					elif typeCode == "audio" and organizationRole == 2:
 						orgName = self.parseLicensor(record.Licensor())
+						self.addLicensor(record.Licensor())
 					elif typeCode == "audio" and organizationRole == 3:
 						orgName = "I don't know"
 					elif typeCode == "text" and organizationRole == 1:
 						orgName = self.parseCopyright(record.Copyrightc())
+						self.addTextCopyright(record.Copyrightc())
 					elif typeCode == "text" and organizationRole == 2:
 						orgName = self.parseLicensor(record.Licensor())
+						self.addLicensor(record.Licensor())
 					elif typeCode == "text" and organizationRole == 3:
 						orgName = "I don't know"
 					elif typeCode == "video" and organizationRole == 1:
 						orgName = self.parseCopyright(record.Copyright_Video())
+						self.addVideoCopyright(record.Copyright_Video())
 					elif typeCode == "video" and organizationRole == 2:
 						orgName = self.parseLicensor(record.licensor())
+						self.addLicensor(record.Licensor())
 					elif typeCode == "video" and organizationRole == 3:
 						orgName = "I don't know"
 					else:
 						print("ERROR: unexpected typeCode", typeCode)
 						sys.exit()
 
-
-					#orgId = orgIdMap.get(orgName)
 					orgId = self.matchName(orgIdMap, orgName)
 					if orgId != None and orgId == organizationId:
 						matchCount += 1
-						#print("\tmatched:", organizationId, orgName)
 					else:
 						unMatchCount += 1
-						#self.displayNames(bibleId, filesetId, hashId, typeCode, organizationRole, slug, organizationId,
-						#	textCopyright, audioCopyright, videoCopyright, licensor, coLicensor,
-						#	creativeCommons, electronicPub, orgName)
 						print("DBP: %s/%s/%s hash:%s, role: %s, orgId: %s, orgSlug: %s" %(typeCode, bibleId, filesetId, hashId, organizationRole, organizationId, slug))
 						if orgId != None:
 							print("\tOrg Lookup Result: %d found for %s" % (orgId, orgName))
@@ -132,25 +137,22 @@ class Organizations:
 				skipCount += 1
 
 		print("total=", len(resultSet), " matched=", matchCount, " unmatched=", unMatchCount, " skiped=", skipCount)
+		for copyright in sorted(self.textCopyrightSet):
+			print("text: |%s|" % (copyright))
+		for copyright in sorted(self.audioCopyrightSet):
+			print("audio: |%s|" % (copyright))
+		for copyright in sorted(self.videoCopyrightSet):
+			print("video: |%s|" % (copyright))
+		for licensor in sorted(self.licensorSet):
+			print("licensor: |%s|" % (licensor))
 
-	#### this is the way that it is done in lptsmanager
-	###orgName in tempDic['Copyrightc']:
 
 	def parseCopyright(self, copyright):
 		if copyright != None:
 			return copyright.lower()
 		else:
 			return None
-		"""
-		result = None
-		if copyright != None:
-			match = re.search(r"[A-Za-z]", copyright)
-			if match != None:
-				result = copyright[match.start():]
-				result = re.sub(DROP_CHARS, "", result)
-			print("*** %s -> |%s|" % (copyright, result))
-		return result
-		"""
+
 
 	def parseLicensor(self, licensor):
 		print("** input ", licensor)
@@ -170,38 +172,60 @@ class Organizations:
 			for name in orgIdMap.keys():
 				if name in orgName:
 					orgId = orgIdMap[name]
-					if orgId==144:
-						return 745
-					elif orgId==72:
-						return 727
-					elif orgId==127:
-						return 750
-					elif orgId==527:
-						return 20
+					if orgId==144:   # bible-society-of-uganda
+						return 745   # the-bible-society-of-uganda
+					elif orgId==72:  # bible-society-of-ghana
+						return 727   # the-bible-society-of-ghana
+					elif orgId==127: # bible-society-of-suriname
+						return 750   # bibles-international
+					elif orgId==527: # sim
+						return 20    # sim-serving-in-mission
+					#elif orgId == 4: # biblica
+					#	return 783	 # the-bible-league
 					else:
 						return orgId
 		return None
 
-	def displayNames(self, bibleId, filesetId, hashId, typeCode, organizationRole, slug, organizationId,
-		textCopyright, audioCopyright, videoCopyright, licensor, coLicensor,
-		creativeCommons, electronicPub, parsedOrgName):
-		print("DBP: %s/%s/%s hash:%s, role: %s, orgId: %s, orgSlug: %s" %(typeCode, bibleId, filesetId, hashId, organizationRole, organizationId, slug))
-		if textCopyright != None:
-			print("\tLPTS Copyrightc:", textCopyright)
-		if audioCopyright != None:
-			print("\tLPTS Copyrightp:", audioCopyright)
-		if videoCopyright != None:
-			print("\tLPTS Copyright_Video:", videoCopyright)
+	def addTextCopyright(self, copyright):
+		if copyright != None:
+			self.textCopyrightSet.add(re.sub(self.stripChars, "", copyright).strip().replace("   ", " ").replace("  ", " "))
+
+	def addAudioCopyright(self, copyright):
+		if copyright != None:
+			self.audioCopyrightSet.add(re.sub(self.stripChars, "", copyright).strip().replace("   ", " ").replace("  ", " "))
+
+	def addVideoCopyright(self, copyright):
+		if copyright != None:
+			self.videoCopyrightSet.add(re.sub(self.stripChars, "", copyright).strip().replace("   ", " ").replace("  ", " "))
+
+	def addLicensor(self, licensor):
 		if licensor != None:
-			print("\tLPTS Licensor:", licensor)
-		if coLicensor != None:
-			print("\tLPTS CoLicensor:", coLicensor)
-		if creativeCommons != None:
-			print("\tLPTS CreativeCommonsText:", creativeCommons)
-		if electronicPub != None:
-			print("\tLPTS ElectronicPublisher:", electronicPub)
-		for possibleName in self.possibleMapList[organizationId]:
-			print("\torganization_translations.name for %s: %s" % (organizationId, possibleName))		
+			self.licensorSet.add(re.sub(self.stripChars, "", licensor).strip().replace("   ", " ").replace("  ", " "))
+
+	def addCoLicensor(self, licensor):
+		if licensor != None:
+			self.licensorSet.add(re.sub(self.stripChars, "", licensor).strip().replace("   ", " ").replace("  ", " "))
+
+#	def displayNames(self, bibleId, filesetId, hashId, typeCode, organizationRole, slug, organizationId,
+#		textCopyright, audioCopyright, videoCopyright, licensor, coLicensor,
+#		creativeCommons, electronicPub, parsedOrgName):
+#		print("DBP: %s/%s/%s hash:%s, role: %s, orgId: %s, orgSlug: %s" %(typeCode, bibleId, filesetId, hashId, organizationRole, organizationId, slug))
+#		if textCopyright != None:
+#			print("\tLPTS Copyrightc:", textCopyright)
+#		if audioCopyright != None:
+#			print("\tLPTS Copyrightp:", audioCopyright)
+#		if videoCopyright != None:
+#			print("\tLPTS Copyright_Video:", videoCopyright)
+#		if licensor != None:
+#			print("\tLPTS Licensor:", licensor)
+#		if coLicensor != None:
+#			print("\tLPTS CoLicensor:", coLicensor)
+#		if creativeCommons != None:
+#			print("\tLPTS CreativeCommonsText:", creativeCommons)
+#		if electronicPub != None:
+#			print("\tLPTS ElectronicPublisher:", electronicPub)
+#		for possibleName in self.possibleMapList[organizationId]:
+#			print("\torganization_translations.name for %s: %s" % (organizationId, possibleName))		
 
 
 if (__name__ == '__main__'):
