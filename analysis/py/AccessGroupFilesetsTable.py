@@ -43,6 +43,7 @@ class AccessGroupFilesetsTable:
 
 			if typeCode in {"text", "audio", "video"}:
 				(lptsRecord, lptsIndex, filesetStatus) = lptsReader.getLPTSRecord(typeCode, bibleId, filesetId)
+				isLive = filesetStatus in {"Live", "live"}
 				if lptsRecord != None:
 					lpts = lptsRecord.record
 				else:
@@ -52,9 +53,9 @@ class AccessGroupFilesetsTable:
 					accessIdInDBP = accessGroupId in accessSet;
 					accessIdInLPTS = lpts.get(lptsName) == "-1"
 
-					if accessIdInLPTS and not accessIdInDBP:
+					if accessIdInLPTS and isLive and not accessIdInDBP:
 						insertRows.append((hashId, accessGroupId))
-					elif accessIdInDBP and not accessIdInLPTS:
+					if accessIdInDBP and (not accessIdInLPTS or not isLive):
 						deleteRows.append((hashId, accessGroupId))
 
 		print("num records to insert %d, num records to delete %d" % (len(insertRows), len(deleteRows)))
@@ -62,13 +63,14 @@ class AccessGroupFilesetsTable:
 			statements.append(("DELETE FROM access_group_filesets WHERE hash_id = %s AND access_group_id = %s", deleteRows))
 		if len(insertRows) > 0:
 			statements.append(("INSERT INTO access_group_filesets (hash_id, access_group_id) VALUES (%s, %s)", insertRows))
+		self.deleteOldGroups(statements)
 		self.db.displayTransaction(statements)
 		self.db.executeTransaction(statements)
 
 
-	def deleteOldGroups(self):
-		self.db.execute("DELETE FROM access_group_filesets WHERE access_group_id < 100", ())
-		self.db.execute("DELETE FROM access_groups WHERE id < 100", ())
+	def deleteOldGroups(self, statements):
+		statements.append(("DELETE FROM access_group_filesets WHERE access_group_id < 100", [()]))
+		statements.append(("DELETE FROM access_groups WHERE id < 100", [()]))
 
 
 	def deleteNewGroups(self):
@@ -77,6 +79,9 @@ class AccessGroupFilesetsTable:
 
 
 	def populateAccessGroups(self):
+		count = self.db.selectScalar("SELECT count(*) FROM access_groups WHERE id > 100", ())
+		if count > 0:
+			return
 		sql = "INSERT INTO access_groups (id, name, description) VALUES (%s, %s, %s)"
 		values = []
 		values.append((101, "allow_text_NT_DBP", "DBPText"))
@@ -110,7 +115,6 @@ class AccessGroupFilesetsTable:
 		values.append((175, "allow_video_SALES", "FCBHStoreVideo"))
 
 		values.append((183, "allow_audio_DOWNLOAD", "Download"))
-		values.append((185, "allow_video_DOWNLOAD", "DownloadVideo"))
 		self.db.executeBatch(sql, values)
 
 
@@ -119,14 +123,17 @@ if (__name__ == '__main__'):
 	db = SQLUtility(config)
 	db.execute("use dbp", ())
 	filesets = AccessGroupFilesetsTable(config, db)
-	#filesets.populateAccessGroups()
+	#filesets.deleteNewGroups()
+	filesets.populateAccessGroups()
 	filesets.process()
 	db.close()
 
 """
-1. Add Logic that will add type, if not present.
-2. Add Logic that will remove old records from bible_fileset if present.
+1. Add code to update dbp_user.access_group_api_keys
+2. Fix bug that relates to text fileset with multiple damids
 3. Test by writing method that read database, generates LPTS Extract like XML.
+4. Also, test the addition, removal and modification of LPTS data
+
 
 
 """
