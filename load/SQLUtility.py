@@ -62,7 +62,7 @@ class SQLUtility:
 
 	def displayTransaction(self, statements):
 		for statement in statements:
-			for values in statement[1][:10]: # do first 10 only
+			for values in statement[1][:100]: # do first 100 only
 				print(statement[0] % values)
 
 

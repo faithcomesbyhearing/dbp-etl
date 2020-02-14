@@ -59,17 +59,16 @@ class LPTSExtractReader:
 		return bibleIdMap
 
 
-	## Returns one (record, index, status) for typeCode, bibleId, filesetId
+	## Returns one (record, index) for typeCode, bibleId, filesetId
 	def getLPTSRecord(self, typeCode, bibleId, filesetId):
 		normFilesetId = filesetId[:10]
 		lptsRecords = self.bibleIdMap.get(bibleId)
 		if lptsRecords != None:
 			for (index, record) in lptsRecords:
-				damIdMap = record.DamIds(typeCode, index)
-				(statusKey, status) = damIdMap.get(normFilesetId, (None, None))
-				if statusKey != None:
-					return (record, index, status)
-		return (None, None, None)
+				damIdSet = record.DamIds(typeCode, index)
+				if filesetId in damIdSet:
+					return (record, index)
+		return (None, None)
 
 
 class LPTSRecord:
@@ -80,8 +79,7 @@ class LPTSRecord:
 	def recordLen(self):
 		return len(self.record.keys())
 
-	## Return the damId's of a record in a map of damId keys
-	## result is map damId: [(statusKey, status)]
+	## Return the damId's of a record in a set of damIds
 	def DamIds(self, typeCode, index):
 		if not typeCode in {"audio", "text", "video"}:
 			print("ERROR: Unknown typeCode '%s', audio, text, or video is expected." % (typeCode))
@@ -146,14 +144,15 @@ class LPTSRecord:
 				"Video_Matt_DamStockNo": "Video_Matt_DamStatus"
 			}	
 		hasKeys = set(damIdDict.keys()).intersection(set(self.record.keys()))
-		results = {}
+		results = set()
 		for key in hasKeys:
 			statusKey = damIdDict[key]
 			damId = self.record[key]
 			if typeCode == "text":
 				damId = damId[:6]
 			status = self.record.get(statusKey)
-			results[damId] = (statusKey, status)
+			if status in {"Live", "live"}:
+				results.add(damId)
 		return results
 
 	def AltName(self):
@@ -378,3 +377,12 @@ class LPTSRecord:
 		return self.record.get("WebHubVideo")
 
 
+if (__name__ == '__main__'):
+	config = Config()
+	reader = LPTSExtractReader(config)
+	recs = reader.bibleIdMap.get("AGUNVS")
+	for (index, rec) in recs:
+		print(index, rec.Download())
+	(lptsRecord, lptsIndex) = reader.getLPTSRecord("text", "AGUNVS", "AGUNVS")
+	record = lptsRecord.record
+	print("Download", record.get("Download"))

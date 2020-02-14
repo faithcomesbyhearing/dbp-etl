@@ -1,4 +1,4 @@
-# AccessGroupFilesetsTable.py
+# UpdateDBPLPTSTable.py
 #
 #| access_group_id | int(10) unsigned | NO   | PRI | NULL              |
 #| hash_id         | char(12)         | NO   | PRI | NULL              |
@@ -16,7 +16,7 @@ from Config import *
 from LPTSExtractReader import *
 from SQLUtility import *
 
-class AccessGroupFilesetsTable:
+class UpdateDBPLPTSTable:
 
 	def __init__(self, config, db):
 		self.config = config
@@ -42,8 +42,7 @@ class AccessGroupFilesetsTable:
 			accessSet = self.db.selectSet("SELECT access_group_id FROM access_group_filesets WHERE hash_id = %s", (hashId))
 
 			if typeCode in {"text", "audio", "video"}:
-				(lptsRecord, lptsIndex, filesetStatus) = lptsReader.getLPTSRecord(typeCode, bibleId, filesetId)
-				isLive = filesetStatus in {"Live", "live"}
+				(lptsRecord, lptsIndex) = lptsReader.getLPTSRecord(typeCode, bibleId, filesetId)
 				if lptsRecord != None:
 					lpts = lptsRecord.record
 				else:
@@ -53,9 +52,9 @@ class AccessGroupFilesetsTable:
 					accessIdInDBP = accessGroupId in accessSet;
 					accessIdInLPTS = lpts.get(lptsName) == "-1"
 
-					if accessIdInLPTS and isLive and not accessIdInDBP:
+					if accessIdInLPTS and not accessIdInDBP:
 						insertRows.append((hashId, accessGroupId))
-					if accessIdInDBP and (not accessIdInLPTS or not isLive):
+					if accessIdInDBP and not accessIdInLPTS:
 						deleteRows.append((hashId, accessGroupId))
 
 		print("num records to insert %d, num records to delete %d" % (len(insertRows), len(deleteRows)))
@@ -72,11 +71,11 @@ class AccessGroupFilesetsTable:
 		statements.append(("DELETE FROM access_group_filesets WHERE access_group_id < 100", [()]))
 		statements.append(("DELETE FROM access_groups WHERE id < 100", [()]))
 
-
-	def deleteNewGroups(self):
-		self.db.execute("DELETE FROM access_group_filesets WHERE access_group_id > 100", ())
-		self.db.execute("DELETE FROM access_groups WHERE id > 100", ())
-
+	#
+	#def deleteNewGroups(self):
+	#	self.db.execute("DELETE FROM access_group_filesets WHERE access_group_id > 100", ())
+	#	self.db.execute("DELETE FROM access_groups WHERE id > 100", ())
+	#
 
 	def populateAccessGroups(self):
 		count = self.db.selectScalar("SELECT count(*) FROM access_groups WHERE id > 100", ())
@@ -149,14 +148,11 @@ class AccessGroupFilesetsTable:
 					print(damid, status)
 
 
-
-
-
 if (__name__ == '__main__'):
 	config = Config()
 	db = SQLUtility(config)
 	db.execute("use dbp", ())
-	filesets = AccessGroupFilesetsTable(config, db)
+	filesets = UpdateDBPLPTSTable(config, db)
 	#filesets.deleteNewGroups()
 	filesets.populateAccessGroups()
 	filesets.process()
@@ -164,7 +160,7 @@ if (__name__ == '__main__'):
 
 """
 config = Config()
-AccessGroupFilesetsTable.findTextFilesetErrors(config)
+UpdateDBPLPTSTable.findTextFilesetErrors(config)
 """
 
 """
@@ -174,8 +170,5 @@ For CBITBL, the WEB does not display the partial Bible with no Live status
 3. Possibly find all those damids that have this problem.
 3. Test by writing method that read database, generates LPTS Extract like XML.
 4. Also, test the addition, removal and modification of LPTS data
-
-
-
 """
 

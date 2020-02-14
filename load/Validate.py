@@ -141,14 +141,14 @@ class Validate:
 				## Validate filesetIds against LPTS
 				filesetIds = inputIdMap[biblePrefix]
 				for filesetId in filesetIds:
-					(lptsRecord, index, status) = self.lptsReader.getLPTSRecord(typeCode, bibleId, filesetId)
+					(lptsRecord, index) = self.lptsReader.getLPTSRecord(typeCode, bibleId, filesetId)
 					if lptsRecord == None:
 						self.missingFilesetIds.append((typeCode, bibleId, filesetId))
 					else:
 
 						stockNo = lptsRecord.Reg_StockNumber()
-						if not status in {"Live", "live"}:
-							self.damIdStatus.append((typeCode, bibleId, filesetId, stockNo, status))
+						#if not status in {"Live", "live"}:
+						#	self.damIdStatus.append((typeCode, bibleId, filesetId, stockNo, status))
 
 						## Validate Required fields are present
 						if lptsRecord.Copyrightc() == None:
@@ -185,8 +185,8 @@ class Validate:
 			self.errorMessages.append("%s/%s/%s LPTS %s field %s is required.\tEROR" % (typeCode, bibleId, filesetId, stockNo, fieldName))
 		for (typeCode, bibleId, filesetId, stockNo, fieldName) in self.suggestedFields:
 			self.errorMessages.append("%s/%s/%s LPTS %s field %s is missing.\tWARN" % (typeCode, bibleId, filesetId, stockNo, fieldName))
-		for (typeCode, bibleId, filesetId, stockNo, status) in self.damIdStatus:
-			self.errorMessages.append("%s/%s/%s LPTS %s has status = %s.\tWARN" % (typeCode, bibleId, filesetId, stockNo, status))
+		#for (typeCode, bibleId, filesetId, stockNo, status) in self.damIdStatus:
+		#	self.errorMessages.append("%s/%s/%s LPTS %s has status = %s.\tWARN" % (typeCode, bibleId, filesetId, stockNo, status))
 
 		errorDir = self.config.directory_errors
 		pattern = self.config.filename_datetime 

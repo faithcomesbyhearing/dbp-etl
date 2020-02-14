@@ -445,7 +445,7 @@ class FilenameParser:
 				if bitrateSuffix != '' and not bitrateSuffix.isdigit():
 					errorMessages.append("%s filesetId positions 11,12 must be a bitrate number if present.\tEROR" % (prefix))
 
-			(lptsRecord, index, status) = lptsReader.getLPTSRecord(typeCode, bibleId, filesetId)
+			(lptsRecord, index) = lptsReader.getLPTSRecord(typeCode, bibleId, filesetId)
 			self.otOrder = self.OTOrderTemp(filesetId, lptsRecord)
 			self.ntOrder = self.NTOrderTemp(filesetId, lptsRecord)
 
