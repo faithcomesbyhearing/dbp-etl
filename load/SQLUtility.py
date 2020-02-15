@@ -39,6 +39,19 @@ class SQLUtility:
 			self.error(cursor, statement, err)
 
 
+	def executeInsert(self, statement, values):
+		cursor = self.conn.cursor()
+		try :
+			cursor.execute(statement, values)
+			self.conn.commit()
+			lastRow = cursor.lastrowid
+			cursor.close()
+			return lastRow
+		except Exception as err:
+			self.error(cursor, statement, err)
+			return None
+
+
 	def executeBatch(self, statement, valuesList):
 		cursor = self.conn.cursor()
 		try:

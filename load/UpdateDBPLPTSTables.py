@@ -69,6 +69,8 @@ class UpdateDBPLPTSTable:
 
 	def deleteOldGroups(self, statements):
 		statements.append(("DELETE FROM access_group_filesets WHERE access_group_id < 100", [()]))
+		#statements.append(("DELETE FROM access_group_api_keys WHERE access_group_id < 100", [()]))
+		#statements.append(("DELETE FROM access_group_keys WHERE access_group_id < 100", [()]))
 		statements.append(("DELETE FROM access_groups WHERE id < 100", [()]))
 
 	#
@@ -116,38 +118,53 @@ class UpdateDBPLPTSTable:
 		values.append((183, "allow_audio_DOWNLOAD", "Download"))
 		self.db.executeBatch(sql, values)
 
-    ## temp analysis method, to find audio damids with different statuses
-	def findTextFilesetErrors(config):
-		damIdDict = {
-			"ND_NTTextDamID1": 		"ND_NTTextDamIDStatus1",
-			"ND_OTTextDamID1": 		"ND_OTTextDamIDStatus1",
-			"Reg_NTTextDamID1": 	"Reg_NTTextDamIDStatus1",
-			"Reg_OTTextDamID1": 	"Reg_OTTextDamIDStatus1",
-			"ND_NTTextDamID2": 		"ND_NTTextDamIDStatus2",
-			"ND_OTTextDamID2": 		"ND_OTTextDamIDStatus2", 
-			"Reg_NTTextDamID2": 	"Reg_NTTextDamIDStatus2",
-			"Reg_OTTextDamID2": 	"Reg_OTTextDamIDStatus2",
-			"ND_NTTextDamID3": 		"ND_NTTextDamIDStatus3",
-			"ND_OTTextDamID3": 		"ND_OTTextDamIDStatus3",
-			"Reg_NTTextDamID3": 	"Reg_NTTextDamIDStatus3", 
-			"Reg_OTTextDamID3": 	"Reg_OTTextDamIDStatus3"}
-		lptsReader = LPTSExtractReader(config)
-		for record in lptsReader.resultSet:
-			record = record.record
-			damIdMap = {}
-			statusSet = set()
-			for key, statusKey in damIdDict.items():
-				damid = record.get(key)
-				if damid != None:
-					status = record.get(statusKey)
-					statusSet.add(status)
-					damIdMap[damid] = status
-			if len(statusSet) > 1:
-				print("\nbible_id: %s,  iso: %s,  lang: %s" % (record.get("DBP_Equivalent"), record.get("ISO"), record.get("LangName")))
-				for damid, status in damIdMap.items():
-					print(damid, status)
+
+	def populateAccessGroupAPIKeys(self, userId, key, name, description, allowDbp, allowWeb, allowAPI, allowAPP, allowGBA):
+		dbpSet = {101, 102, 103}
+		webSet = {111, 113, 115}
+		apiSet = {121, 123, 125}
+		appSet = {131, 133, 135}
+		gbaSet = {141, 143, 145}
+		
+		## Update access_group_api_keys
+		sql = ("INSERT INTO user_keys (user_id, `key`, name, description) VALUES (%s, %s, %s, %s)")
+		values = (userId, key, name, description)
+		keyId = self.db.executeInsert(sql, values)
+		#keyId = self.db.lastRow()
+		#keyId = self.db.conn.cursor().lastrowid
+		print("keyId", keyId)
+		apiSql = ("INSERT INTO access_group_api_keys (access_group_id, key_id) VALUES (%s, %s)")
+		keySql = ("INSERT INTO access_group_keys (access_group_id, key_id_alt, key_id) VALUES (%s, %s, %s)")
+
+		apiValues = []
+		keyValues = []
+		if allowDbp:
+			for accessId in dbpSet:
+				apiValues.append((accessId, keyId))
+				keyValues.append((accessId, keyId, key))
+		if allowWeb:
+			for accessId in webSet:
+				apiValues.append((accessId, keyId))
+				keyValues.append((accessId, keyId, key))
+		if allowAPI:
+			for accessId in apiSet:
+				apiValues.append((accessId, keyId))
+				keyValues.append((accessId, keyId, key))				
+		if allowAPP:
+			for accessId in apiSet:
+				apiValues.append((accessId, keyId))
+				keyValues.append((accessId, keyId, key))
+		if allowGBA:
+			for accessId in gbaSet:
+				apiValues.append((accessId, keyId))
+				keyValues.append((accessId, keyId, key))
+		print("%s rows inserted into access_group_api_keys" % (len(apiValues)))
+		self.db.executeBatch(apiSql, apiValues)
+		print("%d rows inserted into access_group_keys" % (len(keyValues)))
+		self.db.executeBatch(keySql, keyValues)
 
 
+"""
 if (__name__ == '__main__'):
 	config = Config()
 	db = SQLUtility(config)
@@ -157,18 +174,18 @@ if (__name__ == '__main__'):
 	filesets.populateAccessGroups()
 	filesets.process()
 	db.close()
+"""
+if (__name__ == '__main__'):
+	config = Config()
+	db = SQLUtility(config)
+	db.execute("use dbp_users", ())
+	filesets = UpdateDBPLPTSTable(config, db)
+	filesets.populateAccessGroupAPIKeys(4, "abcdefghijklmnop", "test", "test", True, True, True, True, True)
+
 
 """
-config = Config()
-UpdateDBPLPTSTable.findTextFilesetErrors(config)
-"""
-
-"""
-1. Add code to update dbp_user.access_group_api_keys
-2. Fix bug that relates to text fileset with multiple damids
-For CBITBL, the WEB does not display the partial Bible with no Live status
-3. Possibly find all those damids that have this problem.
 3. Test by writing method that read database, generates LPTS Extract like XML.
 4. Also, test the addition, removal and modification of LPTS data
 """
+
 
