@@ -11,7 +11,7 @@
 import io
 import os
 import sys
-import hashlib
+import re
 from Config import *
 from LPTSExtractReader import *
 from SQLUtility import *
@@ -164,7 +164,59 @@ class UpdateDBPLPTSTable:
 		self.db.executeBatch(keySql, keyValues)
 
 
-"""
+	def accessGroupSymmetricTest(self):
+		sql = ("SELECT distinct bfc.bible_id, agf.access_group_id, ag.description"
+			" FROM bible_fileset_connections bfc, bible_filesets bf, access_group_filesets agf, access_groups ag"
+			" WHERE bfc.hash_id = bf.hash_id"
+			" AND bf.hash_id = agf.hash_id"
+			" AND agf.access_group_id = ag.id"
+			" ORDER BY bfc.bible_id, ag.description")
+		resultSet = self.db.select(sql, ())
+		with open("test_DBP.txt", "w") as outFile:
+			priorKey = None
+			for (bibleId, accessGroupId, lptsName) in resultSet:
+				key = bibleId
+				#key = "%s/%s" % (bibleId, filesetId)
+				if key != priorKey:
+					outFile.write("<DBP_Equivalent>%s</DBP_Equivalent>\n" % (bibleId))
+					priorKey = key
+				outFile.write("\t<%s>-1</%s>\n" % (lptsName, lptsName))
+
+		with open(self.config.filename_lpts_xml, "r") as lpts:
+			results = {}
+			permissions = set()
+			hasLive = False
+			for line in lpts:
+				if "<DBP_Eq" in line:
+					if len(permissions) > 0 and hasLive:
+						results[bibleId] = permissions
+					permissions = set()
+					hasLive = False
+					pattern = re.compile("<DBP_Equivalent[123]?>([A-Z0-9]+)</DBP_Equivalent[123]?>")
+					found = pattern.search(line)
+					if found != None:
+						bibleId = found.group(1)
+				if ">-1<" in line:
+					permissions.add(line.strip())
+				if ">Live<" in line or ">live<" in line:
+					hasLive = True
+		with open("test_LPTS.txt", "w") as outFile:
+			for bibleId in sorted(results.keys()):
+				outFile.write("<DBP_Equivalent>%s</DBP_Equivalent>\n" % (bibleId))
+				for permission in sorted(results[bibleId]):
+					outFile.write("\t%s\n" % (permission))
+		
+
+
+
+
+
+
+
+
+
+
+
 if (__name__ == '__main__'):
 	config = Config()
 	db = SQLUtility(config)
@@ -173,18 +225,16 @@ if (__name__ == '__main__'):
 	#filesets.deleteNewGroups()
 	filesets.populateAccessGroups()
 	filesets.process()
+	#filesets.accessGroupSymmetricTest()
 	db.close()
 """
-if (__name__ == '__main__'):
-	config = Config()
-	db = SQLUtility(config)
 	db.execute("use dbp_users", ())
 	filesets = UpdateDBPLPTSTable(config, db)
 	filesets.populateAccessGroupAPIKeys(4, "abcdefghijklmnop", "test", "test", True, True, True, True, True)
+"""
 
 
 """
-3. Test by writing method that read database, generates LPTS Extract like XML.
 4. Also, test the addition, removal and modification of LPTS data
 """
 
