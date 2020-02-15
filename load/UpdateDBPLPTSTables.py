@@ -23,7 +23,7 @@ class UpdateDBPLPTSTable:
 		self.db = db
 
 
-	def process(self):
+	def updateAccessGroupFilesets(self):
 		statements = []
 		insertRows = []
 		deleteRows = []
@@ -79,7 +79,7 @@ class UpdateDBPLPTSTable:
 	#	self.db.execute("DELETE FROM access_groups WHERE id > 100", ())
 	#
 
-	def populateAccessGroups(self):
+	def insertAccessGroups(self):
 		count = self.db.selectScalar("SELECT count(*) FROM access_groups WHERE id > 100", ())
 		if count > 0:
 			return
@@ -119,7 +119,7 @@ class UpdateDBPLPTSTable:
 		self.db.executeBatch(sql, values)
 
 
-	def populateAccessGroupAPIKeys(self, userId, key, name, description, allowDbp, allowWeb, allowAPI, allowAPP, allowGBA):
+	def insertAccessGroupAPIKeys(self, userId, key, name, description, allowDbp, allowWeb, allowAPI, allowAPP, allowGBA):
 		dbpSet = {101, 102, 103}
 		webSet = {111, 113, 115}
 		apiSet = {121, 123, 125}
@@ -205,16 +205,6 @@ class UpdateDBPLPTSTable:
 				outFile.write("<DBP_Equivalent>%s</DBP_Equivalent>\n" % (bibleId))
 				for permission in sorted(results[bibleId]):
 					outFile.write("\t%s\n" % (permission))
-		
-
-
-
-
-
-
-
-
-
 
 
 if (__name__ == '__main__'):
@@ -223,14 +213,14 @@ if (__name__ == '__main__'):
 	db.execute("use dbp", ())
 	filesets = UpdateDBPLPTSTable(config, db)
 	#filesets.deleteNewGroups()
-	filesets.populateAccessGroups()
-	filesets.process()
+	filesets.insertAccessGroups()
+	filesets.updateAccessGroupFilesets()
 	#filesets.accessGroupSymmetricTest()
 	db.close()
 """
 	db.execute("use dbp_users", ())
 	filesets = UpdateDBPLPTSTable(config, db)
-	filesets.populateAccessGroupAPIKeys(4, "abcdefghijklmnop", "test", "test", True, True, True, True, True)
+	filesets.insertAccessGroupAPIKeys(4, "abcdefghijklmnop", "test", "test", True, True, True, True, True)
 """
 
 
