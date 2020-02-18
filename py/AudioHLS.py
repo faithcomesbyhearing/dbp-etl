@@ -118,7 +118,8 @@ class AudioHLS:
 
 	def processBibleId(self, bibleId):
 		filesetList = self.adapter.selectFilesetIds(bibleId)
-		for filesetId in filesetList:
+#		for filesetId in filesetList:
+		for filesetId in [ "ENGESVN1DA" ]:
 			self.processFilesetId(bibleId, filesetId)
 
 

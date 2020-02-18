@@ -18,8 +18,8 @@ from SQLUtility import *
 
 TIM_HOST = "localhost"
 TIM_USER = "sa"
-TIM_PORT = 3320
-TIM_DB_NAME = "dbp_200116"
+TIM_PORT = 3310
+TIM_DB_NAME = "dbp_newdata"
 
 
 class BibleFileTimestamps_Insert:
