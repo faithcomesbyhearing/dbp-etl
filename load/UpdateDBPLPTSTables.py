@@ -30,8 +30,11 @@ class UpdateDBPLPTSTable:
 			" ORDER BY b.bible_id, bf.id, bf.set_type_code")
 		filesetList = self.db.select(sql, ())
 		self.updateAccessGroupFilesets(filesetList)
+		self.updateBibleFilesetCopyrights(filesetList)
 
-
+	##
+	## Access Group Filesets
+	##
 	def updateAccessGroupFilesets(self, filesetList):
 		statements = []
 		insertRows = []
@@ -44,7 +47,7 @@ class UpdateDBPLPTSTable:
 
 			accessSet = self.db.selectSet("SELECT access_group_id FROM access_group_filesets WHERE hash_id = %s", (hashId))
 
-			if typeCode in {"text", "audio", "video"}:
+			if typeCode != "app":
 				(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecord(typeCode, bibleId, filesetId)
 				if lptsRecord != None:
 					lpts = lptsRecord.record
@@ -57,10 +60,10 @@ class UpdateDBPLPTSTable:
 
 					if accessIdInLPTS and not accessIdInDBP:
 						insertRows.append((hashId, accessGroupId))
-					if accessIdInDBP and not accessIdInLPTS:
+					elif accessIdInDBP and not accessIdInLPTS:
 						deleteRows.append((hashId, accessGroupId))
 
-		print("num records to insert %d, num records to delete %d" % (len(insertRows), len(deleteRows)))
+		print("num access_group_filesets to insert %d, num to delete %d" % (len(insertRows), len(deleteRows)))
 		if len(deleteRows) > 0:
 			statements.append(("DELETE FROM access_group_filesets WHERE hash_id = %s AND access_group_id = %s", deleteRows))
 		if len(insertRows) > 0:
@@ -208,6 +211,82 @@ class UpdateDBPLPTSTable:
 				outFile.write("<DBP_Equivalent>%s</DBP_Equivalent>\n" % (bibleId))
 				for permission in sorted(results[bibleId]):
 					outFile.write("\t%s\n" % (permission))
+
+	##
+	## Bible Fileset Copyrights
+	##
+	def updateBibleFilesetCopyrights(self, filesetList):
+		## primary key is hash_id
+		insertRows = []
+		updateRows = []
+		deleteRows = []
+		statements = []
+		for (bibleId, filesetId, setTypeCode, setSizeCode, assetId, hashId) in filesetList:
+			typeCode = setTypeCode.split("_")[0]
+
+			sql = ("SELECT copyright_date, copyright, copyright_description, open_access"
+				" FROM bible_fileset_copyrights WHERE hash_id = %s")
+			row = self.db.selectRow(sql, (hashId))
+
+			if typeCode != "app":
+				(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecord(typeCode, bibleId, filesetId)
+				if lptsRecord != None:
+					copyrightText = lptsRecord.Copyrightc()
+					copyrightAudio = lptsRecord.Copyrightp()
+					copyrightVideo = lptsRecord.Copyright_Video()
+
+					if typeCode == "text":
+						copyright = copyrightText
+						copyrightMsg = copyrightText
+					elif typeCode == "audio":
+						copyright = copyrightAudio
+						copyrightMsg = "Text: %s\nAudio: %s" % (copyrightText, copyrightAudio)
+					elif typeCode == "video":
+						copyright = copyrightVideo
+						copyrightMsg = "Text: %s\nAudio: %s\nVideo: %s" % (copyrightText, copyrightAudio, copyrightVideo)
+
+					copyrightDate = None
+					if copyright != None:
+						datePattern = re.compile("([0-9]+)")
+						year = datePattern.search(copyright)
+						if year != None:
+							copyrightDate = year.group(1)
+							## Should I work on finding multiple dates?
+					#values = (hashId, copyrightDate, copyrightMsg, "")
+					#self.statements.append((sql, [values]))
+
+				if row != None and lptsRecord == None:
+					deleteRows.append((hashId,))
+
+				elif lptsRecord != None and row == None:
+					insertRows.append((copyrightDate, copyrightMsg, copyrightMsg, 1, hashId))
+
+				## This needs to come back after testing
+				#elif (row != None and
+				#	(row[0] != copyrightDate
+				#	or row[1] != copyrightMsg
+				#	or row[2] != copyrightMsg
+				#	or row[3] != 1)):
+				elif (row != None and
+					(row[1] != copyrightMsg
+					or row[2] != copyrightMsg
+					or row[3] != 1)):
+					updateRows.append((copyrightDate, copyrightMsg, copyrightMsg, 1, hashId))
+
+		print("num bible_fileset_copyright to insert %d, num to update %s, num to delete %d" % (len(insertRows), len(updateRows), len(deleteRows)))
+		if len(insertRows) > 0:
+			sql = ("INSERT INTO bible_fileset_copyrights(copyright_date, copyright,"
+				" copyright_description, open_access, hash_id) VALUES (%s, %s, %s, %s, %s)")
+			statements.append((sql, insertRows))
+		if len(updateRows) > 0:
+			sql = ("UPDATE bible_fileset_copyrights SET copyright_date =%s, copyright = %s,"
+				" copyright_description = %s, open_access = %s WHERE hash_id = %s")
+			statements.append((sql, updateRows))
+		if len(deleteRows) > 0:
+			sql = ("DELETE FROM bible_fileset_copyrights WHERE hash_id = %s")
+			statements.append((sql, deleteRows))
+		self.db.displayTransaction(statements)
+		#self.db.executeTransaction(statements)
 
 
 if (__name__ == '__main__'):
