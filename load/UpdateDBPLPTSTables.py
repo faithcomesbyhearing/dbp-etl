@@ -18,31 +18,34 @@ from SQLUtility import *
 
 class UpdateDBPLPTSTable:
 
-	def __init__(self, config, db):
+	def __init__(self, config, db, lptsReader):
 		self.config = config
 		self.db = db
+		self.lptsReader = lptsReader
 
 
-	def updateAccessGroupFilesets(self):
+	def process(self):
+		sql = ("SELECT b.bible_id, bf.id, bf.set_type_code, bf.set_size_code, bf.asset_id, bf.hash_id"
+			" FROM bible_filesets bf JOIN bible_fileset_connections b ON bf.hash_id = b.hash_id"
+			" ORDER BY b.bible_id, bf.id, bf.set_type_code")
+		filesetList = self.db.select(sql, ())
+		self.updateAccessGroupFilesets(filesetList)
+
+
+	def updateAccessGroupFilesets(self, filesetList):
 		statements = []
 		insertRows = []
 		deleteRows = []
 		## note id > 100 is temporary
 		accessGroupMap = self.db.selectMap("SELECT id, description FROM access_groups WHERE id > 100", ())
 
-		lptsReader = LPTSExtractReader(self.config)
-
-		sql = ("SELECT b.bible_id, bf.id, bf.set_type_code, bf.set_size_code, bf.asset_id, bf.hash_id"
-			" FROM bible_filesets bf JOIN bible_fileset_connections b ON bf.hash_id = b.hash_id"
-			" ORDER BY b.bible_id, bf.id, bf.set_type_code")
-		filesetList = self.db.select(sql, ())
 		for (bibleId, filesetId, setTypeCode, setSizeCode, assetId, hashId) in filesetList:
 			typeCode = setTypeCode.split("_")[0]
 
 			accessSet = self.db.selectSet("SELECT access_group_id FROM access_group_filesets WHERE hash_id = %s", (hashId))
 
 			if typeCode in {"text", "audio", "video"}:
-				(lptsRecord, lptsIndex) = lptsReader.getLPTSRecord(typeCode, bibleId, filesetId)
+				(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecord(typeCode, bibleId, filesetId)
 				if lptsRecord != None:
 					lpts = lptsRecord.record
 				else:
@@ -209,13 +212,14 @@ class UpdateDBPLPTSTable:
 
 if (__name__ == '__main__'):
 	config = Config()
+	lptsReader = LPTSExtractReader(config)
 	db = SQLUtility(config)
 	db.execute("use dbp", ())
-	filesets = UpdateDBPLPTSTable(config, db)
+	filesets = UpdateDBPLPTSTable(config, db, lptsReader)
+	filesets.insertAccessGroups() # temporary
 	#filesets.deleteNewGroups()
-	filesets.insertAccessGroups()
-	filesets.updateAccessGroupFilesets()
-	#filesets.accessGroupSymmetricTest()
+	filesets.process()
+	filesets.accessGroupSymmetricTest()
 	db.close()
 """
 	db.execute("use dbp_users", ())

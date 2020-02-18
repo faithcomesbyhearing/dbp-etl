@@ -129,7 +129,7 @@ class UpdateDBPDatabase:
 				self.deleteBibleFiles(hashId)
 				self.insertBibleFileset(bucket, filesetId, hashId, setTypeCode, setSizeCode)
 				self.insertBibleFilesetTags(typeCode, filesetId, hashId, lptsRecord)
-				self.insertBibleFilesetCopyrights(typeCode, hashId, lptsRecord)
+				#self.insertBibleFilesetCopyrights(typeCode, hashId, lptsRecord)
 				self.insertBibleFilesetCopyrightOrganizations()
 				self.insertAccessGroupFilesets()
 				self.insertBibleFiles(hashId, csvFilename)
@@ -208,33 +208,33 @@ class UpdateDBPDatabase:
 		self.statements.append((sql, values))
 
 
-	def insertBibleFilesetCopyrights(self, typeCode, hashId, lptsRecord):
-		## primary key is hash_id
-		sql = ("INSERT INTO bible_fileset_copyrights(hash_id, copyright_date,"
-			" copyright, copyright_description) VALUES (%s, %s, %s, %s)")
-		copyrightText = lptsRecord.Copyrightc()
-		copyrightAudio = lptsRecord.Copyrightp()
-		copyrightVideo = lptsRecord.Copyright_Video()
-
-		if typeCode == "text":
-			copyright = copyrightText
-			copyrightMsg = copyrightText
-		elif typeCode == "audio":
-			copyright = copyrightAudio
-			copyrightMsg = "Text: %s\nAudio: %s" % (copyrightText, copyrightAudio)
-		elif typeCode == "video":
-			copyright = copyrightVideo
-			copyrightMsg = "Text: %s\nAudio: %s\nVideo: %s" % (copyrightText, copyrightAudio, copyrightVideo)
-
-		copyrightDate = None
-		if copyright != None:
-			datePattern = re.compile("([0-9]+)")
-			year = datePattern.search(copyright)
-			if year != None:
-				copyrightDate = year.group(1)
-				## Should I work on finding multiple dates?
-		values = (hashId, copyrightDate, copyrightMsg, "")
-		self.statements.append((sql, [values]))
+#	def insertBibleFilesetCopyrights(self, typeCode, hashId, lptsRecord):
+#		## primary key is hash_id
+#		sql = ("INSERT INTO bible_fileset_copyrights(hash_id, copyright_date,"
+#			" copyright, copyright_description) VALUES (%s, %s, %s, %s)")
+#		copyrightText = lptsRecord.Copyrightc()
+#		copyrightAudio = lptsRecord.Copyrightp()
+#		copyrightVideo = lptsRecord.Copyright_Video()
+#
+#		if typeCode == "text":
+#			copyright = copyrightText
+#			copyrightMsg = copyrightText
+#		elif typeCode == "audio":
+#			copyright = copyrightAudio
+#			copyrightMsg = "Text: %s\nAudio: %s" % (copyrightText, copyrightAudio)
+#		elif typeCode == "video":
+#			copyright = copyrightVideo
+#			copyrightMsg = "Text: %s\nAudio: %s\nVideo: %s" % (copyrightText, copyrightAudio, copyrightVideo)
+#
+#		copyrightDate = None
+#		if copyright != None:
+#			datePattern = re.compile("([0-9]+)")
+#			year = datePattern.search(copyright)
+#			if year != None:
+#				copyrightDate = year.group(1)
+#				## Should I work on finding multiple dates?
+#		values = (hashId, copyrightDate, copyrightMsg, "")
+#		self.statements.append((sql, [values]))
 
 
 	def insertBibleFilesetCopyrightOrganizations(self):
