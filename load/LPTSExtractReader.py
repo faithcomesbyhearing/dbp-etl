@@ -72,27 +72,82 @@ class LPTSExtractReader:
 		return (None, None)
 
 
-	## Returns set(lptsRecord) for filesetId
-	## This method is purely for debugging, not founds resulting from others
-	def getFilesetRecord(self, filesetId):
+	## A test method that returns array of status and records [(status, lptsRecord)]
+	def getFilesetRecords(self, filesetId):
 		if self.filesetIdMap == None:
 			self.filesetIdMap = {}
+			damIdDict = {**LPTSRecord.audio1DamIdDict,
+						**LPTSRecord.audio2DamIdDict,
+						**LPTSRecord.audio3DamIdDict,
+						**LPTSRecord.text1DamIdDict,
+						**LPTSRecord.text2DamIdDict,
+						**LPTSRecord.text3DamIdDict,
+						**LPTSRecord.videoDamIdDict}
 			for lptsRecord in self.resultSet:
-				for typeCode in {"text", "audio", "video"}:
-					indexSet = {1} if typeCode == "video" else {1, 2, 3}
-					for index in indexSet:
-						damIdSet = lptsRecord.DamIds(typeCode, index)
-						for damId in damIdSet:
-							records = self.filesetIdMap.get(damId, set())
-							records.add(lptsRecord)
-							self.filesetIdMap[damId] = records
-			#for filesetId, recs in self.filesetIdMap.items():
-			#	if len(recs) > 1:
-			#		print("%s has %d records" % (filesetId, len(recs)))
+				record = lptsRecord.record
+				hasKeys = set(damIdDict.keys()).intersection(set(record.keys()))
+				for key in hasKeys:
+					statusKey = damIdDict[key]
+					damId = record[key]
+					if "Text" in key:
+						damId = damId[:6]
+					status = record.get(statusKey)
+					statuses = self.filesetIdMap.get(damId, [])
+					statuses.append((status, lptsRecord))
+					self.filesetIdMap[damId] = statuses
 		return self.filesetIdMap.get(filesetId[:10], None)
 
 
 class LPTSRecord:
+
+	audio1DamIdDict = {
+		"CAudioDAMID1": 		"CAudioStatus1",
+		"CAudioDamStockNo": 	"CAudioDamStatus",
+		"ND_NTAudioDamID1": 	"ND_NTAudioDamIDStatus1",
+		"ND_OTAudioDamID1": 	"ND_OTAudioDamIDStatus1",
+		"Reg_NTAudioDamID1": 	"Reg_NTAudioDamIDStatus1",
+		"Reg_OTAudioDamID1": 	"Reg_OTAudioDamIDStatus1"
+	}
+	audio2DamIdDict = {
+		"ND_CAudioDamID2": 		"ND_CAudioDamIDStatus2",
+		"ND_NTAudioDamID2": 	"ND_NTAudioDamIDStatus2",
+		"ND_OTAudioDamID2": 	"ND_OTAudioDamIDStatus2",
+		"Reg_CAudioDamID2": 	"Reg_CAudioDamIDStatus2",
+		"Reg_NTAudioDamID2": 	"Reg_NTAudioDamIDStatus2",
+		"Reg_OTAudioDamID2": 	"Reg_OTAudioDamIDStatus2"
+	}
+	audio3DamIdDict = {
+		"ND_CAudioDamID3": 		"ND_CAudioDamIDStatus3",
+		"ND_NTAudioDamID3": 	"ND_NTAudioDamIDStatus3",
+		"ND_OTAudioDamID3": 	"ND_OTAudioDamIDStatus3",
+		"Reg_CAudioDamID3": 	"Reg_CAudioDamIDStatus3",
+		"Reg_NTAudioDamID3":	"Reg_NTAudioDamIDStatus3",
+		"Reg_OTAudioDamID3":	"Reg_OTAudioDamIDStatus3"
+	}
+	text1DamIdDict = {
+		"ND_NTTextDamID1": 		"ND_NTTextDamIDStatus1",
+		"ND_OTTextDamID1": 		"ND_OTTextDamIDStatus1",
+		"Reg_NTTextDamID1": 	"Reg_NTTextDamIDStatus1",
+		"Reg_OTTextDamID1": 	"Reg_OTTextDamIDStatus1"
+	}
+	text2DamIdDict = {
+		"ND_NTTextDamID2": 		"ND_NTTextDamIDStatus2",
+		"ND_OTTextDamID2": 		"ND_OTTextDamIDStatus2", 
+		"Reg_NTTextDamID2": 	"Reg_NTTextDamIDStatus2",
+		"Reg_OTTextDamID2": 	"Reg_OTTextDamIDStatus2"
+	}
+	text3DamIdDict = {
+		"ND_NTTextDamID3": 		"ND_NTTextDamIDStatus3",
+		"ND_OTTextDamID3": 		"ND_OTTextDamIDStatus3",
+		"Reg_NTTextDamID3": 	"Reg_NTTextDamIDStatus3", 
+		"Reg_OTTextDamID3": 	"Reg_OTTextDamIDStatus3"
+	}
+	videoDamIdDict = {
+		"Video_John_DamStockNo": "Video_John_DamStatus",
+		"Video_Luke_DamStockNo": "Video_Luke_DamStatus",
+		"Video_Mark_DamStockNo": "Video_Mark_DamStatus",
+		"Video_Matt_DamStockNo": "Video_Matt_DamStatus"
+	}	
 
 	def __init__(self, record):
 		self.record = record
@@ -109,61 +164,20 @@ class LPTSRecord:
 			sys.exit()
 		if typeCode == "audio":
 			if index == 1:
-				damIdDict = {
-					"CAudioDAMID1": 		"CAudioStatus1",
-					"CAudioDamStockNo": 	"CAudioDamStatus",
-					"ND_NTAudioDamID1": 	"ND_NTAudioDamIDStatus1",
-					"ND_OTAudioDamID1": 	"ND_OTAudioDamIDStatus1",
-					"Reg_NTAudioDamID1": 	"Reg_NTAudioDamIDStatus1",
-					"Reg_OTAudioDamID1": 	"Reg_OTAudioDamIDStatus1"
-					}
+				damIdDict = LPTSRecord.audio1DamIdDict
 			elif index == 2:
-				damIdDict = {
-					"ND_CAudioDamID2": 		"ND_CAudioDamIDStatus2",
-					"ND_NTAudioDamID2": 	"ND_NTAudioDamIDStatus2",
-					"ND_OTAudioDamID2": 	"ND_OTAudioDamIDStatus2",
-					"Reg_CAudioDamID2": 	"Reg_CAudioDamIDStatus2",
-					"Reg_NTAudioDamID2": 	"Reg_NTAudioDamIDStatus2",
-					"Reg_OTAudioDamID2": 	"Reg_OTAudioDamIDStatus2"
-					}
+				damIdDict = LPTSRecord.audio2DamIdDict
 			elif index == 3:
-				damIdDict = {
-					"ND_CAudioDamID3": 		"ND_CAudioDamIDStatus3",
-					"ND_NTAudioDamID3": 	"ND_NTAudioDamIDStatus3",
-					"ND_OTAudioDamID3": 	"ND_OTAudioDamIDStatus3",
-					"Reg_CAudioDamID3": 	"Reg_CAudioDamIDStatus3",
-					"Reg_NTAudioDamID3":	"Reg_NTAudioDamIDStatus3",
-					"Reg_OTAudioDamID3":	"Reg_OTAudioDamIDStatus3"
-					}
+				damIdDict = LPTSRecord.audio3DamIdDict
 		elif typeCode == "text":
 			if index == 1:
-				damIdDict = {
-					"ND_NTTextDamID1": 		"ND_NTTextDamIDStatus1",
-					"ND_OTTextDamID1": 		"ND_OTTextDamIDStatus1",
-					"Reg_NTTextDamID1": 	"Reg_NTTextDamIDStatus1",
-					"Reg_OTTextDamID1": 	"Reg_OTTextDamIDStatus1"
-					}
+				damIdDict = LPTSRecord.text1DamIdDict
 			elif index == 2:
-				damIdDict = {
-					"ND_NTTextDamID2": 		"ND_NTTextDamIDStatus2",
-					"ND_OTTextDamID2": 		"ND_OTTextDamIDStatus2", 
-					"Reg_NTTextDamID2": 	"Reg_NTTextDamIDStatus2",
-					"Reg_OTTextDamID2": 	"Reg_OTTextDamIDStatus2"
-					}
+				damIdDict = LPTSRecord.text2DamIdDict
 			elif index == 3:
-				damIdDict = {
-					"ND_NTTextDamID3": 		"ND_NTTextDamIDStatus3",
-					"ND_OTTextDamID3": 		"ND_OTTextDamIDStatus3",
-					"Reg_NTTextDamID3": 	"Reg_NTTextDamIDStatus3", 
-					"Reg_OTTextDamID3": 	"Reg_OTTextDamIDStatus3"
-					}
+				damIdDict = LPTSRecord.text3DamIdDict
 		elif typeCode == "video":
-			damIdDict = {
-				"Video_John_DamStockNo": "Video_John_DamStatus",
-				"Video_Luke_DamStockNo": "Video_Luke_DamStatus",
-				"Video_Mark_DamStockNo": "Video_Mark_DamStatus",
-				"Video_Matt_DamStockNo": "Video_Matt_DamStatus"
-			}	
+			damIdDict = LPTSRecord.videoDamIdDict
 		hasKeys = set(damIdDict.keys()).intersection(set(self.record.keys()))
 		results = set()
 		for key in hasKeys:

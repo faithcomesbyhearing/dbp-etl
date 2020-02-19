@@ -29,7 +29,7 @@ class UpdateDBPLPTSTable:
 			" FROM bible_filesets bf JOIN bible_fileset_connections b ON bf.hash_id = b.hash_id"
 			" ORDER BY b.bible_id, bf.id, bf.set_type_code")
 		filesetList = self.db.select(sql, ())
-		self.updateAccessGroupFilesets(filesetList)
+		#self.updateAccessGroupFilesets(filesetList)
 		self.updateBibleFilesetCopyrights(filesetList)
 
 	##
@@ -53,6 +53,7 @@ class UpdateDBPLPTSTable:
 					lpts = lptsRecord.record
 				else:
 					lpts = {}
+					self.droppedRecordErrors(typeCode, bibleId, filesetId, setTypeCode, assetId)
 			
 				for (accessGroupId, lptsName) in accessGroupMap.items():
 					accessIdInDBP = accessGroupId in accessSet;
@@ -71,6 +72,26 @@ class UpdateDBPLPTSTable:
 		self.deleteOldGroups(statements)
 		self.db.displayTransaction(statements)
 		self.db.executeTransaction(statements)
+
+
+	def droppedRecordErrors(self, typeCode, bibleId, filesetId, setTypeCode, assetId):
+		if assetId == "dbs-web":
+			return
+		recs = self.lptsReader.getFilesetRecords(filesetId)
+		if recs != None:
+			for (status, rec) in recs:
+				if rec.DBP_Equivalent() != bibleId:
+					print("ERROR: %s/%s/%s is not in LPTS, but it is in %s in %s." %
+						(typeCode, bibleId, filesetId, rec.DBP_Equivalent(), rec.Reg_StockNumber()))
+				#elif status not in {"Live", "live"}:
+					#print("WARN: %s/%s/%s is not in LPTS, but status is %s in %s." % 
+					#	(typeCode, bibleId, filesetId, status, rec.Reg_StockNumber()))
+				elif status in {"Live", "live"}:
+					print("ERROR: %s/%s/%s is not in LPTS, but status is %s in %s." %
+						(typeCode, bibleId, filesetId, status, rec.Reg_StockNumber()))
+				
+		else:
+			print("ERROR: fileset %s, %s, %s not found in LPTS." % (filesetId, setTypeCode, assetId))
 
 
 	def deleteOldGroups(self, statements):
@@ -213,6 +234,10 @@ class UpdateDBPLPTSTable:
 					outFile.write("\t%s\n" % (permission))
 
 	##
+	## Bible Fileset Tags
+	##
+
+	##
 	## Bible Fileset Copyrights
 	##
 	def updateBibleFilesetCopyrights(self, filesetList):
@@ -257,9 +282,11 @@ class UpdateDBPLPTSTable:
 
 				if row != None and lptsRecord == None:
 					deleteRows.append((hashId,))
+					print("DELETE: %s/%s/%s" % (typeCode, bibleId, filesetId))
 
 				elif lptsRecord != None and row == None:
 					insertRows.append((copyrightDate, copyrightMsg, copyrightMsg, 1, hashId))
+					print("INSERT: %s/%s/%s %s" % (typeCode, bibleId, filesetId, copyrightMsg))
 
 				## This needs to come back after testing
 				#elif (row != None and
@@ -272,6 +299,7 @@ class UpdateDBPLPTSTable:
 					or row[2] != copyrightMsg
 					or row[3] != 1)):
 					updateRows.append((copyrightDate, copyrightMsg, copyrightMsg, 1, hashId))
+					print("UPDATE: %s OLD: %s  NEW: %s" % (filesetId, row[1], copyrightMsg))
 
 		print("num bible_fileset_copyright to insert %d, num to update %s, num to delete %d" % (len(insertRows), len(updateRows), len(deleteRows)))
 		if len(insertRows) > 0:
@@ -285,7 +313,7 @@ class UpdateDBPLPTSTable:
 		if len(deleteRows) > 0:
 			sql = ("DELETE FROM bible_fileset_copyrights WHERE hash_id = %s")
 			statements.append((sql, deleteRows))
-		self.db.displayTransaction(statements)
+		#self.db.displayTransaction(statements)
 		#self.db.executeTransaction(statements)
 
 
