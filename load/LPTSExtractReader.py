@@ -72,7 +72,9 @@ class LPTSExtractReader:
 		return (None, None)
 
 
-	## A test method that returns array of status and records [(status, lptsRecord)]
+	## This is a more permissive way to get LPTS Records, it does not require
+	## a type or bibleId.  So, it can only be used for non-index fields
+	## It returns an array of statuses and records, i.e. [(status, lptsRecord)]
 	def getFilesetRecords(self, filesetId):
 		if self.filesetIdMap == None:
 			self.filesetIdMap = {}
@@ -95,6 +97,11 @@ class LPTSExtractReader:
 					statuses = self.filesetIdMap.get(damId, [])
 					statuses.append((status, lptsRecord))
 					self.filesetIdMap[damId] = statuses
+			for damId, recs in self.filesetIdMap.items():
+				if len(recs) > 1:
+					for (status, rec) in recs:
+						print("DUPLICATE: %s %s" % (status, rec.Reg_StockNumber()))
+			sys.exit()
 		return self.filesetIdMap.get(filesetId[:10], None)
 
 
