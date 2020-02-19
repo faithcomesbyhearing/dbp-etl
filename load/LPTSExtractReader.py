@@ -35,9 +35,10 @@ class LPTSExtractReader:
 		print(len(self.resultSet), " LPTS Records.")
 		self.bibleIdMap = self.getBibleIdMap()
 		print(len(self.bibleIdMap.keys()), " BibleIds found.")
+		self.filesetIdMap = None
 
 
-    ## Generates Map bibleId: [LPTSRecord]
+    ## Generates Map bibleId: [LPTSRecord], called by class init
 	def getBibleIdMap(self):
 		bibleIdMap = {}
 		for rec in self.resultSet:
@@ -66,9 +67,29 @@ class LPTSExtractReader:
 		if lptsRecords != None:
 			for (index, record) in lptsRecords:
 				damIdSet = record.DamIds(typeCode, index)
-				if filesetId in damIdSet:
+				if normFilesetId in damIdSet:
 					return (record, index)
 		return (None, None)
+
+
+	## Returns set(lptsRecord) for filesetId
+	## This method is purely for debugging, not founds resulting from others
+	def getFilesetRecord(self, filesetId):
+		if self.filesetIdMap == None:
+			self.filesetIdMap = {}
+			for lptsRecord in self.resultSet:
+				for typeCode in {"text", "audio", "video"}:
+					indexSet = {1} if typeCode == "video" else {1, 2, 3}
+					for index in indexSet:
+						damIdSet = lptsRecord.DamIds(typeCode, index)
+						for damId in damIdSet:
+							records = self.filesetIdMap.get(damId, set())
+							records.add(lptsRecord)
+							self.filesetIdMap[damId] = records
+			#for filesetId, recs in self.filesetIdMap.items():
+			#	if len(recs) > 1:
+			#		print("%s has %d records" % (filesetId, len(recs)))
+		return self.filesetIdMap.get(filesetId[:10], None)
 
 
 class LPTSRecord:
@@ -386,3 +407,4 @@ if (__name__ == '__main__'):
 	(lptsRecord, lptsIndex) = reader.getLPTSRecord("text", "AGUNVS", "AGUNVS")
 	record = lptsRecord.record
 	print("Download", record.get("Download"))
+	answer = reader.getFilesetRecord("ABCDEF")
