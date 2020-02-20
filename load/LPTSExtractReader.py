@@ -61,6 +61,7 @@ class LPTSExtractReader:
 
 
 	## Returns one (record, index) for typeCode, bibleId, filesetId
+	## This is a strict method that only returns when BibleId matches and status is Live
 	def getLPTSRecord(self, typeCode, bibleId, filesetId):
 		normFilesetId = filesetId[:10]
 		lptsRecords = self.bibleIdMap.get(bibleId)
@@ -70,6 +71,25 @@ class LPTSExtractReader:
 				if normFilesetId in damIdSet:
 					return (record, index)
 		return (None, None)
+
+
+	## This method is a hack, because in LPTS a text damId is 10 char, 
+	## but in DBP it is 6 char, when searching LPTS the same text damid
+	## can be found in multiple record, but there is no way to know
+	## which is correct.
+	def getLPTSRecordLoose(self, typeCode, bibleId, filesetId):
+		result = self.getLPTSRecord(typeCode, bibleId, filesetId)
+		if result[0] != None:
+			return result
+		result = self.getFilesetRecords(filesetId)
+		if result == None or len(result) == 0:
+			return (None, None)
+		for (status, record) in result:
+			if status == "Live":
+				return (record, None)
+		first = result[0]
+		record = first[1]
+		return (record, None)
 
 
 	## This is a more permissive way to get LPTS Records, it does not require
@@ -97,11 +117,12 @@ class LPTSExtractReader:
 					statuses = self.filesetIdMap.get(damId, [])
 					statuses.append((status, lptsRecord))
 					self.filesetIdMap[damId] = statuses
-			for damId, recs in self.filesetIdMap.items():
-				if len(recs) > 1:
-					for (status, rec) in recs:
-						print("DUPLICATE: %s %s" % (status, rec.Reg_StockNumber()))
-			sys.exit()
+			#for damId, recs in self.filesetIdMap.items():
+			#	if len(recs) > 1:
+			#		print("")
+			#		for (status, rec) in recs:
+			#			print("DUPLICATE: %s %s %s" % (damId, status, rec.Reg_StockNumber()))
+			#sys.exit()
 		return self.filesetIdMap.get(filesetId[:10], None)
 
 

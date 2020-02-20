@@ -30,6 +30,7 @@ class UpdateDBPLPTSTable:
 			" ORDER BY b.bible_id, bf.id, bf.set_type_code")
 		filesetList = self.db.select(sql, ())
 		#self.updateAccessGroupFilesets(filesetList)
+		#self.updateBibleFilesetTags(filesetList)
 		self.updateBibleFilesetCopyrights(filesetList)
 
 	##
@@ -75,21 +76,20 @@ class UpdateDBPLPTSTable:
 
 
 	def droppedRecordErrors(self, typeCode, bibleId, filesetId, setTypeCode, assetId):
-		if assetId == "dbs-web":
-			return
+		#if assetId == "dbs-web":
+		#	return
 		recs = self.lptsReader.getFilesetRecords(filesetId)
-		if recs != None:
+		if recs != None and len(recs) > 0:
 			for (status, rec) in recs:
 				if rec.DBP_Equivalent() != bibleId:
 					print("ERROR: %s/%s/%s is not in LPTS, but it is in %s in %s." %
 						(typeCode, bibleId, filesetId, rec.DBP_Equivalent(), rec.Reg_StockNumber()))
 				#elif status not in {"Live", "live"}:
-					#print("WARN: %s/%s/%s is not in LPTS, but status is %s in %s." % 
-					#	(typeCode, bibleId, filesetId, status, rec.Reg_StockNumber()))
-				elif status in {"Live", "live"}:
+				#	print("WARN: %s/%s/%s is not in LPTS, but status is %s in %s." % 
+				#		(typeCode, bibleId, filesetId, status, rec.Reg_StockNumber()))
+				elif status in {"Live", "live", None}:
 					print("ERROR: %s/%s/%s is not in LPTS, but status is %s in %s." %
-						(typeCode, bibleId, filesetId, status, rec.Reg_StockNumber()))
-				
+						(typeCode, bibleId, filesetId, status, rec.Reg_StockNumber()))	
 		else:
 			print("ERROR: fileset %s, %s, %s not found in LPTS." % (filesetId, setTypeCode, assetId))
 
@@ -98,13 +98,8 @@ class UpdateDBPLPTSTable:
 		statements.append(("DELETE FROM access_group_filesets WHERE access_group_id < 100", [()]))
 		#statements.append(("DELETE FROM access_group_api_keys WHERE access_group_id < 100", [()]))
 		#statements.append(("DELETE FROM access_group_keys WHERE access_group_id < 100", [()]))
-		statements.append(("DELETE FROM access_groups WHERE id < 100", [()]))
+		#statements.append(("DELETE FROM access_groups WHERE id < 100", [()]))
 
-	#
-	#def deleteNewGroups(self):
-	#	self.db.execute("DELETE FROM access_group_filesets WHERE access_group_id > 100", ())
-	#	self.db.execute("DELETE FROM access_groups WHERE id > 100", ())
-	#
 
 	def insertAccessGroups(self):
 		count = self.db.selectScalar("SELECT count(*) FROM access_groups WHERE id > 100", ())
@@ -254,7 +249,7 @@ class UpdateDBPLPTSTable:
 			row = self.db.selectRow(sql, (hashId))
 
 			if typeCode != "app":
-				(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecord(typeCode, bibleId, filesetId)
+				(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecordLoose(typeCode, bibleId, filesetId)
 				if lptsRecord != None:
 					copyrightText = lptsRecord.Copyrightc()
 					copyrightAudio = lptsRecord.Copyrightp()
@@ -299,7 +294,7 @@ class UpdateDBPLPTSTable:
 					or row[2] != copyrightMsg
 					or row[3] != 1)):
 					updateRows.append((copyrightDate, copyrightMsg, copyrightMsg, 1, hashId))
-					print("UPDATE: %s OLD: %s  NEW: %s" % (filesetId, row[1], copyrightMsg))
+					#print("UPDATE: %s OLD: %s  NEW: %s" % (filesetId, row[1], copyrightMsg))
 
 		print("num bible_fileset_copyright to insert %d, num to update %s, num to delete %d" % (len(insertRows), len(updateRows), len(deleteRows)))
 		if len(insertRows) > 0:
