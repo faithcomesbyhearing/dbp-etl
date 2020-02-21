@@ -379,7 +379,6 @@ if (__name__ == '__main__'):
 	config = Config()
 	lptsReader = LPTSExtractReader(config)
 	db = SQLUtility(config)
-	db.execute("use dbp", ())
 	filesets = UpdateDBPLPTSTable(config, db, lptsReader)
 	filesets.insertAccessGroups() # temporary
 	filesets.process()
