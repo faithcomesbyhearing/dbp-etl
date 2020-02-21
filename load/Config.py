@@ -11,6 +11,7 @@
 import os
 import sys
 import re
+import configparser
 
 class Config:
 
@@ -30,24 +31,24 @@ class Config:
 		if len(sys.argv) < 2:
 			print("ERROR: config profile, such as 'dev,test,prod' is first required parameter.")
 			sys.exit()
-
-		self.hashMap = {}
 		profile = sys.argv[1]
-		profileLabel = "[" + profile + "]"
-		insideProfile = False
-		cfg = open(configFile, "r")
-		for line in cfg:
-			line = line.strip()
-			if not line.startswith("#"): # Comment
-				if insideProfile:
-					if line.startswith("["):
-						break;
-					parts = line.split("=")
-					if len(parts) == 2:
-						self.hashMap[parts[0].strip()] = parts[1].strip()
-				elif line == profileLabel:
-					insideProfile = True
-		cfg.close()
+
+		config = configparser.ConfigParser(interpolation = None)
+		config.read(configFile)
+		sections = config.sections()
+		if profile not in sections:
+			print("ERROR: config profile %s is not in %s" % (profile, configFile))
+			sys.exit()
+		if "DEFAULT" in sections:
+			default = config["DEFAULT"]
+			specific = config[profile]
+			self.hashMap = {**default, **specific}
+		else:
+			self.hashMap = config[profile]
+
+		#for key, value in self.hashMap.items():
+		#	print(key, value)
+		#sys.exit()
 
 		if len(self.hashMap) == 0:
 			print("ERROR: Config profile %s does not exist in '%s'." % (profileLabel, configFile))
@@ -89,16 +90,6 @@ class Config:
 
 			self.filename_datetime = self._get("filename.datetime")
 
-			#self.permission_public_domain = self.get("permission.public_domain")
-			#self.permission_fcbh_general = self.get("permission.fcbh_general")
-			#self.permission_fcbh_web = self.get("permission.fcbh_web")
-			#self.permission_fcbh_general_exclude = self.get("permission.fcbh_general_exclude")
-			#self.permission_dbs_general = self.get("permission.dbs_general")
-			#self.permission_restricted = self.get("permission.restricted")
-			#self.permission_gideons_hide = self.get("permission.gideons_hide")
-			#self.permission_fcbh_hub = self.get("permission.fcbh_hub")
-			#self.permission_bibleis_hide = self.get("permission.bibleis_hide")
-
 		elif programRunning in {"AudioHLS.py"}:
 
 			self.directory_audio_hls = self._getPath("directory.audio_hls") #"%s/FCBH/files/tmp" % (os.environ["HOME"])
@@ -127,12 +118,11 @@ class Config:
 		return float(self._get(name))
 
 
-
-"""
 # Unit Test
-config = Config()
-print config.database_user
-print config.database_db_name
-"""
+if (__name__ == '__main__'):
+	config = Config()
+	print("User", config.database_user)
+	print("DB", config.database_db_name)
+
 
 

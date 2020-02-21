@@ -247,8 +247,6 @@ class UpdateDBPLPTSTable:
 
 				(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecordLoose(typeCode, bibleId, filesetId)
 
-				#for name in ["bitrate", "sku", "volume"]:
-
 				sql = ("SELECT name, description"
 					" FROM bible_fileset_tags"
 					" WHERE hash_id = %s AND language_id = %s")
