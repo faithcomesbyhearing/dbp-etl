@@ -10,47 +10,52 @@
 
 import os
 import sys
-
-CONFIG_FILE = os.path.join(os.environ['HOME'], "fcbh_dbp.cfg")
+import re
+import configparser
 
 class Config:
 
 	def __init__(self):
-		if not os.path.exists(CONFIG_FILE):
-			print("ERROR: Config file '%s' does not exist." % (CONFIG_FILE))
+		home = os.environ.get('HOME') # unix
+		if home == None:
+			home = os.environ.get('HOMEPATH') # windows
+		if home == None:
+			print("ERROR: Environment variable HOME or HOMEPATH must be set to a directory.")
+			sys.exit()
+
+		configFile = os.path.join(home, "fcbh_dbp.cfg")
+		if not os.path.exists(configFile):
+			print("ERROR: Config file '%s' does not exist." % (configFile))
 			sys.exit()
 
 		if len(sys.argv) < 2:
 			print("ERROR: config profile, such as 'dev,test,prod' is first required parameter.")
 			sys.exit()
-
-		self.hashMap = {}
 		profile = sys.argv[1]
-		profileLabel = "[" + profile + "]"
-		insideProfile = False
-		cfg = open(CONFIG_FILE, "r")
-		for line in cfg:
-			line = line.strip()
-			if not line.startswith("#"): # Comment
-				if insideProfile:
-					if line.startswith("["):
-						break;
-					parts = line.split("=")
-					if len(parts) == 2:
-						self.hashMap[parts[0].strip()] = parts[1].strip()
-				elif line == profileLabel:
-					insideProfile = True
-		cfg.close()
+
+		config = configparser.ConfigParser(interpolation = None)
+		config.read(configFile)
+		sections = config.sections()
+		if profile not in sections:
+			print("ERROR: config profile %s is not in %s" % (profile, configFile))
+			sys.exit()
+		self.hashMap = config[profile]
+
+		#for key, value in self.hashMap.items():
+		#	print(key, value)
 
 		if len(self.hashMap) == 0:
-			print("ERROR: Config profile %s does not exist in '%s'." % (profileLabel, CONFIG_FILE))
+			print("ERROR: Config profile %s does not exist in '%s'." % (profileLabel, configFile))
 			sys.exit()
 
-		programRunning = sys.argv[0].split(os.sep)[-1]
+		splitPattern = re.compile("\\\\|/") # I have no idea why \\\\ escapes to one \
+		programRunning = splitPattern.split(sys.argv[0])[-1]
 
 		self.database_host = self._get("database.host")
 		self.database_user = self._get("database.user")
-		self.database_passwd = self._get("database.passwd")
+		self.database_passwd = os.environ.get('MYSQL_PASSWD')
+		if self.database_passwd == None:
+			self.database_passwd = self._get("database.passwd")
 		self.database_db_name = self._get("database.db_name")
 		self.database_port = self._getInt("database.port")
 
@@ -58,7 +63,8 @@ class Config:
 		self.s3_vid_bucket = self._get("s3.vid_bucket")
 		self.s3_aws_profile = self._get("s3.aws_profile")
 
-		if programRunning in {"Validate.py"}:
+		if programRunning in {"Validate.py", "UpdateDBPDatabase.py", "UpdateDBPLPTSTables.py",
+					"LPTSExtractReader.py"}:
 
 			self.directory_bucket_list = self._getPath("directory.bucket_list")
 			self.filename_lpts_xml = self._getPath("filename.lpts_xml")
@@ -77,16 +83,6 @@ class Config:
 			self.filename_accept_errors = self._getPath("filename.accept.errors")
 
 			self.filename_datetime = self._get("filename.datetime")
-
-			#self.permission_public_domain = self.get("permission.public_domain")
-			#self.permission_fcbh_general = self.get("permission.fcbh_general")
-			#self.permission_fcbh_web = self.get("permission.fcbh_web")
-			#self.permission_fcbh_general_exclude = self.get("permission.fcbh_general_exclude")
-			#self.permission_dbs_general = self.get("permission.dbs_general")
-			#self.permission_restricted = self.get("permission.restricted")
-			#self.permission_gideons_hide = self.get("permission.gideons_hide")
-			#self.permission_fcbh_hub = self.get("permission.fcbh_hub")
-			#self.permission_bibleis_hide = self.get("permission.bibleis_hide")
 
 		elif programRunning in {"AudioHLS.py"}:
 
@@ -116,12 +112,11 @@ class Config:
 		return float(self._get(name))
 
 
-
-"""
 # Unit Test
-config = Config()
-print config.database_user
-print config.database_db_name
-"""
+if (__name__ == '__main__'):
+	config = Config()
+	print("User", config.database_user)
+	print("DB", config.database_db_name)
+
 
 
