@@ -39,16 +39,10 @@ class Config:
 		if profile not in sections:
 			print("ERROR: config profile %s is not in %s" % (profile, configFile))
 			sys.exit()
-		if "DEFAULT" in sections:
-			default = config["DEFAULT"]
-			specific = config[profile]
-			self.hashMap = {**default, **specific}
-		else:
-			self.hashMap = config[profile]
+		self.hashMap = config[profile]
 
 		#for key, value in self.hashMap.items():
 		#	print(key, value)
-		#sys.exit()
 
 		if len(self.hashMap) == 0:
 			print("ERROR: Config profile %s does not exist in '%s'." % (profileLabel, configFile))
