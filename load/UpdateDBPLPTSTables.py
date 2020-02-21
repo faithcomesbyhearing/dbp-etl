@@ -247,12 +247,14 @@ class UpdateDBPLPTSTable:
 
 				(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecordLoose(typeCode, bibleId, filesetId)
 
-				for name in ["bitrate", "sku", "volume"]:
+				#for name in ["bitrate", "sku", "volume"]:
 
-					sql = ("SELECT description, admin_only, notes, iso"
-						" FROM bible_fileset_tags"
-						" WHERE hash_id = %s AND name = %s AND language_id = %s")
-					row = self.db.selectRow(sql, (hashId, name, languageId))
+				sql = ("SELECT name, description"
+					" FROM bible_fileset_tags"
+					" WHERE hash_id = %s AND language_id = %s")
+				tagMap = self.db.selectMap(sql, (hashId, languageId))
+				for name in ["bitrate", "sku", "volume"]:
+					oldDescription = tagMap.get(name)
 
 					if lptsRecord != None:
 						if name == "bitrate":
@@ -267,16 +269,21 @@ class UpdateDBPLPTSTable:
 						else:
 							print("ERROR: unknown bible_fileset_tags name %s" % (name))
 							sys.exit()
+					else:
+						description = None
 
-					if row != None and lptsRecord == None:
+					if oldDescription != None and lptsRecord == None:
 						deleteRows.append((hashId, name, languageId))
+						print("DELETE: %s %s %s" % (filesetId, name, oldDescription))
 
-					elif lptsRecord != None and row == None:
-						insertRows.append((hashId, name, description, adminOnly, notes, iso, languageId))
+					elif description != None and oldDescription == None:
+						if typeCode == "audio":
+							insertRows.append((hashId, name, description, adminOnly, notes, iso, languageId))
+							#print("INSERT: %s %s: %s" % (filesetId, name, description))
 
-					elif (row != None and (row[0] != description)):
+					elif (oldDescription != description):
 						updateRows.append((description, hashId, name, languageId))
-						print("UPDATE: %s %s: OLD %s  NEW: %s" % (filesetId, name, row[0], description))
+						#print("UPDATE: %s %s: OLD %s  NEW: %s" % (filesetId, name, oldDescription, description))
 
 		if len(insertRows) > 0:
 			sql = ("INSERT INTO bible_fileset_tags (hash_id, name, description, admin_only, notes, iso, language_id)"
