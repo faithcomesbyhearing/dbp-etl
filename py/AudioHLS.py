@@ -136,6 +136,9 @@ class AudioHLS:
 		if countError:
 			sys.exit()
 
+		if bitrateMap.get("64") == None:
+			self.adapter.dropAudioHLSWork()
+			return
 		## Check for dropped files
 		(filesetId, origHashId) = bitrateMap["64"]
 		sql = ("SELECT distinct file_name FROM bible_files WHERE hash_id = %s"
@@ -206,7 +209,7 @@ class AudioHLS:
 				verseStart = file[5]
 				self.adapter.insertFiles(values)
 				self.adapter.copyFileTags(origFileId)
-				
+
 				for bitrate in bitrateMap.keys():
 					(bitrateFilesetId, bitrateHashId) = bitrateMap[bitrate]
 					key = "%s:%s:%d:%d" % (bitrateFilesetId, currBook, chapterStart, verseStart)
@@ -222,7 +225,9 @@ class AudioHLS:
 						for segment in self.getBoundaries(mp3FilePath, timestamps):
 							self.adapter.addSegment(segment)
 						self.adapter.insertSegments()
+			self.adapter.copyTimestamps(hashId, origHashId)
 			self.adapter.commitFilesetInsertTran()
+			self.adapter.dropAudioHLSWork()
 			print("", end="\n", flush=True)
 		except Exception as error:
 			print(("\nERROR: at %s %s" % (origFilename, error)), flush=True)
@@ -377,6 +382,11 @@ class AudioHLSAdapter:
 			" AND bf1.chapter_start = bf2.chapter_start"
 			" AND bf1.verse_start = bf2.verse_start")
 		self.execute(sql2, (filesetId,))
+
+
+	def dropAudioHLSWork(self):
+		self.execute("DROP TEMPORARY TABLE IF EXISTS audio_hls_work", ())
+
 
 	## Debug method to display contents of audio_hls_work
 	def printAudioHLSWork(self):
@@ -565,6 +575,28 @@ class AudioHLSAdapter:
 				self.sqlLog.write((sql + "\n") % segment)
 			self.tranCursor.executemany(sql, self.segments)
 			self.segments = []
+		except Exception as err:
+			self.error(self.tranCursor, sql, err)
+
+
+	def copyTimestamps(self, saHashId, daHashId):
+		sql = ("REPLACE INTO bible_file_timestamps (bible_file_id, verse_start, verse_end, `timestamp`)"
+			" SELECT distinct bf_sa.id, t_da.verse_start, t_da.verse_end, t_da.`timestamp`"
+			" FROM bible_file_timestamps t_da, bible_files bf_da, bible_filesets bs_da,"
+			" bible_files bf_sa, bible_filesets bs_sa"
+			" WHERE bf_da.id = t_da.bible_file_id"
+			" AND bf_sa.hash_id = bs_sa.hash_id"
+			" AND bf_da.hash_id = bs_da.hash_id"
+			" AND bf_da.book_id = bf_sa.book_id"
+			" AND bf_da.chapter_start = bf_sa.chapter_start"
+			" AND bs_da.hash_id = %s"
+			" AND bs_sa.hash_id = %s")
+			#" AND bs_da.id = %s"
+			#" AND bs_sa.id = %s")
+		try:
+			values = (daHashId, saHashId)
+			self.sqlLog.write((sql + "\n") % values)
+			self.tranCursor.execute(sql, values)
 		except Exception as err:
 			self.error(self.tranCursor, sql, err)
 	

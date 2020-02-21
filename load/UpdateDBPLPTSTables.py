@@ -391,8 +391,3 @@ if (__name__ == '__main__'):
 """
 
 
-"""
-4. Also, test the addition, removal and modification of LPTS data
-"""
-
-
