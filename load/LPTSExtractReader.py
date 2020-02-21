@@ -126,25 +126,38 @@ class LPTSExtractReader:
 		return self.filesetIdMap.get(filesetId[:10], None)
 
 
+	## This method returns a list of field names for development the purposes.
+	def getFieldNames(self):
+		nameCount = {}
+		for rec in self.resultSet:
+			for field in rec.record.keys():
+				count = nameCount.get(field, 0)
+				count += 1
+				nameCount[field] = count
+		for field in sorted(nameCount.keys()):
+			count = nameCount[field]
+			print(field, count)
+
+
 class LPTSRecord:
 
 	audio1DamIdDict = {
-		"CAudioDAMID1": 		"CAudioStatus1",
-		"CAudioDamStockNo": 	"CAudioDamStatus",
+		"ND_CAudioDAMID1": 		"ND_CAudioDAMStatus",
 		"ND_NTAudioDamID1": 	"ND_NTAudioDamIDStatus1",
 		"ND_OTAudioDamID1": 	"ND_OTAudioDamIDStatus1",
+		"Reg_CAudioDAMID1":		"Reg_CAudioDAMStatus1",
 		"Reg_NTAudioDamID1": 	"Reg_NTAudioDamIDStatus1",
 		"Reg_OTAudioDamID1": 	"Reg_OTAudioDamIDStatus1"
 	}
 	audio2DamIdDict = {
-		"ND_CAudioDamID2": 		"ND_CAudioDamIDStatus2",
+		"ND_CAudioDamID2": 		"ND_CAudioDamIDStatus2", # No occurrances 2/20/2020
 		"ND_NTAudioDamID2": 	"ND_NTAudioDamIDStatus2",
 		"ND_OTAudioDamID2": 	"ND_OTAudioDamIDStatus2",
-		"Reg_CAudioDamID2": 	"Reg_CAudioDamIDStatus2",
+		"Reg_CAudioDamID2": 	"Reg_CAudioDamIDStatus2", # No occurrances 2/20/2020
 		"Reg_NTAudioDamID2": 	"Reg_NTAudioDamIDStatus2",
 		"Reg_OTAudioDamID2": 	"Reg_OTAudioDamIDStatus2"
-	}
-	audio3DamIdDict = {
+	}	
+	audio3DamIdDict = { # No occurrances 2/20/2020
 		"ND_CAudioDamID3": 		"ND_CAudioDamIDStatus3",
 		"ND_NTAudioDamID3": 	"ND_NTAudioDamIDStatus3",
 		"ND_OTAudioDamID3": 	"ND_OTAudioDamIDStatus3",
@@ -175,8 +188,8 @@ class LPTSRecord:
 		"Video_Luke_DamStockNo": "Video_Luke_DamStatus",
 		"Video_Mark_DamStockNo": "Video_Mark_DamStatus",
 		"Video_Matt_DamStockNo": "Video_Matt_DamStatus"
-	}	
-
+	}
+	
 	def __init__(self, record):
 		self.record = record
 
@@ -249,11 +262,23 @@ class LPTSRecord:
 	def Country(self):
 		return self.record.get("Country")
 
+	def CountryAdditional(self):
+		return self.record.get("CountryAdditional")
+
+	def CreativeCommonsAudio(self):
+		return self.record.get("CreativeCommonsAudio")
+
 	def CreativeCommonsAudioWaiver(self):
 		return self.record.get("CreativeCommonsAudioWaiver")
 
 	def CreativeCommonsText(self):
 		return self.record.get("CreativeCommonsText")
+
+	def DBL_Load_Notes(self):
+		return self.record.get("DBL_Load_Notes")
+
+	def DBL_Load_Status(self):
+		return self.record.get("DBL_Load_Status")
 
 	def DBPAudio(self):
 		return self.record.get("DBPAudio")
@@ -348,24 +373,14 @@ class LPTSRecord:
 	def HeartName(self):
 		return self.record.get("HeartName")
 
-	def HUBLink(self, index):
-		if index == 1:
-			return self.record.get("HUBLink") or self.record.get("HUBLink1")
-		elif index == 2:
-			return self.record.get("HUBLink2")
-		elif index == 3:
-			return self.record.get("HUBLink3")
-		else:
-			return None
-
 	def HubText(self):
 		return self.record.get("HubText")
 
-	def ItunesPodcast(self):
-		return self.record.get("ItunesPodcast")
-
 	def ISO(self):
 		return self.record.get("ISO")
+
+	def ItunesPodcast(self):
+		return self.record.get("ItunesPodcast")
 
 	def LangName(self):
 		return self.record.get("LangName")
@@ -376,8 +391,27 @@ class LPTSRecord:
 	def MobileText(self):
 		return self.record.get("MobileText")
 
+	def ND_DBL_Load_Notes(self):
+		return self.record.get("ND_DBL_Load_Notes")
+
+	def ND_HUBLink(self, index):
+		if index == 1:
+			return self.record.get("ND_HUBLink") or self.record.get("ND_HUBLink1")
+		elif index == 2:
+			return self.record.get("ND_HUBLink2")
+		elif index == 3:
+			return self.record.get("ND_HUBLink3")
+		else:
+			return None
+
+	def ND_Recording_Status(self):
+		return self.record.get("ND_Recording_Status")
+
 	def ND_StockNumber(self):
 		return self.record.get("ND_StockNumber")
+
+	def NTAudioDamLoad(self):
+		return self.record.get("NTAudioDamLoad")
 
 	def NTOrder(self):
 		result = self.record.get("NTOrder")
@@ -385,6 +419,9 @@ class LPTSRecord:
 			return "Traditional"
 		else:
 			return result
+
+	def Numerals(self):
+		return self.record.get("Numerals")
 
 	def Orthography(self, index):
 		if index == 1:
@@ -404,14 +441,34 @@ class LPTSRecord:
 		else:
 			return result
 
+	def Portion(self):
+		return self.record.get("Portion")
+
 	def PostedToServer(self):
 		return self.record.get("PostedToServer")
+
+	def Reg_HUBLink(self, index):
+		if index == 1:
+			return self.record.get("Reg_HUBLink1")
+		elif index == 2:
+			return self.record.get("Reg_HUBLink2")
+		elif index == 3:
+			return self.record.get("Reg_HUBLink3")
+		else:
+			print("ERROR: Reg_HUBLink index must be 1, 2, 3")
+			sys.exit()
+
+	def Reg_Recording_Status(self):
+		return self.record.get("Reg_Recording_Status")
 
 	def Reg_StockNumber(self):
 		return self.record.get("Reg_StockNumber")
 
-	def Reg_Recording_Status(self):
-		return self.record.get("Reg_Recording_Status")
+	def Restrictions(self):
+		return self.record.get("Restrictions")
+
+	def Selection(self):
+		return self.record.get("Selection")
 
 	def Streaming(self):
 		return self.record.get("Streaming")
@@ -428,6 +485,18 @@ class LPTSRecord:
 
 	def Version(self):
 		return self.record.get("Version")
+
+	def Video_John_DamLoad(self):
+		return self.record.get("Video_John_DamLoad")
+
+	def Video_Luke_DamLoad(self):
+		return self.record.get("Video_Luke_DamLoad")
+
+	def Video_Mark_DamLoad(self):
+		return self.record.get("Video_Mark_DamLoad")
+
+	def Video_Matt_DamLoad(self):
+		return self.record.get("Video_Matt_DamLoad")
 
 	def Volumne_Name(self):
 		result = self.record.get("Volumne_Name")
@@ -449,4 +518,4 @@ if (__name__ == '__main__'):
 	(lptsRecord, lptsIndex) = reader.getLPTSRecord("text", "AGUNVS", "AGUNVS")
 	record = lptsRecord.record
 	print("Download", record.get("Download"))
-	answer = reader.getFilesetRecord("ABCDEF")
+	reader.getFieldNames()

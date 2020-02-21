@@ -30,8 +30,8 @@ class UpdateDBPLPTSTable:
 			" ORDER BY b.bible_id, bf.id, bf.set_type_code")
 		filesetList = self.db.select(sql, ())
 		#self.updateAccessGroupFilesets(filesetList)
-		#self.updateBibleFilesetTags(filesetList)
-		self.updateBibleFilesetCopyrights(filesetList)
+		self.updateBibleFilesetTags(filesetList)
+		#self.updateBibleFilesetCopyrights(filesetList)
 
 	##
 	## Access Group Filesets
@@ -65,19 +65,19 @@ class UpdateDBPLPTSTable:
 					elif accessIdInDBP and not accessIdInLPTS:
 						deleteRows.append((hashId, accessGroupId))
 
-		print("num access_group_filesets to insert %d, num to delete %d" % (len(insertRows), len(deleteRows)))
 		if len(deleteRows) > 0:
 			statements.append(("DELETE FROM access_group_filesets WHERE hash_id = %s AND access_group_id = %s", deleteRows))
 		if len(insertRows) > 0:
 			statements.append(("INSERT INTO access_group_filesets (hash_id, access_group_id) VALUES (%s, %s)", insertRows))
 		self.deleteOldGroups(statements)
 		self.db.displayTransaction(statements)
+		print("\nnum access_group_filesets to insert %d, num to delete %d" % (len(insertRows), len(deleteRows)))
 		self.db.executeTransaction(statements)
 
 
 	def droppedRecordErrors(self, typeCode, bibleId, filesetId, setTypeCode, assetId):
-		#if assetId == "dbs-web":
-		#	return
+		if assetId == "dbs-web":
+			return
 		recs = self.lptsReader.getFilesetRecords(filesetId)
 		if recs != None and len(recs) > 0:
 			for (status, rec) in recs:
@@ -231,6 +231,68 @@ class UpdateDBPLPTSTable:
 	##
 	## Bible Fileset Tags
 	##
+	def updateBibleFilesetTags(self, filesetList):
+		## primary key is hash_id, name, language_id
+		insertRows = []
+		updateRows = []
+		deleteRows = []
+		statements = []
+		adminOnly = 0
+		notes = None
+		iso = "eng"
+		languageId = 6414
+		for (bibleId, filesetId, setTypeCode, setSizeCode, assetId, hashId) in filesetList:
+			typeCode = setTypeCode.split("_")[0]
+			if typeCode != "app":
+
+				(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecordLoose(typeCode, bibleId, filesetId)
+
+				for name in ["bitrate", "sku", "volume"]:
+
+					sql = ("SELECT description, admin_only, notes, iso"
+						" FROM bible_fileset_tags"
+						" WHERE hash_id = %s AND name = %s AND language_id = %s")
+					row = self.db.selectRow(sql, (hashId, name, languageId))
+
+					if lptsRecord != None:
+						if name == "bitrate":
+							bitrate = filesetId[10:12] if len(filesetId) > 10 else "64"
+							description = bitrate + "kbps"
+						elif name == "sku":
+							description = lptsRecord.Reg_StockNumber()
+							if description != None:
+								description = description.replace("/", "")
+						elif name == "volume":
+							description = lptsRecord.Volumne_Name()
+						else:
+							print("ERROR: unknown bible_fileset_tags name %s" % (name))
+							sys.exit()
+
+					if row != None and lptsRecord == None:
+						deleteRows.append((hashId, name, languageId))
+
+					elif lptsRecord != None and row == None:
+						insertRows.append((hashId, name, description, adminOnly, notes, iso, languageId))
+
+					elif (row != None and (row[0] != description)):
+						updateRows.append((description, hashId, name, languageId))
+						print("UPDATE: %s %s: OLD %s  NEW: %s" % (filesetId, name, row[0], description))
+
+		if len(insertRows) > 0:
+			sql = ("INSERT INTO bible_fileset_tags (hash_id, name, description, admin_only, notes, iso, language_id)"
+					" VALUES (%s, %s, %s, %s, %s, %s, %s)")
+			statements.append((sql, insertRows))
+		if len(updateRows) > 0:
+			sql = ("UPDATE bible_fileset_tags SET description = %s"
+				" WHERE hash_id = %s AND name = %s AND language_id = %s")
+			statements.append((sql, updateRows))
+		if len(deleteRows) > 0:
+			sql = ("DELETE FROM bible_fileset_tags WHERE hash_id = %s AND name = %s AND language_id = %s")
+			statements.append((sql, deleteRows))
+		#self.db.displayTransaction(statements)
+		print("\nnum bible_fileset_tags to insert %d, num to update %s, num to delete %d" % (len(insertRows), len(updateRows), len(deleteRows)))
+		#self.db.executeTransaction(statements)		
+
 
 	##
 	## Bible Fileset Copyrights
@@ -277,26 +339,21 @@ class UpdateDBPLPTSTable:
 
 				if row != None and lptsRecord == None:
 					deleteRows.append((hashId,))
-					print("DELETE: %s/%s/%s" % (typeCode, bibleId, filesetId))
+					#print("DELETE: %s/%s/%s" % (typeCode, bibleId, filesetId))
 
 				elif lptsRecord != None and row == None:
 					insertRows.append((copyrightDate, copyrightMsg, copyrightMsg, 1, hashId))
-					print("INSERT: %s/%s/%s %s" % (typeCode, bibleId, filesetId, copyrightMsg))
+					#print("INSERT: %s/%s/%s %s" % (typeCode, bibleId, filesetId, copyrightMsg))
 
 				## This needs to come back after testing
-				#elif (row != None and
-				#	(row[0] != copyrightDate
-				#	or row[1] != copyrightMsg
-				#	or row[2] != copyrightMsg
-				#	or row[3] != 1)):
 				elif (row != None and
-					(row[1] != copyrightMsg
+					(row[0] != copyrightDate
+					or row[1] != copyrightMsg
 					or row[2] != copyrightMsg
 					or row[3] != 1)):
 					updateRows.append((copyrightDate, copyrightMsg, copyrightMsg, 1, hashId))
 					#print("UPDATE: %s OLD: %s  NEW: %s" % (filesetId, row[1], copyrightMsg))
 
-		print("num bible_fileset_copyright to insert %d, num to update %s, num to delete %d" % (len(insertRows), len(updateRows), len(deleteRows)))
 		if len(insertRows) > 0:
 			sql = ("INSERT INTO bible_fileset_copyrights(copyright_date, copyright,"
 				" copyright_description, open_access, hash_id) VALUES (%s, %s, %s, %s, %s)")
@@ -308,8 +365,9 @@ class UpdateDBPLPTSTable:
 		if len(deleteRows) > 0:
 			sql = ("DELETE FROM bible_fileset_copyrights WHERE hash_id = %s")
 			statements.append((sql, deleteRows))
-		#self.db.displayTransaction(statements)
-		#self.db.executeTransaction(statements)
+		self.db.displayTransaction(statements)
+		print("\nnum bible_fileset_copyright to insert %d, num to update %s, num to delete %d" % (len(insertRows), len(updateRows), len(deleteRows)))
+		self.db.executeTransaction(statements)
 
 
 if (__name__ == '__main__'):
@@ -319,9 +377,8 @@ if (__name__ == '__main__'):
 	db.execute("use dbp", ())
 	filesets = UpdateDBPLPTSTable(config, db, lptsReader)
 	filesets.insertAccessGroups() # temporary
-	#filesets.deleteNewGroups()
 	filesets.process()
-	filesets.accessGroupSymmetricTest()
+	#filesets.accessGroupSymmetricTest()
 	db.close()
 """
 	db.execute("use dbp_users", ())
