@@ -22,6 +22,7 @@ class UpdateDBPLPTSTable:
 		self.config = config
 		self.db = db
 		self.lptsReader = lptsReader
+		self.statements = []
 
 
 	def process(self):
@@ -29,8 +30,8 @@ class UpdateDBPLPTSTable:
 			" FROM bible_filesets bf JOIN bible_fileset_connections b ON bf.hash_id = b.hash_id"
 			" ORDER BY b.bible_id, bf.id, bf.set_type_code")
 		filesetList = self.db.select(sql, ())
-		#self.updateAccessGroupFilesets(filesetList)
-		self.updateBibleFilesetTags(filesetList)
+		self.updateAccessGroupFilesets(filesetList)
+		#self.updateBibleFilesetTags(filesetList)
 		#self.updateBibleFilesetCopyrights(filesetList)
 
 	##
@@ -54,7 +55,7 @@ class UpdateDBPLPTSTable:
 					lpts = lptsRecord.record
 				else:
 					lpts = {}
-					self.droppedRecordErrors(typeCode, bibleId, filesetId, setTypeCode, assetId)
+					#self.droppedRecordErrors(typeCode, bibleId, filesetId, setTypeCode, assetId)
 			
 				for (accessGroupId, lptsName) in accessGroupMap.items():
 					accessIdInDBP = accessGroupId in accessSet;
@@ -65,14 +66,11 @@ class UpdateDBPLPTSTable:
 					elif accessIdInDBP and not accessIdInLPTS:
 						deleteRows.append((hashId, accessGroupId))
 
-		if len(deleteRows) > 0:
-			statements.append(("DELETE FROM access_group_filesets WHERE hash_id = %s AND access_group_id = %s", deleteRows))
-		if len(insertRows) > 0:
-			statements.append(("INSERT INTO access_group_filesets (hash_id, access_group_id) VALUES (%s, %s)", insertRows))
-		self.deleteOldGroups(statements)
-		self.db.displayTransaction(statements)
-		print("\nnum access_group_filesets to insert %d, num to delete %d" % (len(insertRows), len(deleteRows)))
-		self.db.executeTransaction(statements)
+		tableName = "access_group_filesets"
+		pkeyNames = ("hash_id", "access_group_id")
+		self.insert(tableName, pkeyNames, (), insertRows)
+		self.delete(tableName, pkeyNames, deleteRows)
+		self.execute(tableName, len(insertRows), 0, len(deleteRows))
 
 
 	def droppedRecordErrors(self, typeCode, bibleId, filesetId, setTypeCode, assetId):
@@ -272,31 +270,23 @@ class UpdateDBPLPTSTable:
 
 					if oldDescription != None and lptsRecord == None:
 						deleteRows.append((hashId, name, languageId))
-						print("DELETE: %s %s %s" % (filesetId, name, oldDescription))
+						#print("DELETE: %s %s %s" % (filesetId, name, oldDescription))
 
 					elif description != None and oldDescription == None:
-						if typeCode == "audio":
-							insertRows.append((hashId, name, description, adminOnly, notes, iso, languageId))
-							#print("INSERT: %s %s: %s" % (filesetId, name, description))
+						if typeCode == "audio":  ### This is a bug
+							insertRows.append((hashId, name, languageId, description, adminOnly, notes, iso))
 
 					elif (oldDescription != description):
-						updateRows.append((description, hashId, name, languageId))
+						updateRows.append(((hashId, name, languageId), (description, adminOnly, notes, iso)))
 						#print("UPDATE: %s %s: OLD %s  NEW: %s" % (filesetId, name, oldDescription, description))
 
-		if len(insertRows) > 0:
-			sql = ("INSERT INTO bible_fileset_tags (hash_id, name, description, admin_only, notes, iso, language_id)"
-					" VALUES (%s, %s, %s, %s, %s, %s, %s)")
-			statements.append((sql, insertRows))
-		if len(updateRows) > 0:
-			sql = ("UPDATE bible_fileset_tags SET description = %s"
-				" WHERE hash_id = %s AND name = %s AND language_id = %s")
-			statements.append((sql, updateRows))
-		if len(deleteRows) > 0:
-			sql = ("DELETE FROM bible_fileset_tags WHERE hash_id = %s AND name = %s AND language_id = %s")
-			statements.append((sql, deleteRows))
-		#self.db.displayTransaction(statements)
-		print("\nnum bible_fileset_tags to insert %d, num to update %s, num to delete %d" % (len(insertRows), len(updateRows), len(deleteRows)))
-		#self.db.executeTransaction(statements)		
+		tableName = "bible_fileset_tags"
+		pkeyNames = ("hash_id", "name", "language_id")
+		attrNames = ("description", "admin_only", "notes", "iso")
+		self.insert(tableName, pkeyNames, attrNames, insertRows)
+		self.update(tableName, pkeyNames, attrNames, updateRows)
+		self.delete(tableName, pkeyNames, deleteRows)
+		self.execute(tableName, len(insertRows), len(updateRows), len(deleteRows))	
 
 
 	##
@@ -344,11 +334,9 @@ class UpdateDBPLPTSTable:
 
 				if row != None and lptsRecord == None:
 					deleteRows.append((hashId,))
-					#print("DELETE: %s/%s/%s" % (typeCode, bibleId, filesetId))
 
 				elif lptsRecord != None and row == None:
-					insertRows.append((copyrightDate, copyrightMsg, copyrightMsg, 1, hashId))
-					#print("INSERT: %s/%s/%s %s" % (typeCode, bibleId, filesetId, copyrightMsg))
+					insertRows.append((hashId, copyrightDate, copyrightMsg, copyrightMsg, 1))
 
 				## This needs to come back after testing
 				elif (row != None and
@@ -356,23 +344,49 @@ class UpdateDBPLPTSTable:
 					or row[1] != copyrightMsg
 					or row[2] != copyrightMsg
 					or row[3] != 1)):
-					updateRows.append((copyrightDate, copyrightMsg, copyrightMsg, 1, hashId))
-					#print("UPDATE: %s OLD: %s  NEW: %s" % (filesetId, row[1], copyrightMsg))
+					updateRows.append(((hashId,), (copyrightDate, copyrightMsg, copyrightMsg, 1)))
 
-		if len(insertRows) > 0:
-			sql = ("INSERT INTO bible_fileset_copyrights(copyright_date, copyright,"
-				" copyright_description, open_access, hash_id) VALUES (%s, %s, %s, %s, %s)")
-			statements.append((sql, insertRows))
-		if len(updateRows) > 0:
-			sql = ("UPDATE bible_fileset_copyrights SET copyright_date =%s, copyright = %s,"
-				" copyright_description = %s, open_access = %s WHERE hash_id = %s")
-			statements.append((sql, updateRows))
-		if len(deleteRows) > 0:
-			sql = ("DELETE FROM bible_fileset_copyrights WHERE hash_id = %s")
-			statements.append((sql, deleteRows))
-		self.db.displayTransaction(statements)
-		print("\nnum bible_fileset_copyright to insert %d, num to update %s, num to delete %d" % (len(insertRows), len(updateRows), len(deleteRows)))
-		self.db.executeTransaction(statements)
+		tableName = "bible_fileset_copyrights"
+		pkeyNames = ("hash_id",)
+		attrNames = ("copyright_date", "copyright", "copyright_description", "open_access")
+		self.insert(tableName, pkeyNames, attrNames, insertRows)
+		self.update(tableName, pkeyNames, attrNames, updateRows)
+		self.delete(tableName, pkeyNames, deleteRows)
+		self.execute(tableName, len(insertRows), len(updateRows), len(deleteRows))
+
+
+	def insert(self, tableName, pkeyNames, attrNames, values):
+		if len(values) > 0:
+			names = pkeyNames + attrNames
+			valsubs = ['%s'] * len(names)
+			sql = "INSERT INTO %s (%s) VALUES (%s)" % (tableName, ", ".join(names), ", ".join(valsubs))
+			print(sql)
+			self.statements.append((sql, values))
+
+
+	def update(self, tableName, pkeyNames, attrNames, values):
+		if len(values) > 0:
+			sql = "UPDATE %s SET %s WHERE %s" % (tableName, "=%s, SET ".join(attrNames) + "=%s", "=%s AND ".join(pkeyNames) + "=%s")
+			print(sql)
+			reversedValues = []
+			for index in range(len(values)):
+				reversedValues.append(values[index][1] + values[index][0])
+			self.statements.append((sql, reversedValues))
+
+
+	def delete(self, tableName, pkeyNames, pkeyValues):
+		if len(pkeyValues) > 0:
+			sql = "DELETE FROM %s WHERE %s" % (tableName, "=%s AND ".join(pkeyNames) + "=%s")
+			print(sql)
+			self.statements.append((sql, pkeyValues))
+
+
+	def execute(self, tableName, numInsert, numUpdate, numDelete):
+		print("\nnum %s to insert %d, num to update %d, num to delete %d" % (tableName, numInsert, numUpdate, numDelete))
+		if len(self.statements) > 0:
+			self.db.displayTransaction(self.statements)
+			#self.db.executeTransaction(statements)
+			self.statements = []
 
 
 if (__name__ == '__main__'):
