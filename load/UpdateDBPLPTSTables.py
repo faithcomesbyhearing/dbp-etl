@@ -23,6 +23,8 @@ class UpdateDBPLPTSTable:
 		self.db = db
 		self.lptsReader = lptsReader
 		self.statements = []
+		self.hashIdMap = None
+		self.sqlLog = []
 
 
 	def process(self):
@@ -33,6 +35,7 @@ class UpdateDBPLPTSTable:
 		#self.updateAccessGroupFilesets(filesetList)
 		self.updateBibleFilesetTags(filesetList)
 		#self.updateBibleFilesetCopyrights(filesetList)
+		self.displayLog()
 
 	##
 	## Access Group Filesets
@@ -329,9 +332,6 @@ class UpdateDBPLPTSTable:
 						year = datePattern.search(copyright)
 						if year != None:
 							copyrightDate = year.group(1)
-							## Should I work on finding multiple dates?
-					#values = (hashId, copyrightDate, copyrightMsg, "")
-					#self.statements.append((sql, [values]))
 
 				if row != None and lptsRecord == None:
 					deleteRows.append((hashId,))
@@ -339,12 +339,11 @@ class UpdateDBPLPTSTable:
 				elif lptsRecord != None and row == None:
 					insertRows.append((hashId, copyrightDate, copyrightMsg, copyrightMsg, 1))
 
-				## This needs to come back after testing
 				elif (row != None and
-					(row[0] != copyrightDate
-					or row[1] != copyrightMsg
-					or row[2] != copyrightMsg
-					or row[3] != 1)):
+					(row[0] != copyrightDate or
+					row[1] != copyrightMsg or
+					row[2] != copyrightMsg or
+					row[3] != 1)):
 					updateRows.append(((hashId,), (copyrightDate, copyrightMsg, copyrightMsg, 1)))
 
 		tableName = "bible_fileset_copyrights"
@@ -363,6 +362,7 @@ class UpdateDBPLPTSTable:
 			sql = "INSERT INTO %s (%s) VALUES (%s)" % (tableName, ", ".join(names), ", ".join(valsubs))
 			print(sql)
 			self.statements.append((sql, values))
+			#self.prepareLog("INSERT", tableName, pkeyNames, attrNames, values)
 
 
 	def update(self, tableName, pkeyNames, attrNames, values):
@@ -373,6 +373,7 @@ class UpdateDBPLPTSTable:
 			for index in range(len(values)):
 				reversedValues.append(values[index][1] + values[index][0])
 			self.statements.append((sql, reversedValues))
+			#self.prepareLog("UPDATE", tableName, pkeyNames, attrNames, values)
 
 
 	def delete(self, tableName, pkeyNames, pkeyValues):
@@ -380,6 +381,7 @@ class UpdateDBPLPTSTable:
 			sql = "DELETE FROM %s WHERE %s" % (tableName, "=%s AND ".join(pkeyNames) + "=%s")
 			print(sql)
 			self.statements.append((sql, pkeyValues))
+			self.prepareLog("DELETE", tableName, pkeyNames, (), pkeyValues)
 
 
 	def execute(self, tableName, numInsert, numUpdate, numDelete):
@@ -389,6 +391,53 @@ class UpdateDBPLPTSTable:
 			#self.db.executeTransaction(statements)
 			self.statements = []
 
+
+	def prepareLog(self, tranType, tableName, pkeyNames, attrNames, values):
+		if self.hashIdMap == None:
+			self.hashIdMap = {}
+			sql = ("SELECT bf.hash_id, bfc.bible_id, bf.id, bf.set_type_code, bf.set_size_code"
+				" FROM bible_filesets bf, bible_fileset_connections bfc"
+				" WHERE bf.hash_id = bfc.hash_id")
+			resultSet = self.db.select(sql, ())
+			for (hashId, bibleId, filesetId, setTypeCode, setSizeCode) in resultSet:
+				self.hashIdMap[hashId] = (bibleId, filesetId, setTypeCode, setSizeCode)
+		hashIdPos = pkeyNames.index("hash_id")
+		for value in values:
+			msg = ""
+			suffix = []
+			numPkey = len(pkeyNames)
+			if numPkey > 1:
+				suffix.append("KEY:")
+			for index in range(len(pkeyNames)):
+				if index == hashIdPos:
+					hashId = value[index]
+					msg = "%s\t%s\t%s\t%s" % self.hashIdMap[hashId]
+					msg += "\t%s\t%s\t" % (tranType, tableName)
+				else:
+					suffix.append(str(value[index]))
+			if len(attrNames) > 0 and tranType != "DELETE":
+				suffix.append("NEW:")
+				for index in range(len(attrNames)):
+					suffix.append(str(value[index + numPkey]))
+			msg += "\t".join(suffix)
+			self.sqlLog.append(msg)
+
+
+	def displayLog(self):
+		for line in sorted(self.sqlLog):
+			print(line)
+
+		# will be called for each table and each tran, build hash table once
+		#bibleId filesetId set_type_code set_size_code  INSERT: access_group_filesets: access_group_id
+		#bibleId filesetId set_type_code set_size_code  DELETE: access_group_filesets:  access_group_id
+
+		#INSERT: bibleId filesetId set_type_code set_size_code bible_fileset_tags:  name: description
+		#UPDATE: bibleId filesetId set_type_code set_size_code bible_fileset_tags: name: OLD: oldDescription, NEW: description
+		#DELETE: bibleId filesetId set_type_code set_size_code bible_fileset_tags: name: oldDescription
+
+		#INSERT: bibleId filesetId set_type_code set_size_code bible_fileset_copyrights: copyrightDate, copyrightMsg
+		#UPDATE: bibleId filesetId set_type_code set_size_code bible_fileset_copyrights: OLD: oldCopyrhgithDate, oldCopyrightMsg; NEW: copyrightDate, copyrightMsg
+		#DELETE: bibleId filesetId set_type_code, set_size_code bible_fileset_copyrights: copyrightDate, copyrightMsg
 
 if (__name__ == '__main__'):
 	config = Config()
