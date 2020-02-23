@@ -33,9 +33,9 @@ class UpdateDBPLPTSTable:
 			" ORDER BY b.bible_id, bf.id, bf.set_type_code")
 		filesetList = self.db.select(sql, ())
 		#self.updateAccessGroupFilesets(filesetList)
-		self.updateBibleFilesetTags(filesetList)
-		#self.updateBibleFilesetCopyrights(filesetList)
-		self.displayLog()
+		#self.updateBibleFilesetTags(filesetList)
+		self.updateBibleFilesetCopyrights(filesetList)
+		#self.displayLog()
 
 	##
 	## Access Group Filesets
@@ -71,7 +71,7 @@ class UpdateDBPLPTSTable:
 
 		tableName = "access_group_filesets"
 		pkeyNames = ("hash_id", "access_group_id")
-		self.insert(tableName, pkeyNames, (), insertRows)
+		self.insert(tableName, (), pkeyNames, insertRows)
 		self.delete(tableName, pkeyNames, deleteRows)
 		self.execute(tableName, len(insertRows), 0, len(deleteRows))
 
@@ -96,7 +96,7 @@ class UpdateDBPLPTSTable:
 
 
 	def deleteOldGroups(self, statements):
-		statements.append(("DELETE FROM access_group_filesets WHERE access_group_id < 100", [()]))
+		#THIS IS REDUNDANT, normal process with do this?#statements.append(("DELETE FROM access_group_filesets WHERE access_group_id < 100", [()]))
 		#statements.append(("DELETE FROM access_group_api_keys WHERE access_group_id < 100", [()]))
 		#statements.append(("DELETE FROM access_group_keys WHERE access_group_id < 100", [()]))
 		#statements.append(("DELETE FROM access_groups WHERE id < 100", [()]))
@@ -278,17 +278,17 @@ class UpdateDBPLPTSTable:
 							#print("DELETE: %s %s %s" % (filesetId, name, oldDescription))
 
 						elif description != None and oldDescription == None:
-							insertRows.append((hashId, name, languageId, description, adminOnly, notes, iso))
+							insertRows.append((description, adminOnly, notes, iso, hashId, name, languageId))
 
 						elif (oldDescription != description):
-							updateRows.append(((hashId, name, languageId), (description, adminOnly, notes, iso)))
+							updateRows.append((description, adminOnly, notes, iso, hashId, name, languageId))
 							#print("UPDATE: %s %s: OLD %s  NEW: %s" % (filesetId, name, oldDescription, description))
 
 		tableName = "bible_fileset_tags"
 		pkeyNames = ("hash_id", "name", "language_id")
 		attrNames = ("description", "admin_only", "notes", "iso")
-		self.insert(tableName, pkeyNames, attrNames, insertRows)
-		self.update(tableName, pkeyNames, attrNames, updateRows)
+		self.insert(tableName, attrNames, pkeyNames, insertRows)
+		self.update(tableName, attrNames, pkeyNames, updateRows)
 		self.delete(tableName, pkeyNames, deleteRows)
 		self.execute(tableName, len(insertRows), len(updateRows), len(deleteRows))	
 
@@ -337,27 +337,27 @@ class UpdateDBPLPTSTable:
 					deleteRows.append((hashId,))
 
 				elif lptsRecord != None and row == None:
-					insertRows.append((hashId, copyrightDate, copyrightMsg, copyrightMsg, 1))
+					insertRows.append((copyrightDate, copyrightMsg, copyrightMsg, 1, hashId))
 
 				elif (row != None and
 					(row[0] != copyrightDate or
 					row[1] != copyrightMsg or
 					row[2] != copyrightMsg or
 					row[3] != 1)):
-					updateRows.append(((hashId,), (copyrightDate, copyrightMsg, copyrightMsg, 1)))
+					updateRows.append((copyrightDate, copyrightMsg, copyrightMsg, 1, hashId))
 
 		tableName = "bible_fileset_copyrights"
 		pkeyNames = ("hash_id",)
 		attrNames = ("copyright_date", "copyright", "copyright_description", "open_access")
-		self.insert(tableName, pkeyNames, attrNames, insertRows)
-		self.update(tableName, pkeyNames, attrNames, updateRows)
+		self.insert(tableName, attrNames, pkeyNames, insertRows)
+		self.update(tableName, attrNames, pkeyNames, updateRows)
 		self.delete(tableName, pkeyNames, deleteRows)
 		self.execute(tableName, len(insertRows), len(updateRows), len(deleteRows))
 
 
-	def insert(self, tableName, pkeyNames, attrNames, values):
+	def insert(self, tableName, attrNames, pkeyNames, values):
 		if len(values) > 0:
-			names = pkeyNames + attrNames
+			names = attrNames + pkeyNames
 			valsubs = ['%s'] * len(names)
 			sql = "INSERT INTO %s (%s) VALUES (%s)" % (tableName, ", ".join(names), ", ".join(valsubs))
 			print(sql)
@@ -365,14 +365,11 @@ class UpdateDBPLPTSTable:
 			#self.prepareLog("INSERT", tableName, pkeyNames, attrNames, values)
 
 
-	def update(self, tableName, pkeyNames, attrNames, values):
+	def update(self, tableName, attrNames, pkeyNames, values):
 		if len(values) > 0:
 			sql = "UPDATE %s SET %s WHERE %s" % (tableName, "=%s, SET ".join(attrNames) + "=%s", "=%s AND ".join(pkeyNames) + "=%s")
 			print(sql)
-			reversedValues = []
-			for index in range(len(values)):
-				reversedValues.append(values[index][1] + values[index][0])
-			self.statements.append((sql, reversedValues))
+			self.statements.append((sql, values))
 			#self.prepareLog("UPDATE", tableName, pkeyNames, attrNames, values)
 
 
@@ -381,7 +378,7 @@ class UpdateDBPLPTSTable:
 			sql = "DELETE FROM %s WHERE %s" % (tableName, "=%s AND ".join(pkeyNames) + "=%s")
 			print(sql)
 			self.statements.append((sql, pkeyValues))
-			self.prepareLog("DELETE", tableName, pkeyNames, (), pkeyValues)
+			#self.prepareLog("DELETE", tableName, pkeyNames, (), pkeyValues)
 
 
 	def execute(self, tableName, numInsert, numUpdate, numDelete):
