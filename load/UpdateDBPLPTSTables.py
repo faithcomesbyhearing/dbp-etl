@@ -30,8 +30,8 @@ class UpdateDBPLPTSTable:
 			" FROM bible_filesets bf JOIN bible_fileset_connections b ON bf.hash_id = b.hash_id"
 			" ORDER BY b.bible_id, bf.id, bf.set_type_code")
 		filesetList = self.db.select(sql, ())
-		self.updateAccessGroupFilesets(filesetList)
-		#self.updateBibleFilesetTags(filesetList)
+		#self.updateAccessGroupFilesets(filesetList)
+		self.updateBibleFilesetTags(filesetList)
 		#self.updateBibleFilesetCopyrights(filesetList)
 
 	##
@@ -252,33 +252,34 @@ class UpdateDBPLPTSTable:
 				for name in ["bitrate", "sku", "volume"]:
 					oldDescription = tagMap.get(name)
 
-					if lptsRecord != None:
-						if name == "bitrate":
-							bitrate = filesetId[10:12] if len(filesetId) > 10 else "64"
-							description = bitrate + "kbps"
-						elif name == "sku":
-							description = lptsRecord.Reg_StockNumber()
-							if description != None:
-								description = description.replace("/", "")
-						elif name == "volume":
-							description = lptsRecord.Volumne_Name()
+					if typeCode == "audio" or name != "bitrate": # do not do bitrate for non-audio
+
+						if lptsRecord != None:
+							if name == "bitrate":
+								bitrate = filesetId[10:12] if len(filesetId) > 10 else "64"
+								description = bitrate + "kbps"
+							elif name == "sku":
+								description = lptsRecord.Reg_StockNumber()
+								if description != None:
+									description = description.replace("/", "")
+							elif name == "volume":
+								description = lptsRecord.Volumne_Name()
+							else:
+								print("ERROR: unknown bible_fileset_tags name %s" % (name))
+								sys.exit()
 						else:
-							print("ERROR: unknown bible_fileset_tags name %s" % (name))
-							sys.exit()
-					else:
-						description = None
+							description = None
 
-					if oldDescription != None and lptsRecord == None:
-						deleteRows.append((hashId, name, languageId))
-						#print("DELETE: %s %s %s" % (filesetId, name, oldDescription))
+						if oldDescription != None and lptsRecord == None:
+							deleteRows.append((hashId, name, languageId))
+							#print("DELETE: %s %s %s" % (filesetId, name, oldDescription))
 
-					elif description != None and oldDescription == None:
-						if typeCode == "audio":  ### This is a bug
+						elif description != None and oldDescription == None:
 							insertRows.append((hashId, name, languageId, description, adminOnly, notes, iso))
 
-					elif (oldDescription != description):
-						updateRows.append(((hashId, name, languageId), (description, adminOnly, notes, iso)))
-						#print("UPDATE: %s %s: OLD %s  NEW: %s" % (filesetId, name, oldDescription, description))
+						elif (oldDescription != description):
+							updateRows.append(((hashId, name, languageId), (description, adminOnly, notes, iso)))
+							#print("UPDATE: %s %s: OLD %s  NEW: %s" % (filesetId, name, oldDescription, description))
 
 		tableName = "bible_fileset_tags"
 		pkeyNames = ("hash_id", "name", "language_id")
