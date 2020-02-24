@@ -12,6 +12,7 @@ import io
 import os
 import sys
 import re
+from datetime import datetime
 from Config import *
 from LPTSExtractReader import *
 from SQLUtility import *
@@ -22,6 +23,7 @@ class UpdateDBPLPTSTable:
 		self.config = config
 		self.db = db
 		self.lptsReader = lptsReader
+		self.updateCounts = {}
 		self.statements = []
 		self.hashIdMap = None
 		self.sqlLog = []
@@ -32,10 +34,10 @@ class UpdateDBPLPTSTable:
 			" FROM bible_filesets bf JOIN bible_fileset_connections b ON bf.hash_id = b.hash_id"
 			" ORDER BY b.bible_id, bf.id, bf.set_type_code")
 		filesetList = self.db.select(sql, ())
-		#self.updateAccessGroupFilesets(filesetList)
-		#self.updateBibleFilesetTags(filesetList)
+		self.updateAccessGroupFilesets(filesetList)
+		self.updateBibleFilesetTags(filesetList)
 		self.updateBibleFilesetCopyrights(filesetList)
-		#self.displayLog()
+		self.displayLog()
 
 	##
 	## Access Group Filesets
@@ -96,6 +98,7 @@ class UpdateDBPLPTSTable:
 
 
 	def deleteOldGroups(self, statements):
+		a = 1
 		#THIS IS REDUNDANT, normal process with do this?#statements.append(("DELETE FROM access_group_filesets WHERE access_group_id < 100", [()]))
 		#statements.append(("DELETE FROM access_group_api_keys WHERE access_group_id < 100", [()]))
 		#statements.append(("DELETE FROM access_group_keys WHERE access_group_id < 100", [()]))
@@ -370,7 +373,7 @@ class UpdateDBPLPTSTable:
 			sql = "UPDATE %s SET %s WHERE %s" % (tableName, "=%s, SET ".join(attrNames) + "=%s", "=%s AND ".join(pkeyNames) + "=%s")
 			print(sql)
 			self.statements.append((sql, values))
-			#self.prepareLog("UPDATE", tableName, attrNames, pkeyNames, values)
+			self.prepareLog("UPDATE", tableName, attrNames, pkeyNames, values)
 
 
 	def delete(self, tableName, pkeyNames, pkeyValues):
@@ -378,11 +381,13 @@ class UpdateDBPLPTSTable:
 			sql = "DELETE FROM %s WHERE %s" % (tableName, "=%s AND ".join(pkeyNames) + "=%s")
 			print(sql)
 			self.statements.append((sql, pkeyValues))
-			#self.prepareLog("DELETE", tableName, (), pkeyNames, pkeyValues)
+			self.prepareLog("DELETE", tableName, (), pkeyNames, pkeyValues)
 
 
 	def execute(self, tableName, numInsert, numUpdate, numDelete):
-		print("\nnum %s to insert %d, num to update %d, num to delete %d" % (tableName, numInsert, numUpdate, numDelete))
+		self.updateCounts[tableName + "-INSERT:"] = numInsert
+		self.updateCounts[tableName + "-UPDATE:"] = numUpdate
+		self.updateCounts[tableName + "-DELETE:"] = numDelete
 		if len(self.statements) > 0:
 			self.db.displayTransaction(self.statements)
 			#self.db.executeTransaction(statements)
@@ -398,24 +403,22 @@ class UpdateDBPLPTSTable:
 			resultSet = self.db.select(sql, ())
 			for (hashId, bibleId, filesetId, setTypeCode, setSizeCode) in resultSet:
 				self.hashIdMap[hashId] = (bibleId, filesetId, setTypeCode, setSizeCode)
+		typeMsg = "%s\t%s\t" % (tranType, tableName)
 		numAttr = len(attrNames)
 		hashIdPos = pkeyNames.index("hash_id") + numAttr
 		for value in values:
-
-			typeMsg = "\t%s\t%s\t" % (tranType, tableName)
 			idMsg = ""
 			keyMsg = ["KEY:"]
 			attrMsg = ["NEW:"]
-
-			for index in range(len(values)):
+			for index in range(len(value)):
 				if index == hashIdPos:
 					hashId = value[index]
-					idMsg = "%s\t%s\t%s\t%s" % self.hashIdMap[hashId]
+					idMsg = "%s\t%s\t%s\t%s\t" % self.hashIdMap[hashId]
 				elif index < numAttr:
 					attrMsg.append(str(value[index]))
 				else:
 					keyMsg.append(str(value[index]))
-			msg = idMsg
+			msg = idMsg + typeMsg
 			if len(keyMsg) > 1:
 				msg += "\t".join(keyMsg)
 			if len(attrMsg) > 1:
@@ -424,20 +427,22 @@ class UpdateDBPLPTSTable:
 
 
 	def displayLog(self):
-		for line in sorted(self.sqlLog):
-			print(line)
+		errorDir = self.config.directory_errors
+		pattern = self.config.filename_datetime 
+		path = errorDir + "LPTS-Update-" + datetime.today().strftime(pattern) + ".out"
+		print(path)
+		sys.exit()
+		logFile = open(path, "w")
+		for message in sorted(self.sqlLog):
+			logFile.write(message + "\n")
+			print(message)
+		print("")
+		for countKey in sorted(self.updateCounts.keys()):
+			message = "%s = %d\n" % (countKey, self.updateCounts[countKey])
+			logFile.write(message)
+			print(message)
+		logFile.close()	
 
-		# will be called for each table and each tran, build hash table once
-		#bibleId filesetId set_type_code set_size_code  INSERT: access_group_filesets: access_group_id
-		#bibleId filesetId set_type_code set_size_code  DELETE: access_group_filesets:  access_group_id
-
-		#INSERT: bibleId filesetId set_type_code set_size_code bible_fileset_tags:  name: description
-		#UPDATE: bibleId filesetId set_type_code set_size_code bible_fileset_tags: name: OLD: oldDescription, NEW: description
-		#DELETE: bibleId filesetId set_type_code set_size_code bible_fileset_tags: name: oldDescription
-
-		#INSERT: bibleId filesetId set_type_code set_size_code bible_fileset_copyrights: copyrightDate, copyrightMsg
-		#UPDATE: bibleId filesetId set_type_code set_size_code bible_fileset_copyrights: OLD: oldCopyrhgithDate, oldCopyrightMsg; NEW: copyrightDate, copyrightMsg
-		#DELETE: bibleId filesetId set_type_code, set_size_code bible_fileset_copyrights: copyrightDate, copyrightMsg
 
 if (__name__ == '__main__'):
 	config = Config()
