@@ -362,7 +362,7 @@ class UpdateDBPLPTSTable:
 			sql = "INSERT INTO %s (%s) VALUES (%s)" % (tableName, ", ".join(names), ", ".join(valsubs))
 			print(sql)
 			self.statements.append((sql, values))
-			#self.prepareLog("INSERT", tableName, pkeyNames, attrNames, values)
+			self.prepareLog("INSERT", tableName, attrNames, pkeyNames, values)
 
 
 	def update(self, tableName, attrNames, pkeyNames, values):
@@ -370,7 +370,7 @@ class UpdateDBPLPTSTable:
 			sql = "UPDATE %s SET %s WHERE %s" % (tableName, "=%s, SET ".join(attrNames) + "=%s", "=%s AND ".join(pkeyNames) + "=%s")
 			print(sql)
 			self.statements.append((sql, values))
-			#self.prepareLog("UPDATE", tableName, pkeyNames, attrNames, values)
+			#self.prepareLog("UPDATE", tableName, attrNames, pkeyNames, values)
 
 
 	def delete(self, tableName, pkeyNames, pkeyValues):
@@ -378,7 +378,7 @@ class UpdateDBPLPTSTable:
 			sql = "DELETE FROM %s WHERE %s" % (tableName, "=%s AND ".join(pkeyNames) + "=%s")
 			print(sql)
 			self.statements.append((sql, pkeyValues))
-			#self.prepareLog("DELETE", tableName, pkeyNames, (), pkeyValues)
+			#self.prepareLog("DELETE", tableName, (), pkeyNames, pkeyValues)
 
 
 	def execute(self, tableName, numInsert, numUpdate, numDelete):
@@ -389,7 +389,7 @@ class UpdateDBPLPTSTable:
 			self.statements = []
 
 
-	def prepareLog(self, tranType, tableName, pkeyNames, attrNames, values):
+	def prepareLog(self, tranType, tableName, attrNames, pkeyNames, values):
 		if self.hashIdMap == None:
 			self.hashIdMap = {}
 			sql = ("SELECT bf.hash_id, bfc.bible_id, bf.id, bf.set_type_code, bf.set_size_code"
@@ -398,25 +398,28 @@ class UpdateDBPLPTSTable:
 			resultSet = self.db.select(sql, ())
 			for (hashId, bibleId, filesetId, setTypeCode, setSizeCode) in resultSet:
 				self.hashIdMap[hashId] = (bibleId, filesetId, setTypeCode, setSizeCode)
-		hashIdPos = pkeyNames.index("hash_id")
+		numAttr = len(attrNames)
+		hashIdPos = pkeyNames.index("hash_id") + numAttr
 		for value in values:
-			msg = ""
-			suffix = []
-			numPkey = len(pkeyNames)
-			if numPkey > 1:
-				suffix.append("KEY:")
-			for index in range(len(pkeyNames)):
+
+			typeMsg = "\t%s\t%s\t" % (tranType, tableName)
+			idMsg = ""
+			keyMsg = ["KEY:"]
+			attrMsg = ["NEW:"]
+
+			for index in range(len(values)):
 				if index == hashIdPos:
 					hashId = value[index]
-					msg = "%s\t%s\t%s\t%s" % self.hashIdMap[hashId]
-					msg += "\t%s\t%s\t" % (tranType, tableName)
+					idMsg = "%s\t%s\t%s\t%s" % self.hashIdMap[hashId]
+				elif index < numAttr:
+					attrMsg.append(str(value[index]))
 				else:
-					suffix.append(str(value[index]))
-			if len(attrNames) > 0 and tranType != "DELETE":
-				suffix.append("NEW:")
-				for index in range(len(attrNames)):
-					suffix.append(str(value[index + numPkey]))
-			msg += "\t".join(suffix)
+					keyMsg.append(str(value[index]))
+			msg = idMsg
+			if len(keyMsg) > 1:
+				msg += "\t".join(keyMsg)
+			if len(attrMsg) > 1:
+				msg += "\t".join(attrMsg)
 			self.sqlLog.append(msg)
 
 
