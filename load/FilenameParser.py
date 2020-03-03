@@ -623,19 +623,20 @@ class FilenameParser:
 			return "Traditional"
 
 
-#config = Config("dev")
-#FilenameReducer.openErrorReport(config)
-#reader = InputReader(config)
-#parser = FilenameParser(config)
-#bucket = config.s3_bucket
-#filenamesMap = reader.bucketListing(bucket)
-#parser.process3(filenamesMap)
-#reader = InputReader(config)
-#bucket = config.s3_vid_bucket
-#filenamesMap = reader.bucketListing(bucket)
-#parser.process3(filenamesMap)
-#parser.summary3()
-#FilenameReducer.closeErrorReport()
+#if (__name__ == '__main__'):
+	#config = Config()
+	#FilenameReducer.openErrorReport(config)
+	#reader = InputReader(config)
+	#parser = FilenameParser(config)
+	#bucket = config.s3_bucket
+	#filenamesMap = reader.bucketListing(bucket)
+	#parser.process3(filenamesMap)
+	#reader = InputReader(config)
+	#bucket = config.s3_vid_bucket
+	#filenamesMap = reader.bucketListing(bucket)
+	#parser.process3(filenamesMap)
+	#parser.summary3()
+	#FilenameReducer.closeErrorReport()
 
 
 
