@@ -37,8 +37,8 @@ class UpdateDBPLPTSTable:
 			filesetList = self.db.select(sql, ())
 			self.deleteOldGroups() # temporary, until in production
 			self.updateAccessGroupFilesets(filesetList)
-			self.updateBibleFilesetTags(filesetList)
-			self.updateBibleFilesetCopyrights(filesetList)
+			#self.updateBibleFilesetTags(filesetList)
+			#self.updateBibleFilesetCopyrights(filesetList)
 		except Exception as err:
 			print("ERROR: %s" % (err))
 		self.displayLog()
@@ -387,7 +387,7 @@ class UpdateDBPLPTSTable:
 		if len(self.statements) > 0:
 			#self.perRowExecute()
 			#self.db.displayTransaction(self.statements)
-			#self.db.executeTransaction(self.statements)
+			self.db.executeTransaction(self.statements)
 			self.statements = []
 
 
@@ -422,12 +422,12 @@ class UpdateDBPLPTSTable:
 				elif index < numAttr:
 					attrMsg.append("%s=%s" % (attrNames[index], str(value[index])))
 				else:
-					keyMsg.append("%s=%s" % (pkeyNames[index], str(value[index])))
+					keyMsg.append("%s=%s" % (pkeyNames[index - numAttr], str(value[index])))
 			msg = idMsg + typeMsg
 			if len(keyMsg) > 0:
 				msg += "KEY: " + ", ".join(keyMsg)
 			if len(attrMsg) > 0:
-				msg += "COLS: " + ", ".join(attrMsg)
+				msg += "  COLS: " + ", ".join(attrMsg)
 			self.sqlLog.append(msg)
 
 
