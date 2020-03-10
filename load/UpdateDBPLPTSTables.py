@@ -35,6 +35,7 @@ class UpdateDBPLPTSTable:
 			" ORDER BY b.bible_id, bf.id, bf.set_type_code")
 		try:
 			filesetList = self.db.select(sql, ())
+			self.deleteOldGroups() # temporary, until in production
 			self.updateAccessGroupFilesets(filesetList)
 			self.updateBibleFilesetTags(filesetList)
 			self.updateBibleFilesetCopyrights(filesetList)
@@ -80,6 +81,7 @@ class UpdateDBPLPTSTable:
 		self.delete(tableName, pkeyNames, deleteRows)
 		self.execute(tableName, len(insertRows), 0, len(deleteRows))
 
+
 	## deprecated?
 	def droppedRecordErrors(self, typeCode, bibleId, filesetId, setTypeCode, assetId):
 		if assetId == "dbs-web":
@@ -100,14 +102,13 @@ class UpdateDBPLPTSTable:
 			print("ERROR: fileset %s, %s, %s not found in LPTS." % (filesetId, setTypeCode, assetId))
 
 
-	def deleteOldGroups(self, statements):
-		a = 1
-		#THIS IS REDUNDANT, normal process with do this?#statements.append(("DELETE FROM access_group_filesets WHERE access_group_id < 100", [()]))
-		#statements.append(("DELETE FROM access_group_api_keys WHERE access_group_id < 100", [()]))
-		#statements.append(("DELETE FROM access_group_keys WHERE access_group_id < 100", [()]))
-		#statements.append(("DELETE FROM access_groups WHERE id < 100", [()]))
+	## deprecated
+	def deleteOldGroups(self):
+		self.statements.append(("DELETE FROM access_group_filesets WHERE access_group_id < 100", [()]))
+		self.statements.append(("DELETE FROM access_groups WHERE id < 100", [()]))
 
 
+	## deprecated
 	def insertAccessGroups(self):
 		count = self.db.selectScalar("SELECT count(*) FROM access_groups WHERE id > 100", ())
 		if count > 0:
