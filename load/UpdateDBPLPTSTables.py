@@ -33,10 +33,13 @@ class UpdateDBPLPTSTable:
 		sql = ("SELECT b.bible_id, bf.id, bf.set_type_code, bf.set_size_code, bf.asset_id, bf.hash_id"
 			" FROM bible_filesets bf JOIN bible_fileset_connections b ON bf.hash_id = b.hash_id"
 			" ORDER BY b.bible_id, bf.id, bf.set_type_code")
-		filesetList = self.db.select(sql, ())
-		self.updateAccessGroupFilesets(filesetList)
-		self.updateBibleFilesetTags(filesetList)
-		self.updateBibleFilesetCopyrights(filesetList)
+		try:
+			filesetList = self.db.select(sql, ())
+			self.updateAccessGroupFilesets(filesetList)
+			self.updateBibleFilesetTags(filesetList)
+			self.updateBibleFilesetCopyrights(filesetList)
+		except Exception as err:
+			print("ERROR: %s" % (err))
 		self.displayLog()
 
 	##
@@ -77,7 +80,7 @@ class UpdateDBPLPTSTable:
 		self.delete(tableName, pkeyNames, deleteRows)
 		self.execute(tableName, len(insertRows), 0, len(deleteRows))
 
-
+	## deprecated?
 	def droppedRecordErrors(self, typeCode, bibleId, filesetId, setTypeCode, assetId):
 		if assetId == "dbs-web":
 			return
@@ -145,6 +148,7 @@ class UpdateDBPLPTSTable:
 		self.db.executeBatch(sql, values)
 
 
+	## deprecated
 	def insertAccessGroupAPIKeys(self, userId, key, name, description, allowDbp, allowWeb, allowAPI, allowAPP, allowGBA):
 		dbpSet = {101, 102, 103}
 		webSet = {111, 113, 115}
@@ -156,9 +160,6 @@ class UpdateDBPLPTSTable:
 		sql = ("INSERT INTO user_keys (user_id, `key`, name, description) VALUES (%s, %s, %s, %s)")
 		values = (userId, key, name, description)
 		keyId = self.db.executeInsert(sql, values)
-		#keyId = self.db.lastRow()
-		#keyId = self.db.conn.cursor().lastrowid
-		print("keyId", keyId)
 		apiSql = ("INSERT INTO access_group_api_keys (access_group_id, key_id) VALUES (%s, %s)")
 		keySql = ("INSERT INTO access_group_keys (access_group_id, key_id_alt, key_id) VALUES (%s, %s, %s)")
 
@@ -184,9 +185,9 @@ class UpdateDBPLPTSTable:
 			for accessId in gbaSet:
 				apiValues.append((accessId, keyId))
 				keyValues.append((accessId, keyId, key))
-		print("%s rows inserted into access_group_api_keys" % (len(apiValues)))
+		#print("%s rows inserted into access_group_api_keys" % (len(apiValues)))
 		self.db.executeBatch(apiSql, apiValues)
-		print("%d rows inserted into access_group_keys" % (len(keyValues)))
+		#print("%d rows inserted into access_group_keys" % (len(keyValues)))
 		self.db.executeBatch(keySql, keyValues)
 
 
@@ -202,7 +203,6 @@ class UpdateDBPLPTSTable:
 			priorKey = None
 			for (bibleId, accessGroupId, lptsName) in resultSet:
 				key = bibleId
-				#key = "%s/%s" % (bibleId, filesetId)
 				if key != priorKey:
 					outFile.write("<DBP_Equivalent>%s</DBP_Equivalent>\n" % (bibleId))
 					priorKey = key
@@ -236,7 +236,6 @@ class UpdateDBPLPTSTable:
 	## Bible Fileset Tags
 	##
 	def updateBibleFilesetTags(self, filesetList):
-		## primary key is hash_id, name, language_id
 		insertRows = []
 		updateRows = []
 		deleteRows = []
@@ -276,7 +275,7 @@ class UpdateDBPLPTSTable:
 						else:
 							description = None
 
-						if oldDescription != None and lptsRecord == None:
+						if oldDescription != None and description == None:
 							deleteRows.append((hashId, name, languageId))
 							#print("DELETE: %s %s %s" % (filesetId, name, oldDescription))
 
@@ -300,7 +299,6 @@ class UpdateDBPLPTSTable:
 	## Bible Fileset Copyrights
 	##
 	def updateBibleFilesetCopyrights(self, filesetList):
-		## primary key is hash_id
 		insertRows = []
 		updateRows = []
 		deleteRows = []
@@ -315,9 +313,9 @@ class UpdateDBPLPTSTable:
 			if typeCode != "app":
 				(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecordLoose(typeCode, bibleId, filesetId)
 				if lptsRecord != None:
-					copyrightText = lptsRecord.Copyrightc()
-					copyrightAudio = lptsRecord.Copyrightp()
-					copyrightVideo = lptsRecord.Copyright_Video()
+					copyrightText = self.escapeChars(lptsRecord.Copyrightc())
+					copyrightAudio = self.escapeChars(lptsRecord.Copyrightp())
+					copyrightVideo = self.escapeChars(lptsRecord.Copyright_Video())
 
 					if typeCode == "text":
 						copyright = copyrightText
@@ -363,15 +361,13 @@ class UpdateDBPLPTSTable:
 			names = attrNames + pkeyNames
 			valsubs = ['%s'] * len(names)
 			sql = "INSERT INTO %s (%s) VALUES (%s)" % (tableName, ", ".join(names), ", ".join(valsubs))
-			print(sql)
 			self.statements.append((sql, values))
 			self.prepareLog("INSERT", tableName, attrNames, pkeyNames, values)
 
 
 	def update(self, tableName, attrNames, pkeyNames, values):
 		if len(values) > 0:
-			sql = "UPDATE %s SET %s WHERE %s" % (tableName, "=%s, SET ".join(attrNames) + "=%s", "=%s AND ".join(pkeyNames) + "=%s")
-			print(sql)
+			sql = "UPDATE %s SET %s WHERE %s" % (tableName, "=%s, ".join(attrNames) + "=%s", "=%s AND ".join(pkeyNames) + "=%s")
 			self.statements.append((sql, values))
 			self.prepareLog("UPDATE", tableName, attrNames, pkeyNames, values)
 
@@ -379,7 +375,6 @@ class UpdateDBPLPTSTable:
 	def delete(self, tableName, pkeyNames, pkeyValues):
 		if len(pkeyValues) > 0:
 			sql = "DELETE FROM %s WHERE %s" % (tableName, "=%s AND ".join(pkeyNames) + "=%s")
-			print(sql)
 			self.statements.append((sql, pkeyValues))
 			self.prepareLog("DELETE", tableName, (), pkeyNames, pkeyValues)
 
@@ -388,10 +383,19 @@ class UpdateDBPLPTSTable:
 		self.updateCounts[tableName + "-INSERT:"] = numInsert
 		self.updateCounts[tableName + "-UPDATE:"] = numUpdate
 		self.updateCounts[tableName + "-DELETE:"] = numDelete
+		#self.perRowExecute()
 		if len(self.statements) > 0:
-			self.db.displayTransaction(self.statements)
-			#self.db.executeTransaction(statements)
+			#self.db.displayTransaction(self.statements)
+			self.db.executeTransaction(self.statements)
 			self.statements = []
+
+
+	## debug routine
+	def perRowExecute(self):
+		for (statement, values) in self.statements:
+			for value in values:
+				print(statement, value)
+				self.db.execute(statement, value)
 
 
 	def prepareLog(self, tranType, tableName, attrNames, pkeyNames, values):
@@ -430,18 +434,25 @@ class UpdateDBPLPTSTable:
 		errorDir = self.config.directory_errors
 		pattern = self.config.filename_datetime 
 		path = errorDir + "LPTS-Update-" + datetime.today().strftime(pattern) + ".out"
-		print(path)
-		sys.exit()
 		logFile = open(path, "w")
 		for message in sorted(self.sqlLog):
 			logFile.write(message + "\n")
-			print(message)
-		print("")
 		for countKey in sorted(self.updateCounts.keys()):
 			message = "%s = %d\n" % (countKey, self.updateCounts[countKey])
 			logFile.write(message)
-			print(message)
-		logFile.close()	
+		logFile.write("%s\n" % path)
+		logFile.close()
+
+		logFile = open(path, "r")
+		for line in logFile:
+			print(line)
+		logFile.close()
+
+
+	def escapeChars(self, value):
+		if value == None:
+			return
+		return value.replace("'", "''")
 
 
 if (__name__ == '__main__'):
