@@ -387,7 +387,7 @@ class UpdateDBPLPTSTable:
 		if len(self.statements) > 0:
 			#self.perRowExecute()
 			#self.db.displayTransaction(self.statements)
-			self.db.executeTransaction(self.statements)
+			#self.db.executeTransaction(self.statements)
 			self.statements = []
 
 
