@@ -384,8 +384,8 @@ class UpdateDBPLPTSTable:
 		self.updateCounts[tableName + "-INSERT:"] = numInsert
 		self.updateCounts[tableName + "-UPDATE:"] = numUpdate
 		self.updateCounts[tableName + "-DELETE:"] = numDelete
-		#self.perRowExecute()
 		if len(self.statements) > 0:
+			#self.perRowExecute()
 			#self.db.displayTransaction(self.statements)
 			self.db.executeTransaction(self.statements)
 			self.statements = []
@@ -408,26 +408,26 @@ class UpdateDBPLPTSTable:
 			resultSet = self.db.select(sql, ())
 			for (hashId, bibleId, filesetId, setTypeCode, setSizeCode) in resultSet:
 				self.hashIdMap[hashId] = (bibleId, filesetId, setTypeCode, setSizeCode)
-		typeMsg = "%s\t%s\t" % (tranType, tableName)
+		typeMsg = "%s-%s " % (tableName, tranType)
 		numAttr = len(attrNames)
 		hashIdPos = pkeyNames.index("hash_id") + numAttr
 		for value in values:
 			idMsg = ""
-			keyMsg = ["KEY:"]
-			attrMsg = ["NEW:"]
+			keyMsg = []
+			attrMsg = []
 			for index in range(len(value)):
 				if index == hashIdPos:
 					hashId = value[index]
-					idMsg = "%s\t%s\t%s\t%s\t" % self.hashIdMap[hashId]
+					idMsg = "%s/%s/%s/%s " % self.hashIdMap[hashId]
 				elif index < numAttr:
-					attrMsg.append(str(value[index]))
+					attrMsg.append("%s=%s" % (attrNames[index], str(value[index])))
 				else:
-					keyMsg.append(str(value[index]))
+					keyMsg.append("%s=%s" % (pkeyNames[index], str(value[index])))
 			msg = idMsg + typeMsg
-			if len(keyMsg) > 1:
-				msg += "\t".join(keyMsg)
-			if len(attrMsg) > 1:
-				msg += "\t".join(attrMsg)
+			if len(keyMsg) > 0:
+				msg += "KEY: " + ", ".join(keyMsg)
+			if len(attrMsg) > 0:
+				msg += "COLS: " + ", ".join(attrMsg)
 			self.sqlLog.append(msg)
 
 
