@@ -180,6 +180,17 @@ class Filename:
 		if typ not in {"mp3", "html", "mp4"}:
 			self.errors.append("unknown type .%s" % (typ))
 
+	def getSequence(self):
+		prefix = self.bookSeq
+		if prefix == None or prefix == "":
+			prefix = self.fileSeq
+		if prefix == None or prefix == "":
+			lookup = {"MAT": "B01", "MRK": "B02", "LUK": "B03", "JHN": "B04"}
+			prefix = lookup.get(self.bookId, "000")
+		while len(prefix) < 3:
+			prefix = "0" + prefix
+		return prefix
+
 
 	def numErrors(self):
 		return len(self.errors)

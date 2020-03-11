@@ -111,7 +111,7 @@ class Validate:
 				zipDir = zipfile.ZipFile(zipfilePath, "w")
 				with zipDir:
 					for file in os.listdir(directory):
-						if file.endswith("csv"):
+						if file.endswith("csv") and not file.startswith("._"):
 							fullPath = directory + os.sep + file
 							zipDir.write(fullPath, file)
 							os.remove(fullPath)

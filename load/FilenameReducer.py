@@ -150,14 +150,16 @@ class FilenameReducer:
 
 		with open(filename, 'w', newline='\n') as csvfile:
 			writer = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-			writer.writerow(("type_code", "bible_id", "fileset_id", "file_name", "book_id", 
+			writer.writerow(("type_code", "bible_id", "fileset_id", "sequence", "file_name", "book_id", "book_name",
 				"chapter_start", "chapter_end", "verse_start", "verse_end", "datetime", "file_size", "errors"))
 			## prefix and some fields are redundant
 			## optional: bookSeq, fileSeq, name, title, usfx2, damid, filetype
 			(typeCode, bibleId, filesetId) = self.filePrefix.split("/")
 			for file in fileList:
-				writer.writerow((typeCode, bibleId, filesetId, file.file, file.bookId, 
-					file.chapter, file.chapterEnd, file.verseStart, file.verseEnd, file.datetime, file.length, "; ".join(file.errors)))
+				writer.writerow((typeCode, bibleId, filesetId, file.getSequence(), 
+					file.file, file.bookId, file.name, file.chapter, file.chapterEnd, 
+					file.verseStart, file.verseEnd, file.datetime, file.length, 
+					"; ".join(file.errors)))
 
 
 	def writeErrors(self, errorMessages):
