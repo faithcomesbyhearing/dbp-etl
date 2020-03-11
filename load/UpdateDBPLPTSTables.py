@@ -425,7 +425,7 @@ class UpdateDBPLPTSTable:
 					keyMsg.append("%s=%s" % (pkeyNames[index - numAttr], str(value[index])))
 			msg = idMsg + typeMsg
 			if len(keyMsg) > 0:
-				msg += "KEY: " + ", ".join(keyMsg)
+				msg += "PKEY: " + ", ".join(keyMsg)
 			if len(attrMsg) > 0:
 				msg += "  COLS: " + ", ".join(attrMsg)
 			self.sqlLog.append(msg)
