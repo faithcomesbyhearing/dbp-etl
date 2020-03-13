@@ -1,11 +1,8 @@
 # UpdateDBPLPTSTable.py
 #
-#| access_group_id | int(10) unsigned | NO   | PRI | NULL              |
-#| hash_id         | char(12)         | NO   | PRI | NULL              |
-#| PRIMARY KEY (access_group_id, hash_id)
-#| KEY (hash_id)
-#| FOREIGN KEY (access_group_id) REFERENCES access_groups (id)
-#| FOREIGN KEY (hash_id) REFERENCES bible_filesets (hash_id)
+# This program updates DBP tables from the LPTS database source.
+# It does INSERT, UPDATE and DELETE of all table rows that need
+# to be changed based upon a comparison of DBP to LPTS.
 #
 
 import io
@@ -35,7 +32,7 @@ class UpdateDBPLPTSTable:
 			" ORDER BY b.bible_id, bf.id, bf.set_type_code")
 		try:
 			filesetList = self.db.select(sql, ())
-			self.deleteOldGroups() # temporary, until in production
+			#self.deleteOldGroups() # temporary, until in production
 			self.updateAccessGroupFilesets(filesetList)
 			#self.updateBibleFilesetTags(filesetList)
 			#self.updateBibleFilesetCopyrights(filesetList)
@@ -52,6 +49,9 @@ class UpdateDBPLPTSTable:
 		deleteRows = []
 		## note id > 100 is temporary
 		accessGroupMap = self.db.selectMap("SELECT id, description FROM access_groups WHERE id > 100", ())
+		textAccessSet = self.db.selectSet("SELECT description FROM access_groups WHERE name like %s", ("%text%",))
+		audioAccessSet = self.db.selectSet("SELECT description FROM access_groups WHERE name like %s", ("%audio%",))
+		videoAccessSet = self.db.selectSet("SELECT description FROM access_groups WHERE name like %s", ("%video%",))
 
 		for (bibleId, filesetId, setTypeCode, setSizeCode, assetId, hashId) in filesetList:
 			typeCode = setTypeCode.split("_")[0]
@@ -69,6 +69,26 @@ class UpdateDBPLPTSTable:
 				for (accessGroupId, lptsName) in accessGroupMap.items():
 					accessIdInDBP = accessGroupId in accessSet;
 					accessIdInLPTS = lpts.get(lptsName) == "-1"
+
+					if accessIdInLPTS:
+						if typeCode == "text":
+							accessIdInLPTS = lptsName in textAccessSet
+							if accessIdInLPTS and lptsName in {"DBPText", "DBPTextOT"}:
+								if "NT" in setSizeCode and "OT" in setSizeCode:
+									accessIdInLPTS = ("DBPText" in accessGroupMap.values()
+													and "DBPTextOT" in accessGroupMap.values())
+								elif "NT" in setSizeCode:
+									accessIdInLPTS = lptsName == "DBPText"
+								elif "OT" in setSizeCode:
+									accessIdInLPTS = lptsName == "DBPTextOT"
+								else:
+									accessIdInLPTS = False
+						elif typeCode == "audio":
+							accessIdInLPTS = lptsName in audioAccessSet
+						elif typeCode == "video":
+							accessIdInLPTS = lptsName in videoAccessSet
+						else:
+							accessIdInLPTS = False
 
 					if accessIdInLPTS and not accessIdInDBP:
 						insertRows.append((hashId, accessGroupId))
@@ -103,9 +123,9 @@ class UpdateDBPLPTSTable:
 
 
 	## deprecated
-	def deleteOldGroups(self):
-		self.statements.append(("DELETE FROM access_group_filesets WHERE access_group_id < 100", [()]))
-		self.statements.append(("DELETE FROM access_groups WHERE id < 100", [()]))
+#	def deleteOldGroups(self):
+#		self.statements.append(("DELETE FROM access_group_filesets WHERE access_group_id < 100", [()]))
+#		self.statements.append(("DELETE FROM access_groups WHERE id < 100", [()]))
 
 
 	## deprecated
@@ -150,47 +170,47 @@ class UpdateDBPLPTSTable:
 
 
 	## deprecated
-	def insertAccessGroupAPIKeys(self, userId, key, name, description, allowDbp, allowWeb, allowAPI, allowAPP, allowGBA):
-		dbpSet = {101, 102, 103}
-		webSet = {111, 113, 115}
-		apiSet = {121, 123, 125}
-		appSet = {131, 133, 135}
-		gbaSet = {141, 143, 145}
-		
-		## Update access_group_api_keys
-		sql = ("INSERT INTO user_keys (user_id, `key`, name, description) VALUES (%s, %s, %s, %s)")
-		values = (userId, key, name, description)
-		keyId = self.db.executeInsert(sql, values)
-		apiSql = ("INSERT INTO access_group_api_keys (access_group_id, key_id) VALUES (%s, %s)")
-		keySql = ("INSERT INTO access_group_keys (access_group_id, key_id_alt, key_id) VALUES (%s, %s, %s)")
-
-		apiValues = []
-		keyValues = []
-		if allowDbp:
-			for accessId in dbpSet:
-				apiValues.append((accessId, keyId))
-				keyValues.append((accessId, keyId, key))
-		if allowWeb:
-			for accessId in webSet:
-				apiValues.append((accessId, keyId))
-				keyValues.append((accessId, keyId, key))
-		if allowAPI:
-			for accessId in apiSet:
-				apiValues.append((accessId, keyId))
-				keyValues.append((accessId, keyId, key))				
-		if allowAPP:
-			for accessId in apiSet:
-				apiValues.append((accessId, keyId))
-				keyValues.append((accessId, keyId, key))
-		if allowGBA:
-			for accessId in gbaSet:
-				apiValues.append((accessId, keyId))
-				keyValues.append((accessId, keyId, key))
-		#print("%s rows inserted into access_group_api_keys" % (len(apiValues)))
-		self.db.executeBatch(apiSql, apiValues)
-		#print("%d rows inserted into access_group_keys" % (len(keyValues)))
-		self.db.executeBatch(keySql, keyValues)
-
+#	def insertAccessGroupAPIKeys(self, userId, key, name, description, allowDbp, allowWeb, allowAPI, allowAPP, allowGBA):
+#		dbpSet = {101, 102, 103}
+#		webSet = {111, 113, 115}
+#		apiSet = {121, 123, 125}
+#		appSet = {131, 133, 135}
+#		gbaSet = {141, 143, 145}
+#		
+#		## Update access_group_api_keys
+#		sql = ("INSERT INTO user_keys (user_id, `key`, name, description) VALUES (%s, %s, %s, %s)")
+#		values = (userId, key, name, description)
+#		keyId = self.db.executeInsert(sql, values)
+#		apiSql = ("INSERT INTO access_group_api_keys (access_group_id, key_id) VALUES (%s, %s)")
+#		keySql = ("INSERT INTO access_group_keys (access_group_id, key_id_alt, key_id) VALUES (%s, %s, %s)")
+#
+#		apiValues = []
+#		keyValues = []
+#		if allowDbp:
+#			for accessId in dbpSet:
+#				apiValues.append((accessId, keyId))
+#				keyValues.append((accessId, keyId, key))
+#		if allowWeb:
+#			for accessId in webSet:
+#				apiValues.append((accessId, keyId))
+#				keyValues.append((accessId, keyId, key))
+#		if allowAPI:
+#			for accessId in apiSet:
+#				apiValues.append((accessId, keyId))
+#				keyValues.append((accessId, keyId, key))				
+#		if allowAPP:
+#			for accessId in apiSet:
+#				apiValues.append((accessId, keyId))
+#				keyValues.append((accessId, keyId, key))
+#		if allowGBA:
+#			for accessId in gbaSet:
+#				apiValues.append((accessId, keyId))
+#				keyValues.append((accessId, keyId, key))
+#		#print("%s rows inserted into access_group_api_keys" % (len(apiValues)))
+#		self.db.executeBatch(apiSql, apiValues)
+#		#print("%d rows inserted into access_group_keys" % (len(keyValues)))
+#		self.db.executeBatch(keySql, keyValues)
+#
 
 	def accessGroupSymmetricTest(self):
 		sql = ("SELECT distinct bfc.bible_id, agf.access_group_id, ag.description"
@@ -255,7 +275,7 @@ class UpdateDBPLPTSTable:
 					" FROM bible_fileset_tags"
 					" WHERE hash_id = %s AND language_id = %s")
 				tagMap = self.db.selectMap(sql, (hashId, languageId))
-				for name in ["bitrate", "sku", "volume"]:
+				for name in ["bitrate", "sku", "stock_no", "volume"]:
 					oldDescription = tagMap.get(name)
 
 					if typeCode == "audio" or name != "bitrate": # do not do bitrate for non-audio
@@ -264,10 +284,10 @@ class UpdateDBPLPTSTable:
 							if name == "bitrate":
 								bitrate = filesetId[10:12] if len(filesetId) > 10 else "64"
 								description = bitrate + "kbps"
-							elif name == "sku":
+							elif name == "stock_no":
 								description = lptsRecord.Reg_StockNumber()
-								if description != None:
-									description = description.replace("/", "")
+							elif name == "sku":
+								description = None # intended to remove all sku
 							elif name == "volume":
 								description = lptsRecord.Volumne_Name()
 							else:
@@ -465,10 +485,5 @@ if (__name__ == '__main__'):
 	filesets.process()
 	#filesets.accessGroupSymmetricTest()
 	db.close()
-"""
-	db.execute("use dbp_users", ())
-	filesets = UpdateDBPLPTSTable(config, db)
-	filesets.insertAccessGroupAPIKeys(4, "abcdefghijklmnop", "test", "test", True, True, True, True, True)
-"""
 
 
