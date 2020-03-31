@@ -4,6 +4,7 @@
 import io
 import os
 import sys
+import hashlib
 from datetime import datetime
 from Config import *
 from LPTSExtractReader import *
@@ -27,6 +28,8 @@ class BibleFileset:
 		self.dbsFormat = None
 		self.dbsPlain = None
 		self.prodFiles = 0
+		self.dbpFormatDelete = False
+		self.dbpPlainDelete = False
 		self.dbsFormat2fcbhFormat = False
 		self.dbsPlain2fcbhPlain = False
 		for row in resultSet:
@@ -80,9 +83,11 @@ class OneTimeUpdateDBSWEB:
 				print(filesetList.toString())
 				self.processTextFormat(bibleId, filesetId, filesetList)
 				self.processTextPlain(bibleId, filesetId, filesetList)
+				self.updateFilesetGroup(bibleId, filesetId, filesetList)
 				count += 1
 				#if count > 100:
 				#	break
+
 
 		
 	def getDBPProdFiles(self):
@@ -139,11 +144,12 @@ class OneTimeUpdateDBSWEB:
 					fileset.dbsFormat2fcbhFormat = True
 					print("CHANGE1 %s %s/%s dbs-web text_format to dbp-prod" % (hashId, bibleId, filesetId))
 				elif fileset.fcbhFormat != None and (fileset.fcbhFormat.numFiles == 0 or fileset.prodFiles == 0):
+					fileset.dbpFormatDelete = True
 					fileset.dbsFormat2fcbhFormat = True
 					print("DELETE2 %s %s/%s dbp-prod text_format" % (fileset.fcbhFormat.hashId, bibleId, filesetId))
 					print("CHANGE1 %s %s/%s dbs-web text_format to dbp-prod" % (hashId, bibleId, filesetId))
 			else:
-				print("DELETE %s %s/%s dbs-web text_format has no files in dbp-prod." % (hashId, bibleId, filesetId))
+				print("WARN: %s %s/%s dbs-web text_format has no files in dbp-prod." % (hashId, bibleId, filesetId))
 			if fileset.dbsFormat.numVerses > 100:
 				print("WARN: %s %s/%s dbs-web text_format has %d verses." % (hashId, fileset.dbsFormat.numFiles, bibleId, filesetId))
 
@@ -157,6 +163,7 @@ class OneTimeUpdateDBSWEB:
 						fileset.dbsPlain2fcbhPlain = True
 						print("CHANGE3 %s %s/%s dbs-web text_plain to db" % (hashId, bibleId, filesetId))
 					elif fileset.fcbhPlain != None and fileset.fcbhPlain.numVerses == 0:
+						fileset.dbpPlainDelete = True
 						fileset.dbsPlain2fcbhPlain = True
 						print("DELETE4 %s %s/%s dbp-prod text_plain" % (fileset.fcbhFormat.hashId, bibleId, filesetId))
 						print("CHANGE3 %s %s/%s dbs-web text_plain to db" % (hashId, bibleId, filesetId))
@@ -164,6 +171,58 @@ class OneTimeUpdateDBSWEB:
 				print("WARN: %s %s/%s dbs-web text_plain has no verses" % (hashId, bibleId, filesetId))
 			if fileset.dbsPlain.numFiles > 0:
 				print("WARN: %s %s/%s dbs-web text_plain has %d files" % (hashId, bibleId, filesetId, fileset.dbsPlain.numFiles))
+
+
+	def updateFilesetGroup(self, bibleId, filesetId, fileset):
+		self.statements = []
+		if fileset.dbpFormatDelete:
+			self.deleteFileset(bibleId, filesetId, "text_format", fileset)
+		if fileset.dbpPlainDelete:
+			self.deleteFileset(bibleId, filesetId, "text_plain", fileset)
+		if fileset.dbsFormat2fcbhFormat:
+			self.replaceFileset(bibleId, filesetId, "text_format", fileset.dbsFormat)
+		if fileset.dbsPlain2fcbhPlain:
+			self.replaceFileset(bibleId, filesetId, "text_plain", fileset.dbsPlain)
+		#self.db.executeTransaction(self.statements)
+		self.db.displayTransaction(self.statements)
+
+
+	def deleteFileset(self, bibleId, filesetId, typeCode, fileset):
+		stmt = "DELETE bible_fileset WHERE hash_id = %s"
+		self.statements.append((stmt, [(fileset.hashId)]))
+
+
+	def replaceFileset(self, bibleId, filesetId, typeCode, fileset):
+		bucket = "db" if typeCode == "text_plain" else "dbp-prod"
+		newHashId = self.getHashId(bucket, filesetId, typeCode)
+		stmt = "UPDATE bible_filesets SET hash_id = %s, asset_id = %s WHERE hash_id = %s"
+		self.statements.append((stmt, [(newHashId, bucket, fileset.hashId)]))
+		tableNames = ("access_group_filesets", "bible_fileset_connections",
+			"bible_fileset_tags", "bible_fileset_copyrights", "bible_fileset_copyright_organizations",
+			"bible_files", "bible_verses")
+		for table in tableNames:
+			stmt = "UPDATE %s" % (table) + " SET hash_id = %s WHERE hash_id = %s" 
+			self.statements.append((stmt, [(newHashId, fileset.hashId)]))
+
+
+
+		#attrNames = ("hash_id", "id", "asset_id", "set_type_code", "set_size_code", "hidden", "created_at", "updated_at")
+		#attrNames = ("hash_id", "access_group_id", "created_at", "updated_at")
+		#attrNames = ("hash_id", "bible_id", "created_at", "updated_at")
+		#attrNames = ("hash_id", "name", "description", "admin_only", "notes", "iso", "language_id", "created_at", "updated_at")
+		#attrNames = ("hash_id", "copyright_date", "copyright", "copyright_description", "created_at", "updated_at", "open_access")
+		#attrNames = ("hash_id", "organization_id", "organization_role", "created_at", "updated_at")
+		#attrNames = ("hash_id", "book_id", "chapter_start", "chapter_end", "verse_start", "verse_end", 
+		#	"file_name", "file_size", "duration", "created_at", "updated_at")
+		#attrNames = ("hash_id", "book_id", "chapter", "verse_start", "verse_end", "verse_text")
+
+	def getHashId(self, bucket, filesetId, setTypeCode):
+		md5 = hashlib.md5()
+		md5.update(filesetId.encode("latin1"))
+		md5.update(bucket.encode("latin1"))
+		md5.update(setTypeCode.encode("latin1"))
+		hash_id = md5.hexdigest()
+		return hash_id[:12]
 
 	"""
 	dbs-web 1647
