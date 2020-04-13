@@ -508,7 +508,7 @@ class LPTSRecord:
 	def WebHubVideo(self):
 		return self.record.get("WebHubVideo")
 
-
+"""
 if (__name__ == '__main__'):
 	config = Config()
 	reader = LPTSExtractReader(config)
@@ -519,3 +519,22 @@ if (__name__ == '__main__'):
 	record = lptsRecord.record
 	print("Download", record.get("Download"))
 	reader.getFieldNames()
+"""
+
+if (__name__ == '__main__'):
+	config = Config()
+	reader = LPTSExtractReader(config)
+	for rec in reader.resultSet:
+		for index in [1, 2, 3]:
+			print(rec.Reg_StockNumber(), index)
+			prefixSet = set()
+			for typeCode in ["text", "audio", "video"]:
+				if typeCode != "video" or index == 1:
+					damidSet = rec.DamIds(typeCode, index)
+					if len(damidSet) > 0:
+						print(typeCode, index, damidSet)
+						for damid in damidSet:
+							prefixSet.add(damid[:6])
+			if len(prefixSet) > 1:
+				print("ERROR: More than one DamId prefix in set %s" % (",".join(prefixSet)))
+

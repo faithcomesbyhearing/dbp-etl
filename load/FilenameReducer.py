@@ -145,6 +145,9 @@ class FilenameReducer:
 			print("ERROR: Unknown listType %s" % (listType))
 			sys.exit()
 
+		for file in fileList:
+			file.setSortSequence()
+
 		filename = path + self.filePrefix.replace("/", "_") + ".csv"
 		self.ensureDirectory(filename)
 
@@ -155,7 +158,7 @@ class FilenameReducer:
 			## prefix and some fields are redundant
 			## optional: bookSeq, fileSeq, name, title, usfx2, damid, filetype
 			(typeCode, bibleId, filesetId) = self.filePrefix.split("/")
-			for file in fileList:
+			for file in sorted(fileList, key=attrgetter('sortSequence')):
 				writer.writerow((typeCode, bibleId, filesetId, file.getSequence(), 
 					file.file, file.bookId, file.name, file.chapter, file.chapterEnd, 
 					file.verseStart, file.verseEnd, file.datetime, file.length, 

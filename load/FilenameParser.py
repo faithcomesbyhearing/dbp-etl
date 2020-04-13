@@ -34,6 +34,7 @@ class Filename:
 		self.unknown = []
 		self.type = ""
 		self.errors = []
+		self.sortSequence = "000.000"
 
 
 	def setBookSeq(self, bookSeq):
@@ -180,6 +181,7 @@ class Filename:
 		if typ not in {"mp3", "html", "mp4"}:
 			self.errors.append("unknown type .%s" % (typ))
 
+
 	def getSequence(self):
 		prefix = self.bookSeq
 		if prefix == None or prefix == "":
@@ -187,9 +189,19 @@ class Filename:
 		if prefix == None or prefix == "":
 			lookup = {"MAT": "B01", "MRK": "B02", "LUK": "B03", "JHN": "B04"}
 			prefix = lookup.get(self.bookId, "000")
-		while len(prefix) < 3:
-			prefix = "0" + prefix
+		#while len(prefix) < 3:
+		#	prefix = "0" + prefix
 		return prefix
+
+
+	def setSortSequence(self):
+		bookSeq = str(self.getSequence())
+		while len(bookSeq) < 3:
+			bookSeq = "0" + bookSeq
+		chapSeq = self.chapter
+		while(len(chapSeq) < 3):
+			chapSeq = "0" + chapSeq
+		self.sortSequence = bookSeq + "." + chapSeq
 
 
 	def numErrors(self):
