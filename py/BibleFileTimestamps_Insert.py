@@ -18,9 +18,8 @@ from SQLUtility import *
 
 TIM_HOST = "localhost"
 TIM_USER = "sa"
-TIM_PORT = 3310
-TIM_DB_NAME = "dbp_newdata"
-
+TIM_PORT = 3320
+TIM_DB_NAME = "dbp_200309"
 
 class BibleFileTimestamps_Insert:
 
@@ -95,15 +94,23 @@ class BibleFileTimestamps_Insert:
 						priorVerse = 0
 						for line in timings:
 							result = self.timingRegex.search(line)
-							timing = round(float(result.group(1)), 2)
-							verseStart = int(result.group(3))
-							versePart = result.group(4)
-							if versePart == "" or versePart == "a":
-								values.append((fileId, verseStart, None, timing))
-								# check that all verses are included
-								if (priorVerse + 1) != verseStart:
-									print("WARNING: %s %s:%s skipped from %d to %d" % (filesetId, book, chapter, priorVerse, verseStart))
-								priorVerse = verseStart
+							if result != None:
+								# set precision to milliseconds to match SAB timing files
+								# TODO: change database schema for timing from double(8,2) to float
+								timing = round(float(result.group(1)), 3)
+								verseStart = int(result.group(3))
+								versePart = result.group(4)
+								if verseStart == 1:
+									# verse 0 is used to indicate the start of the chapter introduction,
+									# so AudioHLS.py appropriately creates a segment 0
+									values.append((fileId, 0, None, 0))
+								if versePart == "" or versePart == "a":
+									values.append((fileId, verseStart, None, timing))
+									# check that all verses are included
+									if (priorVerse + 1) != verseStart:
+										print("WARNING: %s %s:%s skipped from %d to %d" % (filesetId, book, chapter, priorVerse, verseStart))
+									priorVerse = verseStart
+							# TODO: add an else to verify matching book and chapter in file header
 					else:
 						print("ERROR: No file for %s %s:%s" % (filesetId, book, chapter))
 				else:

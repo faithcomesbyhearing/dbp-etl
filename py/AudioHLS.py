@@ -119,7 +119,8 @@ class AudioHLS:
 	def processBibleId(self, bibleId):
 		filesetList = self.adapter.selectFilesetIds(bibleId)
 #		for filesetId in filesetList:
-		for filesetId in [ "ENGESVN1DA" ]:
+                # TODO: stop using hardcoded filesetid below...
+		for filesetId in [ "ENGNIVN1DA" ]:
 			self.processFilesetId(bibleId, filesetId)
 
 
@@ -266,29 +267,34 @@ class AudioHLS:
 		cmd = 'ffprobe -show_frames -select_streams a -of compact -show_entries frame=best_effort_timestamp_time,pkt_pos ' + file
 		pipe = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
 		i = prevtime = prevpos = time = pos = 0
-		(timestamp_id, bound) = times[i]
+		(timestamp_id, bound) = times[i][0], times[i+1][1]
 		hasResults = False
 		for line in pipe.stdout:
 			hasResults = True
 			tm = self.timesRegex.search(str(line))
 			time = float(tm.group(1))
 			pos  = int(tm.group(2))
+			if time == 0:
+				# enable correct calculation of duration of verse 0 (chapter intro audio)
+				prevpos = pos
 			if (time >= bound):
 				duration = time - prevtime
 				nbytes = pos - prevpos
 				yield (timestamp_id, round(duration, 4), prevpos, nbytes)
 				prevtime, prevpos = time, pos
-				if (i+1 != len(times)):
-					i += 1
-					(timestamp_id, bound) = times[i]
-				else: 
-					bound = 99999999 # search to end of pipe
+				i += 1
+				if (i+1 < len(times)):
+					(timestamp_id, bound) = times[i][0], times[i+1][1]
+				else:
+					(timestamp_id, bound) = times[i][0], 99999999 # search to end of pipe
+
 		if not hasResults:
 			raise Exception("ffprobe failed to return position data.")
-		#duration = time - prevtime
-		#nbytes = pos - prevpos
-		#yield (timestamp_id, round(duration, 4), prevpos, nbytes)
-
+		else:
+			# yield last segment
+			nbytes = os.path.getsize(file) - prevpos # this calculates nbytes correctly
+			duration = time - prevtime  # TODO: this omits the duration of the last packet so is slightly too small
+			yield (timestamp_id, round(duration, 4), prevpos, nbytes)
 
 
 class AudioHLSAdapter:
