@@ -147,7 +147,9 @@ class LPTSRecord:
 		"ND_OTAudioDamID1": 	"ND_OTAudioDamIDStatus1",
 		"Reg_CAudioDAMID1":		"Reg_CAudioDAMStatus1",
 		"Reg_NTAudioDamID1": 	"Reg_NTAudioDamIDStatus1",
-		"Reg_OTAudioDamID1": 	"Reg_OTAudioDamIDStatus1"
+		"Reg_OTAudioDamID1": 	"Reg_OTAudioDamIDStatus1",
+		"CAudioDamStockNo":		"CAudioDamStatus", # added 4/17/2020
+		"CAudioDAMID1":			"CAudioStatus1" # added 4/17/2020
 	}
 	audio2DamIdDict = {
 		"ND_CAudioDamID2": 		"ND_CAudioDamIDStatus2", # No occurrances 2/20/2020

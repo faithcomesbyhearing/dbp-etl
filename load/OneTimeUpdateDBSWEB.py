@@ -42,6 +42,7 @@ class BibleFileset:
 				self.dbsFormat = record
 			elif row[0] == "dbs-web" and row[1] == "text_plain":
 				self.dbsPlain = record
+		self.stockNo = None
 
 	def hasDBSWEBContent(self):
 		return self.dbsFormat != None or self.dbsPlain != None
@@ -65,6 +66,7 @@ class OneTimeUpdateDBSWEB:
 	def __init__(self):
 		self.config = Config()
 		self.db = SQLUtility(self.config)
+		self.lptsReader = LPTSExtractReader(self.config)
 
 
 	def close(self):
@@ -83,7 +85,7 @@ class OneTimeUpdateDBSWEB:
 				print(filesetList.toString())
 				self.processTextFormat(bibleId, filesetId, filesetList)
 				self.processTextPlain(bibleId, filesetId, filesetList)
-				self.updateFilesetGroup(bibleId, filesetId, filesetList)
+				#self.updateFilesetGroup(bibleId, filesetId, filesetList)
 				count += 1
 				#if count > 100:
 				#	break
@@ -123,7 +125,12 @@ class OneTimeUpdateDBSWEB:
 		resultSet = self.db.select(sql, (bibleId, filesetId))
 		#for row in resultSet:
 		#	print(row)
-		return BibleFileset(resultSet)
+		bibleFileset = BibleFileset(resultSet)
+		(lptsRecord, index) = self.lptsReader.getLPTSRecordLoose("text", bibleId, filesetId)
+		if lptsRecord != None:
+			bibleFileset.stockNo = lptsRecord.Reg_StockNumber()
+		return bibleFileset
+
 
 	def getNumVerses(self, fileset):
 		sql = "SELECT count(*) FROM bible_verses WHERE hash_id = %s"
@@ -142,16 +149,22 @@ class OneTimeUpdateDBSWEB:
 			if fileset.dbsFormat.numFiles > 10 and fileset.prodFiles > 10:
 				if fileset.fcbhFormat == None:
 					fileset.dbsFormat2fcbhFormat = True
-					print("CHANGE1 %s %s/%s dbs-web text_format to dbp-prod" % (hashId, bibleId, filesetId))
+					if fileset.stockNo != None:
+						print("WARN1 %s %s/%s dbs-web has LPTS record %s and %d files in dbp-prod." % (hashId, bibleId, filesetId, fileset.stockNo, fileset.dbsFormat.numFiles))
+					else:
+						print("WARN2 %s %s/%s dbs-web has %d files in dbp-prod, but no LPTS record." % (hashId, bibleId, filesetId, fileset.dbsFormat.numFiles))
 				elif fileset.fcbhFormat != None and (fileset.fcbhFormat.numFiles == 0 or fileset.prodFiles == 0):
 					fileset.dbpFormatDelete = True
 					fileset.dbsFormat2fcbhFormat = True
-					print("DELETE2 %s %s/%s dbp-prod text_format" % (fileset.fcbhFormat.hashId, bibleId, filesetId))
-					print("CHANGE1 %s %s/%s dbs-web text_format to dbp-prod" % (hashId, bibleId, filesetId))
+					#print("DELETE2 %s %s/%s dbp-prod text_format" % (fileset.fcbhFormat.hashId, bibleId, filesetId))
+					print("WARN99 %s %s/%s dbs-web has files in dbp-prod and identical dbp-prod fileset with no files." % (hashId, bibleId, filesetId))
 			else:
-				print("WARN: %s %s/%s dbs-web text_format has no files in dbp-prod." % (hashId, bibleId, filesetId))
+				if fileset.stockNo != None:
+					print("WARN3 %s %s/%s dbs-web LPTS record %s, but no files in dbp-prod." % (hashId, bibleId, filesetId, fileset.stockNo))
+				else:
+					print("WARN4: %s %s/%s dbs-web text_format has no files in dbp-prod and no LPTS record." % (hashId, bibleId, filesetId))
 			if fileset.dbsFormat.numVerses > 100:
-				print("WARN: %s %s/%s dbs-web text_format has %d verses." % (hashId, fileset.dbsFormat.numFiles, bibleId, filesetId))
+				print("WARN98: %s %s/%s dbs-web text_format has %d verses." % (hashId, fileset.dbsFormat.numFiles, bibleId, filesetId))
 
 
 	def processTextPlain(self, bibleId, filesetId, fileset):
@@ -168,9 +181,9 @@ class OneTimeUpdateDBSWEB:
 						print("DELETE4 %s %s/%s dbp-prod text_plain" % (fileset.fcbhFormat.hashId, bibleId, filesetId))
 						print("CHANGE3 %s %s/%s dbs-web text_plain to db" % (hashId, bibleId, filesetId))
 			if fileset.dbsPlain.numVerses == 0:
-				print("WARN: %s %s/%s dbs-web text_plain has no verses" % (hashId, bibleId, filesetId))
+				print("WARn: %s %s/%s dbs-web text_plain has no verses" % (hashId, bibleId, filesetId))
 			if fileset.dbsPlain.numFiles > 0:
-				print("WARN: %s %s/%s dbs-web text_plain has %d files" % (hashId, bibleId, filesetId, fileset.dbsPlain.numFiles))
+				print("WARn: %s %s/%s dbs-web text_plain has %d files" % (hashId, bibleId, filesetId, fileset.dbsPlain.numFiles))
 
 
 	def updateFilesetGroup(self, bibleId, filesetId, fileset):
