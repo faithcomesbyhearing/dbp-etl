@@ -18,8 +18,8 @@ from SQLUtility import *
 
 TIM_HOST = "localhost"
 TIM_USER = "sa"
-TIM_PORT = 3320
-TIM_DB_NAME = "dbp_200309"
+TIM_PORT = 3310
+TIM_DB_NAME = "dbp_newdata"
 
 class BibleFileTimestamps_Insert:
 
@@ -35,6 +35,7 @@ class BibleFileTimestamps_Insert:
 		if len(sys.argv) < 3 or sys.argv[1].find("/") == -1:
 			print("Usage: python3 py/BibleFileTimestamps_Insert.py  /top/dir/root/Eng  timing_est_err")
 			sys.exit()
+		# TODO: allow user to give directory with a trailing slash if desired (eg using bash tab expansion)
 		path_and_file = " ".join(sys.argv[1:-1])
 		pathDir, pathFile = os.path.split(path_and_file)
 		if not os.path.exists(pathDir):
@@ -78,8 +79,10 @@ class BibleFileTimestamps_Insert:
 
 
 	def processBible(self, pathDir, bibleDir, timingErr):
+		errcount = 0
 		path = pathDir + os.sep + bibleDir + os.sep + bibleDir + ".appDef"
 		filesetId = self.getFilesetId(path) 
+		# TODO: get timing files from the .appDef instead of assuming the below path
 		path = pathDir + os.sep + bibleDir + os.sep + bibleDir + "_data" + os.sep + "timings"
 		values = []
 		for file in sorted(os.listdir(path)):
@@ -90,7 +93,8 @@ class BibleFileTimestamps_Insert:
 					chapter = result.group(2)
 					fileId = self.getFileId(filesetId, book, chapter)
 					if fileId != None:
-						timings = io.open(path + os.sep + file, mode="r")
+						timing_filename = path + os.sep + file
+						timings = io.open(timing_filename, mode="r")
 						priorVerse = 0
 						for line in timings:
 							result = self.timingRegex.search(line)
@@ -103,7 +107,11 @@ class BibleFileTimestamps_Insert:
 								if verseStart == 1:
 									# verse 0 is used to indicate the start of the chapter introduction,
 									# so AudioHLS.py appropriately creates a segment 0
-									values.append((fileId, 0, None, 0))
+									if timing == 0:
+										print("WARNING: file \"%s\" missed the intro (v1 starts at 0)" % (timing_filename))
+									else:
+                                                                                # append a verse 0 for the intro
+										values.append((fileId, 0, None, 0))
 								if versePart == "" or versePart == "a":
 									values.append((fileId, verseStart, None, timing))
 									# check that all verses are included
@@ -124,7 +132,8 @@ class BibleFileTimestamps_Insert:
 		errorStmt = ("REPLACE INTO bible_fileset_tags (hash_id, name, description, admin_only, iso, language_id)"
 			" VALUES (%s, 'timing_est_err', %s, 0, 'eng', 6414)")
 		insertStmt = "INSERT INTO bible_file_timestamps (bible_file_id, verse_start, verse_end, `timestamp`) VALUES (%s, %s, %s, %s)"		
-		print("Row %d to be inserted for %s, %s" % (len(values), bibleDir, filesetId))
+		print("%s\n", insertStmt)
+		print("%d rows to be inserted for %s, %s" % (len(values), bibleDir, filesetId))
 		cursor = self.db.conn.cursor()
 		try:
 			sql = deleteStmt

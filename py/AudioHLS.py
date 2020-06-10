@@ -120,7 +120,7 @@ class AudioHLS:
 		filesetList = self.adapter.selectFilesetIds(bibleId)
 #		for filesetId in filesetList:
                 # TODO: stop using hardcoded filesetid below...
-		for filesetId in [ "ENGNIVN1DA" ]:
+		for filesetId in [ "ENGKJVN2DA" ]:
 			self.processFilesetId(bibleId, filesetId)
 
 
@@ -275,7 +275,7 @@ class AudioHLS:
 			time = float(tm.group(1))
 			pos  = int(tm.group(2))
 			if time == 0:
-				# enable correct calculation of duration of verse 0 (chapter intro audio)
+				# enable correct calculation of duration of first verse
 				prevpos = pos
 			if (time >= bound):
 				duration = time - prevtime
@@ -382,7 +382,7 @@ class AudioHLSAdapter:
 			" AND bs2.hash_id = bf2.hash_id"
 			" AND bf1.book_id = bf2.book_id"
 			" AND bf1.chapter_start = bf2.chapter_start"
-			" AND bf1.verse_start = bf2.verse_start")
+			" AND bf1.verse_start = bf2.verse_start ORDER BY bs2.id")
 		self.execute(sql2, (filesetId,))
 
 	## Debug method to display contents of audio_hls_work
