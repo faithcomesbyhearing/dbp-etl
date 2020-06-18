@@ -68,8 +68,7 @@ class Config:
 					"UpdateDBPLPTSTables.py",
 					"UpdateDBPBiblesTable.py",
 					"LPTSExtractReader.py", 
-					"TestCopyrightOrganizations.py",
-					"OneTimeUpdateDBSWEB.py"}:
+					"MatchOrganizationNames.py"}:
 
 			self.directory_bucket_list = self._getPath("directory.bucket_list")
 			self.filename_lpts_xml = self._getPath("filename.lpts_xml")
