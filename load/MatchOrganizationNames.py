@@ -52,11 +52,11 @@ class MatchOrganizationNames:
 
 	def processLicensor(self):
 		for record in self.lptsReader.resultSet:
-			#if record.hasDamIds(record, "text"):
-			if record.Licensor() != None:
-				self.matchLicensor(record.Licensor())
-			if record.CoLicensor() != None:
-				self.matchLicensor(record.CoLicensor())
+			if self.hasDamIds(record, "text"):
+				if record.Licensor() != None:
+					self.matchLicensor(record.Licensor())
+				if record.CoLicensor() != None:
+					self.matchLicensor(record.CoLicensor())
 
 		print(len(self.licensorsNoMatch), "Licensors that do not match")
 		count = 0
@@ -81,11 +81,11 @@ class MatchOrganizationNames:
 
 	def processCopyHolder(self):
 		for record in self.lptsReader.resultSet:
-			if record.Copyrightp() != None:
+			if record.Copyrightp() != None and self.hasDamIds(record, "text"):
 				self.matchCopyHolder(record.Copyrightp())
-			if record.Copyrightc() != None:
+			if record.Copyrightc() != None and self.hasDamIds(record, "audio"):
 				self.matchCopyHolder(record.Copyrightc())
-			if record.Copyright_Video() != None:
+			if record.Copyright_Video() != None and self.hasDamIds(record, "video"):
 				self.matchCopyHolder(record.Copyright_Video())
 
 		for item in self.copyHolderNoMatch:
