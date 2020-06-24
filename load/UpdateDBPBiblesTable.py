@@ -21,25 +21,36 @@ class UpdateDBPBiblesTable:
 		## These scripts have multiple numeral systems.  So, this hack chooses the dominant one
 		self.numeralIdMap["Arab"] = "eastern-arabic"
 		self.numeralIdMap["Deva"] = "devanagari"
-		## This should be added to DBP
+		## This one should be added to DBP
 		self.numeralIdMap["Latn"] = "western-arabic"
+		self.sizeCodeMap = self.db.selectMapList("SELECT id, set_size_code FROM bible_filesets WHERE set_type_code='text_format'", ())	
 		self.yearPattern = re.compile("([0-9]+)")
 
 
-	def getBibleRecord(self, bibleId, lptsRecords, setSizeCode):
+	def findTextBibleLPTSRecords(self, bibleId, lptsReader):
+		results = []
+		lptsRecords = lptsReader.bibleIdMap.get(bibleId, [])
+		for (lptsIndex, lptsRecord) in lptsRecords:
+			damids = lptsRecord.DamIds("text", lptsIndex)
+			if len(damids) > 0:
+				results.append((lptsIndex, lptsRecord))
+		return results
+
+
+	def getBibleRecord(self, bibleId, lptsRecords):
 		languageId = self.biblesLanguageId(bibleId, lptsRecords)
 		versification = None
 		script = self.biblesScript(bibleId, lptsRecords)
 		numeralSystemId = self.biblesNumeralId(script)
 		date = self.biblesDate(bibleId, lptsRecords)
-		scope = setSizeCode
-		derived = None
+		scope = self.biblesSizeCode(bibleId, lptsRecords)
+		#derived = None
 		copyright = self.biblesCopyright(bibleId, lptsRecords)
-		priority = self.biblesPriority(bibleId)
-		reviewed = 0
-		notes = None
+		#priority = self.biblesPriority(bibleId)
+		reviewed = 0  ## I think this should be removed as well.  There is no way to update
+		notes = None  ## I think this should be removed as well, or possible null out the value
 		values = (languageId, versification, numeralSystemId, date,
-			scope, script, derived, copyright, priority, reviewed, notes, bibleId)
+			scope, script, copyright, reviewed, notes, bibleId)
 		return values
 
 
@@ -60,14 +71,7 @@ class UpdateDBPBiblesTable:
 			result = self.db.selectScalar("SELECT id FROM languages WHERE iso=%s", (iso))
 			if result != None:
 				final.add(result)
-		return self.findResult(final, "LangName & ISO")
-		#if len(final) == 0:
-		#	return None
-		#elif len(final) == 1:
-		#	return list(final)[0]
-		#else:
-		#	print("ERROR: bible_id %s has multiple language_ids %s" % (bibleId, ",".join(final)))
-		#	return list(final)[0]
+		return self.findResult(bibleId, final, "LangName & ISO")
 
 
 	def biblesScript(self, bibleId, lptsRecords):
@@ -103,14 +107,51 @@ class UpdateDBPBiblesTable:
 		if len(final) == 0:
 			for (lptsIndex, lptsRecord) in lptsRecords:
 				self.extractYear(final, lptsRecord.Volumne_Name())
-		return self.findResult(final, "Copyrightc Date")
-		#if len(final) == 0:
-		#	return None
-		#elif len(final) == 1:
-		#	return list(final)[0]
-		#else:
-		#	print("ERROR: bible_id %s has multiple Copyrightc dates %s" % (bibleId, ",".join(final)))
-		#	return list(final)[0]
+		return self.findResult(bibleId, final, "Copyrightc Date")
+
+
+	def biblesSizeCode(self, bibleId, lptsRecords):
+		final = set()
+		for (lptsIndex, lptsRecord) in lptsRecords:
+			damIds = lptsRecord.DamIds("text", lptsIndex)
+			#print(damIds)
+			for damId in damIds:
+				sizeCodes = self.sizeCodeMap.get(damId, [])
+				for sizeCode in sizeCodes:
+					if sizeCode != None:
+						final.add(sizeCode)
+		if len(final) == 0:
+			return None
+		elif len(final) == 1:
+			return list(final)[0]
+		else:
+			## reduce multiple sizeCodes to one as a union
+			hasNT = False
+			hasOT = False
+			hasNTP = False
+			hasOTP = False
+			for sizeCode in final:
+				if "NTP" in sizeCode:
+					hasNTP = True
+				elif "NT" in sizeCode:
+					hasNT = True
+				if "OTP" in sizeCode:
+					hasOTP = True
+				elif "OT" in sizeCode:
+					hasOT = True
+				if "C" in sizeCode:
+					hasNT = True
+					hasOT = True
+			result = ""
+			if hasNT:
+				result += "NT"
+			elif hasNTP:
+				result += "NTP"
+			if hasOT:
+				result += "OT"
+			elif hasOTP:
+				result += "OTP"
+			return result
 
 
 	def extractYear(self, finalSet, value):
@@ -126,31 +167,24 @@ class UpdateDBPBiblesTable:
 			result = lptsRecord.Copyrightc()
 			if result != None:
 				final.add(result)
-		return self.findResult(final, "Copyrightc")
-		#if len(final) == 0:
-		#	return None
-		#elif len(final) == 1:
-		#	return list(final)[0]
-		#else:
-		#	print("ERROR: bible_id %s has multiple Copyrightc values |%s|" % (bibleId, "|".join(final)))
-		#	return list(final)[0]
+		return self.findResult(bibleId, final, "Copyrightc")
 
 
-	def biblesPriority(self, bibleId):
-		priority = {"ENGESV": 20,
-					"ENGNIV": 19,
-					"ENGKJV": 18,
-					"ENGCEV": 17,
-					"ENGNRSV": 16,
-					"ENGNAB": 15,
-					"ENGWEB": 14,
-					"ENGNAS": 13,
-					"ENGNLV": 11,
-					"ENGEVD": 10}
-		return priority.get(bibleId, 0)
+#	def biblesPriority(self, bibleId):
+#		priority = {"ENGESV": 20,
+#					"ENGNIV": 19,
+#					"ENGKJV": 18,
+#					"ENGCEV": 17,
+#					"ENGNRSV": 16,
+#					"ENGNAB": 15,
+#					"ENGWEB": 14,
+#					"ENGNAS": 13,
+#					"ENGNLV": 11,
+#					"ENGEVD": 10}
+#		return priority.get(bibleId, 0)
 
 
-	def findResult(self, final, fieldName):
+	def findResult(self, bibleId, final, fieldName):
 		if len(final) == 0:
 			return None
 		elif len(final) == 1:
@@ -160,19 +194,8 @@ class UpdateDBPBiblesTable:
 			return list(final)[0]
 
 
-	def findTextBibleLPTSRecords(self, bibleId, lptsReader):
-		results = []
-		lptsRecords = lptsReader.bibleIdMap.get(bibleId, [])
-		for (lptsIndex, lptsRecord) in lptsRecords:
-			damids = lptsRecord.DamIds("text", lptsIndex)
-			if len(damids) > 0:
-				results.append((lptsIndex, lptsRecord))
-		return results
-
-
 ## Unit Test
 if (__name__ == '__main__'):
-	setSizeCode = "NTOT" ## This hard-coding needs to be replaced with getting from fileset
 	config = Config()
 	db = SQLUtility(config)
 	bibleIds = db.selectList("SELECT distinct bible_id FROM bible_fileset_connections", ())
@@ -182,8 +205,7 @@ if (__name__ == '__main__'):
 	update.counts = 0
 	for bibleId in bibleIds:
 		lptsRecords = update.findTextBibleLPTSRecords(bibleId, lptsReader)
-		values = update.getBibleRecord(bibleId, lptsRecords, setSizeCode)
-		#values = update.getBibleRecord(bibleId, lptsRecord, lptsIndex, setSizeCode)
-		print(values)
+		values = update.getBibleRecord(bibleId, lptsRecords)
+		#print(values)
 	print("count", update.counts)
 

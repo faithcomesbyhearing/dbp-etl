@@ -13,6 +13,7 @@ from datetime import datetime
 from Config import *
 from LPTSExtractReader import *
 from SQLUtility import *
+from UpdateDBPBiblesTable import *
 
 class UpdateDBPLPTSTable:
 
@@ -20,6 +21,7 @@ class UpdateDBPLPTSTable:
 		self.config = config
 		self.db = db
 		self.lptsReader = lptsReader
+		self.updateBiblesTable = UpdateDBPBiblesTable(config)
 		self.updateCounts = {}
 		self.statements = []
 		self.hashIdMap = None
@@ -30,14 +32,15 @@ class UpdateDBPLPTSTable:
 		sql = ("SELECT b.bible_id, bf.id, bf.set_type_code, bf.set_size_code, bf.asset_id, bf.hash_id"
 			" FROM bible_filesets bf JOIN bible_fileset_connections b ON bf.hash_id = b.hash_id"
 			" ORDER BY b.bible_id, bf.id, bf.set_type_code")
-		try:
-			filesetList = self.db.select(sql, ())
-			#self.deleteOldGroups() # temporary, until in production
-			self.updateAccessGroupFilesets(filesetList)
-			#self.updateBibleFilesetTags(filesetList)
-			#self.updateBibleFilesetCopyrights(filesetList)
-		except Exception as err:
-			print("ERROR: %s" % (err))
+		#try:
+		filesetList = self.db.select(sql, ())
+		#self.deleteOldGroups() # temporary, until in production
+		#self.updateAccessGroupFilesets(filesetList)
+		#self.updateBibleFilesetTags(filesetList)
+		#self.updateBibleFilesetCopyrights(filesetList)
+		self.updateBibles(filesetList)
+		#except Exception as err:
+		#print("ERROR: %s" % (err))
 		self.displayLog()
 
 	##
@@ -170,48 +173,6 @@ class UpdateDBPLPTSTable:
 
 
 	## deprecated
-#	def insertAccessGroupAPIKeys(self, userId, key, name, description, allowDbp, allowWeb, allowAPI, allowAPP, allowGBA):
-#		dbpSet = {101, 102, 103}
-#		webSet = {111, 113, 115}
-#		apiSet = {121, 123, 125}
-#		appSet = {131, 133, 135}
-#		gbaSet = {141, 143, 145}
-#		
-#		## Update access_group_api_keys
-#		sql = ("INSERT INTO user_keys (user_id, `key`, name, description) VALUES (%s, %s, %s, %s)")
-#		values = (userId, key, name, description)
-#		keyId = self.db.executeInsert(sql, values)
-#		apiSql = ("INSERT INTO access_group_api_keys (access_group_id, key_id) VALUES (%s, %s)")
-#		keySql = ("INSERT INTO access_group_keys (access_group_id, key_id_alt, key_id) VALUES (%s, %s, %s)")
-#
-#		apiValues = []
-#		keyValues = []
-#		if allowDbp:
-#			for accessId in dbpSet:
-#				apiValues.append((accessId, keyId))
-#				keyValues.append((accessId, keyId, key))
-#		if allowWeb:
-#			for accessId in webSet:
-#				apiValues.append((accessId, keyId))
-#				keyValues.append((accessId, keyId, key))
-#		if allowAPI:
-#			for accessId in apiSet:
-#				apiValues.append((accessId, keyId))
-#				keyValues.append((accessId, keyId, key))				
-#		if allowAPP:
-#			for accessId in apiSet:
-#				apiValues.append((accessId, keyId))
-#				keyValues.append((accessId, keyId, key))
-#		if allowGBA:
-#			for accessId in gbaSet:
-#				apiValues.append((accessId, keyId))
-#				keyValues.append((accessId, keyId, key))
-#		#print("%s rows inserted into access_group_api_keys" % (len(apiValues)))
-#		self.db.executeBatch(apiSql, apiValues)
-#		#print("%d rows inserted into access_group_keys" % (len(keyValues)))
-#		self.db.executeBatch(keySql, keyValues)
-#
-
 	def accessGroupSymmetricTest(self):
 		sql = ("SELECT distinct bfc.bible_id, agf.access_group_id, ag.description"
 			" FROM bible_fileset_connections bfc, bible_filesets bf, access_group_filesets agf, access_groups ag"
@@ -377,6 +338,51 @@ class UpdateDBPLPTSTable:
 		self.execute(tableName, len(insertRows), len(updateRows), len(deleteRows))
 
 
+	##
+	## Bibles Table
+	##
+	def updateBibles(self, filesetList):
+		insertRows = []
+		updateRows = []
+		deleteRows = []
+		statements = []
+		## or join to bible_fileset_connections to limit
+		biblesList = self.db.select("SELECT id, language_id, versification, numeral_system_id,"
+			" date, scope, script, copyright, reviewed, notes"
+			" FROM bibles", ())
+		filesetBibles = set()
+		for fileset in filesetList:
+			filesetBibles.add(fileset[0])
+		for currRow in biblesList:
+			bibleId = currRow[0]
+			if bibleId not in filesetBibles:
+				deleteRows.append((bibleId))
+				print("DELETE", currRow)
+
+			else:
+				lptsRecords = self.updateBiblesTable.findTextBibleLPTSRecords(bibleId, self.lptsReader)
+				values = self.updateBiblesTable.getBibleRecord(bibleId, lptsRecords)
+				if (currRow[1] != values[0] or
+					currRow[2] != values[1] or
+					currRow[3] != values[2] or
+					currRow[4] != values[3] or
+					currRow[5] != values[4] or
+					currRow[6] != values[5] or
+					currRow[7] != values[6] or
+					currRow[8] != values[7] or
+					currRow[9] != values[8]):
+					updateRows.append(values)
+
+		tableName = "bibles"
+		pkeyNames = ("id",)
+		attrNames = ("language_id", "versification", "numeral_system_id", "date", "scope", 
+			"script", "copyright", "reviewed", "notes")
+		#self.insert(tableName, attrNames, pkeyNames, insertRows)
+		self.update(tableName, attrNames, pkeyNames, updateRows)
+		self.delete(tableName, pkeyNames, deleteRows)
+		self.execute(tableName, len(insertRows), len(updateRows), len(deleteRows))
+
+
 	def insert(self, tableName, attrNames, pkeyNames, values):
 		if len(values) > 0:
 			names = attrNames + pkeyNames
@@ -406,8 +412,8 @@ class UpdateDBPLPTSTable:
 		self.updateCounts[tableName + "-DELETE:"] = numDelete
 		if len(self.statements) > 0:
 			#self.perRowExecute()
-			#self.db.displayTransaction(self.statements)
-			self.db.executeTransaction(self.statements)
+			self.db.displayTransaction(self.statements)
+			#self.db.executeTransaction(self.statements)
 			self.statements = []
 
 
@@ -420,6 +426,46 @@ class UpdateDBPLPTSTable:
 
 
 	def prepareLog(self, tranType, tableName, attrNames, pkeyNames, values):
+		if tableName == "bibles":
+			self.prepareBiblesLog(tranType, tableName, attrNames, pkeyNames, values)
+		else:
+			self.prepareFilesetsLog(tranType, tableName, attrNames, pkeyNames, values)
+
+
+	def prepareBiblesLog(self, tranType, tableName, attrNames, pkeyNames, values):
+		#if self.hashIdMap == None:
+		#	self.hashIdMap = {}
+		#	sql = ("SELECT bf.hash_id, bfc.bible_id, bf.id, bf.set_type_code, bf.set_size_code"
+		#		" FROM bible_filesets bf, bible_fileset_connections bfc"
+		#		" WHERE bf.hash_id = bfc.hash_id")
+		#	resultSet = self.db.select(sql, ())
+		#	for (hashId, bibleId, filesetId, setTypeCode, setSizeCode) in resultSet:
+		#		self.hashIdMap[hashId] = (bibleId, filesetId, setTypeCode, setSizeCode)
+		typeMsg = "%s-%s " % (tableName, tranType)
+		numAttr = len(attrNames)
+		#hashIdPos = pkeyNames.index("hash_id") + numAttr
+		for value in values:
+			idMsg = ""
+			keyMsg = []
+			attrMsg = []
+			for index in range(len(value)):
+				#if index == hashIdPos:
+				#	hashId = value[index]
+				#	idMsg = "%s/%s/%s/%s " % self.hashIdMap[hashId]
+				#elif index < numAttr:
+				if index < numAttr:
+					attrMsg.append("%s=%s" % (attrNames[index], str(value[index])))
+				else:
+					keyMsg.append("%s=%s" % (pkeyNames[index - numAttr], str(value[index])))
+			msg = idMsg + typeMsg
+			if len(keyMsg) > 0:
+				msg += "PKEY: " + ", ".join(keyMsg)
+			if len(attrMsg) > 0:
+				msg += "  COLS: " + ", ".join(attrMsg)
+			self.sqlLog.append(msg)
+
+
+	def prepareFilesetsLog(self, tranType, tableName, attrNames, pkeyNames, values):
 		if self.hashIdMap == None:
 			self.hashIdMap = {}
 			sql = ("SELECT bf.hash_id, bfc.bible_id, bf.id, bf.set_type_code, bf.set_size_code"

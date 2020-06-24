@@ -81,10 +81,10 @@ class MatchOrganizationNames:
 
 	def processCopyHolder(self):
 		for record in self.lptsReader.resultSet:
-			if record.Copyrightp() != None and self.hasDamIds(record, "text"):
-				self.matchCopyHolder(record.Copyrightp())
-			if record.Copyrightc() != None and self.hasDamIds(record, "audio"):
+			if record.Copyrightc() != None and self.hasDamIds(record, "text"):
 				self.matchCopyHolder(record.Copyrightc())
+			if record.Copyrightp() != None and self.hasDamIds(record, "audio"):
+				self.matchCopyHolder(record.Copyrightp())
 			if record.Copyright_Video() != None and self.hasDamIds(record, "video"):
 				self.matchCopyHolder(record.Copyright_Video())
 
@@ -113,6 +113,15 @@ class MatchOrganizationNames:
 
 
 	def reduceName(self, name):
+		pos = 0
+		if "©" in name:
+			pos = name.index("©")
+		elif "℗" in name:
+			pos = name.index("℗")
+		elif "®" in name:
+			pos = name.index("®")
+		if pos > 0:
+			name = name[pos:]
 		for char in ["©", "℗", "®","0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ",", "/", "-", ";", "_", ".","\n"]:
 			name = name.replace(char, "")
 		name = name.replace("     ", " ")
