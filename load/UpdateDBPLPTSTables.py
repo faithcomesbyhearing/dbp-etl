@@ -21,7 +21,7 @@ class UpdateDBPLPTSTable:
 		self.config = config
 		self.db = db
 		self.lptsReader = lptsReader
-		self.updateBiblesTable = UpdateDBPBiblesTable(config)
+		#self.updateBiblesTable = UpdateDBPBiblesTable(config)
 		self.updateCounts = {}
 		self.statements = []
 		self.hashIdMap = None
@@ -32,15 +32,15 @@ class UpdateDBPLPTSTable:
 		sql = ("SELECT b.bible_id, bf.id, bf.set_type_code, bf.set_size_code, bf.asset_id, bf.hash_id"
 			" FROM bible_filesets bf JOIN bible_fileset_connections b ON bf.hash_id = b.hash_id"
 			" ORDER BY b.bible_id, bf.id, bf.set_type_code")
-		#try:
-		filesetList = self.db.select(sql, ())
-		#self.deleteOldGroups() # temporary, until in production
-		#self.updateAccessGroupFilesets(filesetList)
-		#self.updateBibleFilesetTags(filesetList)
-		#self.updateBibleFilesetCopyrights(filesetList)
-		self.updateBibles(filesetList)
-		#except Exception as err:
-		#print("ERROR: %s" % (err))
+		try:
+			filesetList = self.db.select(sql, ())
+			#self.deleteOldGroups() # temporary, until in production
+			self.updateAccessGroupFilesets(filesetList)
+			self.updateBibleFilesetTags(filesetList)
+			self.updateBibleFilesetCopyrights(filesetList)
+			#self.updateBibles(filesetList)
+		except Exception as err:
+			print("ERROR: %s" % (err))
 		self.displayLog()
 
 	##
@@ -105,24 +105,24 @@ class UpdateDBPLPTSTable:
 		self.execute(tableName, len(insertRows), 0, len(deleteRows))
 
 
-	## deprecated?
-	def droppedRecordErrors(self, typeCode, bibleId, filesetId, setTypeCode, assetId):
-		if assetId == "dbs-web":
-			return
-		recs = self.lptsReader.getFilesetRecords(filesetId)
-		if recs != None and len(recs) > 0:
-			for (status, rec) in recs:
-				if rec.DBP_Equivalent() != bibleId:
-					print("ERROR: %s/%s/%s is not in LPTS, but it is in %s in %s." %
-						(typeCode, bibleId, filesetId, rec.DBP_Equivalent(), rec.Reg_StockNumber()))
-				#elif status not in {"Live", "live"}:
-				#	print("WARN: %s/%s/%s is not in LPTS, but status is %s in %s." % 
-				#		(typeCode, bibleId, filesetId, status, rec.Reg_StockNumber()))
-				elif status in {"Live", "live", None}:
-					print("ERROR: %s/%s/%s is not in LPTS, but status is %s in %s." %
-						(typeCode, bibleId, filesetId, status, rec.Reg_StockNumber()))	
-		else:
-			print("ERROR: fileset %s, %s, %s not found in LPTS." % (filesetId, setTypeCode, assetId))
+#	## deprecated?
+#	def droppedRecordErrors(self, typeCode, bibleId, filesetId, setTypeCode, assetId):
+#		if assetId == "dbs-web":
+#			return
+#		recs = self.lptsReader.getFilesetRecords(filesetId)
+#		if recs != None and len(recs) > 0:
+#			for (status, rec) in recs:
+#				if rec.DBP_Equivalent() != bibleId:
+#					print("ERROR: %s/%s/%s is not in LPTS, but it is in %s in %s." %
+#						(typeCode, bibleId, filesetId, rec.DBP_Equivalent(), rec.Reg_StockNumber()))
+#				#elif status not in {"Live", "live"}:
+#				#	print("WARN: %s/%s/%s is not in LPTS, but status is %s in %s." % 
+#				#		(typeCode, bibleId, filesetId, status, rec.Reg_StockNumber()))
+#				elif status in {"Live", "live", None}:
+#					print("ERROR: %s/%s/%s is not in LPTS, but status is %s in %s." %
+#						(typeCode, bibleId, filesetId, status, rec.Reg_StockNumber()))	
+#		else:
+#			print("ERROR: fileset %s, %s, %s not found in LPTS." % (filesetId, setTypeCode, assetId))
 
 
 	## deprecated
@@ -527,7 +527,7 @@ if (__name__ == '__main__'):
 	lptsReader = LPTSExtractReader(config)
 	db = SQLUtility(config)
 	filesets = UpdateDBPLPTSTable(config, db, lptsReader)
-	filesets.insertAccessGroups() # temporary
+#	filesets.insertAccessGroups() # temporary
 	filesets.process()
 	#filesets.accessGroupSymmetricTest()
 	db.close()
