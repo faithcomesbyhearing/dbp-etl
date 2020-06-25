@@ -92,6 +92,7 @@ class Config:
 
 			self.directory_audio_hls = self._getPath("directory.audio_hls") #"%s/FCBH/files/tmp" % (os.environ["HOME"])
 			self.audio_hls_duration_limit = self._getInt("audio.hls.duration.limit") #10  #### Must become command line param
+		print("Config '%s' is loaded." % (profile))
 
 
 	def _get(self, name):

@@ -105,32 +105,6 @@ class UpdateDBPLPTSTable:
 		self.execute(tableName, len(insertRows), 0, len(deleteRows))
 
 
-#	## deprecated?
-#	def droppedRecordErrors(self, typeCode, bibleId, filesetId, setTypeCode, assetId):
-#		if assetId == "dbs-web":
-#			return
-#		recs = self.lptsReader.getFilesetRecords(filesetId)
-#		if recs != None and len(recs) > 0:
-#			for (status, rec) in recs:
-#				if rec.DBP_Equivalent() != bibleId:
-#					print("ERROR: %s/%s/%s is not in LPTS, but it is in %s in %s." %
-#						(typeCode, bibleId, filesetId, rec.DBP_Equivalent(), rec.Reg_StockNumber()))
-#				#elif status not in {"Live", "live"}:
-#				#	print("WARN: %s/%s/%s is not in LPTS, but status is %s in %s." % 
-#				#		(typeCode, bibleId, filesetId, status, rec.Reg_StockNumber()))
-#				elif status in {"Live", "live", None}:
-#					print("ERROR: %s/%s/%s is not in LPTS, but status is %s in %s." %
-#						(typeCode, bibleId, filesetId, status, rec.Reg_StockNumber()))	
-#		else:
-#			print("ERROR: fileset %s, %s, %s not found in LPTS." % (filesetId, setTypeCode, assetId))
-
-
-	## deprecated
-#	def deleteOldGroups(self):
-#		self.statements.append(("DELETE FROM access_group_filesets WHERE access_group_id < 100", [()]))
-#		self.statements.append(("DELETE FROM access_groups WHERE id < 100", [()]))
-
-
 	## deprecated
 	def insertAccessGroups(self):
 		count = self.db.selectScalar("SELECT count(*) FROM access_groups WHERE id > 100", ())
@@ -413,7 +387,7 @@ class UpdateDBPLPTSTable:
 		if len(self.statements) > 0:
 			#self.perRowExecute()
 			self.db.displayTransaction(self.statements)
-			#self.db.executeTransaction(self.statements)
+			self.db.executeTransaction(self.statements)
 			self.statements = []
 
 

@@ -32,10 +32,9 @@ class LPTSExtractReader:
 								resultRow[fldNode.nodeName] = fldNode.firstChild.nodeValue
 
 						self.resultSet.append(LPTSRecord(resultRow))
-		print(len(self.resultSet), " LPTS Records.")
 		self.bibleIdMap = self.getBibleIdMap()
-		print(len(self.bibleIdMap.keys()), " BibleIds found.")
 		self.filesetIdMap = None
+		print("LPTS Extract with %d records and %d BibleIds is loaded." % (len(self.resultSet), len(self.bibleIdMap.keys())))
 
 
     ## Generates Map bibleId: [LPTSRecord], called by class init

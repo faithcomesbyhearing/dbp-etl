@@ -22,6 +22,7 @@ class SQLUtility:
                              		port = config.database_port,
                              		charset = 'utf8mb4',
                              		cursorclass = pycursor)
+		print("Database '%s' is opened." % (config.database_db_name))
 
 	def close(self):
 		if self.conn != None:
