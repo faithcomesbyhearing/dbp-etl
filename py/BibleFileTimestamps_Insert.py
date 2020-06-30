@@ -16,6 +16,7 @@ import re
 from SQLUtility import *
 
 
+# TODO: change to use Config
 TIM_HOST = "localhost"
 TIM_USER = "sa"
 TIM_PORT = 3310

@@ -10,8 +10,10 @@
 
 import os
 import sys
+from pathlib import Path
 
-CONFIG_FILE = os.path.join(os.environ['HOME'], "fcbh_dbp.cfg")
+# TODO: change to ~/.dbp-etl
+CONFIG_FILE = os.path.join(str(Path.home()) , "fcbh_dbp.cfg")
 
 class Config:
 

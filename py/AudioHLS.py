@@ -119,8 +119,9 @@ class AudioHLS:
 	def processBibleId(self, bibleId):
 		filesetList = self.adapter.selectFilesetIds(bibleId)
 #		for filesetId in filesetList:
-                # TODO: stop using hardcoded filesetid below...
-		for filesetId in [ "ENGKJVN2DA" ]:
+                # with multi filesets the above fails with "Table 'audio_hls_work' already exists"
+                # so hardcode for now, but TODO: stop using hardcoded filesets below...
+		for filesetId in [ "ENGKJVO2DA" ]:
 			self.processFilesetId(bibleId, filesetId)
 
 
@@ -264,6 +265,8 @@ class AudioHLS:
 
 
 	def getBoundaries(self, file, times):
+                # TODO: should be able to calculate boundaries assuming not variable rate
+                # 1) confirm true, 2) see if much faster to calculate, 3) if so change code
 		cmd = 'ffprobe -show_frames -select_streams a -of compact -show_entries frame=best_effort_timestamp_time,pkt_pos ' + file
 		pipe = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
 		i = prevtime = prevpos = time = pos = 0
