@@ -119,9 +119,9 @@ class AudioHLS:
 	def processBibleId(self, bibleId):
 		filesetList = self.adapter.selectFilesetIds(bibleId)
 #		for filesetId in filesetList:
-                # with multi filesets the above fails with "Table 'audio_hls_work' already exists"
-                # so hardcode for now, but TODO: stop using hardcoded filesets below...
-		for filesetId in [ "ENGKJVO2DA" ]:
+        # with multi filesets the above fails with "Table 'audio_hls_work' already exists"
+        # so hardcode for now, but TODO: stop using hardcoded filesets below...
+		for filesetId in [ "ENGKJVO1DA" ]:
 			self.processFilesetId(bibleId, filesetId)
 
 
@@ -191,6 +191,7 @@ class AudioHLS:
 		try:
 			## Insert SA Filesets and Tags
 			self.adapter.beginFilesetInsertTran()
+			# TODO: can we do the delete and insert as a single transaction? (enabling ^C of program without dropping old fileset)
 			self.adapter.deleteSAFilesetFiles(hashId)
 			self.adapter.insertFileset((hashId, filesetId, assetId, setTypeCode, setSizeCode))
 			self.adapter.copyFilesetTables(hashId, origHashId)
@@ -231,6 +232,7 @@ class AudioHLS:
 			print(("\nERROR: at %s %s" % (origFilename, error)), flush=True)
 			self.adapter.rollbackFilesetInsertTran()
 			raise error ## Comment out for production
+#		self.adapter.dropAudioHLSWork()
 
 
 	def hashId(self, bucket, filesetId, typeCode):
@@ -387,6 +389,10 @@ class AudioHLSAdapter:
 			" AND bf1.chapter_start = bf2.chapter_start"
 			" AND bf1.verse_start = bf2.verse_start ORDER BY bs2.id")
 		self.execute(sql2, (filesetId,))
+
+	def dropAudioHLSWork(self):
+		sql2 = ("DROP TEMPORARY TABLE audio_hls_work")
+		self.execute(sql2)
 
 	## Debug method to display contents of audio_hls_work
 	def printAudioHLSWork(self):
