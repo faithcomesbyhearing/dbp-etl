@@ -571,6 +571,7 @@ class AudioHLSAdapter:
 	def addSegment(self, values):
 		self.segments.append((self.currBandwidthId,) + values)
 
+        ## TODO: add entries into bible_fileset_copyrights and bible_fileset_copyright_organizations tables
 
     ## Inserts a collection of rows into the bible_file_stream_bytes table
 	def insertSegments(self):
