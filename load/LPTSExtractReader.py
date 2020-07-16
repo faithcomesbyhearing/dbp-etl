@@ -138,6 +138,29 @@ class LPTSExtractReader:
 			print(field, count)
 
 
+	## This method is used to reduce copyright messages to a shorter string that
+	## will be matched with copyrights in the table lpts_copyright_organizations
+	## in order to determine the organization_id for the copyright holder.
+	def reduceCopyrightToName(self, name):
+		pos = 0
+		if "©" in name:
+			pos = name.index("©")
+		elif "℗" in name:
+			pos = name.index("℗")
+		elif "®" in name:
+			pos = name.index("®")
+		if pos > 0:
+			name = name[pos:]
+		for char in ["©", "℗", "®","0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ",", "/", "-", ";", "_", ".","\n"]:
+			name = name.replace(char, "")
+		name = name.replace("     ", " ")
+		name = name.replace("    ", " ")
+		name = name.replace("   ", " ")
+		name = name.replace("  ", " ")
+		name = name[:64]
+		return name.strip()
+
+
 class LPTSRecord:
 
 	audio1DamIdDict = {

@@ -20,17 +20,21 @@ class MatchOrganizationNames:
 		self.config = config
 		self.db = db
 		self.lptsReader = lptsReader
+		self.licensorUpdates = []
+		self.copyrightInserts = []
 
 		self.licensorsNoMatch = set()
 		self.copyHolderNoMatch = set()
 		self.organizationMap = {}
 		#resultSet = self.db.select("select id, slug from organizations where id in (select organization_id from bible_fileset_copyright_organizations) order by slug", ())
+		#SELECT id, slug from organizations order by slug"
 		with open("/Volumes/FCBH/database_data/organizations.csv", newline="\n") as csvfile:
 			reader = csv.reader(csvfile, delimiter=',', quotechar='"')
 			for row in reader:
 				self.organizationMap[int(row[0])] = (int(row[0]), row[1], set(), set())
 		self.langMap = {}
 		#self.langMap = self.db.selectMap("SELECT name, organization_id FROM organization_translations where organization_id in (select organization_id from bible_fileset_copyright_organizations) order by name", ())
+		#SELECT name, organization_id FROM organization_translations order by name
 		with open("/Volumes/FCBH/database_data/organization_translations.csv", newline="\n") as csvfile:
 			reader = csv.reader(csvfile, delimiter=',', quotechar='"')
 			for row in reader:
@@ -48,6 +52,49 @@ class MatchOrganizationNames:
 		if len(damIds) > 0:
 			return True
 		return False
+
+
+	def addColumns(self):
+		sql = ("SELECT count(*) FROM information_schema.columns"
+			" where table_name='organizations' and column_name='lpts_licensor'")
+		num = self.db.selectScalar(sql, ())
+		if num == 0:
+			sql = "ALTER TABLE organizations ADD column lpts_licensor varchar(255) null"
+			self.db.execute(sql, ())
+		sql = ("CREATE TABLE IF NOT EXISTS lpts_copyright_organizations"
+			" (lpts_copyright varchar(256) NOT NULL,"
+			" organization_id int(10) unsigned NOT NULL, "
+			" FOREIGN KEY (organization_id)"
+			" REFERENCES organizations(id))")
+		self.db.execute(sql, ())
+		self.db.execute("TRUNCATE TABLE lpts_copyright_organizations", ())
+
+
+	def processAlansLicensorMatch(self):
+		with open("/Volumes/FCBH/database_data/alan_licensors.csv", newline="\n") as csvfile:
+			reader = csv.reader(csvfile, delimiter=',', quotechar='"')
+			for row in reader:
+				orgId = int(row[0])
+				if len(row) > 2:
+					licensor = row[1] + "," + row[2]
+				else:
+					Licensor = row[1]
+				self.licensorUpdates.append((licensor, orgId))
+		#print(self.licensorUpdates)
+
+
+	def processAlansCopyrightMatch(self):
+		with open("/Volumes/FCBH/database_data/alan_copyright_holders.csv", newline="\n", encoding='utf-16') as csvfile:
+			reader = csv.reader(csvfile, delimiter='\t', quotechar='"')
+			for row in reader:
+				if row[0] != None and row[0] != "" and row[0] != "?":
+					self.copyrightInserts.append((row[3], int(row[0])))
+				if row[1] != None and row[1] != "" and row[1] != "?":
+					self.copyrightInserts.append((row[3], int(row[1])))
+				if row[2] != None and row[2] != "" and row[2] != "?":
+					self.copyrightInserts.append((row[3], int(row[2])))
+				print(self.copyrightInserts)
+		print(self.copyrightInserts)
 
 
 	def processLicensor(self):
@@ -75,6 +122,7 @@ class MatchOrganizationNames:
 			(orgId, slug, licensors, copyHolders) = organization
 			licensors.add(licensor)
 			self.organizationMap[orgId] = (orgId, slug, licensors, copyHolders)
+			## Here is when I should append to a tuple (licensor, orgId)
 		else:
 			self.licensorsNoMatch.add(licensor)
 
@@ -101,35 +149,16 @@ class MatchOrganizationNames:
 
 
 	def matchCopyHolder(self, copyHolder):
-		copyright = self.reduceName(copyHolder)
+		copyright = self.lptsReader.reduceCopyrightToName(copyHolder)
 		orgId = self.langMap.get(copyright)
 		if orgId != None:
 			organization = self.organizationMap[orgId]
 			(orgId, slug, licensors, copyHolders) = organization
 			copyHolders.add(copyright)
 			self.organizationMap[orgId] = (orgId, slug, licensors, copyHolders)
+			## Here is where I shoud append to a tuple (copyright, orgId)
 		else:
 			self.copyHolderNoMatch.add(copyright)
-
-
-	def reduceName(self, name):
-		pos = 0
-		if "©" in name:
-			pos = name.index("©")
-		elif "℗" in name:
-			pos = name.index("℗")
-		elif "®" in name:
-			pos = name.index("®")
-		if pos > 0:
-			name = name[pos:]
-		for char in ["©", "℗", "®","0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ",", "/", "-", ";", "_", ".","\n"]:
-			name = name.replace(char, "")
-		name = name.replace("     ", " ")
-		name = name.replace("    ", " ")
-		name = name.replace("   ", " ")
-		name = name.replace("  ", " ")
-		name = name[:64]
-		return name.strip()
 
 
 	def displayOutput(self):
@@ -155,14 +184,24 @@ class MatchOrganizationNames:
 		fp.close()
 
 
+	def updateDatabase(self):
+		sql = "UPDATE organizations SET lpts_licensor = ? WHERE id = ?"
+		self.db.executeBatch(sql, self.licensorUpdates)
+		sql = "INSERT INTO lpts_copyright_organizations (lpts_copyright, organization_id) VALUES (?, ?)"
+		self.db.executeBatch(sql, self.copyrightInserts)
+
 
 if (__name__ == '__main__'):
 	config = Config()
 	lptsReader = LPTSExtractReader(config)
 	db = SQLUtility(config)
 	test = MatchOrganizationNames(config, db, lptsReader)
+	test.addColumns()
+	test.processAlansLicensorMatch()
+	test.processAlansCopyrightMatch()
 	test.processLicensor()
 	test.processCopyHolder()
 	test.displayOutput()
+	#test.updateDatabase()
 	db.close()
 
