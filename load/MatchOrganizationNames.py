@@ -20,8 +20,8 @@ class MatchOrganizationNames:
 		self.config = config
 		self.db = db
 		self.lptsReader = lptsReader
-		self.licensorUpdates = []
-		self.copyrightInserts = []
+		self.licensorUpdates = set()
+		self.copyrightInserts = set()
 
 		self.licensorsNoMatch = set()
 		self.copyHolderNoMatch = set()
@@ -61,11 +61,13 @@ class MatchOrganizationNames:
 		if num == 0:
 			sql = "ALTER TABLE organizations ADD column lpts_licensor varchar(255) null"
 			self.db.execute(sql, ())
+		self.db.execute("UPDATE organizations SET lpts_licensor = NULL", ())
 		sql = ("CREATE TABLE IF NOT EXISTS lpts_copyright_organizations"
 			" (lpts_copyright varchar(256) NOT NULL,"
 			" organization_id int(10) unsigned NOT NULL, "
 			" FOREIGN KEY (organization_id)"
-			" REFERENCES organizations(id))")
+			" REFERENCES organizations(id))"
+			" ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci")
 		self.db.execute(sql, ())
 		self.db.execute("TRUNCATE TABLE lpts_copyright_organizations", ())
 
@@ -79,7 +81,7 @@ class MatchOrganizationNames:
 					licensor = row[1] + "," + row[2]
 				else:
 					Licensor = row[1]
-				self.licensorUpdates.append((licensor, orgId))
+				self.licensorUpdates.add((licensor, str(orgId)))
 		#print(self.licensorUpdates)
 
 
@@ -88,13 +90,15 @@ class MatchOrganizationNames:
 			reader = csv.reader(csvfile, delimiter='\t', quotechar='"')
 			for row in reader:
 				if row[0] != None and row[0] != "" and row[0] != "?":
-					self.copyrightInserts.append((row[3], int(row[0])))
+					self.copyrightInserts.add((row[3], int(row[0])))
 				if row[1] != None and row[1] != "" and row[1] != "?":
-					self.copyrightInserts.append((row[3], int(row[1])))
+					self.copyrightInserts.add((row[3], int(row[1])))
 				if row[2] != None and row[2] != "" and row[2] != "?":
-					self.copyrightInserts.append((row[3], int(row[2])))
-				print(self.copyrightInserts)
-		print(self.copyrightInserts)
+					orgId = row[2]
+					if orgId == '755':
+						orgId = '224'
+					self.copyrightInserts.add((row[3], int(orgId)))
+		#print(self.copyrightInserts)
 
 
 	def processLicensor(self):
@@ -122,7 +126,8 @@ class MatchOrganizationNames:
 			(orgId, slug, licensors, copyHolders) = organization
 			licensors.add(licensor)
 			self.organizationMap[orgId] = (orgId, slug, licensors, copyHolders)
-			## Here is when I should append to a tuple (licensor, orgId)
+			## This adds to the organization table update
+			self.licensorUpdates.add((licensor, str(orgId)))
 		else:
 			self.licensorsNoMatch.add(licensor)
 
@@ -156,7 +161,8 @@ class MatchOrganizationNames:
 			(orgId, slug, licensors, copyHolders) = organization
 			copyHolders.add(copyright)
 			self.organizationMap[orgId] = (orgId, slug, licensors, copyHolders)
-			## Here is where I shoud append to a tuple (copyright, orgId)
+			## This adds the copyright to the table insert
+			self.copyrightInserts.add((copyright, str(orgId)))
 		else:
 			self.copyHolderNoMatch.add(copyright)
 
@@ -185,10 +191,17 @@ class MatchOrganizationNames:
 
 
 	def updateDatabase(self):
-		sql = "UPDATE organizations SET lpts_licensor = ? WHERE id = ?"
-		self.db.executeBatch(sql, self.licensorUpdates)
-		sql = "INSERT INTO lpts_copyright_organizations (lpts_copyright, organization_id) VALUES (?, ?)"
-		self.db.executeBatch(sql, self.copyrightInserts)
+		sql = "UPDATE organizations SET lpts_licensor = %s WHERE id = %s"
+		self.db.executeBatch(sql, list(self.licensorUpdates))
+		sql = "INSERT INTO lpts_copyright_organizations (lpts_copyright, organization_id) VALUES (%s, %s)"
+		inserts = list(self.copyrightInserts)
+		for index in range(len(inserts)):
+			item = inserts[index]
+			try:
+				self.db.execute(sql, item)
+			except:
+				(copyright, orgId) = item
+				print("rejected", index, copyright, orgId)
 
 
 if (__name__ == '__main__'):
@@ -202,6 +215,6 @@ if (__name__ == '__main__'):
 	test.processLicensor()
 	test.processCopyHolder()
 	test.displayOutput()
-	#test.updateDatabase()
+	test.updateDatabase()
 	db.close()
 
