@@ -27,7 +27,7 @@ class MatchOrganizationNames:
 		self.copyHolderNoMatch = set()
 		self.organizationMap = {}
 		#resultSet = self.db.select("select id, slug from organizations where id in (select organization_id from bible_fileset_copyright_organizations) order by slug", ())
-		#SELECT id, slug from organizations order by slug"
+		#SELECT id, slug from organizations order by slug
 		with open("/Volumes/FCBH/database_data/organizations.csv", newline="\n") as csvfile:
 			reader = csv.reader(csvfile, delimiter=',', quotechar='"')
 			for row in reader:
