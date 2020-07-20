@@ -72,10 +72,10 @@ class MatchOrganizationNames:
 			reader = csv.reader(csvfile, delimiter=',', quotechar='"')
 			for row in reader:
 				orgId = int(row[0])
-				if len(row) > 2:
+				if len(row[2]) > 0:
 					licensor = row[1] + "," + row[2]
 				else:
-					Licensor = row[1]
+					licensor = row[1]
 				self.licensorUpdates.add((licensor, str(orgId)))
 		#print(self.licensorUpdates)
 
