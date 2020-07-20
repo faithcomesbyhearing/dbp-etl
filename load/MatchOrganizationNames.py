@@ -54,22 +54,17 @@ class MatchOrganizationNames:
 		return False
 
 
-	def addColumns(self):
-		sql = ("SELECT count(*) FROM information_schema.columns"
-			" where table_name='organizations' and column_name='lpts_licensor'")
-		num = self.db.selectScalar(sql, ())
-		if num == 0:
-			sql = "ALTER TABLE organizations ADD column lpts_licensor varchar(255) null"
-			self.db.execute(sql, ())
-		self.db.execute("UPDATE organizations SET lpts_licensor = NULL", ())
-		sql = ("CREATE TABLE IF NOT EXISTS lpts_copyright_organizations"
-			" (lpts_copyright varchar(256) NOT NULL,"
-			" organization_id int(10) unsigned NOT NULL, "
-			" FOREIGN KEY (organization_id)"
-			" REFERENCES organizations(id))"
+	def addTables(self):
+		sql = ("CREATE TABLE IF NOT EXISTS lpts_organizations"
+			" (lpts_organization varchar(256) NOT NULL,"
+			" organization_role int(1) unsigned NOT NULL CHECK (organization_role in (1, 2)),"
+			" organization_id int(10) unsigned NOT NULL,"
+			" created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,"
+  			" updated_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,"
+			" FOREIGN KEY (organization_id) REFERENCES organizations(id))"
 			" ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci")
 		self.db.execute(sql, ())
-		self.db.execute("TRUNCATE TABLE lpts_copyright_organizations", ())
+		self.db.execute("TRUNCATE TABLE lpts_organizations", ())
 
 
 	def processAlansLicensorMatch(self):
@@ -191,9 +186,9 @@ class MatchOrganizationNames:
 
 
 	def updateDatabase(self):
-		sql = "UPDATE organizations SET lpts_licensor = %s WHERE id = %s"
+		sql = "INSERT INTO lpts_organizations (lpts_organization, organization_role, organization_id) VALUES (%s, 2, %s)"
 		self.db.executeBatch(sql, list(self.licensorUpdates))
-		sql = "INSERT INTO lpts_copyright_organizations (lpts_copyright, organization_id) VALUES (%s, %s)"
+		sql = "INSERT INTO lpts_organizations (lpts_organization, organization_role, organization_id) VALUES (%s, 1, %s)"
 		inserts = list(self.copyrightInserts)
 		for index in range(len(inserts)):
 			item = inserts[index]
@@ -209,7 +204,7 @@ if (__name__ == '__main__'):
 	lptsReader = LPTSExtractReader(config)
 	db = SQLUtility(config)
 	test = MatchOrganizationNames(config, db, lptsReader)
-	test.addColumns()
+	test.addTables()
 	test.processAlansLicensorMatch()
 	test.processAlansCopyrightMatch()
 	test.processLicensor()
