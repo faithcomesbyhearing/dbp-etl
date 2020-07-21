@@ -151,7 +151,7 @@ class LPTSExtractReader:
 			pos = name.index("®")
 		if pos > 0:
 			name = name[pos:]
-		for char in ["©", "℗", "®","0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ",", "/", "-", ";", "_", ".","\n"]:
+		for char in ["©", "℗", "®","0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ",", "/", "-", ";", "_", ".", "\t", "\n"]:
 			name = name.replace(char, "")
 		name = name.replace("     ", " ")
 		name = name.replace("    ", " ")

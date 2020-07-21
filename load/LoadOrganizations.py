@@ -34,7 +34,7 @@ class LoadOrganizations:
 				if coLicensor != None and coLicensor not in licensorSet:
 					resultSet.add(coLicensor)
 		for item in resultSet:
-			print(item)
+			print("Licensor missing from lpts_organizations:", item)
 		return resultSet
 
 
@@ -54,7 +54,26 @@ class LoadOrganizations:
 	## This method looks for copyright holders that are in LPTS,
 	## but not yet known to dbp
 	def validateCopyrights(self):
-		print("tbd")
+		resultSet = set()
+		sql = "SELECT lpts_organization FROM lpts_organizations WHERE organization_role=1"
+		copyrightSet = self.db.selectSet(sql, ())
+		for record in self.lptsReader.resultSet:
+			if self.hasDamIds(record, "text"):
+				self.copyrightMatch(resultSet, record.Copyrightc(), copyrightSet)
+			if self.hasDamIds(record, "audio"):
+				self.copyrightMatch(resultSet, record.Copyrightp(), copyrightSet)
+			if self.hasDamIds(record, "video"):
+				self.copyrightMatch(resultSet, record.Copyright_Video(), copyrightSet)
+		for item in resultSet:
+			print("Copyright missing from lpts_organizations:", item)
+		return resultSet
+
+
+	def copyrightMatch(self, resultSet, copyright, copyrightSet):
+		if copyright != None:
+			name = self.lptsReader.reduceCopyrightToName(copyright)
+			if not name in copyrightSet:
+				resultSet.add(name)
 
 
 	## This method updates the bible_fileset_copyright_organization with licensors
@@ -73,7 +92,8 @@ if (__name__ == '__main__'):
 	lptsReader = LPTSExtractReader(config)
 	db = SQLUtility(config)
 	orgs = LoadOrganizations(config, db, lptsReader)
-	unknownLicensors = orgs.validateLicensors()
+	#unknownLicensors = orgs.validateLicensors()
+	unknownCopyrights = orgs.validateCopyrights()
 
 
 	db.close()	
