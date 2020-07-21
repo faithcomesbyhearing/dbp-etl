@@ -93,13 +93,13 @@ class LoadOrganizations:
 					if licensorOrg != None:
 						lptsOrgList.append(licensorOrg)
 					else:
-						print("ERROR: There is no org_id for %s" % (lptsRecord.Licensor()))
+						print("ERROR: There is no org_id for: %s" % (lptsRecord.Licensor()))
 				if lptsRecord.CoLicensor() != None:
 					coLicensorOrg = organizationMap.get(lptsRecord.CoLicensor())
 					if coLicensorOrg != None:
 						lptsOrgList.append(coLicensorOrg)
 					else:
-						print("ERROR: There is no org_id for %s" % (lptsRecord.CoLicensor()))
+						print("ERROR: There is no org_id for: %s" % (lptsRecord.CoLicensor()))
 
 			for lptsOrg in lptsOrgList:
 				if lptsOrg not in dbpOrgList:
