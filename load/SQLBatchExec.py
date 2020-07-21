@@ -5,6 +5,8 @@
 import io
 import os
 import sys
+from datetime import datetime
+from Config import *
 
 
 class SQLBatchExec:
@@ -52,9 +54,14 @@ class SQLBatchExec:
 
 
 	def execute(self):
-		# open file with timestamp
-		# write each statement into file
-		# close file
+		pattern = self.config.filename_datetime 
+		tranDir = "./" ## we need a config parameter
+		path = tranDir + "Trans-" + datetime.today().strftime(pattern) + ".sql"
+		print("Transactions", path)
+		tranFile = open(path, "w")
+		for statement in self.statements:
+			tranFile.write(statement + "\n")
+		tranFile.close()
 		# login into the correct mysql server and database
 		# exec file to mysql
 		print("tbd")

@@ -136,8 +136,7 @@ if (__name__ == '__main__'):
 	print("num filelists", len(filesetList))
 	licensorUpdates = orgs.updateLicensors(filesetList)
 
-
 	db.close()
 	dbOut.displayStatements()
 	dbOut.displayCounts()
-	#dbOut.execute()
+	dbOut.execute()
