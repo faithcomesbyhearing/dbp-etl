@@ -23,7 +23,7 @@ class Config:
 			print("ERROR: Environment variable HOME or HOMEPATH must be set to a directory.")
 			sys.exit()
 
-		configFile = os.path.join(home, "fcbh_dbp.cfg")
+		configFile = os.path.join(home, "dbp-etl.cfg")
 		if not os.path.exists(configFile):
 			print("ERROR: Config file '%s' does not exist." % (configFile))
 			sys.exit()
