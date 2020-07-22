@@ -88,18 +88,13 @@ class LoadOrganizations:
 			(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecordLoose(typeCode, bibleId, filesetId)
 			lptsOrgList = []
 			if lptsRecord != None and self.hasDamIds(lptsRecord, "text"):
-				if lptsRecord.Licensor() != None:
-					licensorOrg = organizationMap.get(lptsRecord.Licensor())
-					if licensorOrg != None:
-						lptsOrgList.append(licensorOrg)
-					else:
-						print("ERROR: There is no org_id for: %s" % (lptsRecord.Licensor()))
-				if lptsRecord.CoLicensor() != None:
-					coLicensorOrg = organizationMap.get(lptsRecord.CoLicensor())
-					if coLicensorOrg != None:
-						lptsOrgList.append(coLicensorOrg)
-					else:
-						print("ERROR: There is no org_id for: %s" % (lptsRecord.CoLicensor()))
+				for licensor in [lptsRecord.Licensor(), lptsRecord.CoLicensor()]:
+					if licensor != None:
+						licensorOrg = organizationMap.get(licensor)
+						if licensorOrg != None:
+							lptsOrgList.append(licensorOrg)
+						else:
+							print("ERROR: There is no org_id for: %s" % (licensor))
 
 			for lptsOrg in lptsOrgList:
 				if lptsOrg not in dbpOrgList:
