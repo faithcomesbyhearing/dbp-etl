@@ -62,9 +62,25 @@ class SQLBatchExec:
 		for statement in self.statements:
 			tranFile.write(statement + "\n")
 		tranFile.close()
+		cmd = "mysql -u%s -p%s  %s < %s" % (self.config.database_user, 
+											self.config.database_passwd,
+											self.config.database_db_name,
+											path)
+		print("cmd", cmd)
+		results = os.popen(cmd).read()
+		print(results)
 		# login into the correct mysql server and database
 		# exec file to mysql
-		print("tbd")
+
+
+if (__name__ == '__main__'):
+	config = Config()
+	sql = SQLBatchExec(config)
+	sql.statements.append("SELECT count(*) FROM bibles")
+	sql.displayStatements()
+	sql.displayCounts()
+	sql.execute()
+
 
 
 
