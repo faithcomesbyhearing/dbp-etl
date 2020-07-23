@@ -116,11 +116,9 @@ class LoadOrganizations:
 		sql = "SELECT lpts_organization, organization_id FROM lpts_organizations WHERE organization_role=1"
 		organizationMap = self.db.selectMap(sql, ())
 		for (bibleId, filesetId, setTypeCode, setSizeCode, assetId, hashId) in filesetList:
-			print("BIBLE:", bibleId, filesetId, hashId)
 			typeCode = setTypeCode.split("_")[0]
 			sql = "SELECT organization_id FROM bible_fileset_copyright_organizations WHERE hash_id = %s AND organization_role=1"
-			dbpOrgList = self.db.selectList(sql, (hashId))
-			print("DBP ORGS:", dbpOrgList)
+			dbpOrgList = self.db.selectSet(sql, (hashId))
 			(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecordLoose(typeCode, bibleId, filesetId)
 			lptsList = set()
 			lptsOrgList = set()
@@ -133,23 +131,18 @@ class LoadOrganizations:
 					lptsList.add(lptsRecord.Copyright_Video())
 
 				for copyright in lptsList:
-					name = self.lptsRecord.reduceCopyrightToName(copyright)
+					name = self.lptsReader.reduceCopyrightToName(copyright)
 					copyrightOrg = organizationMap.get(name)
 					if copyrightOrg != None:
 						lptsOrgList.add(copyrightOrg)
 					else:
 						print("ERROR: There is no org_id for: %s" % (name))
-			print("LPTS ORGS:", lptsOrgList)
-
 			for lptsOrg in lptsOrgList:
 				if lptsOrg not in dbpOrgList:
-					inserts.append((hashId, lptsOrg, 2))
-					print("INSERT", hashId, lptsOrg)
-
+					inserts.append((hashId, lptsOrg, 1))
 			for dbpOrg in dbpOrgList:
 				if dbpOrg not in lptsOrgList:
 					deletes.append((hashId, dbpOrg))
-					print("DELETE", hashId, dbpOrg)
 
 		tableName = "bible_fileset_copyright_organizations"
 		pkeyNames = ("hash_id", "organization_id")
@@ -162,31 +155,28 @@ class LoadOrganizations:
 	## this method can be run to verify the correctness of that update.
 	## This method should be kept for use anytime the updateLicensors is modified.
 	def unitTestUpdateLicensors(self):
-		sql = "SELECT lpts_organization, organization_id FROM lpts_organizations WHERE organization_role=2"
-		organizationMap = self.db.selectMap(sql, ())
+		#sql = "SELECT lpts_organization, organization_id FROM lpts_organizations WHERE organization_role=2"
+		#organizationMap = self.db.selectMap(sql, ())
+		totalDamIdSet = set()
 		for lptsRecord in self.lptsReader.resultSet:
+			licensorSet = set()
+			if lptsRecord.Licensor() != None:
+				licensorSet.add(organizationMap(lptsRecord.Licensor()))
+			if lptsRecord.CoLicensor() != None:
+				licensorSet.add(organizationMap(lptsRecord.CoLicensor()))
 			textDam1 = lptsRecord.DamIds("text", 1)
 			textDam2 = lptsRecord.DamIds("text", 2)
 			textDam3 = lptsRecord.DamIds("text", 3)
 			textDamIds = textDam1.union(textDam2).union(textDam3)
-			if len(textDamIds) > 0:
-				licensorOrgs = set()
-				if lptsRecord.Licensor() != None:
-					licensorOrgs.add(organizationMap(lptsRecord.Licensor()))
-				if lptsRecord.CoLicensor() != None:
-					licensorOrgs.add(organizationMap(lptsRecord.CoLicensor()))
-				for damId in textDamIds:
-					# extract bibleId, damId
-					# lookup hashId in DBP for fileset
-					print(lptsRecord.Reg_StockNumber(), damId)
-					# lookup copyright_orgs record by hashId
-					# any not found is an error
-
-					# compare organizations for hashId with DBP. Any mismatch is an error
-					# either to many, to few, or the same count but different is an error
-					# keep a list of hashId, orgId pairs that have been checked.
-					# when done, check the hashId, orgId pairs against the DBP.
-					# If there are any that have not been checked.  It is an error
+			for damId in textDamIds:
+				totalDamIdSet.add(damId)
+				sql = ("SELECT organization_id FROM bible_fileset_copyright_organizations WHERE hash_id IN"
+					" (SELECT hash_id FROM bible_filesets WHERE id=%s AND set_type_code='text_format')"
+					" AND organization_role = 2")
+				orgSet = self.db.selectSet(sql, damId)
+				if orgSet != licensorSet:
+					print("ERROR: LPTS:", licensorSet, " DBP:", orgSet)
+		# Check the database for damId's not processed by this check
 
 
 if (__name__ == '__main__'):
@@ -206,9 +196,9 @@ if (__name__ == '__main__'):
 	#orgs.updateCopyrightHolders(filesetList)
 	#orgs.unitTestUpdateLicensors()
 	db.close()
-	dbOut.displayStatements()
+	#dbOut.displayStatements()
 	dbOut.displayCounts()
-	#dbOut.execute()
+	dbOut.execute()
 
 
 """

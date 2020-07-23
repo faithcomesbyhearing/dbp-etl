@@ -59,24 +59,28 @@ class SQLBatchExec:
 		path = tranDir + "Trans-" + datetime.today().strftime(pattern) + ".sql"
 		print("Transactions", path)
 		tranFile = open(path, "w")
+		tranFile.write("START TRANSACTION;\n")
 		for statement in self.statements:
 			tranFile.write(statement + "\n")
+		tranFile.write("COMMIT;\n")
 		tranFile.close()
-		cmd = "mysql -u%s -p%s  %s < %s" % (self.config.database_user, 
+		cmd = ("mysql -h %s -P %s -u %s -p%s  %s < %s" % 
+											(self.config.database_host,
+											self.config.database_port,
+											self.config.database_user, 
 											self.config.database_passwd,
 											self.config.database_db_name,
-											path)
+											path))
 		print("cmd", cmd)
-		results = os.popen(cmd).read()
-		print(results)
-		# login into the correct mysql server and database
-		# exec file to mysql
+		results2 = os.popen(cmd).read()
+		print(results2)
 
 
 if (__name__ == '__main__'):
 	config = Config()
 	sql = SQLBatchExec(config)
-	sql.statements.append("SELECT count(*) FROM bibles")
+	sql.statements.append("SELECT * FROM bibles;")
+	sql.statements.append("SHOW DATABASES;")
 	sql.displayStatements()
 	sql.displayCounts()
 	sql.execute()
