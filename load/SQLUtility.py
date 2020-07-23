@@ -6,6 +6,8 @@
 import os
 import sys
 import pymysql
+from Config import *
+
 
 class SQLUtility:
 
@@ -150,16 +152,10 @@ class SQLUtility:
 		sys.exit()
 
 
-"""
-## Unit Test
-sql = SQLUtility(config)
-count = sql.selectScalar("select count(*) from language_status", None)
-print(count)
-lista = sql.selectList("select title from language_status", None)
-print(lista)
-mapa = sql.selectMap("select id, title from language_status", None)
-print(mapa)
-mapb = sql.selectMapList("select id, title from language_status", None)
-print(mapb)
-sql.close()
-"""
+if (__name__ == '__main__'):
+	config = Config()
+	sql = SQLUtility(config)
+	resultSet = sql.select("SELECT * FROM bibles", ())
+	for row in resultSet:
+		print(row)
+	sql.close()
