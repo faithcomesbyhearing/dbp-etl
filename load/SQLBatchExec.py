@@ -64,6 +64,9 @@ class SQLBatchExec:
 			tranFile.write(statement + "\n")
 		tranFile.write("COMMIT;\n")
 		tranFile.close()
+		if self.config.database_tunnel != None:
+			results1 = os.popen(self.config.database_tunnel).read()
+			print("tunnel opened:", results1)
 		cmd = ("mysql -h %s -P %s -u %s -p%s  %s < %s" % 
 											(self.config.database_host,
 											self.config.database_port,
@@ -71,7 +74,6 @@ class SQLBatchExec:
 											self.config.database_passwd,
 											self.config.database_db_name,
 											path))
-		print("cmd", cmd)
 		results2 = os.popen(cmd).read()
 		print(results2)
 

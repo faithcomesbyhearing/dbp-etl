@@ -16,7 +16,11 @@ class SQLUtility:
 			pycursor = pymysql.cursors.DictCursor
 		else:
 			pycursor = pymysql.cursors.Cursor
-					
+
+		if config.database_tunnel != None:
+			results1 = os.popen(config.database_tunnel).read()
+			print("tunnel opened:", results1)
+
 		self.conn = pymysql.connect(host = config.database_host,
                              		user = config.database_user,
                              		password = config.database_passwd,

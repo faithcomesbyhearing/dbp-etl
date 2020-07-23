@@ -18,6 +18,27 @@ class LoadOrganizations:
 		self.lptsReader = lptsReader
 
 
+	## This program requires the primary key of bible_fileset_copyright_organizations
+	## to be hash_id, organization_id, organization_role.
+	## If it is not, it updates the key.
+	## Written in July 2020, this is a temporary method that can be eliminated
+	def changeCopyrightOrganizationsPrimaryKey(self):
+		sql = (("SELECT column_name FROM information_schema.key_column_usage"
+			" WHERE table_name='bible_fileset_copyright_organizations'"
+			" AND table_schema='%s'"
+			" AND constraint_name='PRIMARY'"
+			" ORDER BY ordinal_position") % (self.config.database_db_name))
+		pkey = self.db.selectList(sql, ())
+		if len(pkey) == 2 and pkey[0] == "hash_id" and pkey[1] == "organization_id":
+			sql = (("ALTER TABLE %s.bible_fileset_copyright_organizations"   
+  				" DROP PRIMARY KEY,"
+  				" ADD PRIMARY KEY (hash_id, organization_id, organization_role)") 
+				% (self.config.database_db_name))
+			self.db.execute(sql, ())
+			print("The primary key of bible_fileset_copyright_organizations was changed.")
+			print("The key is now hash_id, organization_id, organization_role.")
+
+
 	## This method looks for licensors that are in LPTS, 
 	## but not yet known to dbp
 	def validateLicensors(self):
@@ -185,6 +206,7 @@ if (__name__ == '__main__'):
 	dbOut = SQLBatchExec(config)
 	lptsReader = LPTSExtractReader(config)
 	orgs = LoadOrganizations(config, db, dbOut, lptsReader)
+	orgs.changeCopyrightOrganizationsPrimaryKey()
 	#unknownLicensors = orgs.validateLicensors()
 	#unknownCopyrights = orgs.validateCopyrights()
 	sql = ("SELECT b.bible_id, bf.id, bf.set_type_code, bf.set_size_code, bf.asset_id, bf.hash_id"

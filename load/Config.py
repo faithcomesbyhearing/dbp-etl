@@ -56,6 +56,7 @@ class Config:
 		self.database_passwd = self._get("database.passwd")
 		self.database_db_name = self._get("database.db_name")
 		self.database_port = self._getInt("database.port")
+		self.database_tunnel = self._getOptional("database.tunnel")
 
 		self.s3_bucket = self._get("s3.bucket")
 		self.s3_vid_bucket = self._get("s3.vid_bucket")
@@ -115,6 +116,9 @@ class Config:
 
 	def _getFloat(self, name):
 		return float(self._get(name))
+
+	def _getOptional(self, name):
+		return self.hashMap.get(name)
 
 
 # Unit Test
