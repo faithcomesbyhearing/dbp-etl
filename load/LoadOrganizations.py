@@ -146,8 +146,7 @@ class LoadOrganizations:
 			lptsRecords = self.lptsReader.getLPTSRecordsAll(typeCode, bibleId, filesetId)
 			lptsList = set()
 			lptsOrgList = set()
-			#if lptsRecord != None:
-			for lptsRecord in lptsRecords:
+			for (lptsRecord, lptsIndex) in lptsRecords:
 				if self.hasDamIds(lptsRecord, "text") and lptsRecord.Copyrightc() != None:
 					lptsList.add(lptsRecord.Copyrightc())
 				if self.hasDamIds(lptsRecord, "audio") and lptsRecord.Copyrightp() != None:
@@ -170,7 +169,7 @@ class LoadOrganizations:
 					deletes.append((hashId, dbpOrg, 1))
 
 		tableName = "bible_fileset_copyright_organizations"
-		pkeyNames = ("hash_id", "organization_id, organization_role")
+		pkeyNames = ("hash_id", "organization_id", "organization_role")
 		attrNames = ()
 		dbOut.insert(tableName, pkeyNames, attrNames, inserts)
 		dbOut.delete(tableName, pkeyNames, deletes)
@@ -234,13 +233,13 @@ if (__name__ == '__main__'):
 			" ORDER BY b.bible_id, bf.id, bf.set_type_code")
 	filesetList = db.select(sql, ())
 	print("num filelists", len(filesetList))
-	orgs.updateLicensors(filesetList)
-	#orgs.updateCopyrightHolders(filesetList)
+	#orgs.updateLicensors(filesetList)
+	orgs.updateCopyrightHolders(filesetList)
 	dbOut.displayStatements()
 	dbOut.displayCounts()
 	dbOut.execute()
 
-	orgs.unitTestUpdateLicensors()
+	#orgs.unitTestUpdateLicensors()
 	db.close()
 
 

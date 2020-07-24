@@ -17,17 +17,17 @@ class SQLBatchExec:
 		self.counts = []
 
 
-	def insert(self, tableName, attrNames, pkeyNames, values):
+	def insert(self, tableName, pkeyNames, attrNames, values):
 		if len(values) > 0:
 			names = attrNames + pkeyNames
 			valsubs = ["'%s'"] * len(names)
-			sql = "INSERT INTO %s (%s) VALUES (%s);" % (tableName, ", ".join(names), ", ".join(valsubs)) 
+			sql = "INSERT INTO %s (%s) VALUES (%s);" % (tableName, ", ".join(names), ", ".join(valsubs))
 			for value in values:
 				self.statements.append(sql % value)
 			self.counts.append(("insert", tableName, len(values)))
 
 
-	def update(self, tableName, attrNames, pkeyNames, values):
+	def update(self, tableName, pkeyNames, attrNames, values):
 		if len(values) > 0:
 			sql = "UPDATE %s SET %s WHERE %s;" % (tableName, "='%s', ".join(attrNames) + "='%s'", "='%s' AND ".join(pkeyNames) + "='%s'")
 			for value in values:
