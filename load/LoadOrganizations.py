@@ -176,27 +176,31 @@ class LoadOrganizations:
 	## this method can be run to verify the correctness of that update.
 	## This method should be kept for use anytime the updateLicensors is modified.
 	def unitTestUpdateLicensors(self):
-		#sql = "SELECT lpts_organization, organization_id FROM lpts_organizations WHERE organization_role=2"
-		#organizationMap = self.db.selectMap(sql, ())
+		sql = "SELECT lpts_organization, organization_id FROM lpts_organizations WHERE organization_role=2"
+		organizationMap = self.db.selectMap(sql, ())
 		totalDamIdSet = set()
 		for lptsRecord in self.lptsReader.resultSet:
 			licensorSet = set()
-			if lptsRecord.Licensor() != None:
-				licensorSet.add(organizationMap(lptsRecord.Licensor()))
-			if lptsRecord.CoLicensor() != None:
-				licensorSet.add(organizationMap(lptsRecord.CoLicensor()))
+			for licensor in [lptsRecord.Licensor(), lptsRecord.CoLicensor()]:
+				if licensor != None:
+					licensorOrg = organizationMap.get(licensor)
+					if licensorOrg != None:
+						licensorSet.add(licensorOrg)
 			textDam1 = lptsRecord.DamIds("text", 1)
 			textDam2 = lptsRecord.DamIds("text", 2)
 			textDam3 = lptsRecord.DamIds("text", 3)
 			textDamIds = textDam1.union(textDam2).union(textDam3)
 			for damId in textDamIds:
 				totalDamIdSet.add(damId)
-				sql = ("SELECT organization_id FROM bible_fileset_copyright_organizations WHERE hash_id IN"
-					" (SELECT hash_id FROM bible_filesets WHERE id=%s AND set_type_code='text_format')"
-					" AND organization_role = 2")
-				orgSet = self.db.selectSet(sql, damId)
-				if orgSet != licensorSet:
-					print("ERROR: LPTS:", licensorSet, " DBP:", orgSet)
+				sql = ("SELECT hash_id FROM bible_filesets WHERE id=%s"
+					" AND set_type_code IN ('text_format', 'text_plain')")
+				hashId = self.db.selectScalar(sql, (damId))
+				if hashId != None:
+					sql = ("SELECT organization_id FROM bible_fileset_copyright_organizations"
+						" WHERE hash_id=%s AND organization_role = 2")
+					orgSet = self.db.selectSet(sql, (hashId))
+					if orgSet != licensorSet:
+						print("ERROR:", hashId, damId, " LPTS:", licensorSet, " DBP:", orgSet)
 		# Check the database for damId's not processed by this check
 
 
@@ -214,13 +218,14 @@ if (__name__ == '__main__'):
 			" ORDER BY b.bible_id, bf.id, bf.set_type_code")
 	filesetList = db.select(sql, ())
 	print("num filelists", len(filesetList))
-	orgs.updateLicensors(filesetList)
+	#orgs.updateLicensors(filesetList)
 	#orgs.updateCopyrightHolders(filesetList)
-	#orgs.unitTestUpdateLicensors()
-	db.close()
 	#dbOut.displayStatements()
-	dbOut.displayCounts()
-	dbOut.execute()
+	#dbOut.displayCounts()
+	#dbOut.execute()
+
+	orgs.unitTestUpdateLicensors()
+	db.close()
 
 
 """
