@@ -91,6 +91,22 @@ class LPTSExtractReader:
 		return (record, None)
 
 
+	## This method returns all LPTS records regardless of the status
+	## Otherwise it is exactly like getLPTSRecord
+	def getLPTSRecordsAll(self, typeCode, bibleId, filesetId):
+		results = []
+		normFilesetId = filesetId[:10]
+		lptsRecords = self.bibleIdMap.get(bibleId)
+		if lptsRecords != None:
+			for (index, record) in lptsRecords:
+				damIdList = record.DamIdMap(typeCode, index)
+				if normFilesetId in damIdList:
+					#return(record, index)
+					results.append((record, index))
+		#return (None, None)
+		return results		
+
+
 	## This is a more permissive way to get LPTS Records, it does not require
 	## a type or bibleId.  So, it can only be used for non-index fields
 	## It returns an array of statuses and records, i.e. [(status, lptsRecord)]
@@ -116,12 +132,6 @@ class LPTSExtractReader:
 					statuses = self.filesetIdMap.get(damId, [])
 					statuses.append((status, lptsRecord))
 					self.filesetIdMap[damId] = statuses
-			#for damId, recs in self.filesetIdMap.items():
-			#	if len(recs) > 1:
-			#		print("")
-			#		for (status, rec) in recs:
-			#			print("DUPLICATE: %s %s %s" % (damId, status, rec.Reg_StockNumber()))
-			#sys.exit()
 		return self.filesetIdMap.get(filesetId[:10], None)
 
 
@@ -220,8 +230,52 @@ class LPTSRecord:
 	def recordLen(self):
 		return len(self.record.keys())
 
-	## Return the damId's of a record in a set of damIds
+#	## Return the damId's of a record in a set of damIds
+#	def DamIds(self, typeCode, index):
+#		if not typeCode in {"audio", "text", "video"}:
+#			print("ERROR: Unknown typeCode '%s', audio, text, or video is expected." % (typeCode))
+#		if not index in {1, 2, 3}:
+#			print("ERROR: Unknown DamId index '%s', 1,2, or 3 expected." % (index))
+#			sys.exit()
+#		if typeCode == "audio":
+#			if index == 1:
+#				damIdDict = LPTSRecord.audio1DamIdDict
+#			elif index == 2:
+#				damIdDict = LPTSRecord.audio2DamIdDict
+#			elif index == 3:
+#				damIdDict = LPTSRecord.audio3DamIdDict
+#		elif typeCode == "text":
+#			if index == 1:
+#				damIdDict = LPTSRecord.text1DamIdDict
+#			elif index == 2:
+#				damIdDict = LPTSRecord.text2DamIdDict
+#			elif index == 3:
+#				damIdDict = LPTSRecord.text3DamIdDict
+#		elif typeCode == "video":
+#			damIdDict = LPTSRecord.videoDamIdDict
+#		hasKeys = set(damIdDict.keys()).intersection(set(self.record.keys()))
+#		results = set()
+#		for key in hasKeys:
+#			statusKey = damIdDict[key]
+#			damId = self.record[key]
+#			if typeCode == "text":
+#				damId = damId[:6]
+#			status = self.record.get(statusKey)
+#			if status in {"Live", "live"}:
+#				results.add(damId)
+#		return results
+
+	## Return the damId's of a record in a set of damIds, which are Live
 	def DamIds(self, typeCode, index):
+		damIdMap = self.DamIdMap(typeCode, index)
+		results = set()
+		for (damId, status) in damIdMap.items():
+			if status in {"Live", "live"}:
+				results.add(damId)
+		return results
+
+	## Return a map of damId: status of the damIds in a record
+	def DamIdMap(self, typeCode, index):
 		if not typeCode in {"audio", "text", "video"}:
 			print("ERROR: Unknown typeCode '%s', audio, text, or video is expected." % (typeCode))
 		if not index in {1, 2, 3}:
@@ -244,15 +298,15 @@ class LPTSRecord:
 		elif typeCode == "video":
 			damIdDict = LPTSRecord.videoDamIdDict
 		hasKeys = set(damIdDict.keys()).intersection(set(self.record.keys()))
-		results = set()
+		results = {}
 		for key in hasKeys:
 			statusKey = damIdDict[key]
 			damId = self.record[key]
 			if typeCode == "text":
 				damId = damId[:6]
 			status = self.record.get(statusKey)
-			if status in {"Live", "live"}:
-				results.add(damId)
+			if results.get(damId) == None or status in {"Live", "live"}:
+				results[damId] = status
 		return results
 
 	def AltName(self):
@@ -551,14 +605,14 @@ if (__name__ == '__main__'):
 	for rec in reader.resultSet:
 		for index in [1, 2, 3]:
 			print(rec.Reg_StockNumber(), index)
-			prefixSet = set()
+			#prefixSet = set()
 			for typeCode in ["text", "audio", "video"]:
 				if typeCode != "video" or index == 1:
-					damidSet = rec.DamIds(typeCode, index)
+					damidSet = rec.DamIds2(typeCode, index)
 					if len(damidSet) > 0:
 						print(typeCode, index, damidSet)
-						for damid in damidSet:
-							prefixSet.add(damid[:6])
-			if len(prefixSet) > 1:
-				print("ERROR: More than one DamId prefix in set %s" % (",".join(prefixSet)))
+						#for damid in damidSet:
+						#	prefixSet.add(damid[:6])
+			#if len(prefixSet) > 1:
+			#	print("ERROR: More than one DamId prefix in set %s" % (",".join(prefixSet)))
 

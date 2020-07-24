@@ -59,13 +59,13 @@ class LoadOrganizations:
 
 
 	def hasDamIds(self, lptsRecord, typeCode):
-		damIds = lptsRecord.DamIds(typeCode, 1)
+		damIds = lptsRecord.DamIdMap(typeCode, 1)
 		if len(damIds) > 0:
 			return True
-		damIds = lptsRecord.DamIds(typeCode, 2)
+		damIds = lptsRecord.DamIdMap(typeCode, 2)
 		if len(damIds) > 0:
 			return True
-		damIds = lptsRecord.DamIds(typeCode, 3)
+		damIds = lptsRecord.DamIdMap(typeCode, 2)
 		if len(damIds) > 0:
 			return True
 		return False
@@ -106,26 +106,28 @@ class LoadOrganizations:
 			typeCode = setTypeCode.split("_")[0]
 			sql = "SELECT organization_id FROM bible_fileset_copyright_organizations WHERE hash_id = %s AND organization_role=2"
 			dbpOrgList = self.db.selectSet(sql, (hashId))
-			(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecordLoose(typeCode, bibleId, filesetId)
+			#(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecordLoose(typeCode, bibleId, filesetId)
+			lptsRecords = self.lptsReader.getLPTSRecordsAll(typeCode, bibleId, filesetId)
 			lptsOrgList = set()
-			if lptsRecord != None and self.hasDamIds(lptsRecord, "text"):
-				for licensor in [lptsRecord.Licensor(), lptsRecord.CoLicensor()]:
-					if licensor != None:
-						licensorOrg = organizationMap.get(licensor)
-						if licensorOrg != None:
-							lptsOrgList.add(licensorOrg)
-						else:
-							print("ERROR: There is no org_id for: %s" % (licensor))
+			for (lptsRecord, index) in lptsRecords:
+				if lptsRecord != None and self.hasDamIds(lptsRecord, "text"):
+					for licensor in [lptsRecord.Licensor(), lptsRecord.CoLicensor()]:
+						if licensor != None:
+							licensorOrg = organizationMap.get(licensor)
+							if licensorOrg != None:
+								lptsOrgList.add(licensorOrg)
+							else:
+								print("ERROR: There is no org_id for: %s" % (licensor))
 			for lptsOrg in lptsOrgList:
 				if lptsOrg not in dbpOrgList:
 					inserts.append((hashId, lptsOrg, 2))
 			for dbpOrg in dbpOrgList:
 				if dbpOrg not in lptsOrgList:
-					deletes.append((hashId, dbpOrg))
+					deletes.append((hashId, dbpOrg, 2))
 
 		tableName = "bible_fileset_copyright_organizations"
-		pkeyNames = ("hash_id", "organization_id")
-		attrNames = ("organization_role",)
+		pkeyNames = ("hash_id", "organization_id", "organization_role")
+		attrNames = ()
 		dbOut.insert(tableName, pkeyNames, attrNames, inserts)
 		dbOut.delete(tableName, pkeyNames, deletes)
 		
@@ -140,10 +142,12 @@ class LoadOrganizations:
 			typeCode = setTypeCode.split("_")[0]
 			sql = "SELECT organization_id FROM bible_fileset_copyright_organizations WHERE hash_id = %s AND organization_role=1"
 			dbpOrgList = self.db.selectSet(sql, (hashId))
-			(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecordLoose(typeCode, bibleId, filesetId)
+			#(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecordLoose(typeCode, bibleId, filesetId)
+			lptsRecords = self.lptsReader.getLPTSRecordsAll(typeCode, bibleId, filesetId)
 			lptsList = set()
 			lptsOrgList = set()
-			if lptsRecord != None:
+			#if lptsRecord != None:
+			for lptsRecord in lptsRecords:
 				if self.hasDamIds(lptsRecord, "text") and lptsRecord.Copyrightc() != None:
 					lptsList.add(lptsRecord.Copyrightc())
 				if self.hasDamIds(lptsRecord, "audio") and lptsRecord.Copyrightp() != None:
@@ -163,11 +167,11 @@ class LoadOrganizations:
 					inserts.append((hashId, lptsOrg, 1))
 			for dbpOrg in dbpOrgList:
 				if dbpOrg not in lptsOrgList:
-					deletes.append((hashId, dbpOrg))
+					deletes.append((hashId, dbpOrg, 1))
 
 		tableName = "bible_fileset_copyright_organizations"
-		pkeyNames = ("hash_id", "organization_id")
-		attrNames = ("organization_role",)
+		pkeyNames = ("hash_id", "organization_id, organization_role")
+		attrNames = ()
 		dbOut.insert(tableName, pkeyNames, attrNames, inserts)
 		dbOut.delete(tableName, pkeyNames, deletes)
 
@@ -186,22 +190,34 @@ class LoadOrganizations:
 					licensorOrg = organizationMap.get(licensor)
 					if licensorOrg != None:
 						licensorSet.add(licensorOrg)
-			textDam1 = lptsRecord.DamIds("text", 1)
-			textDam2 = lptsRecord.DamIds("text", 2)
-			textDam3 = lptsRecord.DamIds("text", 3)
+			textDam1 = set(lptsRecord.DamIdMap("text", 1).keys())
+			textDam2 = set(lptsRecord.DamIdMap("text", 2).keys())
+			textDam3 = set(lptsRecord.DamIdMap("text", 3).keys())	
 			textDamIds = textDam1.union(textDam2).union(textDam3)
+			dbpOrgSet = set()
 			for damId in textDamIds:
 				totalDamIdSet.add(damId)
 				sql = ("SELECT hash_id FROM bible_filesets WHERE id=%s"
 					" AND set_type_code IN ('text_format', 'text_plain')")
-				hashId = self.db.selectScalar(sql, (damId))
-				if hashId != None:
+				hashIds = self.db.selectList(sql, (damId))
+				for hashId in hashIds:
 					sql = ("SELECT organization_id FROM bible_fileset_copyright_organizations"
 						" WHERE hash_id=%s AND organization_role = 2")
 					orgSet = self.db.selectSet(sql, (hashId))
-					if orgSet != licensorSet:
-						print("ERROR:", hashId, damId, " LPTS:", licensorSet, " DBP:", orgSet)
-		# Check the database for damId's not processed by this check
+					dbpOrgSet = dbpOrgSet.union(orgSet)
+				if hashIds != [] and dbpOrgSet != licensorSet:
+					print("ERROR:", hashId, damId, " LPTS:", licensorSet, " DBP:", dbpOrgSet)
+
+		self.db.execute("CREATE TEMPORARY TABLE damid_check (damid varchar(20))", ())
+		self.db.executeBatch("INSERT INTO damid_check (damid) VALUES (%s)", list(totalDamIdSet))
+		count = self.db.selectScalar("SELECT count(*) FROM damid_check", ())
+		print(count, "records inserted")
+		sql = ("SELECT id, hash_id FROM bible_filesets"
+			" WHERE set_type_code IN ('text_plain', 'text_format')"
+			" AND id NOT IN (SELECT damid FROM damid_check)")
+		missedList = self.db.select(sql, ())
+		for (filesetId, hashId) in missedList:
+			print("MISSED:", filesetId, hashId)
 
 
 if (__name__ == '__main__'):
@@ -218,11 +234,11 @@ if (__name__ == '__main__'):
 			" ORDER BY b.bible_id, bf.id, bf.set_type_code")
 	filesetList = db.select(sql, ())
 	print("num filelists", len(filesetList))
-	#orgs.updateLicensors(filesetList)
+	orgs.updateLicensors(filesetList)
 	#orgs.updateCopyrightHolders(filesetList)
-	#dbOut.displayStatements()
-	#dbOut.displayCounts()
-	#dbOut.execute()
+	dbOut.displayStatements()
+	dbOut.displayCounts()
+	dbOut.execute()
 
 	orgs.unitTestUpdateLicensors()
 	db.close()
