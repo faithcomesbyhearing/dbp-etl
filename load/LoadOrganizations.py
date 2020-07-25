@@ -235,8 +235,8 @@ class LoadOrganizations:
 		count = self.db.selectScalar("SELECT count(*) FROM damid_check2", ())
 		print(count, "records inserted")
 		sql = ("SELECT id, hash_id FROM bible_filesets"
-			" WHERE set_type_code IN ('text_plain', 'text_format')"
-			" AND id NOT IN (SELECT damid FROM damid_check2)")
+			#" WHERE set_type_code IN ('text_plain', 'text_format')" #### WRONG
+			" WHERE id NOT IN (SELECT damid FROM damid_check2)")
 		missedList = self.db.select(sql, ())
 		for (filesetId, hashId) in missedList:
 			print("MISSED:", filesetId, hashId)
