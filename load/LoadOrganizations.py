@@ -142,7 +142,6 @@ class LoadOrganizations:
 			typeCode = setTypeCode.split("_")[0]
 			sql = "SELECT organization_id FROM bible_fileset_copyright_organizations WHERE hash_id = %s AND organization_role=1"
 			dbpOrgList = self.db.selectSet(sql, (hashId))
-			#(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecordLoose(typeCode, bibleId, filesetId)
 			lptsRecords = self.lptsReader.getLPTSRecordsAll(typeCode, bibleId, filesetId)
 			lptsList = set()
 			lptsOrgList = set()
@@ -219,6 +218,68 @@ class LoadOrganizations:
 			print("MISSED:", filesetId, hashId)
 
 
+	## After copyrightholders have been updated in bible_fileset_copyright_organizations,
+	## this method can be run to verify the correctness of that update.
+	## This method should be kept for use anytime the updateCopyrightHolders is modified.
+	def unitTestUpdateCopyrightHolders(self):
+		sql = "SELECT lpts_organization, organization_id FROM lpts_organizations WHERE organization_role=1"
+		organizationMap = self.db.selectMap(sql, ())
+		totalDamIdSet = set()
+		for lptsRecord in self.lptsReader.resultSet:
+			self.compareOneTypeCode(totalDamIdSet, organizationMap, lptsRecord, "text")
+			self.compareOneTypeCode(totalDamIdSet, organizationMap, lptsRecord, "audio")
+			self.compareOneTypeCode(totalDamIdSet, organizationMap, lptsRecord, "video")
+
+		self.db.execute("CREATE TEMPORARY TABLE damid_check2 (damid varchar(20))", ())
+		self.db.executeBatch("INSERT INTO damid_check2 (damid) VALUES (%s)", list(totalDamIdSet))
+		count = self.db.selectScalar("SELECT count(*) FROM damid_check2", ())
+		print(count, "records inserted")
+		sql = ("SELECT id, hash_id FROM bible_filesets"
+			" WHERE set_type_code IN ('text_plain', 'text_format')"
+			" AND id NOT IN (SELECT damid FROM damid_check2)")
+		missedList = self.db.select(sql, ())
+		for (filesetId, hashId) in missedList:
+			print("MISSED:", filesetId, hashId)
+
+
+	def compareOneTypeCode(self, totalDamIdSet, organizationMap, lptsRecord, typeCode):
+		copyright = None
+		copyrightName = None
+		copyrightOrgSet = set()
+
+		if typeCode == "text":
+			copyright = lptsRecord.Copyrightc()
+		elif typeCode == "audio":
+			copyright = lptsRecord.Copyrightp()
+		elif typeCode == "video":
+			copyright = lptsRecord.Copyright_Video()
+		if copyright != None:
+			copyrightName = self.lptsReader.reduceCopyrightToName(copyright)
+			copyrightOrgSet = organizationMap.get(copyrightName)
+
+		if typeCode != "video":
+			dam1Set = set(lptsRecord.DamIdMap(typeCode, 1).keys())
+			dam2Set = set(lptsRecord.DamIdMap(typeCode, 2).keys())
+			dam3Set = set(lptsRecord.DamIdMap(typeCode, 3).keys())	
+			lptsDamIds = dam1Set.union(dam2Set).union(dam3Set)		
+		else:
+			lptsDamIds = set(lptsRecord.DamIdMap("video", 1).keys())
+
+		dbpOrgSet = set()
+		for damId in lptsDamIds:
+			totalDamIdSet.add(damId)
+			sql = ("SELECT hash_id FROM bible_filesets WHERE id='%s' AND LEFT(set_type_code,4) = '%s'")
+			stmt = sql % (damId, typeCode[:4])
+			hashIds = self.db.selectList(stmt, ())
+			for hashId in hashIds:
+				sql = ("SELECT organization_id FROM bible_fileset_copyright_organizations"
+					" WHERE hash_id=%s AND organization_role = 1")
+				orgSet = self.db.selectSet(sql, (hashId))
+				dbpOrgSet = dbpOrgSet.union(orgSet)
+			if hashIds != [] and dbpOrgSet != copyrightOrgSet:
+				print("ERROR:", hashId, damId, copyrightName, " LPTS:", copyrightOrgSet, " DBP:", dbpOrgSet)
+
+
 if (__name__ == '__main__'):
 	config = Config()
 	db = SQLUtility(config)
@@ -234,12 +295,13 @@ if (__name__ == '__main__'):
 	filesetList = db.select(sql, ())
 	print("num filelists", len(filesetList))
 	#orgs.updateLicensors(filesetList)
-	orgs.updateCopyrightHolders(filesetList)
-	dbOut.displayStatements()
-	dbOut.displayCounts()
-	dbOut.execute()
+	#orgs.updateCopyrightHolders(filesetList)
+	#dbOut.displayStatements()
+	#dbOut.displayCounts()
+	#dbOut.execute()
 
 	#orgs.unitTestUpdateLicensors()
+	orgs.unitTestUpdateCopyrightHolders()
 	db.close()
 
 
