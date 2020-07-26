@@ -137,7 +137,7 @@ class LoadOrganizations:
 		inserts = []
 		deletes = []
 		sql = "SELECT lpts_organization, organization_id FROM lpts_organizations WHERE organization_role=1"
-		organizationMap = self.db.selectMap(sql, ())
+		organizationMap = self.db.selectMapList(sql, ())
 		for (bibleId, filesetId, setTypeCode, setSizeCode, assetId, hashId) in filesetList:
 			typeCode = setTypeCode.split("_")[0]
 			sql = "SELECT organization_id FROM bible_fileset_copyright_organizations WHERE hash_id = %s AND organization_role=1"
@@ -146,16 +146,19 @@ class LoadOrganizations:
 			lptsList = set()
 			lptsOrgList = set()
 			for (lptsRecord, lptsIndex) in lptsRecords:
-				if self.hasDamIds(lptsRecord, "text") and lptsRecord.Copyrightc() != None:
-					lptsList.add(lptsRecord.Copyrightc())
-				if self.hasDamIds(lptsRecord, "audio") and lptsRecord.Copyrightp() != None:
-					lptsList.add(lptsRecord.Copyrightp())
-				if self.hasDamIds(lptsRecord, "video") and lptsRecord.Copyright_Video() != None:
-					lptsList.add(lptsRecord.Copyright_Video())
+				if typeCode == "text":
+					if self.hasDamIds(lptsRecord, "text") and lptsRecord.Copyrightc() != None:
+						lptsList.add(lptsRecord.Copyrightc())
+				elif typeCode == "audio":
+					if self.hasDamIds(lptsRecord, "audio") and lptsRecord.Copyrightp() != None:
+						lptsList.add(lptsRecord.Copyrightp())
+				elif typeCode == "video":
+					if self.hasDamIds(lptsRecord, "video") and lptsRecord.Copyright_Video() != None:
+						lptsList.add(lptsRecord.Copyright_Video())
 
 				for copyright in lptsList:
 					name = self.lptsReader.reduceCopyrightToName(copyright)
-					copyrightOrg = organizationMap.get(name)
+					copyrightOrg = set(organizationMap.get(name))
 					if copyrightOrg != None:
 						lptsOrgList.add(copyrightOrg)
 					else:
@@ -223,7 +226,7 @@ class LoadOrganizations:
 	## This method should be kept for use anytime the updateCopyrightHolders is modified.
 	def unitTestUpdateCopyrightHolders(self):
 		sql = "SELECT lpts_organization, organization_id FROM lpts_organizations WHERE organization_role=1"
-		organizationMap = self.db.selectMap(sql, ())
+		organizationMap = self.db.selectMapList(sql, ())
 		totalDamIdSet = set()
 		for lptsRecord in self.lptsReader.resultSet:
 			self.compareOneTypeCode(totalDamIdSet, organizationMap, lptsRecord, "text")
@@ -235,7 +238,6 @@ class LoadOrganizations:
 		count = self.db.selectScalar("SELECT count(*) FROM damid_check2", ())
 		print(count, "records inserted")
 		sql = ("SELECT id, hash_id FROM bible_filesets"
-			#" WHERE set_type_code IN ('text_plain', 'text_format')" #### WRONG
 			" WHERE RIGHT(id, 2) != '16'"
 			" AND id NOT IN (SELECT damid FROM damid_check2)")
 		missedList = self.db.select(sql, ())
@@ -256,7 +258,7 @@ class LoadOrganizations:
 			copyright = lptsRecord.Copyright_Video()
 		if copyright != None:
 			copyrightName = self.lptsReader.reduceCopyrightToName(copyright)
-			copyrightOrgSet = organizationMap.get(copyrightName)
+			copyrightOrgSet = set(organizationMap.get(copyrightName, []))
 
 		if typeCode != "video":
 			dam1Set = set(lptsRecord.DamIdMap(typeCode, 1).keys())
