@@ -137,32 +137,33 @@ class LoadOrganizations:
 		inserts = []
 		deletes = []
 		sql = "SELECT lpts_organization, organization_id FROM lpts_organizations WHERE organization_role=1"
-		organizationMap = self.db.selectMapList(sql, ())
+		organizationMap = self.db.selectMapSet(sql, ())
 		for (bibleId, filesetId, setTypeCode, setSizeCode, assetId, hashId) in filesetList:
 			typeCode = setTypeCode.split("_")[0]
 			sql = "SELECT organization_id FROM bible_fileset_copyright_organizations WHERE hash_id = %s AND organization_role=1"
 			dbpOrgList = self.db.selectSet(sql, (hashId))
-			lptsRecords = self.lptsReader.getLPTSRecordsAll(typeCode, bibleId, filesetId)
-			lptsList = set()
+			lptsRecords = self.lptsReader.getFilesetRecords(filesetId)
 			lptsOrgList = set()
-			for (lptsRecord, lptsIndex) in lptsRecords:
-				if typeCode == "text":
-					if self.hasDamIds(lptsRecord, "text") and lptsRecord.Copyrightc() != None:
-						lptsList.add(lptsRecord.Copyrightc())
-				elif typeCode == "audio":
-					if self.hasDamIds(lptsRecord, "audio") and lptsRecord.Copyrightp() != None:
-						lptsList.add(lptsRecord.Copyrightp())
-				elif typeCode == "video":
-					if self.hasDamIds(lptsRecord, "video") and lptsRecord.Copyright_Video() != None:
-						lptsList.add(lptsRecord.Copyright_Video())
+			if lptsRecords != None:
+				for (status, lptsRecord) in lptsRecords:
+					lptsList = set()
+					if typeCode == "text":
+						if self.hasDamIds(lptsRecord, "text") and lptsRecord.Copyrightc() != None:
+							lptsList.add(lptsRecord.Copyrightc())
+					elif typeCode == "audio":
+						if self.hasDamIds(lptsRecord, "audio") and lptsRecord.Copyrightp() != None:
+							lptsList.add(lptsRecord.Copyrightp())
+					elif typeCode == "video":
+						if self.hasDamIds(lptsRecord, "video") and lptsRecord.Copyright_Video() != None:
+							lptsList.add(lptsRecord.Copyright_Video())
 
-				for copyright in lptsList:
-					name = self.lptsReader.reduceCopyrightToName(copyright)
-					copyrightOrg = set(organizationMap.get(name))
-					if copyrightOrg != None:
-						lptsOrgList.add(copyrightOrg)
-					else:
-						print("ERROR: There is no org_id for: %s" % (name))
+					for copyright in lptsList:
+						name = self.lptsReader.reduceCopyrightToName(copyright)
+						copyrightOrg = organizationMap.get(name)
+						if copyrightOrg != None:
+							lptsOrgList = lptsOrgList.union(copyrightOrg)
+						else:
+							print("ERROR: There is no org_id for: %s" % (name))
 			for lptsOrg in lptsOrgList:
 				if lptsOrg not in dbpOrgList:
 					inserts.append((hashId, lptsOrg, 1))
@@ -226,7 +227,7 @@ class LoadOrganizations:
 	## This method should be kept for use anytime the updateCopyrightHolders is modified.
 	def unitTestUpdateCopyrightHolders(self):
 		sql = "SELECT lpts_organization, organization_id FROM lpts_organizations WHERE organization_role=1"
-		organizationMap = self.db.selectMapList(sql, ())
+		organizationMap = self.db.selectMapSet(sql, ())
 		totalDamIdSet = set()
 		for lptsRecord in self.lptsReader.resultSet:
 			self.compareOneTypeCode(totalDamIdSet, organizationMap, lptsRecord, "text")
@@ -258,7 +259,7 @@ class LoadOrganizations:
 			copyright = lptsRecord.Copyright_Video()
 		if copyright != None:
 			copyrightName = self.lptsReader.reduceCopyrightToName(copyright)
-			copyrightOrgSet = set(organizationMap.get(copyrightName, []))
+			copyrightOrgSet = organizationMap.get(copyrightName, set())
 
 		if typeCode != "video":
 			dam1Set = set(lptsRecord.DamIdMap(typeCode, 1).keys())
@@ -298,10 +299,10 @@ if (__name__ == '__main__'):
 	filesetList = db.select(sql, ())
 	print("num filelists", len(filesetList))
 	#orgs.updateLicensors(filesetList)
-	#orgs.updateCopyrightHolders(filesetList)
-	#dbOut.displayStatements()
-	#dbOut.displayCounts()
-	#dbOut.execute()
+	orgs.updateCopyrightHolders(filesetList)
+	dbOut.displayStatements()
+	dbOut.displayCounts()
+	dbOut.execute()
 
 	#orgs.unitTestUpdateLicensors()
 	orgs.unitTestUpdateCopyrightHolders()

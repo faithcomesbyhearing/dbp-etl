@@ -149,6 +149,16 @@ class SQLUtility:
 		return results
 
 
+	def selectMapSet(self, statement, values):
+		resultSet = self.select(statement, values)
+		results = {}
+		for row in resultSet:
+			values = results.get(row[0], set())
+			values.add(row[1])
+			results[row[0]] = values
+		return results		
+
+
 	def error(self, cursor, stmt, error):
 		cursor.close()	
 		print("ERROR executing SQL %s on '%s'" % (error, stmt))
