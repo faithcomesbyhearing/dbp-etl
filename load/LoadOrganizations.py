@@ -102,7 +102,7 @@ class LoadOrganizations:
 		deletes = []
 		sql = "SELECT lpts_organization, organization_id FROM lpts_organizations WHERE organization_role=2"
 		organizationMap = self.db.selectMapSet(sql, ())
-		for (bibleId, filesetId, setTypeCode, setSizeCode, assetId, hashId) in filesetList:
+		for (filesetId, setTypeCode, assetId, hashId) in filesetList:
 			typeCode = setTypeCode.split("_")[0]
 			sql = "SELECT organization_id FROM bible_fileset_copyright_organizations WHERE hash_id = %s AND organization_role=2"
 			dbpOrgList = self.db.selectSet(sql, (hashId))
@@ -110,7 +110,7 @@ class LoadOrganizations:
 			lptsOrgList = set()
 			if lptsRecords != None:
 				for (status, lptsRecord) in lptsRecords:
-					if lptsRecord != None and self.hasDamIds(lptsRecord, "text"):
+					if self.hasDamIds(lptsRecord, "text"):
 						for licensor in [lptsRecord.Licensor(), lptsRecord.CoLicensor()]:
 							if licensor != None:
 								licensorOrg = organizationMap.get(licensor)
@@ -138,7 +138,7 @@ class LoadOrganizations:
 		deletes = []
 		sql = "SELECT lpts_organization, organization_id FROM lpts_organizations WHERE organization_role=1"
 		organizationMap = self.db.selectMapSet(sql, ())
-		for (bibleId, filesetId, setTypeCode, setSizeCode, assetId, hashId) in filesetList:
+		for (filesetId, setTypeCode, assetId, hashId) in filesetList:
 			typeCode = setTypeCode.split("_")[0]
 			sql = "SELECT organization_id FROM bible_fileset_copyright_organizations WHERE hash_id = %s AND organization_role=1"
 			dbpOrgList = self.db.selectSet(sql, (hashId))
@@ -183,7 +183,7 @@ class LoadOrganizations:
 	## This method should be kept for use anytime the updateLicensors is modified.
 	def unitTestUpdateLicensors(self):
 		sql = "SELECT lpts_organization, organization_id FROM lpts_organizations WHERE organization_role=2"
-		organizationMap = self.db.selectMap(sql, ())
+		organizationMap = self.db.selectMapSet(sql, ())
 		totalDamIdSet = set()
 		for lptsRecord in self.lptsReader.resultSet:
 			licensorSet = set()
@@ -191,7 +191,7 @@ class LoadOrganizations:
 				if licensor != None:
 					licensorOrg = organizationMap.get(licensor)
 					if licensorOrg != None:
-						licensorSet.add(licensorOrg)
+						licensorSet = licensorSet.union(licensorOrg)
 			textDam1 = set(lptsRecord.DamIdMap("text", 1).keys())
 			textDam2 = set(lptsRecord.DamIdMap("text", 2).keys())
 			textDam3 = set(lptsRecord.DamIdMap("text", 3).keys())	
@@ -293,19 +293,17 @@ if (__name__ == '__main__'):
 	orgs.changeCopyrightOrganizationsPrimaryKey()
 	#unknownLicensors = orgs.validateLicensors()
 	#unknownCopyrights = orgs.validateCopyrights()
-	sql = ("SELECT b.bible_id, bf.id, bf.set_type_code, bf.set_size_code, bf.asset_id, bf.hash_id"
-			" FROM bible_filesets bf JOIN bible_fileset_connections b ON bf.hash_id = b.hash_id"
-			" ORDER BY b.bible_id, bf.id, bf.set_type_code")
+	sql = "SELECT id, set_type_code, asset_id, hash_id FROM bible_filesets ORDER BY id, set_type_code"
 	filesetList = db.select(sql, ())
 	print("num filelists", len(filesetList))
-	orgs.updateLicensors(filesetList)
+	#orgs.updateLicensors(filesetList)
 	#orgs.updateCopyrightHolders(filesetList)
-	dbOut.displayStatements()
-	dbOut.displayCounts()
-	dbOut.execute()
+	#dbOut.displayStatements()
+	#dbOut.displayCounts()
+	#dbOut.execute()
 
-	orgs.unitTestUpdateLicensors()
-	#orgs.unitTestUpdateCopyrightHolders()
+	#orgs.unitTestUpdateLicensors()
+	orgs.unitTestUpdateCopyrightHolders()
 	db.close()
 
 
