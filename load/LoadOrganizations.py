@@ -106,19 +106,18 @@ class LoadOrganizations:
 			typeCode = setTypeCode.split("_")[0]
 			sql = "SELECT organization_id FROM bible_fileset_copyright_organizations WHERE hash_id = %s AND organization_role=2"
 			dbpOrgList = self.db.selectSet(sql, (hashId))
-			#(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecordLoose(typeCode, bibleId, filesetId)
-			lptsRecords = self.lptsReader.getLPTSRecordsAll(typeCode, bibleId, filesetId)
+			lptsRecords = self.lptsReader.getFilesetRecords(filesetId)
 			lptsOrgList = set()
-			for (lptsRecord, index) in lptsRecords:
-				if lptsRecord != None and self.hasDamIds(lptsRecord, "text"):
-					for licensor in [lptsRecord.Licensor(), lptsRecord.CoLicensor()]:
-						if licensor != None:
-							licensorOrg = organizationMap.get(licensor)
-							if licensorOrg != None:
-								#lptsOrgList.add(licensorOrg)
-								lptsOrgList = lplptsOrgList.union(licensorOrg)
-							else:
-								print("ERROR: There is no org_id for: %s" % (licensor))
+			if lptsRecords != None:
+				for (status, lptsRecord) in lptsRecords:
+					if lptsRecord != None and self.hasDamIds(lptsRecord, "text"):
+						for licensor in [lptsRecord.Licensor(), lptsRecord.CoLicensor()]:
+							if licensor != None:
+								licensorOrg = organizationMap.get(licensor)
+								if licensorOrg != None:
+									lptsOrgList = lptsOrgList.union(licensorOrg)
+								else:
+									print("ERROR: There is no org_id for: %s" % (licensor))
 			for lptsOrg in lptsOrgList:
 				if lptsOrg not in dbpOrgList:
 					inserts.append((hashId, lptsOrg, 2))
@@ -299,11 +298,11 @@ if (__name__ == '__main__'):
 			" ORDER BY b.bible_id, bf.id, bf.set_type_code")
 	filesetList = db.select(sql, ())
 	print("num filelists", len(filesetList))
-	#orgs.updateLicensors(filesetList)
+	orgs.updateLicensors(filesetList)
 	#orgs.updateCopyrightHolders(filesetList)
-	#dbOut.displayStatements()
-	#dbOut.displayCounts()
-	#dbOut.execute()
+	dbOut.displayStatements()
+	dbOut.displayCounts()
+	dbOut.execute()
 
 	orgs.unitTestUpdateLicensors()
 	#orgs.unitTestUpdateCopyrightHolders()
