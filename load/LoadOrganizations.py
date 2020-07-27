@@ -101,7 +101,7 @@ class LoadOrganizations:
 		inserts = []
 		deletes = []
 		sql = "SELECT lpts_organization, organization_id FROM lpts_organizations WHERE organization_role=2"
-		organizationMap = self.db.selectMap(sql, ())
+		organizationMap = self.db.selectMapSet(sql, ())
 		for (bibleId, filesetId, setTypeCode, setSizeCode, assetId, hashId) in filesetList:
 			typeCode = setTypeCode.split("_")[0]
 			sql = "SELECT organization_id FROM bible_fileset_copyright_organizations WHERE hash_id = %s AND organization_role=2"
@@ -115,7 +115,8 @@ class LoadOrganizations:
 						if licensor != None:
 							licensorOrg = organizationMap.get(licensor)
 							if licensorOrg != None:
-								lptsOrgList.add(licensorOrg)
+								#lptsOrgList.add(licensorOrg)
+								lptsOrgList = lplptsOrgList.union(licensorOrg)
 							else:
 								print("ERROR: There is no org_id for: %s" % (licensor))
 			for lptsOrg in lptsOrgList:
@@ -299,13 +300,13 @@ if (__name__ == '__main__'):
 	filesetList = db.select(sql, ())
 	print("num filelists", len(filesetList))
 	#orgs.updateLicensors(filesetList)
-	orgs.updateCopyrightHolders(filesetList)
-	dbOut.displayStatements()
-	dbOut.displayCounts()
-	dbOut.execute()
+	#orgs.updateCopyrightHolders(filesetList)
+	#dbOut.displayStatements()
+	#dbOut.displayCounts()
+	#dbOut.execute()
 
-	#orgs.unitTestUpdateLicensors()
-	orgs.unitTestUpdateCopyrightHolders()
+	orgs.unitTestUpdateLicensors()
+	#orgs.unitTestUpdateCopyrightHolders()
 	db.close()
 
 
