@@ -27,18 +27,22 @@ class MatchOrganizationNames:
 		self.copyHolderNoMatch = set()
 		self.organizationMap = {}
 		#resultSet = self.db.select("select id, slug from organizations where id in (select organization_id from bible_fileset_copyright_organizations) order by slug", ())
-		#SELECT id, slug from organizations order by slug
-		with open("/Volumes/FCBH/database_data/organizations.csv", newline="\n") as csvfile:
-			reader = csv.reader(csvfile, delimiter=',', quotechar='"')
-			for row in reader:
-				self.organizationMap[int(row[0])] = (int(row[0]), row[1], set(), set())
+		resultSet = self.db.select("SELECT id, slug from organizations order by slug", ())
+		for row in resultSet:
+			self.organizationMap[int(row[0])] = (int(row[0]), row[1], set(), set())
+		#with open("/Volumes/FCBH/database_data/organizations.csv", newline="\n") as csvfile:
+		#	reader = csv.reader(csvfile, delimiter=',', quotechar='"')
+		#	for row in reader:
+		#		self.organizationMap[int(row[0])] = (int(row[0]), row[1], set(), set())
 		self.langMap = {}
 		#self.langMap = self.db.selectMap("SELECT name, organization_id FROM organization_translations where organization_id in (select organization_id from bible_fileset_copyright_organizations) order by name", ())
-		#SELECT name, organization_id FROM organization_translations order by name
-		with open("/Volumes/FCBH/database_data/organization_translations.csv", newline="\n") as csvfile:
-			reader = csv.reader(csvfile, delimiter=',', quotechar='"')
-			for row in reader:
-				self.langMap[row[0]] = int(row[1])
+		resultSet = self.db.select("SELECT name, organization_id FROM organization_translations order by name", ())
+		for row in resultSet:
+			self.langMap[row[0]] = int(row[1])
+		#with open("/Volumes/FCBH/database_data/organization_translations.csv", newline="\n") as csvfile:
+		#	reader = csv.reader(csvfile, delimiter=',', quotechar='"')
+		#	for row in reader:
+		#		self.langMap[row[0]] = int(row[1])
 
 
 	def hasDamIds(self, lptsRecord, typeCode):
