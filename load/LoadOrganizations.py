@@ -295,19 +295,20 @@ if (__name__ == '__main__'):
 	lptsReader = LPTSExtractReader(config)
 	orgs = LoadOrganizations(config, db, dbOut, lptsReader)
 	orgs.changeCopyrightOrganizationsPrimaryKey()
-	#unknownLicensors = orgs.validateLicensors()
-	#unknownCopyrights = orgs.validateCopyrights()
+	unknownLicensors = orgs.validateLicensors()
+	unknownCopyrights = orgs.validateCopyrights()
+	#sys.exit()
 	sql = "SELECT id, set_type_code, asset_id, hash_id FROM bible_filesets ORDER BY id, set_type_code"
 	filesetList = db.select(sql, ())
 	print("num filelists", len(filesetList))
-	#orgs.updateLicensors(filesetList)
-	#orgs.updateCopyrightHolders(filesetList)
-	#dbOut.displayStatements()
-	#dbOut.displayCounts()
-	#dbOut.execute()
+	orgs.updateLicensors(filesetList)
+	orgs.updateCopyrightHolders(filesetList)
+	dbOut.displayStatements()
+	dbOut.displayCounts()
+	dbOut.execute()
 
 	#orgs.unitTestUpdateLicensors()
-	orgs.unitTestUpdateCopyrightHolders()
+	#orgs.unitTestUpdateCopyrightHolders()
 	db.close()
 
 
