@@ -142,7 +142,11 @@ class LoadOrganizations:
 			typeCode = setTypeCode.split("_")[0]
 			sql = "SELECT organization_id FROM bible_fileset_copyright_organizations WHERE hash_id = %s AND organization_role=1"
 			dbpOrgList = self.db.selectSet(sql, (hashId))
-			lptsRecords = self.lptsReader.getFilesetRecords(filesetId)
+			if filesetId[8:10] == "SA":
+				dbpFilesetId = filesetId[:8] + "DA" + filesetId[10:]
+			else:
+				dbpFilesetId = filesetId
+			lptsRecords = self.lptsReader.getFilesetRecords(dbpFilesetId)
 			lptsOrgList = set()
 			if lptsRecords != None:
 				for (status, lptsRecord) in lptsRecords:
