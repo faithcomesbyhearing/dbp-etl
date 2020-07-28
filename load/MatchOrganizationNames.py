@@ -68,7 +68,7 @@ class MatchOrganizationNames:
 
 
 	def processAlansLicensorMatch(self):
-		with open("/Volumes/FCBH/database_data/alan_licensors.csv", newline="\n") as csvfile:
+		with open(self.config.directory_bucket_list + "/alan_licensors.csv", newline="\n") as csvfile:
 			reader = csv.reader(csvfile, delimiter=',', quotechar='"')
 			for row in reader:
 				orgId = int(row[0])
@@ -81,7 +81,7 @@ class MatchOrganizationNames:
 
 
 	def processAlansCopyrightMatch(self):
-		with open("/Volumes/FCBH/database_data/alan_copyright_holders.csv", newline="\n", encoding='utf-16') as csvfile:
+		with open(self.config.directory_bucket_list + "/alan_copyright_holders.csv", newline="\n", encoding='utf-16') as csvfile:
 			reader = csv.reader(csvfile, delimiter='\t', quotechar='"')
 			for row in reader:
 				if row[0] != None and row[0] != "" and row[0] != "?":
@@ -186,17 +186,33 @@ class MatchOrganizationNames:
 
 
 	def updateDatabase(self):
+		errorCount1 = 0
+		errorCount2 = 0
+		finalLicensors = []
+		for (orgName, orgId) in self.licensorUpdates:
+			count1 = self.db.selectScalar("SELECT count(*) FROM organizations WHERE id=%s", (orgId,))
+			if count1 > 0:
+				finalLicensors.append((orgName, orgId))
+			else:
+				print("Organization does not exist for ", orgName, orgId)
+				errorCount1 += 1
+
+		finalCopyHolders = []
+		for (orgName, orgId) in self.copyrightInserts:
+			count = self.db.selectScalar("SELECT count(*) FROM organizations WHERE id=%s", (orgId,))
+			if count > 0:
+				finalCopyHolders.append((orgName, orgId))
+			else:
+				print("Organization does not exist for ", orgName, orgId)
+				errorCount2 += 1
+
+		if errorCount1 > 0 or errorCount2 > 0:
+			print("Add missing organizations and try again")
+			sys.exit()
 		sql = "INSERT INTO lpts_organizations (lpts_organization, organization_role, organization_id) VALUES (%s, 2, %s)"
-		self.db.executeBatch(sql, list(self.licensorUpdates))
+		self.db.executeBatch(sql, finalLicensors)
 		sql = "INSERT INTO lpts_organizations (lpts_organization, organization_role, organization_id) VALUES (%s, 1, %s)"
-		inserts = list(self.copyrightInserts)
-		for index in range(len(inserts)):
-			item = inserts[index]
-			try:
-				self.db.execute(sql, item)
-			except:
-				(copyright, orgId) = item
-				print("rejected", index, copyright, orgId)
+		self.db.executeBatch(sql, finalCopyHolders)
 
 
 if (__name__ == '__main__'):
