@@ -586,19 +586,13 @@ class LPTSRecord:
 	def WebHubVideo(self):
 		return self.record.get("WebHubVideo")
 
-"""
+
 if (__name__ == '__main__'):
 	config = Config()
 	reader = LPTSExtractReader(config)
-	recs = reader.bibleIdMap.get("AGUNVS")
-	for (index, rec) in recs:
-		print(index, rec.Download())
-	(lptsRecord, lptsIndex) = reader.getLPTSRecord("text", "AGUNVS", "AGUNVS")
-	record = lptsRecord.record
-	print("Download", record.get("Download"))
 	reader.getFieldNames()
-"""
 
+"""
 if (__name__ == '__main__'):
 	config = Config()
 	reader = LPTSExtractReader(config)
@@ -615,4 +609,4 @@ if (__name__ == '__main__'):
 						#	prefixSet.add(damid[:6])
 			#if len(prefixSet) > 1:
 			#	print("ERROR: More than one DamId prefix in set %s" % (",".join(prefixSet)))
-
+"""
