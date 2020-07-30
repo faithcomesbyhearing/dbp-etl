@@ -108,7 +108,7 @@ class LoadOrganizations:
 			dbpOrgList = self.db.selectSet(sql, (hashId))
 			lptsRecords = self.lptsReader.getFilesetRecords(filesetId)
 			lptsOrgList = set()
-			if lptsRecords != None:
+			if setTypeCode[:4] == "text" and lptsRecords != None:
 				for (status, lptsRecord) in lptsRecords:
 					if self.hasDamIds(lptsRecord, "text"):
 						for licensor in [lptsRecord.Licensor(), lptsRecord.CoLicensor()]:
@@ -313,6 +313,7 @@ if (__name__ == '__main__'):
 
 
 """
+truncate table bible_fileset_copyright_organizations;
 SET FOREIGN_KEY_CHECKS=0;
 insert into bible_fileset_copyright_organizations 
 select * from bible_fileset_copyright_organizations_backup;
