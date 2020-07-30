@@ -102,26 +102,27 @@ class LoadOrganizations:
 		deletes = []
 		sql = "SELECT lpts_organization, organization_id FROM lpts_organizations WHERE organization_role=2"
 		organizationMap = self.db.selectMapSet(sql, ())
+		sql = "SELECT hash_id, organization_id FROM bible_fileset_copyright_organizations WHERE organization_role=2"
+		dbpOrgMapSet = self.db.selectMapSet(sql, ())
 		for (filesetId, setTypeCode, assetId, hashId) in filesetList:
 			typeCode = setTypeCode.split("_")[0]
-			sql = "SELECT organization_id FROM bible_fileset_copyright_organizations WHERE hash_id = %s AND organization_role=2"
-			dbpOrgList = self.db.selectSet(sql, (hashId))
 			lptsRecords = self.lptsReader.getFilesetRecords(filesetId)
 			lptsOrgList = set()
 			if setTypeCode[:4] == "text" and lptsRecords != None:
 				for (status, lptsRecord) in lptsRecords:
-					if self.hasDamIds(lptsRecord, "text"):
-						for licensor in [lptsRecord.Licensor(), lptsRecord.CoLicensor()]:
-							if licensor != None:
-								licensorOrg = organizationMap.get(licensor)
-								if licensorOrg != None:
-									lptsOrgList = lptsOrgList.union(licensorOrg)
-								else:
-									print("ERROR: There is no org_id for: %s" % (licensor))
+					for licensor in [lptsRecord.Licensor(), lptsRecord.CoLicensor()]:
+						if licensor != None:
+							licensorOrg = organizationMap.get(licensor)
+							if licensorOrg != None:
+								lptsOrgList = lptsOrgList.union(licensorOrg)
+							else:
+								print("ERROR: There is no org_id for: %s" % (licensor))
+
+			dbpOrgSet = dbpOrgMapSet.get(hashId, set())
 			for lptsOrg in lptsOrgList:
-				if lptsOrg not in dbpOrgList:
+				if lptsOrg not in dbpOrgSet:
 					inserts.append((hashId, lptsOrg, 2))
-			for dbpOrg in dbpOrgList:
+			for dbpOrg in dbpOrgSet:
 				if dbpOrg not in lptsOrgList:
 					deletes.append((hashId, dbpOrg, 2))
 
@@ -138,10 +139,10 @@ class LoadOrganizations:
 		deletes = []
 		sql = "SELECT lpts_organization, organization_id FROM lpts_organizations WHERE organization_role=1"
 		organizationMap = self.db.selectMapSet(sql, ())
+		sql = "SELECT hash_id, organization_id FROM bible_fileset_copyright_organizations WHERE organization_role=1"
+		dbpOrgMapSet = self.db.selectMapSet(sql, ())
 		for (filesetId, setTypeCode, assetId, hashId) in filesetList:
 			typeCode = setTypeCode.split("_")[0]
-			sql = "SELECT organization_id FROM bible_fileset_copyright_organizations WHERE hash_id = %s AND organization_role=1"
-			dbpOrgList = self.db.selectSet(sql, (hashId))
 			if filesetId[8:10] == "SA":
 				dbpFilesetId = filesetId[:8] + "DA" + filesetId[10:]
 			else:
@@ -168,10 +169,12 @@ class LoadOrganizations:
 							lptsOrgList = lptsOrgList.union(copyrightOrg)
 						else:
 							print("ERROR: There is no org_id for: %s" % (name))
+
+			dbpOrgSet = dbpOrgMapSet.get(hashId, set())
 			for lptsOrg in lptsOrgList:
-				if lptsOrg not in dbpOrgList:
+				if lptsOrg not in dbpOrgSet:
 					inserts.append((hashId, lptsOrg, 1))
-			for dbpOrg in dbpOrgList:
+			for dbpOrg in dbpOrgSet:
 				if dbpOrg not in lptsOrgList:
 					deletes.append((hashId, dbpOrg, 1))
 
@@ -295,8 +298,9 @@ if (__name__ == '__main__'):
 	lptsReader = LPTSExtractReader(config)
 	orgs = LoadOrganizations(config, db, dbOut, lptsReader)
 	orgs.changeCopyrightOrganizationsPrimaryKey()
-	unknownLicensors = orgs.validateLicensors()
-	unknownCopyrights = orgs.validateCopyrights()
+	# These methods should be called by Validate
+	#unknownLicensors = orgs.validateLicensors()
+	#unknownCopyrights = orgs.validateCopyrights()
 	#sys.exit()
 	sql = "SELECT id, set_type_code, asset_id, hash_id FROM bible_filesets ORDER BY id, set_type_code"
 	filesetList = db.select(sql, ())
