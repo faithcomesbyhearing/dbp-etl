@@ -39,9 +39,6 @@ class UpdateDBPLPTSTable:
 			self.updateBibleFilesetTags(filesetList)
 			self.updateBibleFilesetCopyrights(filesetList)
 			#self.updateBibles(filesetList)
-			self.dbOut.displayStatements()
-			self.dbOut.displayCounts()
-			#self.dbOut.execute()
 		except Exception as err:
 			print("ERROR: %s" % (err))
 		self.displayLog()
@@ -467,6 +464,9 @@ if (__name__ == '__main__'):
 	filesets.process()
 	#filesets.accessGroupSymmetricTest()
 	db.close()
+	dbOut.displayStatements()
+	dbOut.displayCounts()
+	#dbOut.execute()
 
 """
 truncate table access_group_filesets;
