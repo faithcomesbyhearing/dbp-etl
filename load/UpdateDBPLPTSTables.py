@@ -54,11 +54,10 @@ class UpdateDBPLPTSTable:
 		textAccessSet = self.db.selectSet("SELECT description FROM access_groups WHERE name like %s", ("%text%",))
 		audioAccessSet = self.db.selectSet("SELECT description FROM access_groups WHERE name like %s", ("%audio%",))
 		videoAccessSet = self.db.selectSet("SELECT description FROM access_groups WHERE name like %s", ("%video%",))
+		accessMapSet = self.db.selectMapSet("SELECT hash_id, access_group_id FROM access_group_filesets", ())
 
 		for (bibleId, filesetId, setTypeCode, setSizeCode, assetId, hashId) in filesetList:
 			typeCode = setTypeCode.split("_")[0]
-
-			accessSet = self.db.selectSet("SELECT access_group_id FROM access_group_filesets WHERE hash_id = %s", (hashId))
 
 			if typeCode != "app":
 				(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecord(typeCode, bibleId, filesetId)
@@ -68,6 +67,7 @@ class UpdateDBPLPTSTable:
 					lpts = {}
 					#self.droppedRecordErrors(typeCode, bibleId, filesetId, setTypeCode, assetId)
 			
+				accessSet = accessMapSet.get(hashId, set())
 				for (accessGroupId, lptsName) in accessGroupMap.items():
 					accessIdInDBP = accessGroupId in accessSet;
 					accessIdInLPTS = lpts.get(lptsName) == "-1"
@@ -99,7 +99,7 @@ class UpdateDBPLPTSTable:
 
 		tableName = "access_group_filesets"
 		pkeyNames = ("hash_id", "access_group_id")
-		self.dbOut.insert(tableName, (), pkeyNames, insertRows)
+		self.dbOut.insert(tableName, pkeyNames, (), insertRows)
 		self.dbOut.delete(tableName, pkeyNames, deleteRows)
 
 
@@ -197,16 +197,22 @@ class UpdateDBPLPTSTable:
 		notes = None
 		iso = "eng"
 		languageId = 6414
+		sql = "SELECT hash_id, name, description FROM bible_fileset_tags WHERE language_id = %s"
+		tagHashIdMap = {}
+		resultSet = self.db.select(sql, (languageId))
+		for row in resultSet:
+			(hashId, name, description) = row
+			tagMap = tagHashIdMap.get(hashId, {})
+			tagMap[name] = description
+			tagHashIdMap[hashId] = tagMap
+		
 		for (bibleId, filesetId, setTypeCode, setSizeCode, assetId, hashId) in filesetList:
 			typeCode = setTypeCode.split("_")[0]
 			if typeCode != "app":
 
 				(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecordLoose(typeCode, bibleId, filesetId)
 
-				sql = ("SELECT name, description"
-					" FROM bible_fileset_tags"
-					" WHERE hash_id = %s AND language_id = %s")
-				tagMap = self.db.selectMap(sql, (hashId, languageId))
+				tagMap = tagHashIdMap.get(hashId, {})
 				for name in ["bitrate", "sku", "stock_no", "volume"]:
 					oldDescription = tagMap.get(name)
 
@@ -233,17 +239,19 @@ class UpdateDBPLPTSTable:
 							#print("DELETE: %s %s %s" % (filesetId, name, oldDescription))
 
 						elif description != None and oldDescription == None:
+							description = description.replace("'", "\\'")
 							insertRows.append((description, adminOnly, notes, iso, hashId, name, languageId))
 
 						elif (oldDescription != description):
+							description = description.replace("'", "\\'")
 							updateRows.append((description, adminOnly, notes, iso, hashId, name, languageId))
 							#print("UPDATE: %s %s: OLD %s  NEW: %s" % (filesetId, name, oldDescription, description))
 
 		tableName = "bible_fileset_tags"
 		pkeyNames = ("hash_id", "name", "language_id")
 		attrNames = ("description", "admin_only", "notes", "iso")
-		self.dbOut.insert(tableName, attrNames, pkeyNames, insertRows)
-		self.dbOut.update(tableName, attrNames, pkeyNames, updateRows)
+		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
+		self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
 		self.dbOut.delete(tableName, pkeyNames, deleteRows)
 
 
@@ -254,12 +262,19 @@ class UpdateDBPLPTSTable:
 		insertRows = []
 		updateRows = []
 		deleteRows = []
+		sql = ("SELECT hash_id, copyright_date, copyright, copyright_description, open_access"
+				" FROM bible_fileset_copyrights")
+		copyrightHashIdMap = {}
+		resultSet = self.db.select(sql, ())
+		for row in resultSet:
+			hashId = row[0]
+			newRow = row[1:]
+			copyrightHashIdMap[hashId] = newRow
+
 		for (bibleId, filesetId, setTypeCode, setSizeCode, assetId, hashId) in filesetList:
 			typeCode = setTypeCode.split("_")[0]
 
-			sql = ("SELECT copyright_date, copyright, copyright_description, open_access"
-				" FROM bible_fileset_copyrights WHERE hash_id = %s")
-			row = self.db.selectRow(sql, (hashId))
+			row = copyrightHashIdMap.get(hashId, None)
 
 			if typeCode != "app":
 				(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecordLoose(typeCode, bibleId, filesetId)
@@ -289,6 +304,7 @@ class UpdateDBPLPTSTable:
 					deleteRows.append((hashId,))
 
 				elif lptsRecord != None and row == None:
+					copyrightMsg = copyrightMsg.replace("'", "\\'")
 					insertRows.append((copyrightDate, copyrightMsg, copyrightMsg, 1, hashId))
 
 				elif (row != None and
@@ -296,13 +312,14 @@ class UpdateDBPLPTSTable:
 					row[1] != copyrightMsg or
 					row[2] != copyrightMsg or
 					row[3] != 1)):
+					copyrightMsg = copyrightMsg.replace("'", "\\'")
 					updateRows.append((copyrightDate, copyrightMsg, copyrightMsg, 1, hashId))
 
 		tableName = "bible_fileset_copyrights"
 		pkeyNames = ("hash_id",)
 		attrNames = ("copyright_date", "copyright", "copyright_description", "open_access")
-		self.dbOut.insert(tableName, attrNames, pkeyNames, insertRows)
-		self.dbOut.update(tableName, attrNames, pkeyNames, updateRows)
+		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
+		self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
 		self.dbOut.delete(tableName, pkeyNames, deleteRows)
 
 
@@ -344,8 +361,8 @@ class UpdateDBPLPTSTable:
 		pkeyNames = ("id",)
 		attrNames = ("language_id", "versification", "numeral_system_id", "date", "scope", 
 			"script", "copyright", "reviewed", "notes")
-		self.dbOut.insert(tableName, attrNames, pkeyNames, insertRows)
-		self.dbOut.update(tableName, attrNames, pkeyNames, updateRows)
+		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
+		self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
 		self.dbOut.delete(tableName, pkeyNames, deleteRows)
 
 
@@ -466,7 +483,7 @@ if (__name__ == '__main__'):
 	db.close()
 	dbOut.displayStatements()
 	dbOut.displayCounts()
-	#dbOut.execute()
+	dbOut.execute()
 
 """
 truncate table access_group_filesets;

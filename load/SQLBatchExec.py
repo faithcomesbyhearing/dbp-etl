@@ -23,7 +23,9 @@ class SQLBatchExec:
 			valsubs = ["'%s'"] * len(names)
 			sql = "INSERT INTO %s (%s) VALUES (%s);" % (tableName, ", ".join(names), ", ".join(valsubs))
 			for value in values:
-				self.statements.append(sql % value)
+				stmt = sql % value
+				stmt = stmt.replace("'None'", "NULL")
+				self.statements.append(stmt)
 			self.counts.append(("insert", tableName, len(values)))
 
 
@@ -31,7 +33,9 @@ class SQLBatchExec:
 		if len(values) > 0:
 			sql = "UPDATE %s SET %s WHERE %s;" % (tableName, "='%s', ".join(attrNames) + "='%s'", "='%s' AND ".join(pkeyNames) + "='%s'")
 			for value in values:
-				self.statements.append(sql % value)
+				stmt = sql % value
+				stmt = stmt.replace("'None'", "NULL")
+				self.statements.append(stmt)
 			self.counts.append(("update", tableName, len(values)))
 
 
@@ -39,7 +43,9 @@ class SQLBatchExec:
 		if len(pkeyValues) > 0:
 			sql = "DELETE FROM %s WHERE %s;" % (tableName, "='%s' AND ".join(pkeyNames) + "='%s'")
 			for value in pkeyValues:
-				self.statements.append(sql % value)
+				stmt = sql % value
+				stmt = stmt.replace("'None'", "NULL")
+				self.statements.append(stmt)
 			self.counts.append(("delete", tableName, len(pkeyValues)))
 
 
