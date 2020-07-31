@@ -13,17 +13,18 @@ from datetime import datetime
 from Config import *
 from LPTSExtractReader import *
 from SQLUtility import *
+from SQLBatchExec import *
 from UpdateDBPBiblesTable import *
 
 class UpdateDBPLPTSTable:
 
-	def __init__(self, config, db, lptsReader):
+	def __init__(self, config, db, dbOut, lptsReader):
 		self.config = config
 		self.db = db
+		self.dbOut = dbOut
 		self.lptsReader = lptsReader
 		#self.updateBiblesTable = UpdateDBPBiblesTable(config)
 		self.updateCounts = {}
-		self.statements = []
 		self.hashIdMap = None
 		self.sqlLog = []
 
@@ -34,11 +35,13 @@ class UpdateDBPLPTSTable:
 			" ORDER BY b.bible_id, bf.id, bf.set_type_code")
 		try:
 			filesetList = self.db.select(sql, ())
-			#self.deleteOldGroups() # temporary, until in production
 			self.updateAccessGroupFilesets(filesetList)
 			self.updateBibleFilesetTags(filesetList)
 			self.updateBibleFilesetCopyrights(filesetList)
 			#self.updateBibles(filesetList)
+			self.dbOut.displayStatements()
+			self.dbOut.displayCounts()
+			#self.dbOut.execute()
 		except Exception as err:
 			print("ERROR: %s" % (err))
 		self.displayLog()
@@ -47,7 +50,6 @@ class UpdateDBPLPTSTable:
 	## Access Group Filesets
 	##
 	def updateAccessGroupFilesets(self, filesetList):
-		statements = []
 		insertRows = []
 		deleteRows = []
 		## note id > 100 is temporary
@@ -100,9 +102,8 @@ class UpdateDBPLPTSTable:
 
 		tableName = "access_group_filesets"
 		pkeyNames = ("hash_id", "access_group_id")
-		self.insert(tableName, (), pkeyNames, insertRows)
-		self.delete(tableName, pkeyNames, deleteRows)
-		self.execute(tableName, len(insertRows), 0, len(deleteRows))
+		self.dbOut.insert(tableName, (), pkeyNames, insertRows)
+		self.dbOut.delete(tableName, pkeyNames, deleteRows)
 
 
 	## deprecated
@@ -195,7 +196,6 @@ class UpdateDBPLPTSTable:
 		insertRows = []
 		updateRows = []
 		deleteRows = []
-		statements = []
 		adminOnly = 0
 		notes = None
 		iso = "eng"
@@ -245,10 +245,9 @@ class UpdateDBPLPTSTable:
 		tableName = "bible_fileset_tags"
 		pkeyNames = ("hash_id", "name", "language_id")
 		attrNames = ("description", "admin_only", "notes", "iso")
-		self.insert(tableName, attrNames, pkeyNames, insertRows)
-		self.update(tableName, attrNames, pkeyNames, updateRows)
-		self.delete(tableName, pkeyNames, deleteRows)
-		self.execute(tableName, len(insertRows), len(updateRows), len(deleteRows))	
+		self.dbOut.insert(tableName, attrNames, pkeyNames, insertRows)
+		self.dbOut.update(tableName, attrNames, pkeyNames, updateRows)
+		self.dbOut.delete(tableName, pkeyNames, deleteRows)
 
 
 	##
@@ -258,7 +257,6 @@ class UpdateDBPLPTSTable:
 		insertRows = []
 		updateRows = []
 		deleteRows = []
-		statements = []
 		for (bibleId, filesetId, setTypeCode, setSizeCode, assetId, hashId) in filesetList:
 			typeCode = setTypeCode.split("_")[0]
 
@@ -306,10 +304,9 @@ class UpdateDBPLPTSTable:
 		tableName = "bible_fileset_copyrights"
 		pkeyNames = ("hash_id",)
 		attrNames = ("copyright_date", "copyright", "copyright_description", "open_access")
-		self.insert(tableName, attrNames, pkeyNames, insertRows)
-		self.update(tableName, attrNames, pkeyNames, updateRows)
-		self.delete(tableName, pkeyNames, deleteRows)
-		self.execute(tableName, len(insertRows), len(updateRows), len(deleteRows))
+		self.dbOut.insert(tableName, attrNames, pkeyNames, insertRows)
+		self.dbOut.update(tableName, attrNames, pkeyNames, updateRows)
+		self.dbOut.delete(tableName, pkeyNames, deleteRows)
 
 
 	##
@@ -319,7 +316,6 @@ class UpdateDBPLPTSTable:
 		insertRows = []
 		updateRows = []
 		deleteRows = []
-		statements = []
 		## or join to bible_fileset_connections to limit
 		biblesList = self.db.select("SELECT id, language_id, versification, numeral_system_id,"
 			" date, scope, script, copyright, reviewed, notes"
@@ -351,44 +347,9 @@ class UpdateDBPLPTSTable:
 		pkeyNames = ("id",)
 		attrNames = ("language_id", "versification", "numeral_system_id", "date", "scope", 
 			"script", "copyright", "reviewed", "notes")
-		#self.insert(tableName, attrNames, pkeyNames, insertRows)
-		self.update(tableName, attrNames, pkeyNames, updateRows)
-		self.delete(tableName, pkeyNames, deleteRows)
-		self.execute(tableName, len(insertRows), len(updateRows), len(deleteRows))
-
-
-	def insert(self, tableName, attrNames, pkeyNames, values):
-		if len(values) > 0:
-			names = attrNames + pkeyNames
-			valsubs = ['%s'] * len(names)
-			sql = "INSERT INTO %s (%s) VALUES (%s)" % (tableName, ", ".join(names), ", ".join(valsubs))
-			self.statements.append((sql, values))
-			self.prepareLog("INSERT", tableName, attrNames, pkeyNames, values)
-
-
-	def update(self, tableName, attrNames, pkeyNames, values):
-		if len(values) > 0:
-			sql = "UPDATE %s SET %s WHERE %s" % (tableName, "=%s, ".join(attrNames) + "=%s", "=%s AND ".join(pkeyNames) + "=%s")
-			self.statements.append((sql, values))
-			self.prepareLog("UPDATE", tableName, attrNames, pkeyNames, values)
-
-
-	def delete(self, tableName, pkeyNames, pkeyValues):
-		if len(pkeyValues) > 0:
-			sql = "DELETE FROM %s WHERE %s" % (tableName, "=%s AND ".join(pkeyNames) + "=%s")
-			self.statements.append((sql, pkeyValues))
-			self.prepareLog("DELETE", tableName, (), pkeyNames, pkeyValues)
-
-
-	def execute(self, tableName, numInsert, numUpdate, numDelete):
-		self.updateCounts[tableName + "-INSERT:"] = numInsert
-		self.updateCounts[tableName + "-UPDATE:"] = numUpdate
-		self.updateCounts[tableName + "-DELETE:"] = numDelete
-		if len(self.statements) > 0:
-			#self.perRowExecute()
-			self.db.displayTransaction(self.statements)
-			self.db.executeTransaction(self.statements)
-			self.statements = []
+		self.dbOut.insert(tableName, attrNames, pkeyNames, insertRows)
+		self.dbOut.update(tableName, attrNames, pkeyNames, updateRows)
+		self.dbOut.delete(tableName, pkeyNames, deleteRows)
 
 
 	## debug routine
@@ -500,10 +461,25 @@ if (__name__ == '__main__'):
 	config = Config()
 	lptsReader = LPTSExtractReader(config)
 	db = SQLUtility(config)
-	filesets = UpdateDBPLPTSTable(config, db, lptsReader)
+	dbOut = SQLBatchExec(config)
+	filesets = UpdateDBPLPTSTable(config, db, dbOut, lptsReader)
 #	filesets.insertAccessGroups() # temporary
 	filesets.process()
 	#filesets.accessGroupSymmetricTest()
 	db.close()
 
+"""
+truncate table access_group_filesets;
+SET FOREIGN_KEY_CHECKS=0;
+insert into access_group_filesets 
+select * from access_group_filesets_backup;
+SET FOREIGN_KEY_CHECKS=1;
+select count(*) from access_group_filesets;
 
+truncate table bible_fileset_copyrights;
+SET FOREIGN_KEY_CHECKS=0;
+insert into bible_fileset_copyrights 
+select * from bible_fileset_copyrights_backup;
+SET FOREIGN_KEY_CHECKS=1;
+select count(*) from bible_fileset_copyrights;
+"""
