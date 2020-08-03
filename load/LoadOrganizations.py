@@ -129,8 +129,8 @@ class LoadOrganizations:
 		tableName = "bible_fileset_copyright_organizations"
 		pkeyNames = ("hash_id", "organization_id", "organization_role")
 		attrNames = ()
-		dbOut.insert(tableName, pkeyNames, attrNames, inserts)
-		dbOut.delete(tableName, pkeyNames, deletes)
+		self.dbOut.insert(tableName, pkeyNames, attrNames, inserts)
+		self.dbOut.delete(tableName, pkeyNames, deletes)
 		
 
 	## This method updates the bible_fileset_copyright_organizations with copyrightholders
@@ -181,8 +181,8 @@ class LoadOrganizations:
 		tableName = "bible_fileset_copyright_organizations"
 		pkeyNames = ("hash_id", "organization_id", "organization_role")
 		attrNames = ()
-		dbOut.insert(tableName, pkeyNames, attrNames, inserts)
-		dbOut.delete(tableName, pkeyNames, deletes)
+		self.dbOut.insert(tableName, pkeyNames, attrNames, inserts)
+		self.dbOut.delete(tableName, pkeyNames, deletes)
 
 
 	## After licensors have been updated in bible_fileset_copyright_organizations,
