@@ -43,7 +43,7 @@ class UpdateDBPLPTSTable:
 		#self.updateBibles(filesetList)
 		#except Exception as err:
 		#print("ERROR: %s" % (err))
-		self.displayLog()
+		#self.displayLog()
 
 	##
 	## Access Group Filesets
@@ -381,6 +381,7 @@ class UpdateDBPLPTSTable:
 		orgs.updateCopyrightHolders(filesetList)
 
 
+	## This is not currently used.
 	def prepareLog(self, tranType, tableName, attrNames, pkeyNames, values):
 		if tableName == "bibles":
 			self.prepareBiblesLog(tranType, tableName, attrNames, pkeyNames, values)
