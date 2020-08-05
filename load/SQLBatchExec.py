@@ -60,28 +60,31 @@ class SQLBatchExec:
 
 
 	def execute(self):
-		pattern = self.config.filename_datetime 
-		tranDir = "./" ## we need a config parameter
-		path = tranDir + "Trans-" + datetime.today().strftime(pattern) + ".sql"
-		print("Transactions", path)
-		tranFile = open(path, "w")
-		tranFile.write("START TRANSACTION;\n")
-		for statement in self.statements:
-			tranFile.write(statement + "\n")
-		tranFile.write("COMMIT;\n")
-		tranFile.close()
-		if self.config.database_tunnel != None:
-			results1 = os.popen(self.config.database_tunnel).read()
-			print("tunnel opened:", results1)
-		cmd = ("mysql -h %s -P %s -u %s -p%s  %s < %s" % 
-											(self.config.database_host,
-											self.config.database_port,
-											self.config.database_user, 
-											self.config.database_passwd,
-											self.config.database_db_name,
-											path))
-		results2 = os.popen(cmd).read()
-		print(results2)
+		if len(self.statements) == 0:
+			print("NO INSERT, UPDATE, or DELETE Transactions to process")
+		else:
+			pattern = self.config.filename_datetime 
+			tranDir = "./" ## we need a config parameter
+			path = tranDir + "Trans-" + datetime.today().strftime(pattern) + ".sql"
+			print("Transactions", path)
+			tranFile = open(path, "w")
+			tranFile.write("START TRANSACTION;\n")
+			for statement in self.statements:
+				tranFile.write(statement + "\n")
+			tranFile.write("COMMIT;\n")
+			tranFile.close()
+			if self.config.database_tunnel != None:
+				results1 = os.popen(self.config.database_tunnel).read()
+				print("tunnel opened:", results1)
+			cmd = ("mysql -h %s -P %s -u %s -p%s  %s < %s" % 
+												(self.config.database_host,
+												self.config.database_port,
+												self.config.database_user, 
+												self.config.database_passwd,
+												self.config.database_db_name,
+												path))
+			results2 = os.popen(cmd).read()
+			print(results2)
 
 
 if (__name__ == '__main__'):
@@ -92,8 +95,6 @@ if (__name__ == '__main__'):
 	sql.displayStatements()
 	sql.displayCounts()
 	sql.execute()
-
-
 
 
 
