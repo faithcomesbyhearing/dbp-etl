@@ -6,6 +6,7 @@ import io
 import os
 import sys
 from datetime import datetime
+import subprocess
 from Config import *
 
 
@@ -83,8 +84,10 @@ class SQLBatchExec:
 												self.config.database_passwd,
 												self.config.database_db_name,
 												path))
-			results2 = os.popen(cmd).read()
-			print(results2)
+			#results2 = os.popen(cmd).read()
+			#print(results2)
+			process = subprocess.Popen([cmd], shell=True, stderr=subprocess.STDOUT)
+			process.wait(timeout=128)
 
 
 if (__name__ == '__main__'):
