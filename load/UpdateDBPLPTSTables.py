@@ -275,11 +275,15 @@ class UpdateDBPLPTSTable:
 
 		for (bibleId, filesetId, setTypeCode, setSizeCode, assetId, hashId) in filesetList:
 			typeCode = setTypeCode.split("_")[0]
-
+			if filesetId[8:10] == "SA":
+				dbpFilesetId = filesetId[:8] + "DA" + filesetId[10:]
+			else:
+				dbpFilesetId = filesetId
+			#lptsRecords = self.lptsReader.getFilesetRecords(dbpFilesetId)
 			row = copyrightHashIdMap.get(hashId, None)
 
 			if typeCode != "app":
-				(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecordLoose(typeCode, bibleId, filesetId)
+				(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecordLoose(typeCode, bibleId, dbpFilesetId)
 				if lptsRecord != None:
 					copyrightText = self.escapeChars(lptsRecord.Copyrightc())
 					copyrightAudio = self.escapeChars(lptsRecord.Copyrightp())
