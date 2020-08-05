@@ -221,7 +221,8 @@ class LPTSRecord:
 		"Video_John_DamStockNo": "Video_John_DamStatus",
 		"Video_Luke_DamStockNo": "Video_Luke_DamStatus",
 		"Video_Mark_DamStockNo": "Video_Mark_DamStatus",
-		"Video_Matt_DamStockNo": "Video_Matt_DamStatus"
+		"Video_Matt_DamStockNo": "Video_Matt_DamStatus",
+		"Video_DamStockNo2": "Video_DamStatus2"
 	}
 	
 	def __init__(self, record):
