@@ -87,7 +87,7 @@ class SQLBatchExec:
 			#results2 = os.popen(cmd).read()
 			#print(results2)
 			process = subprocess.Popen([cmd], shell=True, stderr=subprocess.STDOUT)
-			process.wait(timeout=128)
+			process.wait(timeout=600)
 
 
 if (__name__ == '__main__'):
