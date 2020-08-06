@@ -27,6 +27,49 @@ class UpdateDBPBiblesTable:
 		self.yearPattern = re.compile("([0-9]+)")
 
 
+	##
+	## Bibles Table
+	##
+	def updateBibles(self, filesetList):
+		insertRows = []
+		updateRows = []
+		deleteRows = []
+		## or join to bible_fileset_connections to limit
+		biblesList = self.db.select("SELECT id, language_id, versification, numeral_system_id,"
+			" date, scope, script, copyright, reviewed, notes"
+			" FROM bibles", ())
+		filesetBibles = set()
+		for fileset in filesetList:
+			filesetBibles.add(fileset[0])
+		for currRow in biblesList:
+			bibleId = currRow[0]
+			if bibleId not in filesetBibles:
+				deleteRows.append((bibleId))
+				print("DELETE", currRow)
+
+			else:
+				lptsRecords = self.updateBiblesTable.findTextBibleLPTSRecords(bibleId, self.lptsReader)
+				values = self.updateBiblesTable.getBibleRecord(bibleId, lptsRecords)
+				if (currRow[1] != values[0] or
+					currRow[2] != values[1] or
+					currRow[3] != values[2] or
+					currRow[4] != values[3] or
+					currRow[5] != values[4] or
+					currRow[6] != values[5] or
+					currRow[7] != values[6] or
+					currRow[8] != values[7] or
+					currRow[9] != values[8]):
+					updateRows.append(values)
+
+		tableName = "bibles"
+		pkeyNames = ("id",)
+		attrNames = ("language_id", "versification", "numeral_system_id", "date", "scope", 
+			"script", "copyright", "reviewed", "notes")
+		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
+		self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
+		self.dbOut.delete(tableName, pkeyNames, deleteRows)
+
+
 	def findTextBibleLPTSRecords(self, bibleId, lptsReader):
 		results = []
 		lptsRecords = lptsReader.bibleIdMap.get(bibleId, [])
