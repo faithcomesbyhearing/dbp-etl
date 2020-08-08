@@ -2,11 +2,14 @@
 #
 # This program inserts and replaces records in the DBP bibles table
 #
+# When a fileset is uploaded into the bucket, after inserting the fileset row, this 
+# programs insertBible method is called to insert the bibles and bible_fileset_connections records
 
 import io
 import sys
 from Config import *
 from SQLUtility import *
+from SQLBatchExec import *
 from LPTSExtractReader import *
 from LookupTables import *
 
@@ -14,9 +17,11 @@ from LookupTables import *
 class UpdateDBPBiblesTable:
 
 
-	def __init__(self, config):
+	def __init__(self, config, db, dbOut, lptsReader):
 		self.config = config
-		self.db = SQLUtility(config)
+		self.db = db
+		self.dbOut = dbOut
+		self.lptsReader = lptsReader
 		self.numeralIdMap = self.db.selectMap("SELECT script_id, numeral_system_id FROM alphabet_numeral_systems", ())
 		## These scripts have multiple numeral systems.  So, this hack chooses the dominant one
 		self.numeralIdMap["Arab"] = "eastern-arabic"
@@ -27,31 +32,115 @@ class UpdateDBPBiblesTable:
 		self.yearPattern = re.compile("([0-9]+)")
 
 
+	## This method inserts a new Bible record and a new connections record
+	def insertBible(self, bibleId):
+		print("tbd")
+
+
+	##
+	## Bible_Fileset_Connections
+	##
+	def updateBibleFilesetConnections(self, filesetList):
+		#insertBibleRows = []
+		deleteBibleRows = []
+		#insertConnectRows = []
+		deleteConnectRows = []
+
+		## Create a filesetId: bibleId: [hashId] Map 
+		filesetListMap = {}
+		for (bibleId, fid, setTypeCode, setSizeCode, assetId, hashId) in filesetList:			
+			filesetId = fid[:10]
+			if filesetId[8:10] == "SA":
+				filesetId = filesetId[:8] + "DA" + filesetId[10:]
+			bibleListMap = filesetListMap.get(filesetId, {})
+			hashIds = bibleListMap.get(bibleId, [])
+			hashIds.append(hashId)
+			bibleListMap[bibleId] = hashIds
+			filesetListMap[filesetId] = bibleListMap
+
+		#for filesetId in sorted(filesetListMap.keys()):
+		#	print(filesetId)
+		#	bibles = filesetListMap[filesetId]
+		#	print("\t", bibles)
+		#sys.exit()
+		
+		for filesetId in filesetListMap.keys():
+			dbpBibles = filesetListMap[filesetId]
+			#print(filesetId, dbpBibles.keys, dbpBibles)
+
+			lptsBibleIdSet = set()
+			lptsRecords = self.lptsReader.getFilesetRecords(filesetId)
+			if lptsRecords != None:
+				for (status, lptsRecord) in lptsRecords:
+					if lptsRecord.DBP_Equivalent() != None:
+						lptsBibleIdSet.add(lptsRecord.DBP_Equivalent())
+					if lptsRecord.DBP_Equivalent2() != None:
+						lptsBibleIdSet.add(lptsRecord.DBP_Equivalent2())
+					if lptsRecord.DBP_Equivalent3() != None:
+						lptsBibleIdSet.add(lptsRecord.DBP_Equivalent3())
+			print(lptsBibleIdSet)
+			# I can't do this unless, I can determine the hashId of the fileset without
+			# A bibleId
+			#for lptsBibleId in lptsBibleIdSet:
+			#	if lptsBibleId not in dbpBibles.keys():
+			#		hashId = how do i find hashId
+			#		print("GEN INSERT both tables")
+			#		print("GET ")
+			#		insertBibleRows.append(lptsBibleId)
+			#		insertConnectRows.append((hashId, lptsBibleId))
+
+			for dbpBibleId in dbpBibles.keys():
+				if dbpBibleId not in lptsBibleIdSet:
+					deleteBibleRows.append(dbpBibleId)
+					hashIds = dbpBibles[dbpBibleId]
+					for hashId in hashIds:
+						deleteConnectRows.append((hashId, dbpBibleId))
+
+		tableName = "bible_fileset_connections"
+		pkeyNames = ("hash_id", "bible_id")
+		attrNames = ()
+		#print("INSERT", insertConnectRows)
+		print("DELETE", deleteConnectRows)
+		#self.dbOut.insert(tableName, pkeyNames, attrNames, insertConnectRows)
+		#self.dbOut.delete(tableName, pkeyNames, deleteConnectRows)
+
+
+
 	##
 	## Bibles Table
 	##
-	def updateBibles(self, filesetList):
+	def updateBibles(self):
 		insertRows = []
 		updateRows = []
 		deleteRows = []
-		## or join to bible_fileset_connections to limit
-		biblesList = self.db.select("SELECT id, language_id, versification, numeral_system_id,"
-			" date, scope, script, copyright, reviewed, notes"
-			" FROM bibles", ())
-		filesetBibles = set()
-		for fileset in filesetList:
-			filesetBibles.add(fileset[0])
-		for currRow in biblesList:
-			bibleId = currRow[0]
-			if bibleId not in filesetBibles:
-				deleteRows.append((bibleId))
-				print("DELETE", currRow)
+		dbpBibleMap = {}
+		sql = "SELECT id, language_id, versification, numeral_system_id, `date`, scope, script FROM bibles"
+		resultSet = self.db.select(sql, ())
+		for row in resultSet:
+			dbpBibleMap[row[0]] = row[1:]
 
+		# select filesets without join to connections
+
+		lptsBibleMap = self.lptsReader.getBibleIdMap()
+		for lptsBibleId in sorted(lptsBibleMap.keys()):
+			print("LPTS", lptsBibleId)
+
+			if lptsBibleId not in dbpBibleMap.keys():
+				print("INSERT", lptsBibleId)
 			else:
-				lptsRecords = self.updateBiblesTable.findTextBibleLPTSRecords(bibleId, self.lptsReader)
-				values = self.updateBiblesTable.getBibleRecord(bibleId, lptsRecords)
-				if (currRow[1] != values[0] or
-					currRow[2] != values[1] or
+				print("CHECK FOR UPDATE", lptsBibleId)
+
+		for dbpBibleId in sorted(dbpBibleMap.keys()):
+			if dbpBibleId not in lptsBibleMap.keys():
+				print("DBP DELETE", dbpBibleId)
+
+		sys.exit()
+
+		"""
+		#lptsRecords = self.updateBiblesTable.findTextBibleLPTSRecords(bibleId, self.lptsReader)
+		#values = self.updateBiblesTable.getBibleRecord(bibleId, lptsRecords)
+		#if (currRow[1] != values[0] or
+		#	currRow[2] != values[1] or
 					currRow[3] != values[2] or
 					currRow[4] != values[3] or
 					currRow[5] != values[4] or
@@ -60,11 +149,12 @@ class UpdateDBPBiblesTable:
 					currRow[8] != values[7] or
 					currRow[9] != values[8]):
 					updateRows.append(values)
+		"""
 
 		tableName = "bibles"
 		pkeyNames = ("id",)
-		attrNames = ("language_id", "versification", "numeral_system_id", "date", "scope", 
-			"script", "copyright", "reviewed", "notes")
+		attrNames = ("language_id", "versification", "numeral_system_id", "date", "scope", "script")
+		ignoredNamed = ("derived", "copyright", "priority", "reviewed", "notes") # here for doc only
 		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
 		self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
 		self.dbOut.delete(tableName, pkeyNames, deleteRows)
@@ -213,20 +303,6 @@ class UpdateDBPBiblesTable:
 		return self.findResult(bibleId, final, "Copyrightc")
 
 
-#	def biblesPriority(self, bibleId):
-#		priority = {"ENGESV": 20,
-#					"ENGNIV": 19,
-#					"ENGKJV": 18,
-#					"ENGCEV": 17,
-#					"ENGNRSV": 16,
-#					"ENGNAB": 15,
-#					"ENGWEB": 14,
-#					"ENGNAS": 13,
-#					"ENGNLV": 11,
-#					"ENGEVD": 10}
-#		return priority.get(bibleId, 0)
-
-
 	def findResult(self, bibleId, final, fieldName):
 		if len(final) == 0:
 			return None
@@ -241,14 +317,14 @@ class UpdateDBPBiblesTable:
 if (__name__ == '__main__'):
 	config = Config()
 	db = SQLUtility(config)
-	bibleIds = db.selectList("SELECT distinct bible_id FROM bible_fileset_connections", ())
-	db.close()
+	dbOut = SQLBatchExec(config)
 	lptsReader = LPTSExtractReader(config)
-	update = UpdateDBPBiblesTable(config)
-	update.counts = 0
-	for bibleId in bibleIds:
-		lptsRecords = update.findTextBibleLPTSRecords(bibleId, lptsReader)
-		values = update.getBibleRecord(bibleId, lptsRecords)
-		#print(values)
-	print("count", update.counts)
+	bibles = UpdateDBPBiblesTable(config, db, dbOut, lptsReader)
+	sql = ("SELECT b.bible_id, bf.id, bf.set_type_code, bf.set_size_code, bf.asset_id, bf.hash_id"
+			" FROM bible_filesets bf JOIN bible_fileset_connections b ON bf.hash_id = b.hash_id"
+			" ORDER BY b.bible_id, bf.id, bf.set_type_code")
+	filesetList = db.select(sql, ())
+	bibles.updateBibleFilesetConnections(filesetList)
+	#bibles.updateBibles()
+	db.close()
 

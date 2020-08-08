@@ -37,7 +37,7 @@ class LPTSExtractReader:
 		print("LPTS Extract with %d records and %d BibleIds is loaded." % (len(self.resultSet), len(self.bibleIdMap.keys())))
 
 
-    ## Generates Map bibleId: [LPTSRecord], called by class init
+    ## Generates Map bibleId: [(index, LPTSRecord)], called by class init
 	def getBibleIdMap(self):
 		bibleIdMap = {}
 		for rec in self.resultSet:
@@ -93,6 +93,7 @@ class LPTSExtractReader:
 
 	## This method returns all LPTS records regardless of the status
 	## Otherwise it is exactly like getLPTSRecord
+	## Return [(record, index)]
 	def getLPTSRecordsAll(self, typeCode, bibleId, filesetId):
 		results = []
 		normFilesetId = filesetId[:10]
@@ -230,41 +231,6 @@ class LPTSRecord:
 
 	def recordLen(self):
 		return len(self.record.keys())
-
-#	## Return the damId's of a record in a set of damIds
-#	def DamIds(self, typeCode, index):
-#		if not typeCode in {"audio", "text", "video"}:
-#			print("ERROR: Unknown typeCode '%s', audio, text, or video is expected." % (typeCode))
-#		if not index in {1, 2, 3}:
-#			print("ERROR: Unknown DamId index '%s', 1,2, or 3 expected." % (index))
-#			sys.exit()
-#		if typeCode == "audio":
-#			if index == 1:
-#				damIdDict = LPTSRecord.audio1DamIdDict
-#			elif index == 2:
-#				damIdDict = LPTSRecord.audio2DamIdDict
-#			elif index == 3:
-#				damIdDict = LPTSRecord.audio3DamIdDict
-#		elif typeCode == "text":
-#			if index == 1:
-#				damIdDict = LPTSRecord.text1DamIdDict
-#			elif index == 2:
-#				damIdDict = LPTSRecord.text2DamIdDict
-#			elif index == 3:
-#				damIdDict = LPTSRecord.text3DamIdDict
-#		elif typeCode == "video":
-#			damIdDict = LPTSRecord.videoDamIdDict
-#		hasKeys = set(damIdDict.keys()).intersection(set(self.record.keys()))
-#		results = set()
-#		for key in hasKeys:
-#			statusKey = damIdDict[key]
-#			damId = self.record[key]
-#			if typeCode == "text":
-#				damId = damId[:6]
-#			status = self.record.get(statusKey)
-#			if status in {"Live", "live"}:
-#				results.add(damId)
-#		return results
 
 	## Return the damId's of a record in a set of damIds, which are Live
 	def DamIds(self, typeCode, index):
