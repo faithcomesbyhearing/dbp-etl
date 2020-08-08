@@ -32,78 +32,106 @@ class UpdateDBPBiblesTable:
 		self.yearPattern = re.compile("([0-9]+)")
 
 
-	## This method inserts a new Bible record and a new connections record
-	def insertBible(self, bibleId):
-		print("tbd")
-
-
 	##
 	## Bible_Fileset_Connections
 	##
 	def updateBibleFilesetConnections(self, filesetList):
-		#insertBibleRows = []
-		deleteBibleRows = []
-		#insertConnectRows = []
-		deleteConnectRows = []
+		insertRows = []
+		deleteRows = []
 
-		## Create a filesetId: bibleId: [hashId] Map 
-		filesetListMap = {}
+		## Create DBP Map filesetId/typeCode: [(filesetId, setTypeCode, hashId, bibleId)]
+		dbpFilesetListMap = {}
 		for (bibleId, fid, setTypeCode, setSizeCode, assetId, hashId) in filesetList:			
 			filesetId = fid[:10]
 			if filesetId[8:10] == "SA":
 				filesetId = filesetId[:8] + "DA" + filesetId[10:]
-			bibleListMap = filesetListMap.get(filesetId, {})
-			hashIds = bibleListMap.get(bibleId, [])
-			hashIds.append(hashId)
-			bibleListMap[bibleId] = hashIds
-			filesetListMap[filesetId] = bibleListMap
+			typeCode = setTypeCode.split("_")[0]
+			key = filesetId + "/" + typeCode
+			values = dbpFilesetListMap.get(key, [])
+			values.append((fid, setTypeCode, hashId, bibleId))
+			dbpFilesetListMap[key] = values
 
-		#for filesetId in sorted(filesetListMap.keys()):
-		#	print(filesetId)
-		#	bibles = filesetListMap[filesetId]
-		#	print("\t", bibles)
-		#sys.exit()
+		## Check for absent and multiple bibleId's within a DBP filesetId/typeCode group
+		for key, filesets in dbpFilesetListMap.items():
+			bibleIdSet = set()
+			for (filesetId, setTypeCode, hashId, bibleId) in filesets:
+				if bibleId == None or bibleId == "":
+					print("ERROR_01 BibleId absent in DBP Record", key, filesets)
+				else:
+					bibleIdSet.add(bibleId)
+			if len(bibleIdSet) > 1:
+				print("ERROR_02 Multiple BibleId in DBP Fileset Group ", key, filesets)
 		
-		for filesetId in filesetListMap.keys():
-			dbpBibles = filesetListMap[filesetId]
-			#print(filesetId, dbpBibles.keys, dbpBibles)
+		## Create LPTS Map filesetId/typeCode: (filesetId, typeCode, index, bibleId)
+		indexMap = {"audio": [1, 2, 3], "text": [1, 2, 3], "video": [1]}
+		lptsFilesetListMap = {}
+		for lptsRecord in self.lptsReader.resultSet:
+			for typeCode in ["audio", "text", "video"]:
+				for index in indexMap[typeCode]:
+					filesetIds = lptsRecord.DamIdMap(typeCode, index)
+					for filesetId in filesetIds:
+						key = filesetId + "/" + typeCode
+						values = lptsFilesetListMap.get(key, [])
+						bibleId = lptsRecord.DBP_EquivalentByIndex(index)
+						values.append((filesetId, typeCode, index, bibleId))
+						lptsFilesetListMap[key] = values
+		#print(lptsFilesetListMap)
 
-			lptsBibleIdSet = set()
-			lptsRecords = self.lptsReader.getFilesetRecords(filesetId)
-			if lptsRecords != None:
-				for (status, lptsRecord) in lptsRecords:
-					if lptsRecord.DBP_Equivalent() != None:
-						lptsBibleIdSet.add(lptsRecord.DBP_Equivalent())
-					if lptsRecord.DBP_Equivalent2() != None:
-						lptsBibleIdSet.add(lptsRecord.DBP_Equivalent2())
-					if lptsRecord.DBP_Equivalent3() != None:
-						lptsBibleIdSet.add(lptsRecord.DBP_Equivalent3())
-			print(lptsBibleIdSet)
-			# I can't do this unless, I can determine the hashId of the fileset without
-			# A bibleId
-			#for lptsBibleId in lptsBibleIdSet:
-			#	if lptsBibleId not in dbpBibles.keys():
-			#		hashId = how do i find hashId
-			#		print("GEN INSERT both tables")
-			#		print("GET ")
-			#		insertBibleRows.append(lptsBibleId)
-			#		insertConnectRows.append((hashId, lptsBibleId))
+		## Check for absent and multiple bibleId's within a LPTS filesetId/typeCode group
+		for key, filesets in lptsFilesetListMap.items():
+			bibleIdSet = set()
+			for (filesetId, typeCode, index, bibleId) in filesets:
+				if bibleId == None or bibleId == "":
+					print("ERROR_03 BibleId absent in LPTS Record", key, filesets)
+				else:
+					bibleIdSet.add(bibleId)
+			if len(bibleIdSet) > 1:
+				print("ERROR_04 Multiple BibleId in Fileset Group ", key, filesets)
 
-			for dbpBibleId in dbpBibles.keys():
-				if dbpBibleId not in lptsBibleIdSet:
-					deleteBibleRows.append(dbpBibleId)
-					hashIds = dbpBibles[dbpBibleId]
-					for hashId in hashIds:
-						deleteConnectRows.append((hashId, dbpBibleId))
+		## Compare two maps for missing DBP records, and issue warnings
+		for key in lptsFilesetListMap.keys():
+			if dbpFilesetListMap.get(key) == None:
+				print("WARN_05 DBP Missing", key, lptsFilesetListMap[key])
+
+		## Compare two maps for missing LPTS filesets, and issue warnings
+		for key in dbpFilesetListMap.keys():
+			if lptsFilesetListMap.get(key) == None:
+				print("WARN_06 LPTS Missing", key, dbpFilesetListMap[key])
+
+		## Compare two match for key matches, and compare Bible Id
+		for key, lptsFilesets in lptsFilesetListMap.items():
+			#print(key, lptsFilesets)
+			dbpFilesets = dbpFilesetListMap.get(key)
+			if dbpFilesets != None:
+				dbpBibleIdSet = set()
+				for (filesetId, setTypeCode, hashId, bibleId) in dbpFilesets:
+					if bibleId != None:
+						dbpBibleIdSet.add(bibleId)
+				lptsBibleIdSet = set()
+				for (filesetId, typeCode, index, bibleId) in lptsFilesets:
+					if bibleId != None:
+						lptsBibleIdSet.add(bibleId)
+				if dbpBibleIdSet != lptsBibleIdSet:
+					#print(key, lptsFilesets, "\n\t", dbpFilesets)
+					if len(dbpBibleIdSet) == 1 and len(lptsBibleIdSet) == 1:
+						for lptsBibleId in lptsBibleIdSet:
+							insertRows.append((hashId, lptsBibleId))
+						for dbpBibleId in dbpBibleIdSet:
+							deleteRows.append((hashId, dbpBibleId))
+					else:
+						print(key, lptsFilesets, "\n\t", dbpFilesets)
+				#print(key, lptsFilesets, "\n\t", dbpFilesets)
+
+				## If BibleIds different, DELETE DBP connection, INSERT LPTS connection
+
 
 		tableName = "bible_fileset_connections"
 		pkeyNames = ("hash_id", "bible_id")
 		attrNames = ()
-		#print("INSERT", insertConnectRows)
-		print("DELETE", deleteConnectRows)
-		#self.dbOut.insert(tableName, pkeyNames, attrNames, insertConnectRows)
-		#self.dbOut.delete(tableName, pkeyNames, deleteConnectRows)
-
+		print("INSERT", insertRows)
+		print("DELETE", deleteRows)
+		#self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
+		#self.dbOut.delete(tableName, pkeyNames, deleteRows)	
 
 
 	##

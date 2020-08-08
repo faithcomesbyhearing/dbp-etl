@@ -361,7 +361,6 @@ class LPTSRecord:
 	def DBPWebHub(self):
 		return self.record.get("DBPWebHub")
 
-
 	def DBP_Equivalent(self):
 		result = self.record.get("DBP_Equivalent")
 		if result in {"N/A", "#N/A"}:
@@ -382,6 +381,17 @@ class LPTSRecord:
 			return None
 		else:
 			return result
+
+	def DBP_EquivalentByIndex(self, index):
+		if index == 1:
+			return self.DBP_Equivalent()
+		elif index == 2:
+			return self.DBP_Equivalent2()
+		elif index == 3:
+			return self.DBP_Equivalent3()
+		else:
+			print("ERROR: DBP_Equivalent index must be 1, 2, or 3.")
+			sys.exit()			
 
 	def Download(self):
 		return self.record.get("Download")
