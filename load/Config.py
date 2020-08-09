@@ -69,7 +69,8 @@ class Config:
 					"LPTSExtractReader.py", 
 					"MatchOrganizationNames.py",
 					"LoadOrganizations.py",
-					"SQLBatchExec.py"}:
+					"SQLBatchExec.py", 
+					"CheckBibleFilesetConnectionsTable.py"}:
 
 			self.directory_bucket_list = self._getPath("directory.bucket_list")
 			self.filename_lpts_xml = self._getPath("filename.lpts_xml")
