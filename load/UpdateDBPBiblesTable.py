@@ -2,8 +2,11 @@
 #
 # This program inserts and replaces records in the DBP bibles table
 #
-# When a fileset is uploaded into the bucket, after inserting the fileset row, this 
-# programs insertBible method is called to insert the bibles and bible_fileset_connections records
+# This class is intended to run before the update of filesets as a result of a load.
+# It updates the bibles table based upon LPTS content, without regard to which Bibles
+# have been uploaded.  When the filesets are updated, the bible_fileset_connections are
+# also updated.
+
 
 import io
 import sys
@@ -28,54 +31,52 @@ class UpdateDBPBiblesTable:
 		self.numeralIdMap["Deva"] = "devanagari"
 		## This one should be added to DBP
 		self.numeralIdMap["Latn"] = "western-arabic"
-		self.sizeCodeMap = self.db.selectMapList("SELECT id, set_size_code FROM bible_filesets WHERE set_type_code='text_format'", ())	
+		self.sizeCodeMap = self.db.selectMapList("SELECT id, set_size_code FROM bible_filesets", ())	
 		self.yearPattern = re.compile("([0-9]+)")
 
 
 	##
 	## Bibles Table
 	##
-	def updateBibles(self):
+	def process(self):
 		insertRows = []
 		updateRows = []
 		deleteRows = []
+
+		## select bibles from DBP
 		dbpBibleMap = {}
 		sql = "SELECT id, language_id, versification, numeral_system_id, `date`, scope, script FROM bibles"
 		resultSet = self.db.select(sql, ())
 		for row in resultSet:
 			dbpBibleMap[row[0]] = row[1:]
 
-		# select filesets without join to connections
-
+		## retrieve bibles from LPTS
 		lptsBibleMap = self.lptsReader.getBibleIdMap()
-		for lptsBibleId in sorted(lptsBibleMap.keys()):
-			print("LPTS", lptsBibleId)
-
-			if lptsBibleId not in dbpBibleMap.keys():
-				print("INSERT", lptsBibleId)
-			else:
-				print("CHECK FOR UPDATE", lptsBibleId)
 
 		for dbpBibleId in sorted(dbpBibleMap.keys()):
 			if dbpBibleId not in lptsBibleMap.keys():
-				print("DBP DELETE", dbpBibleId)
+				deleteRows.append(dbpBibleId)
 
-		sys.exit()
+		for bibleId in sorted(lptsBibleMap.keys()):
+			lptsRecords = lptsBibleMap[bibleId]
+			languageId = self.biblesLanguageId(bibleId, lptsRecords)
+			versification = None
+			script = self.biblesScript(bibleId, lptsRecords)
+			numerals = self.biblesNumeralId(script)
+			date = self.biblesDate(bibleId, lptsRecords)
+			scope = self.biblesSizeCode(bibleId, lptsRecords)
 
-		"""
-		#lptsRecords = self.updateBiblesTable.findTextBibleLPTSRecords(bibleId, self.lptsReader)
-		#values = self.updateBiblesTable.getBibleRecord(bibleId, lptsRecords)
-		#if (currRow[1] != values[0] or
-		#	currRow[2] != values[1] or
-					currRow[3] != values[2] or
-					currRow[4] != values[3] or
-					currRow[5] != values[4] or
-					currRow[6] != values[5] or
-					currRow[7] != values[6] or
-					currRow[8] != values[7] or
-					currRow[9] != values[8]):
-					updateRows.append(values)
-		"""
+			if bibleId not in dbpBibleMap.keys():
+				insertRows.append((languageId, versification, numerals, date, scope, script, bibleId))
+			else:
+				(dbpLanguageId, dbpVersification, dbpNumerals, dbpDate, dbpScope, dbpScript) = dbpBibleMap[bibleId]
+				if (languageId != dbpLanguageId or
+					versification != dbpVersification or
+					numerals != dbpNumerals or
+					date != dbpDate or
+					scope != dbpScope or
+					script != dbpScript):
+					updateRows.append((languageId, versification, numerals, date, scope, script, bibleId))
 
 		tableName = "bibles"
 		pkeyNames = ("id",)
@@ -86,33 +87,6 @@ class UpdateDBPBiblesTable:
 		self.dbOut.delete(tableName, pkeyNames, deleteRows)
 
 
-	def findTextBibleLPTSRecords(self, bibleId, lptsReader):
-		results = []
-		lptsRecords = lptsReader.bibleIdMap.get(bibleId, [])
-		for (lptsIndex, lptsRecord) in lptsRecords:
-			damids = lptsRecord.DamIds("text", lptsIndex)
-			if len(damids) > 0:
-				results.append((lptsIndex, lptsRecord))
-		return results
-
-
-	def getBibleRecord(self, bibleId, lptsRecords):
-		languageId = self.biblesLanguageId(bibleId, lptsRecords)
-		versification = None
-		script = self.biblesScript(bibleId, lptsRecords)
-		numeralSystemId = self.biblesNumeralId(script)
-		date = self.biblesDate(bibleId, lptsRecords)
-		scope = self.biblesSizeCode(bibleId, lptsRecords)
-		#derived = None
-		copyright = self.biblesCopyright(bibleId, lptsRecords)
-		#priority = self.biblesPriority(bibleId)
-		reviewed = 0  ## I think this should be removed as well.  There is no way to update
-		notes = None  ## I think this should be removed as well, or possible null out the value
-		values = (languageId, versification, numeralSystemId, date,
-			scope, script, copyright, reviewed, notes, bibleId)
-		return values
-
-
 	def biblesLanguageId(self, bibleId, lptsRecords):
 		final = set()
 		for (lptsIndex, lptsRecord) in lptsRecords:
@@ -121,16 +95,22 @@ class UpdateDBPBiblesTable:
 			result = self.db.selectScalar("SELECT l.id FROM languages l,language_translations t WHERE l.iso=%s AND t.name=%s AND l.id=t.language_source_id", (iso, langName))
 			if result != None:
 				final.add(result)
-			else:
+		if len(final) == 0:
+			for (lptsIndex, lptsRecord) in lptsRecords:
+				iso = lptsRecord.ISO()
 				result = self.db.selectScalar("SELECT id FROM languages WHERE iso=%s AND name=%s", (iso, langName))
 				if result != None:
 					final.add(result)
 		if len(final) == 0:
-			iso = bibleId[:3].lower()
+			iso = lptsRecord.ISO()
 			result = self.db.selectScalar("SELECT id FROM languages WHERE iso=%s", (iso))
 			if result != None:
 				final.add(result)
-		return self.findResult(bibleId, final, "LangName & ISO")
+		if len(final) == 0:
+			return None
+		if len(final) > 1:
+			print("ERROR_01 Duplicate language_id for bibleId", bibleId, final)
+		return list(final)[0]
 
 
 	def biblesScript(self, bibleId, lptsRecords):
@@ -172,13 +152,15 @@ class UpdateDBPBiblesTable:
 	def biblesSizeCode(self, bibleId, lptsRecords):
 		final = set()
 		for (lptsIndex, lptsRecord) in lptsRecords:
-			damIds = lptsRecord.DamIds("text", lptsIndex)
-			#print(damIds)
-			for damId in damIds:
-				sizeCodes = self.sizeCodeMap.get(damId, [])
-				for sizeCode in sizeCodes:
-					if sizeCode != None:
-						final.add(sizeCode)
+			for typeCode in ["audio", "text", "video"]:
+				damIds = lptsRecord.DamIdMap(typeCode, lptsIndex)
+				#print("DAMIDS", damIds)
+				for damId in damIds.keys():
+					sizeCodes = self.sizeCodeMap.get(damId, [])
+					for sizeCode in sizeCodes:
+						if sizeCode != None:
+							final.add(sizeCode)
+		#print("FOUND SIZES", final)
 		if len(final) == 0:
 			return None
 		elif len(final) == 1:
@@ -246,11 +228,9 @@ if (__name__ == '__main__'):
 	dbOut = SQLBatchExec(config)
 	lptsReader = LPTSExtractReader(config)
 	bibles = UpdateDBPBiblesTable(config, db, dbOut, lptsReader)
-	sql = ("SELECT b.bible_id, bf.id, bf.set_type_code, bf.set_size_code, bf.asset_id, bf.hash_id"
-			" FROM bible_filesets bf JOIN bible_fileset_connections b ON bf.hash_id = b.hash_id"
-			" ORDER BY b.bible_id, bf.id, bf.set_type_code")
-	filesetList = db.select(sql, ())
-	bibles.updateBibleFilesetConnections(filesetList)
-	#bibles.updateBibles()
+	bibles.process()
 	db.close()
+
+	dbOut.displayStatements()
+	dbOut.displayCounts()
 
