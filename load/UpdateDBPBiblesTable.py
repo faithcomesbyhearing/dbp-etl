@@ -24,7 +24,15 @@ class UpdateDBPBiblesTable:
 		self.db = db
 		self.dbOut = dbOut
 		self.lptsReader = lptsReader
-		self.scriptMap = self.db.selectMap("SELECT lpts_name, script_id FROM lpts_script_codes", ())
+		sql = ("SELECT l.iso, a.script_id FROM alphabet_language a"
+				" JOIN languages l ON a.language_id = l.id"
+				" WHERE a.script_id IN" 
+				" (SELECT a.script_id FROM alphabet_language a"
+				" JOIN languages l ON a.language_id = l.id"
+				" GROUP BY a.script_id"
+				" having count(*) = 1)")
+		self.scriptCodeMap = self.db.selectMap(sql, ())
+		self.scriptNameMap = self.db.selectMap("SELECT lpts_name, script_id FROM lpts_script_codes", ())
 		self.numeralIdMap = self.db.selectMap("SELECT script_id, numeral_system_id FROM alphabet_numeral_systems", ())
 		## These scripts have multiple numeral systems.  So, this hack chooses the dominant one
 		self.numeralIdMap["Arab"] = "eastern-arabic"
@@ -143,13 +151,18 @@ class UpdateDBPBiblesTable:
 	def biblesScript(self, bibleId, lptsRecords):
 		final = set()
 		for (lptsIndex, lptsRecord) in lptsRecords:
-			script = lptsRecord.Orthography(lptsIndex)
-			if script != None:
-				result = self.scriptMap.get(script)
-				if result != None:
-					final.add(result)
-				else:
-					print("ERROR_05 unknown script_id for name %s in bible_id %s" % (script, bibleId))
+			result = self.scriptCodeMap.get(lptsRecord.ISO())
+			if result != None:
+				final.add(result)
+		if len(final) == 0:
+			for (lptsIndex, lptsRecord) in lptsRecords:
+				script = lptsRecord.Orthography(lptsIndex)
+				if script != None:
+					result = self.scriptNameMap.get(script)
+					if result != None:
+						final.add(result)
+					else:
+						print("ERROR_05 unknown script_id for name %s in bible_id %s" % (script, bibleId))
 		if len(final) == 0:
 			return "" #None ???????
 		elif len(final) == 1:
