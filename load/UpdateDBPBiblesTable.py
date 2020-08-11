@@ -32,7 +32,7 @@ class UpdateDBPBiblesTable:
 		## This one should be added to DBP
 		self.numeralIdMap["Latn"] = "western-arabic"
 		self.sizeCodeMap = self.db.selectMapList("SELECT id, set_size_code FROM bible_filesets", ())	
-		self.yearPattern = re.compile("([0-9]+)")
+		self.yearPattern = re.compile("([0-9]{4})")
 
 
 	##
@@ -110,10 +110,10 @@ class UpdateDBPBiblesTable:
 			if result != None:
 				final.add(result)
 		if len(final) == 0:
-			print("FATAL_01 ISO code of bibleId unknown", iso, bibleId)
+			print("ERROR_01 ISO code of bibleId unknown", iso, bibleId)
 			return None
 		if len(final) > 1:
-			print("ERROR_02 Duplicate language_id for bibleId", bibleId, final)
+			print("ERROR_02 Multiple language_id for bibleId", bibleId, final)
 		return list(final)[0]
 
 
@@ -126,9 +126,15 @@ class UpdateDBPBiblesTable:
 			if lptsRecord.NTOrder() != None:
 				finalNT.add(lptsRecord.NTOrder())
 		if len(finalOT) > 1:
-			print("ERROR_03 Duplicate OTOrder for bibleId", bibleId, finalOT)
+			if "Traditional" in finalOT:
+				finalOT.remove("Traditional")
+			if len(finalOT) > 1:
+				print("ERROR_03 Multiple OTOrder for bibleId", bibleId, finalOT)
 		if len(finalNT) > 1:
-			print("ERROR_04 Duplicate NTOrder for bibleId", bibleId, finalNT)
+			if "Traditional" in finalNT:
+				finalNT.remove("Traditional")
+			if len(finalNT) > 1:
+				print("ERROR_04 Multiple NTOrder for bibleId", bibleId, finalNT)
 		otOrder = list(finalOT)[0] if len(finalOT) > 0 else ""
 		ntOrder = list(finalNT)[0] if len(finalNT) > 0 else ""
 		return otOrder + "," + ntOrder
@@ -139,7 +145,6 @@ class UpdateDBPBiblesTable:
 		for (lptsIndex, lptsRecord) in lptsRecords:
 			script = lptsRecord.Orthography(lptsIndex)
 			if script != None:
-				#result = LookupTables.scriptCode(script)
 				result = self.scriptMap.get(script)
 				if result != None:
 					final.add(result)
@@ -217,13 +222,15 @@ class UpdateDBPBiblesTable:
 				result += "OT"
 			elif hasOTP:
 				result += "OTP"
+			if result == "NTOT":
+				return "C"
 			return result
 
 
 	def extractYear(self, finalSet, value):
 		if value != None:
 			match = self.yearPattern.search(value)
-			if match != None:
+			if match != None and match.group(1)[0] <= '2':
 				finalSet.add(match.group(1))
 
 
@@ -233,7 +240,7 @@ class UpdateDBPBiblesTable:
 		elif len(final) == 1:
 			return list(final)[0]
 		else:
-			print("WARN: bible_id %s has multiple %s values |%s|" % (bibleId, fieldName, "|".join(final)))
+			print("WARN_06: bible_id %s has multiple %s values |%s|" % (bibleId, fieldName, "|".join(final)))
 			return list(final)[0]
 
 
@@ -285,9 +292,10 @@ class UpdateDBPBiblesTable:
 				"Latin (SE Asia)":"Latn", 
 				"Malayalam":"Mlym", 
 				"NA":"Zyyy", 
-				"Oriya":"Orya", 
+				"Oriya":"Orya",
 				"Tamil":"Taml", 
 				"Telugu":"Telu", 
+				"Thaana":"Thaa",
 				"Thai":"Thai", 
 				"Tibetan":"Tibt"}
 			insertRows = []
