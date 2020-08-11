@@ -71,6 +71,7 @@ class UpdateDBPBiblesTable:
 			versification = self.biblesVersification(bibleId, lptsRecords)
 			script = self.biblesScript(bibleId, lptsRecords)
 			numerals = self.biblesNumeralId(script)
+			#numerals = self.biblesNumeralId2(bibleId, lptsRecords)
 			date = self.biblesDate(bibleId, lptsRecords)
 			scope = self.biblesSizeCode(bibleId, lptsRecords)
 
@@ -180,6 +181,24 @@ class UpdateDBPBiblesTable:
 	def biblesNumeralId(self, script):
 		numeralSystemId = self.numeralIdMap.get(script, "") 
 		return numeralSystemId
+
+
+	def biblesNumeralId2(self, bibleId, lptsRecords):
+		final = set()
+		for (lptsIndex, lptsRecord) in lptsRecords:
+			numerals = lptsRecord.Numerals()
+			if numerals != None:
+				numerals = numerals.strip().lower().replace(" ", "-")
+				if numerals == "arabic":
+					numerals = "eastern-arabic"
+				if numerals == "arabic-/-khmer":
+					numerals = "khmer"
+				final.add(numerals)
+		if len(final) == 0:
+			return ""
+		if len(final) > 1:
+			print("ERROR Multiple Numerals for bibleId", bibleId, final)
+		return list(final)[0]
 
 
 	def biblesDate(self, bibleId, lptsRecords):
