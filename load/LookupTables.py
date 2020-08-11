@@ -1,5 +1,8 @@
 # LookupTables
 
+
+## This class is deprecated.  It has been replaced by the table lpts_script_codes
+
 class LookupTables:
 
 	def scriptCode(script):

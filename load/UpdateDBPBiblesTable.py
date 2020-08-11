@@ -14,7 +14,6 @@ from Config import *
 from SQLUtility import *
 from SQLBatchExec import *
 from LPTSExtractReader import *
-from LookupTables import *
 
 
 class UpdateDBPBiblesTable:
@@ -25,6 +24,7 @@ class UpdateDBPBiblesTable:
 		self.db = db
 		self.dbOut = dbOut
 		self.lptsReader = lptsReader
+		self.scriptMap = self.db.selectMap("SELECT lpts_name, script_id FROM lpts_script_codes", ())
 		self.numeralIdMap = self.db.selectMap("SELECT script_id, numeral_system_id FROM alphabet_numeral_systems", ())
 		## These scripts have multiple numeral systems.  So, this hack chooses the dominant one
 		self.numeralIdMap["Arab"] = "eastern-arabic"
@@ -60,14 +60,15 @@ class UpdateDBPBiblesTable:
 		for bibleId in sorted(lptsBibleMap.keys()):
 			lptsRecords = lptsBibleMap[bibleId]
 			languageId = self.biblesLanguageId(bibleId, lptsRecords)
-			versification = None
+			versification = self.biblesVersification(bibleId, lptsRecords)
 			script = self.biblesScript(bibleId, lptsRecords)
 			numerals = self.biblesNumeralId(script)
 			date = self.biblesDate(bibleId, lptsRecords)
 			scope = self.biblesSizeCode(bibleId, lptsRecords)
 
 			if bibleId not in dbpBibleMap.keys():
-				insertRows.append((languageId, versification, numerals, date, scope, script, bibleId))
+				if languageId != None:
+					insertRows.append((languageId, versification, numerals, date, scope, script, bibleId))
 			else:
 				(dbpLanguageId, dbpVersification, dbpNumerals, dbpDate, dbpScope, dbpScript) = dbpBibleMap[bibleId]
 				if (languageId != dbpLanguageId or
@@ -76,12 +77,14 @@ class UpdateDBPBiblesTable:
 					date != dbpDate or
 					scope != dbpScope or
 					script != dbpScript):
-					updateRows.append((languageId, versification, numerals, date, scope, script, bibleId))
+					if languageId != None:
+						updateRows.append((languageId, versification, numerals, date, scope, script, bibleId))
 
-		tableName = "bibles"
+		#tableName = "bibles"
+		tableName = "test_bibles"
 		pkeyNames = ("id",)
 		attrNames = ("language_id", "versification", "numeral_system_id", "date", "scope", "script")
-		ignoredNamed = ("derived", "copyright", "priority", "reviewed", "notes") # here for doc only
+		ignoredNames = ("derived", "copyright", "priority", "reviewed", "notes") # here for doc only
 		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
 		self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
 		self.dbOut.delete(tableName, pkeyNames, deleteRows)
@@ -107,10 +110,28 @@ class UpdateDBPBiblesTable:
 			if result != None:
 				final.add(result)
 		if len(final) == 0:
+			print("FATAL_01 ISO code of bibleId unknown", iso, bibleId)
 			return None
 		if len(final) > 1:
-			print("ERROR_01 Duplicate language_id for bibleId", bibleId, final)
+			print("ERROR_02 Duplicate language_id for bibleId", bibleId, final)
 		return list(final)[0]
+
+
+	def biblesVersification(self, bibleId, lptsRecords):
+		finalOT = set()
+		finalNT = set()
+		for (lptsIndex, lptsRecord) in lptsRecords:
+			if lptsRecord.OTOrder() != None:
+				finalOT.add(lptsRecord.OTOrder())
+			if lptsRecord.NTOrder() != None:
+				finalNT.add(lptsRecord.NTOrder())
+		if len(finalOT) > 1:
+			print("ERROR_03 Duplicate OTOrder for bibleId", bibleId, finalOT)
+		if len(finalNT) > 1:
+			print("ERROR_04 Duplicate NTOrder for bibleId", bibleId, finalNT)
+		otOrder = list(finalOT)[0] if len(finalOT) > 0 else ""
+		ntOrder = list(finalNT)[0] if len(finalNT) > 0 else ""
+		return otOrder + "," + ntOrder
 
 
 	def biblesScript(self, bibleId, lptsRecords):
@@ -118,10 +139,14 @@ class UpdateDBPBiblesTable:
 		for (lptsIndex, lptsRecord) in lptsRecords:
 			script = lptsRecord.Orthography(lptsIndex)
 			if script != None:
-				result = LookupTables.scriptCode(script)
-				final.add(result)
+				#result = LookupTables.scriptCode(script)
+				result = self.scriptMap.get(script)
+				if result != None:
+					final.add(result)
+				else:
+					print("ERROR_05 unknown script_id for name %s in bible_id %s" % (script, bibleId))
 		if len(final) == 0:
-			return None
+			return "" #None ???????
 		elif len(final) == 1:
 			return list(final)[0]
 		else:
@@ -135,7 +160,7 @@ class UpdateDBPBiblesTable:
 
 
 	def biblesNumeralId(self, script):
-		numeralSystemId = self.numeralIdMap.get(script) 
+		numeralSystemId = self.numeralIdMap.get(script, "") 
 		return numeralSystemId
 
 
@@ -185,9 +210,9 @@ class UpdateDBPBiblesTable:
 					hasOT = True
 			result = ""
 			if hasNT:
-				result += "NT"
+				result = "NT"
 			elif hasNTP:
-				result += "NTP"
+				result = "NTP"
 			if hasOT:
 				result += "OT"
 			elif hasOTP:
@@ -202,15 +227,6 @@ class UpdateDBPBiblesTable:
 				finalSet.add(match.group(1))
 
 
-	def biblesCopyright(self, bibleId, lptsRecords):
-		final = set()
-		for (lptsIndex, lptsRecord) in lptsRecords:
-			result = lptsRecord.Copyrightc()
-			if result != None:
-				final.add(result)
-		return self.findResult(bibleId, final, "Copyrightc")
-
-
 	def findResult(self, bibleId, final, fieldName):
 		if len(final) == 0:
 			return None
@@ -221,10 +237,81 @@ class UpdateDBPBiblesTable:
 			return list(final)[0]
 
 
+	## This is a one-time function that creates a table of script codes.
+	@staticmethod
+	def lptsScriptCodesInsert(db):
+		sql = ("CREATE TABLE IF NOT EXISTS lpts_script_codes ("
+			" lpts_name VARCHAR(256) NOT NULL PRIMARY KEY,"
+			" script_id CHAR(4) NOT NULL)")
+			#, FOREIGN KEY (script_id) REFERENCES alphabets(script))")
+		db.execute(sql, ())
+		count = db.selectScalar("SELECT count(*) FROM lpts_script_codes", ())
+		if count == 0:
+			scriptCodes = {
+				"Amharic":"Ethi", 
+				"Arabic":"Arab", 
+				"Armenian":"Armn",
+				"Bengali":"Beng", 
+				"Bengali Script":"Beng",
+				"Berber":"Tfng",
+				"Burmese":"Mymr", 
+				"Canadian Aboriginal Syllabic":"Cans", 
+				"Canadian Aboriginal Syllabics":"Cans", 
+				"Cherokee Sylabary":"Cher", 
+				"Cyrillic":"Cyrl", 
+				"Devanagari":"Deva", 
+				"Devangari":"Deva", 
+				"Ethiopic":"Ethi", 
+				"Ethoiopic":"Ethi", 
+				"Ethopic":"Ethi", 
+				"Ge'ez":"Ethi", 
+				"Greek":"Grek", 
+				"Gujarati":"Gujr", 
+				"Gurmukhi":"Guru", 
+				"Han":"Hani", 
+				"Hangul (Korean)":"Kore", 
+				"Hebrew":"Hebr", 
+				"Japanese":"Jpan", 
+				"Kannada":"Knda", 
+				"Khmer":"Khmr", 
+				"Khmer Script":"Khmr", 
+				"Lao":"Laoo", 
+				"Latin":"Latn", 
+				"Latin (Africa)":"Latn", 
+				"Latin (African)":"Latn", 
+				"Latin (Latin America)":"Latn", 
+				"Latin (Latin American)":"Latn", 
+				"Latin (PNG)":"Latn", 
+				"Latin (SE Asia)":"Latn", 
+				"Malayalam":"Mlym", 
+				"NA":"Zyyy", 
+				"Oriya":"Orya", 
+				"Tamil":"Taml", 
+				"Telugu":"Telu", 
+				"Thai":"Thai", 
+				"Tibetan":"Tibt"}
+			insertRows = []
+			for (key, value) in scriptCodes.items():
+				insertRows.append((key, value))
+			sql = "INSERT lpts_script_codes (lpts_name, script_id) VALUES (%s, %s)"
+			db.executeBatch(sql, insertRows)
+
+
+	## This is a one-time function that creates test_bibles table.
+	@staticmethod
+	def createTestBiblesTable(db):
+		db.execute("DROP TABLE IF EXISTS test_bibles", ())
+		db.execute("CREATE TABLE test_bibles SELECT * FROM bibles", ())
+		db.execute("ALTER TABLE test_bibles MODIFY COLUMN versification VARCHAR(64) NOT NULL", ())
+		db.execute("ALTER TABLE test_bibles MODIFY COLUMN scope VARCHAR(8) NULL", ())
+
+
 ## Unit Test
 if (__name__ == '__main__'):
 	config = Config()
 	db = SQLUtility(config)
+	UpdateDBPBiblesTable.lptsScriptCodesInsert(db)
+	UpdateDBPBiblesTable.createTestBiblesTable(db)
 	dbOut = SQLBatchExec(config)
 	lptsReader = LPTSExtractReader(config)
 	bibles = UpdateDBPBiblesTable(config, db, dbOut, lptsReader)
@@ -233,4 +320,5 @@ if (__name__ == '__main__'):
 
 	dbOut.displayStatements()
 	dbOut.displayCounts()
+	dbOut.execute()
 
