@@ -70,8 +70,8 @@ class UpdateDBPBiblesTable:
 			languageId = self.biblesLanguageId(bibleId, lptsRecords)
 			versification = self.biblesVersification(bibleId, lptsRecords)
 			script = self.biblesScript(bibleId, lptsRecords)
-			numerals = self.biblesNumeralId(script)
-			#numerals = self.biblesNumeralId2(bibleId, lptsRecords)
+			#numerals = self.biblesNumeralId(script)
+			numerals = self.biblesNumeralId2(bibleId, lptsRecords)
 			date = self.biblesDate(bibleId, lptsRecords)
 			scope = self.biblesSizeCode(bibleId, lptsRecords)
 			copyright = self.bibleTextCopyright(bibleId, lptsRecords)
@@ -185,7 +185,6 @@ class UpdateDBPBiblesTable:
 		return numeralSystemId
 
 
-	## deprecated
 	def biblesNumeralId2(self, bibleId, lptsRecords):
 		final = set()
 		for (lptsIndex, lptsRecord) in lptsRecords:
