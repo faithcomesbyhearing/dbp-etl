@@ -53,7 +53,7 @@ class UpdateDBPBiblesTable:
 
 		## select bibles from DBP
 		dbpBibleMap = {}
-		sql = "SELECT id, language_id, versification, numeral_system_id, `date`, scope, script FROM bibles"
+		sql = "SELECT id, language_id, versification, numeral_system_id, `date`, scope, script, copyright FROM bibles"
 		resultSet = self.db.select(sql, ())
 		for row in resultSet:
 			dbpBibleMap[row[0]] = row[1:]
@@ -74,25 +74,27 @@ class UpdateDBPBiblesTable:
 			#numerals = self.biblesNumeralId2(bibleId, lptsRecords)
 			date = self.biblesDate(bibleId, lptsRecords)
 			scope = self.biblesSizeCode(bibleId, lptsRecords)
+			copyright = self.bibleTextCopyright(bibleId, lptsRecords)
 
 			if bibleId not in dbpBibleMap.keys():
 				if languageId != None:
-					insertRows.append((languageId, versification, numerals, date, scope, script, bibleId))
+					insertRows.append((languageId, versification, numerals, date, scope, script, copyright, bibleId))
 			else:
-				(dbpLanguageId, dbpVersification, dbpNumerals, dbpDate, dbpScope, dbpScript) = dbpBibleMap[bibleId]
+				(dbpLanguageId, dbpVersification, dbpNumerals, dbpDate, dbpScope, dbpScript, dbpCopyright) = dbpBibleMap[bibleId]
 				if (languageId != dbpLanguageId or
 					versification != dbpVersification or
 					numerals != dbpNumerals or
 					date != dbpDate or
 					scope != dbpScope or
-					script != dbpScript):
+					script != dbpScript or
+					copyright != dbpCopyright):
 					if languageId != None:
-						updateRows.append((languageId, versification, numerals, date, scope, script, bibleId))
+						updateRows.append((languageId, versification, numerals, date, scope, script, copyright, bibleId))
 
 		#tableName = "bibles"
 		tableName = "test_bibles"
 		pkeyNames = ("id",)
-		attrNames = ("language_id", "versification", "numeral_system_id", "date", "scope", "script")
+		attrNames = ("language_id", "versification", "numeral_system_id", "date", "scope", "script", "copyright")
 		ignoredNames = ("derived", "copyright", "priority", "reviewed", "notes") # here for doc only
 		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
 		self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
@@ -257,6 +259,22 @@ class UpdateDBPBiblesTable:
 			if result == "NTOT":
 				return "C"
 			return result
+
+
+	def bibleTextCopyright(self, bibleId, lptsRecords):
+		final = set()
+		for (lptsIndex, lptsRecord) in lptsRecords:
+			copyright = lptsRecord.Copyrightc()
+			if copyright != None:
+				final.add(copyright)
+		if len(final) == 0:
+			return None
+		elif len(final) > 1:
+			print("WARN_07: Multiple Copyright for bibleId", bibleId, final)
+		copyright = list(final)[0]
+		copyright = copyright[:128]
+		copyright = copyright.replace("\n", "")
+		return copyright.replace("'", "")
 
 
 	def extractYear(self, finalSet, value):
