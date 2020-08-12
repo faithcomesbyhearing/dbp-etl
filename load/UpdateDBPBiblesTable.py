@@ -265,15 +265,18 @@ class UpdateDBPBiblesTable:
 		for (lptsIndex, lptsRecord) in lptsRecords:
 			copyright = lptsRecord.Copyrightc()
 			if copyright != None:
+				if "©" in copyright:
+					pos = copyright.index("©")
+					copyright = copyright[pos:]
+				copyright = copyright.split("\n")[0]
+				copyright = copyright[:128]
+				copyright = copyright.replace("'", "''")
 				final.add(copyright)
 		if len(final) == 0:
 			return None
 		elif len(final) > 1:
 			print("WARN_07: Multiple Copyright for bibleId", bibleId, final)
-		copyright = list(final)[0]
-		copyright = copyright[:128]
-		copyright = copyright.replace("\n", "")
-		return copyright.replace("'", "")
+		return list(final)[0]
 
 
 	def extractYear(self, finalSet, value):
