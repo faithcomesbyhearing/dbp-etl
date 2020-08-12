@@ -154,18 +154,18 @@ class UpdateDBPBiblesTable:
 	def biblesScript(self, bibleId, lptsRecords):
 		final = set()
 		for (lptsIndex, lptsRecord) in lptsRecords:
-			result = self.scriptCodeMap.get(lptsRecord.ISO())
-			if result != None:
-				final.add(result)
+			script = lptsRecord.Orthography(lptsIndex)
+			if script != None:
+				result = self.scriptNameMap.get(script)
+				if result != None:
+					final.add(result)
+				else:
+					print("ERROR_05 unknown script_id for name %s in bible_id %s" % (script, bibleId))
 		if len(final) == 0:
 			for (lptsIndex, lptsRecord) in lptsRecords:
-				script = lptsRecord.Orthography(lptsIndex)
-				if script != None:
-					result = self.scriptNameMap.get(script)
-					if result != None:
-						final.add(result)
-					else:
-						print("ERROR_05 unknown script_id for name %s in bible_id %s" % (script, bibleId))
+				result = self.scriptCodeMap.get(lptsRecord.ISO())
+				if result != None:
+					final.add(result)
 		if len(final) == 0:
 			return "" #None ???????
 		elif len(final) == 1:
@@ -185,6 +185,7 @@ class UpdateDBPBiblesTable:
 		return numeralSystemId
 
 
+	## deprecated
 	def biblesNumeralId2(self, bibleId, lptsRecords):
 		final = set()
 		for (lptsIndex, lptsRecord) in lptsRecords:
@@ -218,13 +219,11 @@ class UpdateDBPBiblesTable:
 		for (lptsIndex, lptsRecord) in lptsRecords:
 			for typeCode in ["audio", "text", "video"]:
 				damIds = lptsRecord.DamIdMap(typeCode, lptsIndex)
-				#print("DAMIDS", damIds)
 				for damId in damIds.keys():
 					sizeCodes = self.sizeCodeMap.get(damId, [])
 					for sizeCode in sizeCodes:
 						if sizeCode != None:
 							final.add(sizeCode)
-		#print("FOUND SIZES", final)
 		if len(final) == 0:
 			return None
 		elif len(final) == 1:
@@ -376,7 +375,7 @@ if (__name__ == '__main__'):
 	bibles.process()
 	db.close()
 
-	dbOut.displayStatements()
+	#dbOut.displayStatements()
 	dbOut.displayCounts()
 	dbOut.execute()
 
