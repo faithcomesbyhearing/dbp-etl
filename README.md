@@ -4,3 +4,9 @@ This program is under development.  It is a new Extract, Transfer, and Load of d
 
 This program is intended to be a drop-in replacement for the current lptsmanager program.
 
+This needs a description of dbp-etl.cfg
+
+This needs a description of programs to run
+
+
+
