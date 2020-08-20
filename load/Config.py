@@ -70,13 +70,15 @@ class Config:
 					"MatchOrganizationNames.py",
 					"LoadOrganizations.py",
 					"SQLBatchExec.py", 
-					"CheckBibleFilesetConnectionsTable.py"}:
+					"CheckBibleFilesetConnectionsTable.py",
+					"S3Utility.py"}:
 
 			self.directory_bucket_list = self._getPath("directory.bucket_list")
 			self.filename_lpts_xml = self._getPath("filename.lpts_xml")
 
 			self.directory_validate	= self._getPath("directory.validate")
-			self.directory_upload	= self._getPath("directory.upload")
+			self.directory_uploading = self._getPath("directory.uploading")
+			self.directory_uploaded = self._getPath("directory.uploaded")
 			self.directory_database	= self._getPath("directory.database")
 			self.directory_complete	= self._getPath("directory.complete")
 
