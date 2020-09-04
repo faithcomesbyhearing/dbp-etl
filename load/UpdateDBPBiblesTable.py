@@ -33,12 +33,7 @@ class UpdateDBPBiblesTable:
 				" having count(*) = 1)")
 		self.scriptCodeMap = self.db.selectMap(sql, ())
 		self.scriptNameMap = self.db.selectMap("SELECT lpts_name, script_id FROM lpts_script_codes", ())
-		self.numeralIdMap = self.db.selectMap("SELECT script_id, numeral_system_id FROM alphabet_numeral_systems", ())
-		## These scripts have multiple numeral systems.  So, this hack chooses the dominant one
-		self.numeralIdMap["Arab"] = "eastern-arabic"
-		self.numeralIdMap["Deva"] = "devanagari"
-		## This one should be added to DBP
-		self.numeralIdMap["Latn"] = "western-arabic"
+		self.numeralIdSet = self.db.selectSet("SELECT id FROM numeral_systems", ())
 		self.sizeCodeMap = self.db.selectMapList("SELECT id, set_size_code FROM bible_filesets", ())	
 		self.yearPattern = re.compile("([0-9]{4})")
 
@@ -68,9 +63,8 @@ class UpdateDBPBiblesTable:
 		for bibleId in sorted(lptsBibleMap.keys()):
 			lptsRecords = lptsBibleMap[bibleId]
 			languageId = self.biblesLanguageId(bibleId, lptsRecords)
-			versification = self.biblesVersification(bibleId, lptsRecords)
+			#versification = self.biblesVersification(bibleId, lptsRecords)
 			script = self.biblesScript(bibleId, lptsRecords)
-			#numerals = self.biblesNumeralId(script)
 			numerals = self.biblesNumeralId2(bibleId, lptsRecords)
 			date = self.biblesDate(bibleId, lptsRecords)
 			scope = self.biblesSizeCode(bibleId, lptsRecords)
@@ -78,18 +72,18 @@ class UpdateDBPBiblesTable:
 
 			if bibleId not in dbpBibleMap.keys():
 				if languageId != None:
-					insertRows.append((languageId, versification, numerals, date, scope, script, copyright, bibleId))
+					insertRows.append((languageId, "protestant", numerals, date, scope, script, copyright, bibleId))
 			else:
 				(dbpLanguageId, dbpVersification, dbpNumerals, dbpDate, dbpScope, dbpScript, dbpCopyright) = dbpBibleMap[bibleId]
 				if (languageId != dbpLanguageId or
-					versification != dbpVersification or
+					#versification != dbpVersification or
 					numerals != dbpNumerals or
 					date != dbpDate or
 					scope != dbpScope or
 					script != dbpScript or
 					copyright != dbpCopyright):
 					if languageId != None:
-						updateRows.append((languageId, versification, numerals, date, scope, script, copyright, bibleId))
+						updateRows.append((languageId, dbpVersification, numerals, date, scope, script, copyright, bibleId))
 
 		#tableName = "bibles"
 		tableName = "test_bibles"
@@ -128,27 +122,27 @@ class UpdateDBPBiblesTable:
 		return list(final)[0]
 
 
-	def biblesVersification(self, bibleId, lptsRecords):
-		finalOT = set()
-		finalNT = set()
-		for (lptsIndex, lptsRecord) in lptsRecords:
-			if lptsRecord.OTOrder() != None:
-				finalOT.add(lptsRecord.OTOrder())
-			if lptsRecord.NTOrder() != None:
-				finalNT.add(lptsRecord.NTOrder())
-		if len(finalOT) > 1:
-			if "Traditional" in finalOT:
-				finalOT.remove("Traditional")
-			if len(finalOT) > 1:
-				print("ERROR_03 Multiple OTOrder for bibleId", bibleId, finalOT)
-		if len(finalNT) > 1:
-			if "Traditional" in finalNT:
-				finalNT.remove("Traditional")
-			if len(finalNT) > 1:
-				print("ERROR_04 Multiple NTOrder for bibleId", bibleId, finalNT)
-		otOrder = list(finalOT)[0] if len(finalOT) > 0 else ""
-		ntOrder = list(finalNT)[0] if len(finalNT) > 0 else ""
-		return otOrder + "," + ntOrder
+#	def biblesVersification(self, bibleId, lptsRecords):
+#		finalOT = set()
+#		finalNT = set()
+#		for (lptsIndex, lptsRecord) in lptsRecords:
+#			if lptsRecord.OTOrder() != None:
+#				finalOT.add(lptsRecord.OTOrder())
+#			if lptsRecord.NTOrder() != None:
+#				finalNT.add(lptsRecord.NTOrder())
+#		if len(finalOT) > 1:
+#			if "Traditional" in finalOT:
+#				finalOT.remove("Traditional")
+#			if len(finalOT) > 1:
+#				print("ERROR_03 Multiple OTOrder for bibleId", bibleId, finalOT)
+#		if len(finalNT) > 1:
+#			if "Traditional" in finalNT:
+#				finalNT.remove("Traditional")
+#			if len(finalNT) > 1:
+#				print("ERROR_04 Multiple NTOrder for bibleId", bibleId, finalNT)
+#		otOrder = list(finalOT)[0] if len(finalOT) > 0 else ""
+#		ntOrder = list(finalNT)[0] if len(finalNT) > 0 else ""
+#		return otOrder + "," + ntOrder
 
 
 	def biblesScript(self, bibleId, lptsRecords):
@@ -167,7 +161,7 @@ class UpdateDBPBiblesTable:
 				if result != None:
 					final.add(result)
 		if len(final) == 0:
-			return "" #None ???????
+			return None
 		elif len(final) == 1:
 			return list(final)[0]
 		else:
@@ -180,26 +174,25 @@ class UpdateDBPBiblesTable:
 				return list(final)[0]
 
 
-	def biblesNumeralId(self, script):
-		numeralSystemId = self.numeralIdMap.get(script, "") 
-		return numeralSystemId
-
-
 	def biblesNumeralId2(self, bibleId, lptsRecords):
 		final = set()
 		for (lptsIndex, lptsRecord) in lptsRecords:
 			numerals = lptsRecord.Numerals()
 			if numerals != None:
 				numerals = numerals.strip().lower().replace(" ", "-")
-				if numerals == "arabic":
+				if numerals == "latin":
+					numerals = "western-arabic"
+				elif numerals == "arabic":
 					numerals = "eastern-arabic"
-				if numerals == "arabic-/-khmer":
+				elif numerals == "arabic-/-khmer":
 					numerals = "khmer"
+				if numerals not in self.numeralIdSet:
+					print("ERROR_03 Unknown Numeral System '%s'" % numerals)
 				final.add(numerals)
 		if len(final) == 0:
-			return ""
+			return None
 		if len(final) > 1:
-			print("ERROR Multiple Numerals for bibleId", bibleId, final)
+			print("ERROR_04 Multiple Numerals for bibleId", bibleId, final)
 		return list(final)[0]
 
 
@@ -273,8 +266,8 @@ class UpdateDBPBiblesTable:
 				final.add(copyright)
 		if len(final) == 0:
 			return None
-		elif len(final) > 1:
-			print("WARN_07: Multiple Copyright for bibleId", bibleId, final)
+		#elif len(final) > 1:
+		#	print("WARN_07: Multiple Copyright for bibleId", bibleId, final)
 		return list(final)[0]
 
 
@@ -361,8 +354,16 @@ class UpdateDBPBiblesTable:
 	def createTestBiblesTable(db):
 		db.execute("DROP TABLE IF EXISTS test_bibles", ())
 		db.execute("CREATE TABLE test_bibles SELECT * FROM bibles", ())
-		db.execute("ALTER TABLE test_bibles MODIFY COLUMN versification VARCHAR(64) NOT NULL", ())
-		db.execute("ALTER TABLE test_bibles MODIFY COLUMN scope VARCHAR(8) NULL", ())
+		db.execute("ALTER TABLE test_bibles MODIFY COLUMN scope VARCHAR(8) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL", ())
+		db.execute("ALTER TABLE test_bibles MODIFY COLUMN script char(4) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL", ())
+		db.execute("ALTER TABLE test_bibles MODIFY COLUMN numeral_system_id VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL", ())
+		db.execute("ALTER TABLE test_bibles add primary key (id)", ())
+		db.execute("ALTER TABLE test_bibles add index (language_id)", ())
+		db.execute("ALTER TABLE test_bibles add index (numeral_system_id)", ())
+		db.execute("ALTER TABLE test_bibles add index (script)", ())
+		db.execute("ALTER TABLE test_bibles add foreign key (script) references alphabets (script)", ())
+		db.execute("ALTER TABLE test_bibles add foreign key (language_id) references languages (id)", ())
+		db.execute("ALTER TABLE test_bibles add foreign key (numeral_system_id) references numeral_systems (id)", ())
 
 
 ## Unit Test
@@ -380,4 +381,6 @@ if (__name__ == '__main__'):
 	#dbOut.displayStatements()
 	dbOut.displayCounts()
 	dbOut.execute()
+
+
 
