@@ -2,9 +2,40 @@
 #
 # This file is a general purpose utility for performing S3 operations
 #
+#
+# Folder: audio
+#	Folder: BibleID
+#		Folder: FilesetID
+#			Files: .mp3 files
+#
+# Folder: Booknames
+#	Folder: BibleID
+#		File: Booknames.xml
+# Folder: Sql
+#	Folder: BibleID
+#		Folder: FilesetID
+#			File: Sql file for plain text
+# Folder: text
+#	Folder: BibleID
+#		Folder: filesetID
+#			Folder: FONTs
+#			Folder: index
+#			Folder: indexlemma
+#			Files: html txt files for formatted text
+#		File: about.html
+#		File: index.html
+#		File: title.json
+#
+# Folder: video
+#	Folder: BibleID
+#		Folder: FilesetID
+#			Files: .mp4 files
+#
+
 import boto3
-import io
-import os 
+#import io
+import os
+import shutil
 from Config import *
 
 class S3Utility:
@@ -55,57 +86,87 @@ class S3Utility:
 	## when the database update is complete, it moves the entire fileset to complete
 
 
-	def promoteFileset(self, filesetPrefix):
-		folders = [self.config.directory_validate,
-				self.directory_uploading,
-				self.directory_uploaded,
-				self.directory_database,
-				self.directory_complete]
-		# Does something keep track of the status's
-		# Or, can I make this event driven, where the program responds to the presence
-		# of files in a directory
-		print("tbd")
-
-
 	def uploadAllFilesets(self, s3Bucket):
 		directory = self.config.directory_uploading
 		lenDirectory = len(directory)
 		for root, dirs, files in os.walk(directory):
 			relDirName = root[lenDirectory:].replace("\\", "/")
-			print(root, relDirName, dirs)
-			#if len(files) > 0:
-			#	print("file0", files[0])
-
 			if relDirName[:5] == "audio" and len(dirs) == 0:
-				print("***** inside audio", root, relDirName)
-				self.uploadFileset(s3Bucket, root, relDirName, files, "audio/mpeg")
+				print("***** inside audio", directory, relDirName, dirs)
+				self.uploadFileset(s3Bucket, directory, relDirName, files, "audio/mpeg")
 			elif relDirName[:4] == "text" and relDirName.count("/") == 1:
-				print("***** inside text")
+				print("***** inside text", directory, relDirName, dirs)
 			else:
-				print("***** ELSEWHERE")
+				print("***** ELSEWHERE", directory, relDirName, dirs)
 
 
 	def uploadFileset(self, s3Bucket, sourceDir, filesetPrefix, files, contentType):
 		errorCount = 0
 		targetDir = self.config.directory_uploaded
+		os.makedirs(targetDir + filesetPrefix, exist_ok=True)
 		for file in files:
-			filename = sourceDir + file
-			s3Key = filesetPrefix + file
-			moveFilename = targetDir + filesetPrefix + file
-			print("upload file", filename, "to key", s3Key)
-			print("move file", filename, "to file", moveFilename)
-			#try:
-				#self.client.upload_file(filename, s3Bucket, s3Key,
-				#ExtraArgs={'ContentType': contentType})
-				#os.mv(filename, moveFilename)
-			#except Exception as err:
-			#	print("ERROR: Upload of %s to %s failed: %s" % (s3Key, s3Bucket, err))
-			#	errorCount += 1
+			if not file.startswith("."):
+				s3Key = filesetPrefix + os.sep + file
+				filename = sourceDir + s3Key
+				#try:
+					#print("upload file", filename, "to key", s3Key)
+					#self.client.upload_file(filename, s3Bucket, s3Key,
+					#ExtraArgs={'ContentType': contentType})
+				#except Exception as err:
+					#print("ERROR: Upload of %s to %s failed: %s" % (s3Key, s3Bucket, err))
+					#errorCount += 1
+				try:
+					moveFilename = targetDir + s3Key
+					print("move file", filename, "to file", moveFilename)
+					os.rename(filename, moveFilename)
+				except Exception as err:
+					print("ERROR: Rename of %s to %s failed: %s" % (filename, moveFilename, err))
+					errorCount += 1
+
 		if errorCount == 0:
-			sourceDir = targetDir + filesetPrefix
-			targetDir = self.config.directory_database + filesetPrefix
-			print("move dir", sourceDir, "to dir", targetDir)
-			#os.mv(sourceDir, targetDir)
+			self.cleanupDirectory(sourceDir, filesetPrefix)
+			self.promoteFileset(targetDir, filesetPrefix)
+
+
+	def cleanupDirectory(self, directory, filesetPrefix):
+		prefix = filesetPrefix
+		print("prefix", prefix)
+		while(len(prefix) > 0):
+			path = directory + prefix
+			print("path", path)
+			files = os.listdir(path)
+			print("files", len(files))
+			if len(files) == 0:
+				#os.remdir(path)
+				print("remdir", path)
+				pos = path.rfind(os.sep)
+				print("pos", pos)
+				if pos >= 0:
+					prefix = prefix[:pos]
+				else:
+					prefix = ""
+			else:
+				prefix = ""
+			print("new prefix")
+
+
+	def promoteFileset(self, sourceDir, filesetPrefix):
+		folders = [self.config.directory_validate,
+				self.config.directory_uploading,
+				self.config.directory_uploaded,
+				self.config.directory_database,
+				self.config.directory_complete]
+		if not sourceDir in folders:
+			print("FATAL: unknown directory %s in promote fileset" % (sourceDir))
+			sys.exit()
+		index = folders.index(sourceDir)
+		nextIndex = index + 1
+		if nextIndex >= len(folders):
+			print("FATAL: cannot promote beyond directory %s" % (sourceDir))
+			sys.exit()
+		targetDir = folders[nextIndex]
+		print("move dir", sourceDir + filesetPrefix, "to dir", targetDir)
+		#shutil.move(sourceDir + filesetPrefix, targetDir)
 
 
 
@@ -115,8 +176,11 @@ class S3Utility:
 if (__name__ == '__main__'):
 	config = Config()
 	s3 = S3Utility(config)
-	s3.uploadAllFilesets("test-dbp")
-	#s3.uploadFileset("dbp-prod", "abcdefg")
+	s3.cleanupDirectory(config.directory_uploading, "audio/ENGESV/ENGESVN1DA")
+
+
+	#s3.uploadAllFilesets("test-dbp")
+	
 
 	#s3.getObject("test-dbp", "audio/ACMAS3/ACMAS3N2DA16/B07___09_1Corinthians__ACMAS3N2DA.mp3")
 	#s3.getObject("test-dbp", "text/DIDWBT/DIDWBT/DIDWBT_73_JHN_3.html")
