@@ -104,50 +104,47 @@ class S3Utility:
 		errorCount = 0
 		targetDir = self.config.directory_uploaded
 		os.makedirs(targetDir + filesetPrefix, exist_ok=True)
-		for file in files:
+		for file in sorted(files):
 			if not file.startswith("."):
 				s3Key = filesetPrefix + os.sep + file
 				filename = sourceDir + s3Key
-				#try:
-					#print("upload file", filename, "to key", s3Key)
-					#self.client.upload_file(filename, s3Bucket, s3Key,
-					#ExtraArgs={'ContentType': contentType})
-				#except Exception as err:
-					#print("ERROR: Upload of %s to %s failed: %s" % (s3Key, s3Bucket, err))
-					#errorCount += 1
 				try:
+					print("upload file", filename, "to key", s3Key)
+					self.client.upload_file(filename, s3Bucket, s3Key,
+					ExtraArgs={'ContentType': contentType})
 					moveFilename = targetDir + s3Key
-					print("move file", filename, "to file", moveFilename)
 					os.rename(filename, moveFilename)
 				except Exception as err:
-					print("ERROR: Rename of %s to %s failed: %s" % (filename, moveFilename, err))
+					print("ERROR: Upload of %s to %s failed: %s" % (s3Key, s3Bucket, err))
+					#print("ERROR: Rename of %s to %s failed: %s" % (filename, moveFilename, err))
 					errorCount += 1
 
 		if errorCount == 0:
 			self.cleanupDirectory(sourceDir, filesetPrefix)
 			self.promoteFileset(targetDir, filesetPrefix)
+			pos = filesetPrefix.rfind(os.sep)
+			if pos >= 0:
+				prefix = filesetPrefix[:pos]
+				self.cleanupDirectory(targetDir, prefix)
 
 
 	def cleanupDirectory(self, directory, filesetPrefix):
 		prefix = filesetPrefix
-		print("prefix", prefix)
 		while(len(prefix) > 0):
 			path = directory + prefix
-			print("path", path)
 			files = os.listdir(path)
-			print("files", len(files))
 			if len(files) == 0:
-				#os.remdir(path)
-				print("remdir", path)
-				pos = path.rfind(os.sep)
-				print("pos", pos)
+				try:
+					os.rmdir(path)
+				except Exception as err:
+					print("ERROR: Directory cleanup of %s failed:" % (prefix, err))
+				pos = prefix.rfind(os.sep)
 				if pos >= 0:
 					prefix = prefix[:pos]
 				else:
 					prefix = ""
 			else:
 				prefix = ""
-			print("new prefix")
 
 
 	def promoteFileset(self, sourceDir, filesetPrefix):
@@ -166,7 +163,10 @@ class S3Utility:
 			sys.exit()
 		targetDir = folders[nextIndex]
 		print("move dir", sourceDir + filesetPrefix, "to dir", targetDir)
-		#shutil.move(sourceDir + filesetPrefix, targetDir)
+		try:
+			shutil.move(sourceDir + filesetPrefix, targetDir + filesetPrefix)
+		except Exception as err:
+			print("ERROR: Directory move of %s failed:" % (filesetPrefix, err))
 
 
 
@@ -176,10 +176,7 @@ class S3Utility:
 if (__name__ == '__main__'):
 	config = Config()
 	s3 = S3Utility(config)
-	s3.cleanupDirectory(config.directory_uploading, "audio/ENGESV/ENGESVN1DA")
-
-
-	#s3.uploadAllFilesets("test-dbp")
+	s3.uploadAllFilesets("test-dbp")
 	
 
 	#s3.getObject("test-dbp", "audio/ACMAS3/ACMAS3N2DA16/B07___09_1Corinthians__ACMAS3N2DA.mp3")
