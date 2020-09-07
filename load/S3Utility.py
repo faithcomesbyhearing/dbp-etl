@@ -109,14 +109,13 @@ class S3Utility:
 				s3Key = filesetPrefix + os.sep + file
 				filename = sourceDir + s3Key
 				try:
-					print("upload file", filename, "to key", s3Key)
+					print("upload: %s" % (s3Key))
 					self.client.upload_file(filename, s3Bucket, s3Key,
 					ExtraArgs={'ContentType': contentType})
 					moveFilename = targetDir + s3Key
 					os.rename(filename, moveFilename)
 				except Exception as err:
 					print("ERROR: Upload of %s to %s failed: %s" % (s3Key, s3Bucket, err))
-					#print("ERROR: Rename of %s to %s failed: %s" % (filename, moveFilename, err))
 					errorCount += 1
 
 		if errorCount == 0:
@@ -162,7 +161,7 @@ class S3Utility:
 			print("FATAL: cannot promote beyond directory %s" % (sourceDir))
 			sys.exit()
 		targetDir = folders[nextIndex]
-		print("move dir", sourceDir + filesetPrefix, "to dir", targetDir)
+		#print("move dir", sourceDir + filesetPrefix, "to dir", targetDir)
 		try:
 			shutil.move(sourceDir + filesetPrefix, targetDir + filesetPrefix)
 		except Exception as err:
