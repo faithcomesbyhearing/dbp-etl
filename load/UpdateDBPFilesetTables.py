@@ -1,4 +1,4 @@
-# UpdateDBPDatabase.py
+# UpdateDBPBiblesTable.py
 #
 # This program inserts and replaces records in the DBP database
 # 1. bible_filesets
@@ -22,7 +22,7 @@ from LPTSExtractReader import *
 #from LookupTables import *
 
 
-class UpdateDBPDatabase:
+class UpdateDBPBiblesTable:
 
 	def getHashId(bucket, filesetId, setTypeCode):
 		md5 = hashlib.md5()
@@ -293,7 +293,7 @@ if (__name__ == '__main__'):
 	db = SQLUtility(config)
 	dbOut = SQLBatchExec(config)
 	lptsReader = LPTSExtractReader(config)
-	update = UpdateDBPDatabase(config, db, dbOut)
+	update = UpdateDBPBiblesTable(config, db, dbOut)
 	update.process(lptsReader)
 
 	dbOut.displayCounts()
