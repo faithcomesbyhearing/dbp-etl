@@ -39,6 +39,13 @@ class DBPLoadController:
 		self.s3Utility.uploadAllFilesets(config.s3_bucket)
 
 
+	def updateDatabase(self):
+		db = SQLUtility(self.config)
+		dbOut = SQLBatchExec(self.config)
+		update = UpdateDBPDatabase(self.config, db, dbOut)
+		update.process()
+
+
 
 
 
@@ -48,6 +55,7 @@ if (__name__ == '__main__'):
 	ctrl = DBPLoadController(config, lptsReader)
 	ctrl.validate()
 	ctrl.upload()
+	ctrl.updateDatabase()
 
 
 

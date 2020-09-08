@@ -19,15 +19,23 @@ class SQLBatchExec:
 
 
 	def insert(self, tableName, pkeyNames, attrNames, values):
+		self.insertReplace("INSERT", tableName, pkeyNames, attrNames, values)
+
+
+	def replace(self, tableName, pkeyNames, attrNames, values):
+		self.insertReplace("REPLACE", tableName, pkeyNames, attrNames, values)		
+
+
+	def insertReplace(self, operator, tableName, pkeyNames, attrNames, values):
 		if len(values) > 0:
 			names = attrNames + pkeyNames
 			valsubs = ["'%s'"] * len(names)
-			sql = "INSERT INTO %s (%s) VALUES (%s);" % (tableName, ", ".join(names), ", ".join(valsubs))
+			sql = "%s INTO %s (%s) VALUES (%s);" % (operator, tableName, ", ".join(names), ", ".join(valsubs))
 			for value in values:
 				stmt = sql % value
 				stmt = stmt.replace("'None'", "NULL")
 				self.statements.append(stmt)
-			self.counts.append(("insert", tableName, len(values)))
+			self.counts.append((operator.lower(), tableName, len(values)))
 
 
 	def update(self, tableName, pkeyNames, attrNames, values):
