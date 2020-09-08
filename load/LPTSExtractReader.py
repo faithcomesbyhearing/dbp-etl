@@ -178,7 +178,7 @@ class LPTSRecord:
 		"ND_CAudioDAMID1": 		"ND_CAudioDAMStatus",
 		"ND_NTAudioDamID1": 	"ND_NTAudioDamIDStatus1",
 		"ND_OTAudioDamID1": 	"ND_OTAudioDamIDStatus1",
-		"Reg_CAudioDAMID1":		"Reg_CAudioDAMStatus1",
+		"Reg_CAudioDAMID1":		"Reg_CAudioDAMIDStatus1",
 		"Reg_NTAudioDamID1": 	"Reg_NTAudioDamIDStatus1",
 		"Reg_OTAudioDamID1": 	"Reg_OTAudioDamIDStatus1",
 		"CAudioDamStockNo":		"CAudioDamStatus", # added 4/17/2020
