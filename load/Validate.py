@@ -30,10 +30,10 @@ class Validate:
 		return results
 			
 
-	def __init__(self, args):
-		self.config = Config()
-		self.runType = args["run"]
-		self.lptsReader = LPTSExtractReader(self.config)
+	def __init__(self, runType, config, lptsReader):
+		self.config = config
+		self.runType = runType
+		self.lptsReader = lptsReader
 		self.errorMessages = []
 		self.invalidFileExt = []
 		self.missingBibleIds = []
@@ -204,7 +204,9 @@ class Validate:
 
 if (__name__ == '__main__'):
 	args = Validate.parseCommandLine()
-	validate = Validate(args)
+	config = Config()
+	lptsReader = LPTSExtractReader(config)
+	validate = Validate(args["run"], config, lptsReader)
 	validate.process()
 	validate.reportErrors()
 
