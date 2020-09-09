@@ -13,6 +13,9 @@ from Config import *
 from LPTSExtractReader import *
 from Validate import *
 from S3Utility import *
+from SQLBatchExec import *
+from UpdateDBPFilesetTables import *
+
 
 class DBPLoadController:
 
@@ -23,6 +26,7 @@ class DBPLoadController:
 
 
 	def validate(self):
+		print("********** VALIDATING **********")
 		validate = Validate("files", self.config, self.lptsReader)
 		validate.process()
 		validate.reportErrors()
@@ -36,17 +40,22 @@ class DBPLoadController:
 
 
 	def upload(self):
+		print("********** UPLOADING **********")
 		self.s3Utility.uploadAllFilesets(config.s3_bucket)
 
 
 	def updateDatabase(self):
+		print("********** UPDATING **********")
 		db = SQLUtility(self.config)
 		dbOut = SQLBatchExec(self.config)
-		update = UpdateDBPDatabase(self.config, db, dbOut)
-		update.process()
+		update = UpdateDBPFilesetTables(self.config, db, dbOut)
+		filesetList = update.process()
 
-
-
+		dbOut.displayStatements()
+		dbOut.displayCounts()
+		dbOut.execute()
+		for filesetPrefix in filesetList:
+			self.s3Utility.promoteFileset(self.config.directory_database, filesetPrefix)
 
 
 if (__name__ == '__main__'):
@@ -56,6 +65,7 @@ if (__name__ == '__main__'):
 	ctrl.validate()
 	ctrl.upload()
 	ctrl.updateDatabase()
+	print("********** COMPLETE **********")
 
 
 

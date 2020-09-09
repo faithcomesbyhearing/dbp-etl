@@ -21,7 +21,7 @@ from SQLUtility import *
 from SQLBatchExec import *
 
 
-class UpdateDBPBiblesTable:
+class UpdateDBPFilesetTables:
 
 	def getHashId(bucket, filesetId, setTypeCode):
 		md5 = hashlib.md5()
@@ -102,6 +102,7 @@ class UpdateDBPBiblesTable:
 
 
 	def process(self):
+		results = []
 		dirname = self.config.directory_database
 		typeCodeList = os.listdir(dirname)
 		for typeCode in typeCodeList:
@@ -116,12 +117,14 @@ class UpdateDBPBiblesTable:
 						self.insertFilesetConnections(hashId, bibleId)
 						filesetDir = filesetIdPath + os.sep + filesetId
 						self.insertBibleFiles(hashId, csvFilename, filesetDir)
+						results.append("%s/%s/%s" % (typeCode, bibleId, filesetId))
 			elif typeCode == "text":
 				print("TBD text update")
 				sys.exit()
 			elif typeCode == "video":
 				print("TBD video update")
 				sys.exit()
+		return results
 
 
 	def getSetSizeCodeByFile(self, csvFilename):
@@ -132,7 +135,7 @@ class UpdateDBPBiblesTable:
 				bookIdSet.add(row["book_id"])
 		otBooks = bookIdSet.intersection(self.OT)
 		ntBooks = bookIdSet.intersection(self.NT)
-		return UpdateDBPBiblesTable.getSetSizeCode(ntBooks, otBooks)
+		return UpdateDBPFilesetTables.getSetSizeCode(ntBooks, otBooks)
 
 
 #	def deleteBibleFiles(self, hashId):
@@ -158,9 +161,9 @@ class UpdateDBPBiblesTable:
 
 	def insertBibleFileset(self, typeCode, filesetId, csvFilename):
 		bucket = self.config.s3_vid_bucket if typeCode == "video" else self.config.s3_bucket
-		setTypeCode = UpdateDBPBiblesTable.getSetTypeCode(typeCode, filesetId)
+		setTypeCode = UpdateDBPFilesetTables.getSetTypeCode(typeCode, filesetId)
 		setSizeCode = self.getSetSizeCodeByFile(csvFilename)
-		hashId = UpdateDBPBiblesTable.getHashId(bucket, filesetId, setTypeCode)
+		hashId = UpdateDBPFilesetTables.getHashId(bucket, filesetId, setTypeCode)
 		insertRows = []
 		insertRows.append((filesetId, bucket, setTypeCode, setSizeCode, hashId))
 		tableName = "bible_filesets"
@@ -234,11 +237,11 @@ if (__name__ == '__main__'):
 	config = Config()
 	db = SQLUtility(config)
 	dbOut = SQLBatchExec(config)
-	update = UpdateDBPBiblesTable(config, db, dbOut)
+	update = UpdateDBPFilesetTables(config, db, dbOut)
 	update.process()
 
+	#dbOut.displayStatements()
 	dbOut.displayCounts()
-	dbOut.displayStatements()
-	#dbOut.execute()
+	dbOut.execute()
 
 

@@ -41,12 +41,8 @@ class S3Utility:
 
 	def __init__(self, config):
 		self.config = config
-		#session = boto3.Session(profile_name='Gary')
 		session = boto3.Session(profile_name=config.s3_aws_profile)
 		self.client = session.client('s3')
-
-
-
 
 
 	def downloadFile(self, s3Bucket, s3Key, filename):
@@ -72,7 +68,7 @@ class S3Utility:
 		for root, dirs, files in os.walk(directory):
 			relDirName = root[lenDirectory:].replace("\\", "/")
 			if relDirName[:5] == "audio" and len(dirs) == 0:
-				print("***** inside audio", directory, relDirName, dirs)
+				#print("***** inside audio", directory, relDirName, dirs)
 				self.uploadFileset(s3Bucket, directory, relDirName, files, "audio/mpeg")
 			#elif relDirName[:4] == "text" and relDirName.count("/") == 1:
 			#	print("***** inside text", directory, relDirName, dirs)
@@ -99,31 +95,8 @@ class S3Utility:
 					errorCount += 1
 
 		if errorCount == 0:
-			self.cleanupDirectory(sourceDir, filesetPrefix)
+			self._cleanupDirectory(sourceDir, filesetPrefix)
 			self.promoteFileset(targetDir, filesetPrefix)
-			pos = filesetPrefix.rfind(os.sep)
-			if pos >= 0:
-				prefix = filesetPrefix[:pos]
-				self.cleanupDirectory(targetDir, prefix)
-
-
-	def cleanupDirectory(self, directory, filesetPrefix):
-		prefix = filesetPrefix
-		while(len(prefix) > 0):
-			path = directory + prefix
-			files = os.listdir(path)
-			if len(files) == 0:
-				try:
-					os.rmdir(path)
-				except Exception as err:
-					print("ERROR: Directory cleanup of %s failed:" % (prefix, err))
-				pos = prefix.rfind(os.sep)
-				if pos >= 0:
-					prefix = prefix[:pos]
-				else:
-					prefix = ""
-			else:
-				prefix = ""
 
 
 	def promoteFileset(self, sourceDir, filesetPrefix):
@@ -146,6 +119,37 @@ class S3Utility:
 			shutil.move(sourceDir + filesetPrefix, targetDir + filesetPrefix)
 		except Exception as err:
 			print("ERROR: Directory move of %s failed:" % (filesetPrefix, err))
+		self._cleanupDirectory(sourceDir, filesetPrefix)
+
+
+#	def _cleanupFilesetDirectory(self, directory, filesetPrefix):
+#			print("cleanup fileset directory", directory, filesetPrefix)
+#			self._cleanupDirectory(directory, filesetPrefix)
+#			pos = filesetPrefix.rfind(os.sep)
+#			if pos >= 0:
+#				prefix = filesetPrefix[:pos]
+#				self._cleanupDirectory(directory, prefix)
+
+
+	def _cleanupDirectory(self, directory, filesetPrefix):
+		print("cleanup directory %s/%s" % (directory, filesetPrefix))
+		prefix = filesetPrefix
+		while(len(prefix) > 0):
+			path = directory + prefix
+			if os.path.exists(path):
+				files = os.listdir(path)
+				if len(files) == 0:
+					try:
+						os.rmdir(path)
+					except Exception as err:
+						print("ERROR: Directory cleanup of %s failed:" % (prefix, err))
+					pos = prefix.rfind(os.sep)
+					prefix = prefix[:pos] if pos > 0 else ""
+				else:
+					prefix = ""
+			else:
+				pos = prefix.rfind(os.sep)
+				prefix = prefix[:pos] if pos > 0 else ""
 
 
 if (__name__ == '__main__'):
