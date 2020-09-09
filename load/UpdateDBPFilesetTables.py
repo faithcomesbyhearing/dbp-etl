@@ -14,12 +14,11 @@ import io
 import sys
 import hashlib
 import csv
-import re
+import math
+import subprocess
 from Config import *
 from SQLUtility import *
 from SQLBatchExec import *
-from LPTSExtractReader import *
-#from LookupTables import *
 
 
 class UpdateDBPBiblesTable:
@@ -99,52 +98,14 @@ class UpdateDBPBiblesTable:
 		self.rejectStatements = []
 		self.OT = self.db.selectSet("SELECT id FROM books WHERE book_testament = 'OT'", ())
 		self.NT = self.db.selectSet("SELECT id FROM books WHERE book_testament = 'NT'", ())
-		self.numeralIdMap = self.db.selectMap("SELECT script_id, numeral_system_id FROM alphabet_numeral_systems", ())
+		self.durationRegex = re.compile(r"duration=([0-9\.]+)")
 
 
-
-	def processOld(self, lptsReader):
-		print("process")
-		dirname = self.config.directory_accepted
-		files = os.listdir(dirname)
-		for file in sorted(files):
-			if file.endswith("csv"):
-				(typeCode, bibleId, filesetId) = file.split(".")[0].split("_")
-				bucket = self.config.s3_vid_bucket if typeCode == "video" else self.config.s3_bucket
-				print(bucket, typeCode, bibleId, filesetId)
-				(lptsRecord, lptsIndex, damIdStatus) = lptsReader.getLPTSRecord(typeCode, bibleId, filesetId)
-				print("LPTS", lptsRecord.Reg_StockNumber(), lptsIndex, damIdStatus)
-				setTypeCode = UpdateDBPDatabase.getSetTypeCode(typeCode, filesetId)
-				hashId = UpdateDBPDatabase.getHashId(bucket, filesetId, setTypeCode)
-				csvFilename = dirname + os.sep + file
-				setSizeCode = self.getSetSizeCodeByFile(csvFilename)
-				self.statements = []
-				#self.rejectStatements = []
-				self.deleteBibleFiles(hashId)
-				self.insertBibleFileset(bucket, filesetId, hashId, setTypeCode, setSizeCode)
-				self.insertBibleFiles(hashId, csvFilename)
-				self.insertBibles(bibleId, lptsRecord, lptsIndex, setSizeCode)
-				self.insertBibleFilesetConnections(bibleId, hashId)
-				self.insertBibleTranslations()
-				self.insertBibleEquivalents() #last updated 2018-11-21 17:07:08 
-				self.insertBibleFileTitles() #last updated 2018-03-05 03:32:33
-				self.insertBibleLinks() #last updated 2019-04-26 15:48:17
-				self.insertBibleOrganizations() # last updated 2019-04-30 10:49:05
-				self.db.displayTransaction(self.statements)
-				#if len(self.rejectStatements) == 0:
-				self.db.executeTransaction(self.statements)
-
-
-		if len(self.rejectStatements) > 0:
-			print("\n\nREJECT\n\n")
-			self.db.displayTransaction(self.rejectStatements)
-
-
-	def process(self, lptsReader):
+	def process(self):
 		dirname = self.config.directory_database
 		typeCodeList = os.listdir(dirname)
 		for typeCode in typeCodeList:
-			bibleIdPath = dirname + os.sep + typeCode
+			bibleIdPath = dirname + typeCode
 			if typeCode == "audio":
 				for bibleId in os.listdir(bibleIdPath):
 					filesetIdPath = bibleIdPath + os.sep + bibleId
@@ -153,16 +114,14 @@ class UpdateDBPBiblesTable:
 						csvFilename = "%s/%s_%s_%s.csv" % (self.config.directory_accepted, typeCode, bibleId, filesetId)
 						hashId = self.insertBibleFileset(typeCode, filesetId, csvFilename)
 						self.insertFilesetConnections(hashId, bibleId)
-						filePath = filesetIdPath + os.sep + filesetId
-						for filename in os.listdir(filePath):
-							print(filename)
-						# I should read the csv file, not the filelist, because it contains
-						# the required information
+						filesetDir = filesetIdPath + os.sep + filesetId
+						self.insertBibleFiles(hashId, csvFilename, filesetDir)
 			elif typeCode == "text":
 				print("TBD text update")
+				sys.exit()
 			elif typeCode == "video":
 				print("TBD video update")
-
+				sys.exit()
 
 
 	def getSetSizeCodeByFile(self, csvFilename):
@@ -173,7 +132,7 @@ class UpdateDBPBiblesTable:
 				bookIdSet.add(row["book_id"])
 		otBooks = bookIdSet.intersection(self.OT)
 		ntBooks = bookIdSet.intersection(self.NT)
-		return UpdateDBPDatabase.getSetSizeCode(ntBooks, otBooks)
+		return UpdateDBPBiblesTable.getSetSizeCode(ntBooks, otBooks)
 
 
 #	def deleteBibleFiles(self, hashId):
@@ -199,9 +158,9 @@ class UpdateDBPBiblesTable:
 
 	def insertBibleFileset(self, typeCode, filesetId, csvFilename):
 		bucket = self.config.s3_vid_bucket if typeCode == "video" else self.config.s3_bucket
-		setTypeCode = UpdateDBPDatabase.getSetTypeCode(typeCode, filesetId)
+		setTypeCode = UpdateDBPBiblesTable.getSetTypeCode(typeCode, filesetId)
 		setSizeCode = self.getSetSizeCodeByFile(csvFilename)
-		hashId = UpdateDBPDatabase.getHashId(bucket, filesetId, setTypeCode)
+		hashId = UpdateDBPBiblesTable.getHashId(bucket, filesetId, setTypeCode)
 		insertRows = []
 		insertRows.append((filesetId, bucket, setTypeCode, setSizeCode, hashId))
 		tableName = "bible_filesets"
@@ -220,57 +179,28 @@ class UpdateDBPBiblesTable:
 		self.dbOut.replace(tableName, pkeyNames, attrNames, insertRows)
 
 
-	def insertBibleFiles(self, hashId, csvFilename):
+	def insertBibleFiles(self, hashId, csvFilename, filesetDir):
 		insertRows = []
 		with open(csvFilename, newline='\n') as csvfile:
 			reader = csv.DictReader(csvfile)
 			for row in reader:
-				#sequence = row["sequence"]
 				bookId = row["book_id"]
-				chapterStart = row["chapter_start"]
-				chapterEnd = row["chapter_end"]
-				verseStart = row["verse_start"]
-				verseEnd = row["verse_end"]
+				if row["chapter_start"] == "end":
+					(chapterStart, verseStart, verseEnd) = self.convertChapterStart(bookId)
+				else:
+					chapterStart = row["chapter_start"]
+					verseStart = row["verse_start"] if row["verse_start"] != "" else "1"
+					verseEnd = row["verse_end"] if row["verse_end"] != "" else None
+				chapterEnd = row["chapter_end"] if row["chapter_end"] != "" else None
 				fileName = row["file_name"]
 				fileSize = row["file_size"]
-				duration = 0
-				if chapterStart == "end":
-					(chapterStart, verseStart, verseEnd) = self.convertChapterStart(bookId)
+				duration = self.getDuration(filesetDir + os.sep + fileName)
 				insertRows.append((chapterEnd, verseEnd, fileName, fileSize, duration,
-					hashId, bookId, chapterStart, chapterEnd))
+					hashId, bookId, chapterStart, verseStart))
 		tableName = "bible_files"
 		pkeyNames = ("hash_id", "book_id", "chapter_start", "verse_start")
 		attrNames = ("chapter_end", "verse_end", "file_name", "file_size", "duration")
 		self.dbOut.replace(tableName, pkeyNames, attrNames, insertRows)
-
-#		isVideoFile = csvFilename.split("_")[1] == "video"
-#		## skipped duration
-#		sql = ("INSERT INTO bible_files(hash_id, book_id, chapter_start, chapter_end,"
-#			" verse_start, verse_end, file_name, file_size) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)")
-#		values = []
-#		with open(csvFilename, newline='\n') as csvfile:
-#			reader = csv.DictReader(csvfile)
-#			for row in reader:
-#				bookId = row["book_id"] if row["book_id"] != "" else None
-#				if row["chapter_start"] == "end":
-#					(chapterStart, verseStart, verseEnd) = self.convertChapterStart(bookId)
-#				else:
-#					chapterStart = row["chapter_start"] if row["chapter_start"] != "" else None
-#					verseStart = row["verse_start"] if row["verse_start"] != "" else None
-#					verseEnd = row["verse_end"] if row["verse_end"] != "" else None
-#				chapterEnd = row["chapter_end"] if row["chapter_end"] != "" else None
-#				if isVideoFile:
-#					filename = row["file_name"].split(".")[0] + "_stream.m3u8"
-#					fullname = "%s/%s/%s/%s" % (row["type_code"], row["bible_id"], row["fileset_id"], filename)
-#					if fullname in self.videoStreamSet:
-#						value = (hashId, bookId, chapterStart, chapterEnd, verseStart, verseEnd, filename, row["file_size"])
-#						values.append(value)
-#					else:
-#						print("ERROR: %s is missing" % (fullname))
-#				else:
-#					value = (hashId, bookId, chapterStart, chapterEnd, verseStart, verseEnd, row["file_name"], row["file_size"])
-#					values.append(value)
-#			self.statements.append((sql, values))
 
 
 	def convertChapterStart(self, bookId):
@@ -284,7 +214,19 @@ class UpdateDBPBiblesTable:
 			return ("21", "26", "26")
 		else:
 			print("ERROR: Unexpected book %s in UpdateDBPDatabase." % (bookId))
-			sys.exit()	
+			sys.exit()
+
+
+	def getDuration(self, file):
+		cmd = 'ffprobe -select_streams a -v error -show_format ' + file + ' | grep duration'
+		response = subprocess.run(cmd, shell=True, capture_output=True)
+		result = self.durationRegex.search(str(response))
+		if result != None:
+			dur = result.group(1)
+			#print("duration", dur)
+			return int(math.ceil(float(dur)))
+		else:
+			raise Exception("ffprobe for duration failed for %s" % (file))
 
 
 ## Unit Test
@@ -292,9 +234,8 @@ if (__name__ == '__main__'):
 	config = Config()
 	db = SQLUtility(config)
 	dbOut = SQLBatchExec(config)
-	lptsReader = LPTSExtractReader(config)
 	update = UpdateDBPBiblesTable(config, db, dbOut)
-	update.process(lptsReader)
+	update.process()
 
 	dbOut.displayCounts()
 	dbOut.displayStatements()

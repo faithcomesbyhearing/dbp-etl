@@ -71,7 +71,8 @@ class Config:
 					"LoadOrganizations.py",
 					"SQLBatchExec.py", 
 					"CheckBibleFilesetConnectionsTable.py",
-					"S3Utility.py", 
+					"S3Utility.py",
+					"UpdateDBPFilesetTables.py", 
 					"DBPLoadController.py"}:
 
 			self.directory_bucket_list = self._getPath("directory.bucket_list")
