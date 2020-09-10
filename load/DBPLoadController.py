@@ -19,15 +19,16 @@ from UpdateDBPFilesetTables import *
 
 class DBPLoadController:
 
-	def __init__(self, config, lptsReader):
+	def __init__(self, config, db, lptsReader):
 		self.config = config
+		self.db = db
 		self.lptsReader = lptsReader
 		self.s3Utility = S3Utility(config)
 
 
 	def validate(self):
 		print("********** VALIDATING **********")
-		validate = Validate("files", self.config, self.lptsReader)
+		validate = Validate("files", self.config, self.db, self.lptsReader)
 		validate.process()
 		validate.reportErrors()
 
@@ -46,9 +47,8 @@ class DBPLoadController:
 
 	def updateDatabase(self):
 		print("********** UPDATING **********")
-		db = SQLUtility(self.config)
 		dbOut = SQLBatchExec(self.config)
-		update = UpdateDBPFilesetTables(self.config, db, dbOut)
+		update = UpdateDBPFilesetTables(self.config, self.db, dbOut)
 		filesetList = update.process()
 
 		dbOut.displayStatements()
@@ -60,8 +60,9 @@ class DBPLoadController:
 
 if (__name__ == '__main__'):
 	config = Config()
+	db = SQLUtility(config)
 	lptsReader = LPTSExtractReader(config)
-	ctrl = DBPLoadController(config, lptsReader)
+	ctrl = DBPLoadController(config, db, lptsReader)
 	ctrl.validate()
 	ctrl.upload()
 	ctrl.updateDatabase()

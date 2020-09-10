@@ -5,6 +5,7 @@ import sys
 import zipfile
 from datetime import datetime
 from Config import *
+from SQLUtility import *
 from InputReader import *
 from LPTSExtractReader import *
 from FilenameParser import *
@@ -30,8 +31,9 @@ class Validate:
 		return results
 			
 
-	def __init__(self, runType, config, lptsReader):
+	def __init__(self, runType, config, db, lptsReader):
 		self.config = config
+		self.db = db
 		self.runType = runType
 		self.lptsReader = lptsReader
 		self.errorMessages = []
@@ -40,7 +42,11 @@ class Validate:
 		self.missingFilesetIds = []
 		self.requiredFields = []
 		self.suggestedFields = []
+		self.invalidValues = []
 		self.damIdStatus = []
+		self.scriptNameSet = db.selectSet("SELECT lpts_name FROM lpts_script_codes", ())
+		self.numeralsSet = db.selectSet("SELECT id FROM numeral_systems", ())
+
 
 
 	def process(self):
@@ -172,7 +178,14 @@ class Validate:
 							if lptsRecord.Orthography(index) == None:
 								fieldName = "_x003%d_Orthography" % (index)
 								self.requiredFields.append((typeCode, bibleId, filesetId, stockNo, fieldName))
+						
+						scriptName = lptsRecord.Orthography(index)
+						if scriptName != None and scriptName not in self.scriptNameSet:
+							self.invalidValues.append((typeCode, bibleId, filesetId, stockNo, "_x003n_Orthography", scriptName))
 
+						numeralsName = lptsRecord.Numerals()
+						if numeralsName != None and numeralsName not in self.numeralsSet:
+							self.invalidValues.append((typeCode, bibleId, filesetId, stockNo, "Numerals", numeralsName))
 
 	def reportErrors(self):
 		for (typeCode, bibleId, filesetId, filename) in self.invalidFileExt:
@@ -185,6 +198,8 @@ class Validate:
 			self.errorMessages.append("%s/%s/%s LPTS %s field %s is required.\tEROR" % (typeCode, bibleId, filesetId, stockNo, fieldName))
 		for (typeCode, bibleId, filesetId, stockNo, fieldName) in self.suggestedFields:
 			self.errorMessages.append("%s/%s/%s LPTS %s field %s is missing.\tWARN" % (typeCode, bibleId, filesetId, stockNo, fieldName))
+		for (typeCode, bibleId, filesetId, stockNo, fieldName, fieldValue) in self.invalidValues:
+			self.errorMessages.append("%s/%s/%s %s has invalid value '%s'.\tEROR" % (typeCode, bibleId, filesetId, fieldName, fieldValue))
 		#for (typeCode, bibleId, filesetId, stockNo, status) in self.damIdStatus:
 		#	self.errorMessages.append("%s/%s/%s LPTS %s has status = %s.\tWARN" % (typeCode, bibleId, filesetId, stockNo, status))
 
@@ -205,8 +220,9 @@ class Validate:
 if (__name__ == '__main__'):
 	args = Validate.parseCommandLine()
 	config = Config()
+	db = SQLUtility(config)
 	lptsReader = LPTSExtractReader(config)
-	validate = Validate(args["run"], config, lptsReader)
+	validate = Validate(args["run"], config, db, lptsReader)
 	validate.process()
 	validate.reportErrors()
 
