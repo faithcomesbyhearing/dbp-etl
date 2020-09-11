@@ -126,7 +126,6 @@ class Filename:
 		self.verseStartNum = 1
 
 
-
 	def setChapterEnd(self, chapter, chapterMap):
 		self.chapterEnd = chapter
 		if not chapter.isdigit():
@@ -154,8 +153,8 @@ class Filename:
 		if self.verseStart.isdigit() and self.verseEnd.isdigit():
 			startInt = int(self.verseStart)
 			endInt = int(self.verseEnd)
-			if startInt >= endInt:
-				self.errors.append("verse out of sequence start: %s  end: %s" % (self.verseStart, self.verseEnd))
+			#if startInt >= endInt:
+			#	self.errors.append("verse out of sequence start: %s  end: %s" % (self.verseStart, self.verseEnd))
 		self.verseEndNum = int(self.verseEnd)
 
 
@@ -249,6 +248,21 @@ class FilenameRegex:
 				file.setChapter(match.group(2), parser.maxChapterMap)
 				file.setType(match.group(3))
 
+			elif self.name == "audio99":
+				file.setDamid(match.group(1))
+				file.setBookSeq(match.group(2))
+				file.setBookId(match.group(3), parser.chapterMap)
+				file.setChapter(match.group(4), parser.maxChapterMap)
+				file.setType(match.group(5))
+			elif self.name == "audio100":
+				file.setDamid(match.group(1))
+				file.setBookSeq(match.group(2))
+				file.setBookId(match.group(3), parser.chapterMap)
+				file.setChapter(match.group(4), parser.maxChapterMap)
+				file.setVerseStart(match.group(5))
+				file.setChapterEnd(match.group(6), parser.maxChapterMap)
+				file.setVerseEnd(match.group(7))				
+				file.setType(match.group(8))
 			elif self.name == "audio101" or self.name == "audio102":
 				file.setBookBySeq(match.group(1), parser.otOrder, parser.ntOrder, parser.chapterMap)
 				file.setChapter(match.group(2), parser.maxChapterMap)
@@ -373,6 +387,10 @@ class FilenameParser:
 			FilenameRegex("text2", r"([A-Z][A-Z0-9])([0-9]{0,3}).(html)"),
 		)
 		self.audioTemplates = (
+			## New audio format
+			## {filesetid}_{A/B}{ordering}_{USFM}_{chap_start}[_{verse_start}-{chapter_end}_{verse_end}].mp3
+			FilenameRegex("audio99", r"([A-Z0-9]+)_([AB][0-9]+)_([A-Z]+)_([0-9]+).(mp3)"),
+			FilenameRegex("audio100", r"([A-Z0-9]+)_([AB][0-9]+)_([A-Z]+)_([0-9]+)_([0-9]+)-([0-9]+)_([0-9]+).(mp3)"),
 			## using three did not pick up more than 2, but I think it will.
 			## {bookseq}___{chap}_{bookname}____{damid}.mp3   B01___01_Matthew_____ENGGIDN2DA.mp3
 			FilenameRegex("audio101", r"([AB][0-9]{2})_+([0-9]{2,3})_+([1-4]?[A-Za-z\-]+)_+([A-Z0-9]+).(mp3)"),
