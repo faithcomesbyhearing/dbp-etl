@@ -103,27 +103,26 @@ class UpdateDBPFilesetTables:
 
 	def process(self):
 		results = []
-		dirname = self.config.directory_database
-		typeCodeList = os.listdir(dirname)
-		for typeCode in typeCodeList:
-			bibleIdPath = dirname + typeCode
-			if typeCode == "audio":
-				for bibleId in os.listdir(bibleIdPath):
-					filesetIdPath = bibleIdPath + os.sep + bibleId
-					for filesetId in os.listdir(filesetIdPath):
-						print(typeCode, bibleId, filesetId)
-						csvFilename = "%s/%s_%s_%s.csv" % (self.config.directory_accepted, typeCode, bibleId, filesetId)
-						hashId = self.insertBibleFileset(typeCode, filesetId, csvFilename)
-						self.insertFilesetConnections(hashId, bibleId)
-						filesetDir = filesetIdPath + os.sep + filesetId
-						self.insertBibleFiles(hashId, csvFilename, filesetDir)
-						results.append("%s/%s/%s" % (typeCode, bibleId, filesetId))
-			elif typeCode == "text":
-				print("TBD text update")
-				sys.exit()
-			elif typeCode == "video":
-				print("TBD video update")
-				sys.exit()
+		dirname = self.config.directory_accepted
+		filenameList = os.listdir(dirname)
+		for filename in filenameList:
+			if filename.endswith(".csv"):
+				(typeCode, bibleId, filesetId) = filename.split(".")[0].split("_")
+				print(typeCode, bibleId, filesetId)
+				csvFilename = self.config.directory_accepted + filename
+				if typeCode == "audio":
+					hashId = self.insertBibleFileset(typeCode, filesetId, csvFilename)
+					self.insertFilesetConnections(hashId, bibleId)
+					filesetDir = "%s%s/%s/%s" % (self.config.directory_database, typeCode, bibleId, filesetId)
+					self.insertBibleFiles(hashId, csvFilename, filesetDir)
+					results.append("%s/%s/%s" % (typeCode, bibleId, filesetId))
+
+				elif typeCode == "text":
+					print("TBD text update")
+					sys.exit()
+				elif typeCode == "video":
+					print("TBD video update")
+					sys.exit()
 		return results
 
 
@@ -240,8 +239,8 @@ if (__name__ == '__main__'):
 	update = UpdateDBPFilesetTables(config, db, dbOut)
 	update.process()
 
-	#dbOut.displayStatements()
+	dbOut.displayStatements()
 	dbOut.displayCounts()
-	dbOut.execute()
+	#dbOut.execute()
 
 
