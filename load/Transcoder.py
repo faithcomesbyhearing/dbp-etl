@@ -18,30 +18,35 @@ class Transcoder:
 
 
 	def createMP3Job(self, file):
-		baseobj = file[:file.rfind('.')]
+		baseobj = file[:file.rfind(".")]
+		underscore = baseobj.find("_")
+		if underscore > 9:
+			output = baseobj[:underscore] + "%s" + baseobj[underscore:] + ".mp3"
+		else:
+			output = baseobj + "%s" + ".mp3"
 		inputs = [{
-			'Key': file
-			#'Container': '.mp3'
+			"Key": file,
+			"Container": "mp3"
 		}]
 		outputs = [
 		{
-			'Key': baseobj + '16.mp3',
-			'PresetId': self.preset_mp3_16bit,
+			"Key": output % ("16a"),
+			"PresetId": self.preset_mp3_16bit,
 	
 		},
 		{
-			'Key': baseobj + '32.mp3',
-			'PresetId': self.preset_mp3_32bit,
+			"Key": output % ("32a"),
+			"PresetId": self.preset_mp3_32bit,
 		
 		},
 		{
-			'Key': baseobj + '.mp3',
-			'PresetId': self.preset_mp3_64bit,
+			"Key": output % ("64a"),
+			"PresetId": self.preset_mp3_64bit,
 		
 		},
 		{
-			'Key': baseobj + '128.mp3',
-			'PresetId': self.preset_mp3_128bit
+			"Key": output % ("128a"),
+			"PresetId": self.preset_mp3_128bit
 		}]
 		status = self.client.create_job(PipelineId=self.audioTranscoder,
 										  Inputs=inputs,
@@ -56,7 +61,8 @@ if (__name__ == '__main__'):
 	#s3Key = 
 	#s3.uploadFile(bucket, s3Key, filename, 'audio/mpeg')
 	transcoder = Transcoder(config)
-	transcoder.createMP3Job('B01___01_Matthew_____ENGESVN1DA.mp3')
+	transcoder.createMP3Job("B01___01_Matthew_____ENGESVN1DA.mp3")
+	transcoder.createMP3Job("ENGESVN2DA_B03_LUK_003_04-003_08.mp3")
 
 
 """
@@ -157,5 +163,36 @@ def create_job(file):
 										  #OutputKeyPrefix='hls/',
 										  Playlists=playlists)
 	return status['Job']['Id']
+
+
+
+	for item in fList:
+		jList.append(create_job(item))
+				
+	isDone=False
+	while isDone is False:
+		for job in jList:
+			try:
+				status = transcoder_client.read_job(Id=job)
+				if status['Job']['Status'] == 'Complete' or status['Job']['Status'] == 'Error':
+					fName=None
+					fDuration=None
+					try:
+						fName=status['Job']['Input']['Key']
+					except:
+						print("Could not set file name")
+					try:
+						fDuration=status['Job']['Output']['Duration']
+					except:
+						print("Could not set file duration")
+					
+					if fName is not None and fDuration is not None:
+						videoFileDic.update({fName:fDuration})
+					jList.remove(job)
+			except:
+				print("Could not get status for: "+job)
+		if len(jList)==0:
+			isDone=True
+
 """
 
