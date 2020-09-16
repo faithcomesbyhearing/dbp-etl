@@ -1,5 +1,6 @@
 # Transcoder.py
 
+import time
 import boto3
 from S3Utility import *
 
@@ -8,7 +9,7 @@ class Transcoder:
 
 
 	def __init__(self, config):
-		region = 'us-east-1'  # put in config
+		region = "us-east-1"  # put in config
 		self.client = boto3.client('elastictranscoder', region_name=region)
 		self.audioTranscoder = '1599766493865-viabwr'
 		self.preset_mp3_16bit = '1600051328798-010nb3'
@@ -17,41 +18,68 @@ class Transcoder:
 		self.preset_mp3_128bit = '1351620000001-300040'
 
 
+
 	def createMP3Job(self, file):
 		baseobj = file[:file.rfind(".")]
 		underscore = baseobj.find("_")
 		if underscore > 9:
 			output = baseobj[:underscore] + "%s" + baseobj[underscore:] + ".mp3"
 		else:
-			output = baseobj + "%s" + ".mp3"
+			output = baseobj + "%s.mp3"
 		inputs = [{
 			"Key": file,
 			"Container": "mp3"
 		}]
 		outputs = [
 		{
-			"Key": output % ("16a"),
+			"Key": output % ("16"),
 			"PresetId": self.preset_mp3_16bit,
 	
 		},
 		{
-			"Key": output % ("32a"),
+			"Key": output % ("32"),
 			"PresetId": self.preset_mp3_32bit,
 		
 		},
 		{
-			"Key": output % ("64a"),
+			"Key": output % ("64"),
 			"PresetId": self.preset_mp3_64bit,
 		
 		},
 		{
-			"Key": output % ("128a"),
+			"Key": output % ("128"),
 			"PresetId": self.preset_mp3_128bit
 		}]
 		status = self.client.create_job(PipelineId=self.audioTranscoder,
 										  Inputs=inputs,
 										  Outputs=outputs)
-		return status['Job']['Id']
+		return status["Job"]["Id"]
+
+
+	def getJobStatus(self, jobId):
+		response = self.client.read_job(Id=jobId).get("Job")
+		status = response.get("Status")
+		# status := Submitted | Progressing | Complete | Canceled | Error
+		print(status)
+		if status == "Complete":
+			outputs = response.get("Outputs", [])
+			for output in outputs:
+				objNameOut = output.get("Key")
+				statusOut = output.get("Status")
+				fileSize = output.get("FileSize")
+				duration = output.get("Duration")
+				durationMS = output.get("DurationMillis")
+				print(statusOut, objNameOut, fileSize, duration, durationMS)
+
+		elif status == "Error":
+			outputs = response.get("Outputs", [])
+			for output in outputs:
+				objNameOut = output.get("Key")
+				statusOut = output.get("Status")
+				statusDetail = output.get("StatusDetail")
+				print(objNameOut, statusOut, statusDetail)
+
+		
 
 
 if (__name__ == '__main__'):
@@ -61,8 +89,10 @@ if (__name__ == '__main__'):
 	#s3Key = 
 	#s3.uploadFile(bucket, s3Key, filename, 'audio/mpeg')
 	transcoder = Transcoder(config)
-	transcoder.createMP3Job("B01___01_Matthew_____ENGESVN1DA.mp3")
-	transcoder.createMP3Job("ENGESVN2DA_B03_LUK_003_04-003_08.mp3")
+	jobId = transcoder.createMP3Job("B01___01_Matthew_____ENGESVN1DA.mp3")
+	time.sleep(20)
+	transcoder.getJobStatus(jobId)
+	#transcoder.createMP3Job("ENGESVN2DA_B03_LUK_003_04-003_08.mp3")
 
 
 """
