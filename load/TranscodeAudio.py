@@ -5,7 +5,7 @@ import boto3
 from S3Utility import *
 
 
-class Transcoder:
+class TranscodeAudio:
 
 
 	def __init__(self, config, filesetPrefix):
@@ -134,7 +134,7 @@ if (__name__ == '__main__'):
 	config = Config()
 	s3 = S3Utility(config)
 	testFileset = "audio/ENGESV/ENGESVN2DA"
-	transcoder = Transcoder(config, testFileset)
+	transcoder = TranscodeAudio(config, testFileset)
 	# open accepted file
 	# read lines
 	# call create job for each line
