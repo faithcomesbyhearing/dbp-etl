@@ -59,7 +59,8 @@ class UpdateDBPBiblesTable:
 
 		for dbpBibleId in sorted(dbpBibleMap.keys()):
 			if dbpBibleId not in lptsBibleMap.keys():
-				deleteRows.append(dbpBibleId)
+				if not self.testBibleForeignKeys(dbpBibleId):
+					deleteRows.append(dbpBibleId)
 
 		for bibleId in sorted(lptsBibleMap.keys()):
 			lptsRecords = lptsBibleMap[bibleId]
@@ -159,7 +160,7 @@ class UpdateDBPBiblesTable:
 				if numerals == "latin":
 					numerals = "western-arabic"
 				elif numerals == "arabic":
-					numerals = "eastern-arabic"
+					numerals = "western-arabic"
 				elif numerals == "arabic-/-khmer":
 					numerals = "khmer"
 				if numerals not in self.numeralIdSet:
@@ -253,6 +254,28 @@ class UpdateDBPBiblesTable:
 			match = self.yearPattern.search(value)
 			if match != None and match.group(1)[0] <= '2':
 				finalSet.add(match.group(1))
+
+
+	def testBibleForeignKeys(self, bibleId):
+		hasErrors = False
+		hasErrors |= self.testDeleteInTable(bibleId, "user_bookmarks")
+		hasErrors |= self.testDeleteInTable(bibleId, "user_highlights")
+		hasErrors |= self.testDeleteInTable(bibleId, "user_notes")
+		hasErrors |= self.testDeleteInTable(bibleId, "user_settings")
+		return hasErrors
+
+
+	def testDeleteInTable(self, bibleId, tableName):
+		sql = ("SELECT count(*) FROM " +
+				self.config.database_user_db_name +
+				"." + tableName +
+				" WHERE bible_id = %s")
+		count = self.db.selectScalar(sql, (bibleId,))
+		if count > 0:
+			print("ERROR_06: Unable to DELETE bible_id %s from bibles. It is used by table %s." % (bibleId, tableName))
+			return True
+		else:
+			return False # has no error
 
 
 #	def findResult(self, bibleId, final, fieldName):

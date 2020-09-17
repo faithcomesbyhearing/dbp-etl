@@ -55,6 +55,7 @@ class Config:
 		self.database_user = self._get("database.user")
 		self.database_passwd = self._get("database.passwd")
 		self.database_db_name = self._get("database.db_name")
+		self.database_user_db_name = self._get("database.user_db_name")
 		self.database_port = self._getInt("database.port")
 		self.database_tunnel = self._getOptional("database.tunnel")
 
