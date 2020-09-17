@@ -244,3 +244,8 @@ if (__name__ == '__main__'):
 	#dbOut.execute()
 
 
+##
+## delete fileset_id, requires a check in dbp_users.playlist_items (fileset_id)
+##
+
+
