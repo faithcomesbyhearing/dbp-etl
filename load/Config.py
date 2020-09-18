@@ -74,7 +74,8 @@ class Config:
 					"CheckBibleFilesetConnectionsTable.py",
 					"S3Utility.py",
 					"UpdateDBPFilesetTables.py", 
-					"DBPLoadController.py"}:
+					"DBPLoadController.py",
+					"TranscodeAudio.py"}:
 
 			self.directory_bucket_list = self._getPath("directory.bucket_list")
 			self.filename_lpts_xml = self._getPath("filename.lpts_xml")

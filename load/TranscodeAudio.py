@@ -1,6 +1,7 @@
 # Transcoder.py
 
 import time
+import csv
 import boto3
 from S3Utility import *
 
@@ -18,135 +19,98 @@ class TranscodeAudio:
 		self.preset_mp3_32bit = '1600051390966-jwg0ig'
 		self.preset_mp3_64bit = '1600051427984-acsojp'
 		self.preset_mp3_128bit = '1351620000001-300040'
-		self.submittedJobs = []
+		self.openJobs = []
 
 
 	def createMP3Job(self, file):
-		baseobj = file[:file.rfind(".")]
-		underscore = baseobj.find("_")
-		if underscore > 9:
-			output = baseobj[:underscore] + "%s" + baseobj[underscore:] + ".mp3"
-		else:
-			output = baseobj + "%s.mp3"
+		print("transcode", self.filesetPrefix + "/" + file)
 		inputs = [{
-			"Key": file,
+			"Key": self.filesetPrefix + "/" + file,
 			"Container": "mp3"
 		}]
 		outputs = [
 		{
-			"Key": output % ("16"),
-			"PresetId": self.preset_mp3_16bit,
-	
+			"Key": self.filesetPrefix + "16/" + file,
+			"PresetId": self.preset_mp3_16bit
 		},
 		{
-			"Key": output % ("32"),
-			"PresetId": self.preset_mp3_32bit,
-		
+			"Key": self.filesetPrefix + "32/" + file,
+			"PresetId": self.preset_mp3_32bit
 		},
 		{
-			"Key": output % ("64"),
-			"PresetId": self.preset_mp3_64bit,
-		
-		},
-		{
-			"Key": output % ("128"),
-			"PresetId": self.preset_mp3_128bit
+			"Key": self.filesetPrefix + "64/" + file,
+			"PresetId": self.preset_mp3_64bit
 		}]
 		status = self.client.create_job(PipelineId=self.audioTranscoder,
 										  Inputs=inputs,
 										  Outputs=outputs)
-		#return status["Job"]["Id"]
-		self.submittedJobs.append(status["Job"]["Id"])
+		self.openJobs.append(status["Job"]["Id"])
 
 
-	## As the transcode succeed for each, the source files can be promoted to uploaded.
-	## We need the filesize and duration information for the the update process
-	## The filesize and duration need to be put into flat files so that it can process
-	## What do I do with error information
-
-	## It should generate the file when all is completed
 	def completeJobs(self):
-		moreToDo = True
-		while moreToDo:
-		for jobId in self.submittedJobs:
-			statusList = self.getJobStatus(jobId)
-			try:
-				status = transcoder_client.read_job(Id=job)
-				if status['Job']['Status'] == 'Complete' or status['Job']['Status'] == 'Error':
-					fName=None
-					fDuration=None
-					try:
-						fName=status['Job']['Input']['Key']
-					except:
-						print("Could not set file name")
-					try:
-						fDuration=status['Job']['Output']['Duration']
-					except:
-						print("Could not set file duration")
-					
-					if fName is not None and fDuration is not None:
-						videoFileDic.update({fName:fDuration})
-					jList.remove(job)
-			except:
-				print("Could not get status for: "+job)
-		if len(jList)==0:
-			isDone=True	
+		results16 = []
+		results32 = []
+		results64 = []
+		errorCount = 0
+		while len(self.openJobs) > 0:
+			stillOpenJobs = []
+			for jobId in self.openJobs:
+				response = self.client.read_job(Id=jobId).get("Job")
+				inputObj = response["Input"]["Key"]
+				status = response.get("Status")
+				print("check Job", jobId, status, inputObj)
+				if status == "Complete":
+					outputs = response["Outputs"]
+					self.appendOutputs(results16, outputs[0])
+					self.appendOutputs(results32, outputs[1])
+					self.appendOutputs(results64, outputs[2])
 
-		## This must return true or false whether the task is completed correctly	
+				elif status == "Error":
+					errorCount += 1
+					for output in response.get("Outputs", []):
+						if output.get("Status") == "Error":
+							print("ERROR %s" % (output.get("StatusDetail")))
+						else:
+							print("NO Message", output.get("Key"), output.get("StatusDetail"))
 
-
-
-	def getJobStatus(self, jobId):
-		response = self.client.read_job(Id=jobId).get("Job")
-		status = response.get("Status")
-		# status := Submitted | Progressing | Complete | Canceled | Error
-		print(status)
-		if status == "Complete":
-			outputs = response.get("Outputs", [])
-			for output in outputs:
-				objNameOut = output.get("Key")
-				statusOut = output.get("Status")
-				fileSize = output.get("FileSize")
-				duration = output.get("Duration")
-				durationMS = output.get("DurationMillis")
-				print(statusOut, objNameOut, fileSize, duration, durationMS)
-				return()
-
-		elif status == "Error":
-			outputs = response.get("Outputs", [])
-			for output in outputs:
-				objNameOut = output.get("Key")
-				statusOut = output.get("Status")
-				statusDetail = output.get("StatusDetail")
-				print(objNameOut, statusOut, statusDetail)
-
-		else:
-			return None
+				else:
+					stillOpenJobs.append(jobId)
+			self.openJobs = stillOpenJobs
+			time.sleep(5)
+		if errorCount == 0:
+			self.createTranscoded("MP3", "16", results16)
+			self.createTranscoded("MP3", "32", results32)
+			self.createTranscoded("MP3", "64", results64)
 
 
-	def createAcceptedFiles(self):
-		print("TBD")
+	def appendOutputs(self, results, output):
+		filename = output.get("Key").split("/")[-1]
+		results.append((filename, output.get("FileSize"), output.get("Duration")))
 
-		
+
+	def createTranscoded(self, codecType, bitrate, results):
+		#cvsFilename = self.directory_accepted + self.filesetPrefix.replace("/", "_") + bitrate + ".csv"
+		cvsFilename = self.filesetPrefix.replace("/", "_") + bitrate + ".csv"
+		with open(cvsFilename, 'w', newline='\n') as csvfile:
+			writer = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+			writer.writerow(("file_name", "file_size", "duration"))
+			for row in results:
+				writer.writerow(row)
+
 
 
 if (__name__ == '__main__'):
 	config = Config()
-	s3 = S3Utility(config)
 	testFileset = "audio/ENGESV/ENGESVN2DA"
 	transcoder = TranscodeAudio(config, testFileset)
-	# open accepted file
-	# read lines
-	# call create job for each line
-		transcoder.createMP3Job("B01___01_Matthew_____ENGESVN1DA.mp3")
+	csvFilename = config.directory_accepted + "/" + testFileset.replace("/", "_") + ".csv"
+	with open(csvFilename, newline='\n') as csvfile:
+		reader = csv.DictReader(csvfile)
+		count = 0
+		for row in reader:
+			if count < 3000:
+				transcoder.createMP3Job(row["file_name"])
+				count += 1
 	transcoder.completeJobs()
-	#transcoder.getJobStatus(jobId)
-	#transcoder.createMP3Job("ENGESVN2DA_B03_LUK_003_04-003_08.mp3")
-
-		## createMP3Job will be called by S3Utility in production
-	def unitTestCreateMP3Jobs(self):
-		print("TBD")
-		# open accepted file for this fileset
-		# process lines one at a time, and call createMP3
 
 
