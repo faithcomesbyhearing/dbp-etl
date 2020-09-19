@@ -30,7 +30,6 @@ directory.uploaded	= /????/files/uploaded/
 directory.database	= /????/files/database/
 directory.complete	= /????/files/complete/
 
-
 ## directories for storing in-process files
 directory.quarantine = /????/files/active/quarantine/
 directory.duplicate = /????/files/active/duplicate/
@@ -40,10 +39,10 @@ directory.transcoded = /????/files/active/transcoded/
 ## audio transcoder settings
 audio.transcoder.region	= us-east-1
 audio.transcoder.input_bucket = test-dbp-audio-transcode
-audio.transcoder.pipeline = 1599766493865-viabwr
-audio.preset.mp3_16bit = 1600051328798-010nb3
-audio.preset.mp3_32bit = 1600051390966-jwg0ig
-audio.preset.mp3_64bit = 1600051427984-acsojp
+audio.transcoder.pipeline = 1600444320877-xz1xsy
+audio.preset.mp3_16bit = 1600450911341-sbjykx
+audio.preset.mp3_32bit = 1600450983559-8mnddf
+audio.preset.mp3_64bit = 1600451005783-fvtcgc
 
 directory.errors = /????/files/validate/errors/
 error.limit.pct = 25.0
@@ -58,7 +57,7 @@ filename.datetime	= %y-%m-%d-%H-%M-%S
 
 database.host 	= localhost
 database.user 	= root
-database.passwd = brilligg
+database.passwd = ????
 database.port	= 3306
 database.db_name = hls_dbp
 
