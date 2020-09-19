@@ -62,13 +62,14 @@ class S3Utility:
 			print("ERROR: Upload %s failed  with error %s" % (s3Key, err))
 
 
-	def uploadAllFilesets(self, s3Bucket):
+	def uploadAllFilesets(self):
 		directory = self.config.directory_uploading
 		lenDirectory = len(directory)
 		for root, dirs, files in os.walk(directory):
 			relDirName = root[lenDirectory:].replace("\\", "/")
 			if relDirName[:5] == "audio" and len(dirs) == 0:
 				#print("***** inside audio", directory, relDirName, dirs)
+				s3Bucket = self.config.audio_transcoder_input_bucket
 				self.uploadFileset(s3Bucket, directory, relDirName, files, "audio/mpeg")
 			#elif relDirName[:4] == "text" and relDirName.count("/") == 1:
 			#	print("***** inside text", directory, relDirName, dirs)
@@ -122,15 +123,6 @@ class S3Utility:
 		self._cleanupDirectory(sourceDir, filesetPrefix)
 
 
-#	def _cleanupFilesetDirectory(self, directory, filesetPrefix):
-#			print("cleanup fileset directory", directory, filesetPrefix)
-#			self._cleanupDirectory(directory, filesetPrefix)
-#			pos = filesetPrefix.rfind(os.sep)
-#			if pos >= 0:
-#				prefix = filesetPrefix[:pos]
-#				self._cleanupDirectory(directory, prefix)
-
-
 	def _cleanupDirectory(self, directory, filesetPrefix):
 		print("cleanup directory %s/%s" % (directory, filesetPrefix))
 		prefix = filesetPrefix
@@ -155,6 +147,6 @@ class S3Utility:
 if (__name__ == '__main__'):
 	config = Config()
 	s3 = S3Utility(config)
-	s3.uploadAllFilesets(config.s3_bucket)
+	s3.uploadAllFilesets()
 	
 

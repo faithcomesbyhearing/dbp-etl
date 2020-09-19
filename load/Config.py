@@ -63,19 +63,17 @@ class Config:
 		self.s3_vid_bucket = self._get("s3.vid_bucket")
 		self.s3_aws_profile = self._get("s3.aws_profile")
 
-		if programRunning in {"Validate.py", 
-					"UpdateDBPDatabase.py", 
-					"UpdateDBPLPTSTables.py",
-					"UpdateDBPBiblesTable.py",
-					"LPTSExtractReader.py", 
-					"MatchOrganizationNames.py",
-					"LoadOrganizations.py",
-					"SQLBatchExec.py", 
-					"CheckBibleFilesetConnectionsTable.py",
-					"S3Utility.py",
-					"UpdateDBPFilesetTables.py", 
-					"DBPLoadController.py",
-					"TranscodeAudio.py"}:
+		if programRunning in {"AudioHLS.py"}:
+			self.directory_audio_hls = self._getPath("directory.audio_hls") #"%s/FCBH/files/tmp" % (os.environ["HOME"])
+			self.audio_hls_duration_limit = self._getInt("audio.hls.duration.limit") #10  #### Must become command line param
+
+		else:
+			self.audio_transcoder_region = self._get("audio.transcoder.region")
+			self.audio_transcoder_input_bucket = self._get("audio.transcoder.input_bucket")
+			self.audio_transcoder_pipeline = self._get("audio.transcoder.pipeline")
+			self.audio_preset_mp3_16bit = self._get("audio.preset.mp3_16bit")
+			self.audio_preset_mp3_32bit = self._get("audio.preset.mp3_32bit")
+			self.audio_preset_mp3_64bit = self._get("audio.preset.mp3_64bit")
 
 			self.directory_bucket_list = self._getPath("directory.bucket_list")
 			self.filename_lpts_xml = self._getPath("filename.lpts_xml")
@@ -89,6 +87,7 @@ class Config:
 			self.directory_quarantine = self._getPath("directory.quarantine")
 			self.directory_duplicate = self._getPath("directory.duplicate")
 			self.directory_accepted = self._getPath("directory.accepted")
+			self.directory_transcoded = self._getPath("directory.transcoded")
 
 			self.directory_errors = self._getPath("directory.errors")
 			self.error_limit_pct = self._getFloat("error.limit.pct")
@@ -96,10 +95,6 @@ class Config:
 
 			self.filename_datetime = self._get("filename.datetime")
 
-		elif programRunning in {"AudioHLS.py"}:
-
-			self.directory_audio_hls = self._getPath("directory.audio_hls") #"%s/FCBH/files/tmp" % (os.environ["HOME"])
-			self.audio_hls_duration_limit = self._getInt("audio.hls.duration.limit") #10  #### Must become command line param
 		print("Config '%s' is loaded." % (profile))
 
 

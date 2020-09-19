@@ -12,13 +12,24 @@ class TranscodeAudio:
 	def __init__(self, config, filesetPrefix):
 		self.config = config
 		self.filesetPrefix = filesetPrefix
-		region = "us-east-1"  # put in config
-		self.client = boto3.client('elastictranscoder', region_name=region)
-		self.audioTranscoder = '1599766493865-viabwr'
-		self.preset_mp3_16bit = '1600051328798-010nb3'
-		self.preset_mp3_32bit = '1600051390966-jwg0ig'
-		self.preset_mp3_64bit = '1600051427984-acsojp'
-		self.preset_mp3_128bit = '1351620000001-300040'
+		#region = "us-east-1"  # put in config
+		#region = 'us-west-2' # put in config
+		session = boto3.Session(profile_name=config.s3_aws_profile)
+		self.client = session.client('elastictranscoder', region_name=config.audio_transcoder_region)
+		#self.audioTranscoder = '1599766493865-viabwr'
+		#self.preset_mp3_16bit = '1600051328798-010nb3'
+		#self.preset_mp3_32bit = '1600051390966-jwg0ig'
+		#self.preset_mp3_64bit = '1600051427984-acsojp'
+		#self.preset_mp3_128bit = '1351620000001-300040'
+		#self.audioTranscoder = '1600444320877-xz1xsy'
+		#self.preset_mp3_16bit = '1600450911341-sbjykx'
+		#self.preset_mp3_32bit = '1600450983559-8mnddf'
+		#self.preset_mp3_64bit = '1600451005783-fvtcgc'
+
+		self.audioTranscoder = config.audio_transcoder_pipeline
+		self.preset_mp3_16bit = config.audio_preset_mp3_16bit
+		self.preset_mp3_32bit = config.audio_preset_mp3_32bit
+		self.preset_mp3_64bit = config.audio_preset_mp3_64bit
 		self.openJobs = []
 
 
@@ -89,14 +100,19 @@ class TranscodeAudio:
 
 
 	def createTranscoded(self, codecType, bitrate, results):
-		#cvsFilename = self.directory_accepted + self.filesetPrefix.replace("/", "_") + bitrate + ".csv"
-		cvsFilename = self.filesetPrefix.replace("/", "_") + bitrate + ".csv"
+		if codecType == "MP3":
+			suffix = "-M" + bitrate
+		elif codecType == "OGG":
+			suffix = "-O" + bitrate
+		else:
+			print("FATAL ERROR: unknown codecType %s in TranscodeAudio" % (codecType))
+			sys.exit()
+		cvsFilename = self.config.directory_transcoded + self.filesetPrefix.replace("/", "_") + suffix + ".csv"
 		with open(cvsFilename, 'w', newline='\n') as csvfile:
 			writer = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
 			writer.writerow(("file_name", "file_size", "duration"))
 			for row in results:
 				writer.writerow(row)
-
 
 
 if (__name__ == '__main__'):
