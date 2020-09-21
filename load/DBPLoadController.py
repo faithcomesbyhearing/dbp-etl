@@ -42,7 +42,7 @@ class DBPLoadController:
 
 	def upload(self):
 		print("********** UPLOADING **********")
-		self.s3Utility.uploadAllFilesets(config.s3_bucket)
+		self.s3Utility.uploadAllFilesets()
 
 
 	def updateDatabase(self):
@@ -51,7 +51,7 @@ class DBPLoadController:
 		update = UpdateDBPFilesetTables(self.config, self.db, dbOut)
 		filesetList = update.process()
 
-		dbOut.displayStatements()
+		#dbOut.displayStatements()
 		dbOut.displayCounts()
 		dbOut.execute()
 		for filesetPrefix in filesetList:

@@ -69,15 +69,14 @@ class S3Utility:
 			relDirName = root[lenDirectory:].replace("\\", "/")
 			if relDirName[:5] == "audio" and len(dirs) == 0:
 				#print("***** inside audio", directory, relDirName, dirs)
-				s3Bucket = self.config.audio_transcoder_input_bucket
-				self.uploadFileset(s3Bucket, directory, relDirName, files, "audio/mpeg")
+				self.uploadAudioFileset(self.config.s3_bucket, directory, relDirName, files)
 			#elif relDirName[:4] == "text" and relDirName.count("/") == 1:
 			#	print("***** inside text", directory, relDirName, dirs)
 			#else:
 			#	print("***** ELSEWHERE", directory, relDirName, dirs)
 
 
-	def uploadFileset(self, s3Bucket, sourceDir, filesetPrefix, files, contentType):
+	def uploadAudioFileset(self, s3Bucket, sourceDir, filesetPrefix, files):
 		errorCount = 0
 		targetDir = self.config.directory_uploaded
 		os.makedirs(targetDir + filesetPrefix, exist_ok=True)
@@ -88,7 +87,7 @@ class S3Utility:
 				try:
 					print("upload: %s" % (s3Key))
 					self.client.upload_file(filename, s3Bucket, s3Key,
-					ExtraArgs={'ContentType': contentType})
+					ExtraArgs={'ContentType': "audio/mpeg"})
 					moveFilename = targetDir + s3Key
 					os.rename(filename, moveFilename)
 				except Exception as err:
