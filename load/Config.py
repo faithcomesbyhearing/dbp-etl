@@ -79,8 +79,7 @@ class Config:
 			self.filename_lpts_xml = self._getPath("filename.lpts_xml")
 
 			self.directory_validate	= self._getPath("directory.validate")
-			self.directory_uploading = self._getPath("directory.uploading")
-			self.directory_uploaded = self._getPath("directory.uploaded")
+			self.directory_upload = self._getPath("directory.upload")
 			self.directory_database	= self._getPath("directory.database")
 			self.directory_complete	= self._getPath("directory.complete")
 

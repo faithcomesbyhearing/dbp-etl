@@ -33,12 +33,11 @@
 #
 
 import boto3
-import boto3.s3
-import boto3.s3.transfer
+#import boto3.s3
+#import boto3.s3.transfer
 import os
 import shutil
-#from boto.s3.connection import S3Connection  # test
-#from multiprocessing.pool import ThreadPool  # test
+import subprocess
 from Config import *
 
 class S3Utility:
@@ -65,8 +64,8 @@ class S3Utility:
 		except Exception as err:
 			print("ERROR: Upload %s failed  with error %s" % (s3Key, err))
 
-
-	def uploadAllFilesets(self):
+	## deprecated
+	def uploadAllFilesetsOld(self):
 		directory = self.config.directory_uploading
 		lenDirectory = len(directory)
 		for root, dirs, files in os.walk(directory):
@@ -79,8 +78,8 @@ class S3Utility:
 			#else:
 			#	print("***** ELSEWHERE", directory, relDirName, dirs)
 
-
-	def uploadAudioFileset(self, s3Bucket, sourceDir, filesetPrefix, files):
+	## deprecated
+	def uploadAudioFilesetOld(self, s3Bucket, sourceDir, filesetPrefix, files):
 		errorCount = 0
 		targetDir = self.config.directory_uploaded
 		os.makedirs(targetDir + filesetPrefix, exist_ok=True)
@@ -103,10 +102,58 @@ class S3Utility:
 			self.promoteFileset(targetDir, filesetPrefix)
 
 
+	def uploadAllFilesets(self):
+		uploadSucceeded = 0
+		uploadFailed = 0
+		directory = self.config.directory_upload
+		for typeCode in os.listdir(directory):
+			if typeCode in {"audio", "text", "video"}:
+				for bibleId in [f for f in os.listdir(directory + typeCode) if not f.startswith('.')]:
+					for filesetId in [f for f in os.listdir(directory + typeCode + os.sep + bibleId) if not f.startswith('.')]:
+						if typeCode == "audio":
+							filesetPrefix = typeCode + "/" + bibleId + "/" + filesetId + "/"
+							done = self.uploadAudioFileset(self.config.s3_bucket, directory, filesetPrefix)
+							if done:
+								uploadSucceeded += 1
+							else:
+								uploadFailed += 1
+		print("%d filesets uploaded" % (uploadSucceeded))
+		print("%d filesets failed to upload" % (uploadFailed))
+
+
+	def uploadAudioFileset(self, s3Bucket, sourceDir, filesetPrefix):
+		print("uploading: ", filesetPrefix)
+		self._cleanupHiddenFiles(sourceDir + filesetPrefix)
+		cmd = "aws s3 sync %s%s s3://%s/%s" % (sourceDir, filesetPrefix, s3Bucket, filesetPrefix)
+		#cmd = 'aws s3 cp %s%s s3://%s/%s --recursive --exclude ".*" --exclude "*/.*"' % (sourceDir, filesetPrefix, s3Bucket, filesetPrefix)
+		response = subprocess.run(cmd, shell=True, stderr=subprocess.PIPE)
+		if response.returncode != 0:
+			print("ERROR: Upload of %s to %s failed. MESSAGE: %s" % (filesetPrefix, s3Bucket, response.stderr))
+			return False
+		else:
+			self.promoteFileset(sourceDir, filesetPrefix)
+			return True
+
+
+	def _cleanupHiddenFiles(self, directory):
+		toDelete = []
+		self._cleanupHiddenFilesRecurse(toDelete, directory)
+		for path in toDelete:
+			os.remove(path)
+
+
+	def _cleanupHiddenFilesRecurse(self, toDelete, directory):
+		for pathName in os.listdir(directory):
+			fullName = directory + os.sep + pathName
+			if pathName.startswith("."):
+				toDelete.append(fullName)
+			if os.path.isdir(fullName):
+				self._cleanupHiddenFilesRecurse(toDelete, fullName)
+
+
 	def promoteFileset(self, sourceDir, filesetPrefix):
 		folders = [self.config.directory_validate,
-				self.config.directory_uploading,
-				self.config.directory_uploaded,
+				self.config.directory_upload,
 				self.config.directory_database,
 				self.config.directory_complete]
 		if not sourceDir in folders:
@@ -122,7 +169,7 @@ class S3Utility:
 		try:
 			shutil.move(sourceDir + filesetPrefix, targetDir + filesetPrefix)
 		except Exception as err:
-			print("ERROR: Directory move of %s failed:" % (filesetPrefix, err))
+			print("ERROR: Directory move of %s failed: %s" % (filesetPrefix, err))
 		self._cleanupDirectory(sourceDir, filesetPrefix)
 
 
@@ -146,59 +193,10 @@ class S3Utility:
 				pos = prefix.rfind(os.sep)
 				prefix = prefix[:pos] if pos > 0 else ""
 
-if (__name__ == '__main__'):
-	config = Config()
-	session = boto3.Session(profile_name=config.s3_aws_profile)
-	client = session.client('s3')
-	transConfig = boto3.s3.transfer.TransferConfig()
-	transfer = boto3.s3.transfer.S3Transfer(client=client, config=transConfig, osutil=None, manager=None)
-	directory = config.directory_uploading
-	for typeCode in os.listdir(directory):
-		if typeCode == "audio":
-			for bibleId in os.listdir(directory + "/audio"):
-				for filesetId in os.listdir(directory + "/audio/" + bibleId):
-					print(filesetId)
-					for file in os.listdir(directory + "/audio/" + bibleId + "/" + filesetId):
-						print(file)
-						key = typeCode + "/" + bibleId + "/" + filesetId + "/" + file
-						filename = directory + key
-						#print(key, filename)
-						transfer.upload_file(filename, "test-dbp", key, callback=None, extra_args=None)
 
-"""
 if (__name__ == '__main__'):
 	config = Config()
 	s3 = S3Utility(config)
 	s3.uploadAllFilesets()
-"""
-"""
-time aws s3 sync /Volumes/FCBH/files/uploading/audio/ENGESV/ENGESVN2DA/ s3://test-dbp/audio/ENGESV/ENGESVN2DA/
-
-#time aws s3 rm 
-
-time aws s3 cp /Volumes/FCBH/files/uploading/audio/ENGESV/ENGESVN2DA/ s3://test-dbp/audio/ENGESV/ENGESVN2DA/ --recursive
 
 
-		print("AUDIO folder exists")
-		subfolders=folderList(sourcePath+"audio/")
-		for folder in subfolders:
-			subGroup=folderList(sourcePath+"audio/"+folder+"/")
-			for group in subGroup:
-				fileGroup=listFiles(sourcePath+"audio/"+folder+"/"+group+"/")
-				for audioFile in fileGroup:
-					audioPath=sourcePath+"audio/"+folder+"/"+group+"/"+audioFile
-					duration=getDurationMP3(audioPath)
-					if duration is not None:
-						audioFileDic.update({audioFile:duration})
-				cmdRM="aws s3 rm s3://"+lptsEnv.bucket+"/audio/"+folder+"/"+group+"/ --recursive"
-				print(cmdRM)
-				os.system(cmdRM)
-				
-				cmd="aws s3 cp "+sourcePath+"audio/"+folder+"/"+group+"/ s3://"+lptsEnv.bucket+"/audio/"+folder+"/"+group+"/ --recursive"
-				print(cmd)
-				os.system(cmd)
-				x = datetime.datetime.now()
-				thingsToCheck.add(x.strftime("%Y-%m-%d %H:%M:%S")+" "+folder+":"+group)
-			os.system("rm -r "+sourcePath+"audio/"+folder)
-	
-"""
