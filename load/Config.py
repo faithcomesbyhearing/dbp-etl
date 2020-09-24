@@ -68,12 +68,12 @@ class Config:
 			self.audio_hls_duration_limit = self._getInt("audio.hls.duration.limit") #10  #### Must become command line param
 
 		else:
-			self.audio_transcoder_region = self._get("audio.transcoder.region")
-			self.audio_transcoder_input_bucket = self._get("audio.transcoder.input_bucket")
-			self.audio_transcoder_pipeline = self._get("audio.transcoder.pipeline")
-			self.audio_preset_mp3_16bit = self._get("audio.preset.mp3_16bit")
-			self.audio_preset_mp3_32bit = self._get("audio.preset.mp3_32bit")
-			self.audio_preset_mp3_64bit = self._get("audio.preset.mp3_64bit")
+#			self.audio_transcoder_region = self._get("audio.transcoder.region")
+#			self.audio_transcoder_input_bucket = self._get("audio.transcoder.input_bucket")
+#			self.audio_transcoder_pipeline = self._get("audio.transcoder.pipeline")
+#			self.audio_preset_mp3_16bit = self._get("audio.preset.mp3_16bit")
+#			self.audio_preset_mp3_32bit = self._get("audio.preset.mp3_32bit")
+#			self.audio_preset_mp3_64bit = self._get("audio.preset.mp3_64bit")
 
 			self.directory_bucket_list = self._getPath("directory.bucket_list")
 			self.filename_lpts_xml = self._getPath("filename.lpts_xml")

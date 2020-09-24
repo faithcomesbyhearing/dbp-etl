@@ -33,8 +33,12 @@
 #
 
 import boto3
+import boto3.s3
+import boto3.s3.transfer
 import os
 import shutil
+#from boto.s3.connection import S3Connection  # test
+#from multiprocessing.pool import ThreadPool  # test
 from Config import *
 
 class S3Utility:
@@ -142,10 +146,59 @@ class S3Utility:
 				pos = prefix.rfind(os.sep)
 				prefix = prefix[:pos] if pos > 0 else ""
 
+if (__name__ == '__main__'):
+	config = Config()
+	session = boto3.Session(profile_name=config.s3_aws_profile)
+	client = session.client('s3')
+	transConfig = boto3.s3.transfer.TransferConfig()
+	transfer = boto3.s3.transfer.S3Transfer(client=client, config=transConfig, osutil=None, manager=None)
+	directory = config.directory_uploading
+	for typeCode in os.listdir(directory):
+		if typeCode == "audio":
+			for bibleId in os.listdir(directory + "/audio"):
+				for filesetId in os.listdir(directory + "/audio/" + bibleId):
+					print(filesetId)
+					for file in os.listdir(directory + "/audio/" + bibleId + "/" + filesetId):
+						print(file)
+						key = typeCode + "/" + bibleId + "/" + filesetId + "/" + file
+						filename = directory + key
+						#print(key, filename)
+						transfer.upload_file(filename, "test-dbp", key, callback=None, extra_args=None)
 
+"""
 if (__name__ == '__main__'):
 	config = Config()
 	s3 = S3Utility(config)
 	s3.uploadAllFilesets()
-	
+"""
+"""
+time aws s3 sync /Volumes/FCBH/files/uploading/audio/ENGESV/ENGESVN2DA/ s3://test-dbp/audio/ENGESV/ENGESVN2DA/
 
+#time aws s3 rm 
+
+time aws s3 cp /Volumes/FCBH/files/uploading/audio/ENGESV/ENGESVN2DA/ s3://test-dbp/audio/ENGESV/ENGESVN2DA/ --recursive
+
+
+		print("AUDIO folder exists")
+		subfolders=folderList(sourcePath+"audio/")
+		for folder in subfolders:
+			subGroup=folderList(sourcePath+"audio/"+folder+"/")
+			for group in subGroup:
+				fileGroup=listFiles(sourcePath+"audio/"+folder+"/"+group+"/")
+				for audioFile in fileGroup:
+					audioPath=sourcePath+"audio/"+folder+"/"+group+"/"+audioFile
+					duration=getDurationMP3(audioPath)
+					if duration is not None:
+						audioFileDic.update({audioFile:duration})
+				cmdRM="aws s3 rm s3://"+lptsEnv.bucket+"/audio/"+folder+"/"+group+"/ --recursive"
+				print(cmdRM)
+				os.system(cmdRM)
+				
+				cmd="aws s3 cp "+sourcePath+"audio/"+folder+"/"+group+"/ s3://"+lptsEnv.bucket+"/audio/"+folder+"/"+group+"/ --recursive"
+				print(cmd)
+				os.system(cmd)
+				x = datetime.datetime.now()
+				thingsToCheck.add(x.strftime("%Y-%m-%d %H:%M:%S")+" "+folder+":"+group)
+			os.system("rm -r "+sourcePath+"audio/"+folder)
+	
+"""
