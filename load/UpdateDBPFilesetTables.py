@@ -102,11 +102,12 @@ class UpdateDBPFilesetTables:
 
 
 	def process(self):
+		databaseFilesetSet = self.getDatabaseFilesets()
 		results = []
 		dirname = self.config.directory_accepted
 		filenameList = os.listdir(dirname)
 		for filename in filenameList:
-			if filename.endswith(".csv"):
+			if filename in databaseFilesetSet:
 				(typeCode, bibleId, filesetId) = filename.split(".")[0].split("_")
 				print(typeCode, bibleId, filesetId)
 				csvFilename = self.config.directory_accepted + filename
@@ -123,6 +124,17 @@ class UpdateDBPFilesetTables:
 				elif typeCode == "video":
 					print("TBD video update")
 					sys.exit()
+		return results
+
+
+	def getDatabaseFilesets(self):
+		results = set()
+		dirname = self.config.directory_database
+		for typeCode in os.listdir(dirname):
+			for bibleId in os.listdir(dirname + typeCode):
+				for filesetId in os.listdir(dirname + typeCode + os.sep + bibleId):
+					csvFilename = typeCode + "_" + bibleId + "_" + filesetId + ".csv"
+					results.add(csvFilename)
 		return results
 
 
@@ -221,7 +233,7 @@ class UpdateDBPFilesetTables:
 
 	def getDuration(self, file):
 		cmd = 'ffprobe -select_streams a -v error -show_format ' + file + ' | grep duration'
-		response = subprocess.run(cmd, shell=True, capture_output=True)
+		response = subprocess.run(cmd, shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 		result = self.durationRegex.search(str(response))
 		if result != None:
 			dur = result.group(1)

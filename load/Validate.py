@@ -203,17 +203,18 @@ class Validate:
 		#for (typeCode, bibleId, filesetId, stockNo, status) in self.damIdStatus:
 		#	self.errorMessages.append("%s/%s/%s LPTS %s has status = %s.\tWARN" % (typeCode, bibleId, filesetId, stockNo, status))
 
-		errorDir = self.config.directory_errors
-		pattern = self.config.filename_datetime 
-		path = errorDir + "Errors-" + datetime.today().strftime(pattern) + ".out"
-		print("openErrorReport", path)
-		errorFile = open(path, "w")
-		for message in sorted(self.errorMessages):
-			(text, level) = message.split("\t", 2)
-			formatted = "%s  %s\n" % (level, text)
-			errorFile.write(formatted)
-			print(formatted, end='')
-		errorFile.close()
+		if len(self.errorMessages) > 0:
+			errorDir = self.config.directory_errors
+			pattern = self.config.filename_datetime 
+			path = errorDir + "Errors-" + datetime.today().strftime(pattern) + ".out"
+			print("openErrorReport", path)
+			errorFile = open(path, "w")
+			for message in sorted(self.errorMessages):
+				(text, level) = message.split("\t", 2)
+				formatted = "%s  %s\n" % (level, text)
+				errorFile.write(formatted)
+				print(formatted, end='')
+			errorFile.close()
 		print("Num Errors ", len(self.errorMessages))		
 
 
