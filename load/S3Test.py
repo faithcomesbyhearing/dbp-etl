@@ -19,27 +19,30 @@ class S3Test:
 
 	def syncTest(self, filesetPrefix):
 		start = time.time()
-		cmd = "aws s3 sync %s%s s3://%s/%s" % (self.config.directory_uploading, filesetPrefix, self.bucket, filesetPrefix)
+		cmd = "aws s3 sync %s%s s3://%s/%s" % (self.config.directory_upload, filesetPrefix, self.bucket, filesetPrefix)
 		os.system(cmd)
 		self.duration(start, "aws s3 sync:")
 
 
 	def cpTest(self, filesetPrefix):
 		start = time.time()
-		cmd = "aws s3 cp %s%s s3://%s/%s --recursive" % (self.config.directory_uploading, filesetPrefix, self.bucket, filesetPrefix)
+		cmd = "aws s3 cp %s%s s3://%s/%s --recursive" % (self.config.directory_upload, filesetPrefix, self.bucket, filesetPrefix)
 		os.system(cmd)
 		self.duration(start, "aws s3 cp:")
 
 
 	def boto3Test(self, filesetPrefix):
 		start = time.time()
-		directory = self.config.directory_uploading + filesetPrefix
+		directory = self.config.directory_upload + filesetPrefix
 		for file in os.listdir(directory):
 			filename = directory + file
 			s3Key = filesetPrefix + file
 			print("upload", s3Key, filename)
-			self.client.upload_file(filename, self.bucket, s3Key,
-			ExtraArgs={'ContentType': "audio/mpeg"})
+			if file.endswith(".mp3"):
+				self.client.upload_file(filename, self.bucket, s3Key,
+				ExtraArgs={'ContentType': "audio/mpeg"})
+			elif ! os.path.isdir(filename):
+				self.client.upload_file(filename, self.bucket, s3Key)
 		self.duration(start, "boto3 s3.upload_file:")
 
 
@@ -47,7 +50,7 @@ class S3Test:
 		start = time.time()
 		transConfig = boto3.s3.transfer.TransferConfig()
 		transfer = boto3.s3.transfer.S3Transfer(client=self.client, config=transConfig, osutil=None, manager=None)
-		directory = self.config.directory_uploading + filesetPrefix
+		directory = self.config.directory_upload + filesetPrefix
 		for file in os.listdir(directory):
 			filename = directory + file
 			s3Key = filesetPrefix + file
@@ -58,7 +61,7 @@ class S3Test:
 
 	def getFilesetList(self):
 		filesetList = []
-		directory = self.config.directory_uploading
+		directory = self.config.directory_upload
 		for typeCode in os.listdir(directory):
 			if typeCode == "audio":
 				for bibleId in os.listdir(directory + "/audio"):
