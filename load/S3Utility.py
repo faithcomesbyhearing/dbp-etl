@@ -33,8 +33,6 @@
 #
 
 import boto3
-#import boto3.s3
-#import boto3.s3.transfer
 import os
 import shutil
 import subprocess
@@ -145,7 +143,7 @@ class S3Utility:
 	def _cleanupHiddenFilesRecurse(self, toDelete, directory):
 		for pathName in os.listdir(directory):
 			fullName = directory + os.sep + pathName
-			if pathName.startswith("."):
+			if pathName.startswith(".") or pathName == "Thumbs.db":
 				toDelete.append(fullName)
 			if os.path.isdir(fullName):
 				self._cleanupHiddenFilesRecurse(toDelete, fullName)

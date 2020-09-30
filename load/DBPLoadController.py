@@ -24,6 +24,27 @@ class DBPLoadController:
 		self.db = db
 		self.lptsReader = lptsReader
 		self.s3Utility = S3Utility(config)
+		self.stockNumRegex = re.compile("__[A-Z0-9]{8}")
+
+
+	# Some audio fileset will have stock number, instead of damid in the filename.
+	# This method repairs those filenames, prior to any other processing.
+	def repairFileNames(self):
+		validateDir = self.config.directory_validate
+		for typeCode in os.listdir(validateDir):
+			if typeCode == "audio":
+				audioDir = validateDir + typeCode
+				for bibleId in os.listdir(audioDir):
+					bibleDir = audioDir + os.sep + bibleId
+					for filesetId in os.listdir(bibleDir):
+						filesetDir = bibleDir + os.sep + filesetId
+						for fileName in os.listdir(filesetDir):
+							if fileName.endswith(".mp3"):
+								namePart = fileName.split(".")[0]
+								damId = namePart[-10:]
+								if self.stockNumRegex.match(damId):
+									newFileName = namePart[:-10] + filesetId + ".mp3"
+									os.rename(filesetDir + os.sep + fileName, filesetDir + os.sep + newFileName)
 
 
 	def validate(self):
@@ -41,12 +62,12 @@ class DBPLoadController:
 
 
 	def upload(self):
-		print("********** UPLOADING **********")
+		print("********** UPLOADING TO S3 **********")
 		self.s3Utility.uploadAllFilesets()
 
 
 	def updateDatabase(self):
-		print("********** UPDATING **********")
+		print("********** UPDATING DBP **********")
 		dbOut = SQLBatchExec(self.config)
 		update = UpdateDBPFilesetTables(self.config, self.db, dbOut)
 		filesetList = update.process()
@@ -63,6 +84,7 @@ if (__name__ == '__main__'):
 	db = SQLUtility(config)
 	lptsReader = LPTSExtractReader(config)
 	ctrl = DBPLoadController(config, db, lptsReader)
+	ctrl.repairFileNames()
 	ctrl.validate()
 	ctrl.upload()
 	ctrl.updateDatabase()
