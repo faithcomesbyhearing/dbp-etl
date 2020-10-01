@@ -1,7 +1,6 @@
 # S3Utility
 #
-# This file is a general purpose utility for performing S3 operations
-#
+# This file performs the S3Upload operations
 #
 # Folder: audio
 #	Folder: BibleID
@@ -133,6 +132,7 @@ class S3Utility:
 			return True
 
 
+	## Possibly this should be moved to be before Validate in class DBPLoadController
 	def _cleanupHiddenFiles(self, directory):
 		toDelete = []
 		self._cleanupHiddenFilesRecurse(toDelete, directory)
