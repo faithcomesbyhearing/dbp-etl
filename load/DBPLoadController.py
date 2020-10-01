@@ -27,9 +27,8 @@ class DBPLoadController:
 		self.stockNumRegex = re.compile("__[A-Z0-9]{8}")
 
 
-	# Some audio fileset will have stock number, instead of damid in the filename.
-	# This method repairs those filenames, prior to any other processing.
-	def repairFileNames(self):
+	def cleanup(self):
+		print("********** CLEANUP **********")
 		validateDir = self.config.directory_validate
 		for typeCode in os.listdir(validateDir):
 			if typeCode == "audio":
@@ -38,13 +37,36 @@ class DBPLoadController:
 					bibleDir = audioDir + os.sep + bibleId
 					for filesetId in os.listdir(bibleDir):
 						filesetDir = bibleDir + os.sep + filesetId
-						for fileName in os.listdir(filesetDir):
-							if fileName.endswith(".mp3"):
-								namePart = fileName.split(".")[0]
-								damId = namePart[-10:]
-								if self.stockNumRegex.match(damId):
-									newFileName = namePart[:-10] + filesetId + ".mp3"
-									os.rename(filesetDir + os.sep + fileName, filesetDir + os.sep + newFileName)
+						self._repairFileNames(filesetDir, filesetId)
+						self._cleanupHiddenFiles(filesetDir)
+
+
+	## This corrects filesets that have stock number instead of damId in the filename.
+	def _repairFileNames(self, filesetDir, filesetId):
+		for fileName in os.listdir(filesetDir):
+			if fileName.endswith(".mp3"):
+				namePart = fileName.split(".")[0]
+				damId = namePart[-10:]
+				if self.stockNumRegex.match(damId):
+					newFileName = namePart[:-10] + filesetId + ".mp3"
+					os.rename(filesetDir + os.sep + fileName, filesetDir + os.sep + newFileName)
+
+
+	## This method remove hidden files include .* and Thumb.db
+	def _cleanupHiddenFiles(self, directory):
+		toDelete = []
+		self._cleanupHiddenFilesRecurse(toDelete, directory)
+		for path in toDelete:
+			os.remove(path)
+
+
+	def _cleanupHiddenFilesRecurse(self, toDelete, directory):
+		for pathName in os.listdir(directory):
+			fullName = directory + os.sep + pathName
+			if pathName.startswith(".") or pathName == "Thumbs.db":
+				toDelete.append(fullName)
+			if os.path.isdir(fullName):
+				self._cleanupHiddenFilesRecurse(toDelete, fullName)
 
 
 	def validate(self):
@@ -84,7 +106,7 @@ if (__name__ == '__main__'):
 	db = SQLUtility(config)
 	lptsReader = LPTSExtractReader(config)
 	ctrl = DBPLoadController(config, db, lptsReader)
-	ctrl.repairFileNames()
+	ctrl.cleanup()
 	ctrl.validate()
 	ctrl.upload()
 	ctrl.updateDatabase()

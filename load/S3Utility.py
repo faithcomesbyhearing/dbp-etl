@@ -120,9 +120,8 @@ class S3Utility:
 
 	def uploadAudioFileset(self, s3Bucket, sourceDir, filesetPrefix):
 		print("uploading: ", filesetPrefix)
-		self._cleanupHiddenFiles(sourceDir + filesetPrefix)
 		cmd = "aws s3 sync %s%s s3://%s/%s" % (sourceDir, filesetPrefix, s3Bucket, filesetPrefix)
-		#cmd = 'aws s3 cp %s%s s3://%s/%s --recursive --exclude ".*" --exclude "*/.*"' % (sourceDir, filesetPrefix, s3Bucket, filesetPrefix)
+		#cmd = "aws s3 cp %s%s s3://%s/%s --recursive" % (sourceDir, filesetPrefix, s3Bucket, filesetPrefix)
 		response = subprocess.run(cmd, shell=True, stderr=subprocess.PIPE)
 		if response.returncode != 0:
 			print("ERROR: Upload of %s to %s failed. MESSAGE: %s" % (filesetPrefix, s3Bucket, response.stderr))
@@ -130,23 +129,6 @@ class S3Utility:
 		else:
 			self.promoteFileset(sourceDir, filesetPrefix)
 			return True
-
-
-	## Possibly this should be moved to be before Validate in class DBPLoadController
-	def _cleanupHiddenFiles(self, directory):
-		toDelete = []
-		self._cleanupHiddenFilesRecurse(toDelete, directory)
-		for path in toDelete:
-			os.remove(path)
-
-
-	def _cleanupHiddenFilesRecurse(self, toDelete, directory):
-		for pathName in os.listdir(directory):
-			fullName = directory + os.sep + pathName
-			if pathName.startswith(".") or pathName == "Thumbs.db":
-				toDelete.append(fullName)
-			if os.path.isdir(fullName):
-				self._cleanupHiddenFilesRecurse(toDelete, fullName)
 
 
 	def promoteFileset(self, sourceDir, filesetPrefix):
