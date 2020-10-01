@@ -9,7 +9,7 @@ Location: users home directory
 # The name [DEFAULT] can proceed settings that are default, if not overridden.
 # The configuration name is the first command-line parameter to any dbp load program
 
-[dev]
+[DEFAULT]
 
 database.tunnel = ???? (optional)
 database.host	= 127.0.0.1
@@ -66,6 +66,8 @@ s3.vid_bucket = dbp-vid
 s3.aws_profile = FCBH_Gary
 directory.audio_hls = /Users/garygriswold/FCBH/files/tmp
 audio.hls.duration.limit = 10
+
+[dev]
 
 [test]
 

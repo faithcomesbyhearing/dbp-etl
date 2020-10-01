@@ -171,30 +171,53 @@ class UpdateDBPFilesetTables:
 
 
 	def insertBibleFileset(self, typeCode, filesetId, csvFilename):
+		tableName = "bible_filesets"
+		pkeyNames = ("hash_id",)
+		attrNames = ("id", "asset_id", "set_type_code", "set_size_code")
+		updateRows = []
 		bucket = self.config.s3_vid_bucket if typeCode == "video" else self.config.s3_bucket
 		setTypeCode = UpdateDBPFilesetTables.getSetTypeCode(typeCode, filesetId)
 		setSizeCode = self.getSetSizeCodeByFile(csvFilename)
 		hashId = UpdateDBPFilesetTables.getHashId(bucket, filesetId, setTypeCode)
-		insertRows = []
-		insertRows.append((filesetId, bucket, setTypeCode, setSizeCode, hashId))
-		tableName = "bible_filesets"
-		pkeyNames = ("hash_id",)
-		attrNames = ("id", "asset_id", "set_type_code", "set_size_code")
-		self.dbOut.replace(tableName, pkeyNames, attrNames, insertRows)
+		row = self.db.selectRow("SELECT id, asset_id, set_type_code, set_size_code FROM bible_filesets WHERE hash_id=%s", (hashId,))
+		if row == None:
+			updateRows.append((filesetId, bucket, setTypeCode, setSizeCode, hashId))
+			self.dbOut.insert(tableName, pkeyNames, attrNames, updateRows)
+		else:
+			(dbpFilesetId, dbpBucket, dbpSetTypeCode, dbpSetSizeCode) = row
+			if (dbpFilesetId != filesetId or
+				dbpBucket != bucket or
+				dbpSetTypeCode != setTypeCode or
+				dbpSetSizeCode != setSizeCode):
+				updateRows.append((filesetId, bucket, setTypeCode, setSizeCode, hashId))
+				self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
 		return hashId
 
 
 	def insertFilesetConnections(self, hashId, bibleId):
 		insertRows = []
-		insertRows.append((hashId, bibleId))
-		tableName = "bible_fileset_connections"
-		pkeyNames = ("hash_id", "bible_id")
-		attrNames = ()
-		self.dbOut.replace(tableName, pkeyNames, attrNames, insertRows)
+		row = self.db.selectRow("SELECT * FROM bible_fileset_connections WHERE hash_id=%s AND bible_id=%s", (hashId, bibleId))
+		if row == None:
+			insertRows.append((hashId, bibleId))
+			tableName = "bible_fileset_connections"
+			pkeyNames = ("hash_id", "bible_id")
+			attrNames = ()
+			self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
 
 
 	def insertBibleFiles(self, hashId, csvFilename, filesetDir):
 		insertRows = []
+		updateRows = []
+		deleteRows = []
+		sql = ("SELECT book_id, chapter_start, verse_start, chapter_end, verse_end, file_name, file_size, duration"
+				" FROM bible_files WHERE hash_id = %s")
+		resultSet = self.db.select(sql, (hashId,))
+		dbpMap = {}
+		for row in resultSet:
+			(dbpBookId, dbpChapterStart, dbpVerseStart, dbpChapterEnd, dbpVerseEnd, dbpFileName, dbpFileSize, dbpDuration) = row
+			key = (dbpBookId, dbpChapterStart, dbpVerseStart)
+			value = (dbpChapterEnd, dbpVerseEnd, dbpFileName, dbpFileSize, dbpDuration)
+			dbpMap[key] = value
 		with open(csvFilename, newline='\n') as csvfile:
 			reader = csv.DictReader(csvfile)
 			for row in reader:
@@ -202,30 +225,49 @@ class UpdateDBPFilesetTables:
 				if row["chapter_start"] == "end":
 					(chapterStart, verseStart, verseEnd) = self.convertChapterStart(bookId)
 				else:
-					chapterStart = row["chapter_start"]
-					verseStart = row["verse_start"] if row["verse_start"] != "" else "1"
-					verseEnd = row["verse_end"] if row["verse_end"] != "" else None
-				chapterEnd = row["chapter_end"] if row["chapter_end"] != "" else None
+					chapterStart = int(row["chapter_start"])
+					verseStart = int(row["verse_start"]) if row["verse_start"] != "" else 1
+					verseEnd = int(row["verse_end"]) if row["verse_end"] != "" else None
+				chapterEnd = int(row["chapter_end"]) if row["chapter_end"] != "" else None
 				fileName = row["file_name"]
-				fileSize = row["file_size"]
+				fileSize = int(row["file_size"]) if row["file_size"] != "" else None
 				duration = self.getDuration(filesetDir + os.sep + fileName)
-				insertRows.append((chapterEnd, verseEnd, fileName, fileSize, duration,
-					hashId, bookId, chapterStart, verseStart))
+				key = (bookId, chapterStart, verseStart)
+				dbpValue = dbpMap.get(key)
+				if dbpValue == None:
+					insertRows.append((chapterEnd, verseEnd, fileName, fileSize, duration,
+						hashId, bookId, chapterStart, verseStart))
+				else:
+					del dbpMap[key]
+					(dbpChapterEnd, dbpVerseEnd, dbpFileName, dbpFileSize, dbpDuration) = dbpValue
+					if (chapterEnd != dbpChapterEnd or
+						verseEnd != dbpVerseEnd or
+						fileName != dbpFileName or
+						fileSize != dbpFileSize or
+						duration != dbpDuration):
+						updateRows.append((chapterEnd, verseEnd, fileName, fileSize, duration,
+						hashId, bookId, chapterStart, verseStart))
+
+		for (dbpBookId, dbpChapterStart, dbpVerseStart) in dbpMap.keys():
+			deleteRows.append((hashId, dbpBookId, dbpChapterStart, dbpVerseStart))
+
 		tableName = "bible_files"
 		pkeyNames = ("hash_id", "book_id", "chapter_start", "verse_start")
 		attrNames = ("chapter_end", "verse_end", "file_name", "file_size", "duration")
-		self.dbOut.replace(tableName, pkeyNames, attrNames, insertRows)
+		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
+		self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
+		self.dbOut.delete(tableName, pkeyNames, deleteRows)
 
 
 	def convertChapterStart(self, bookId):
 		if bookId == "MAT":
-			return ("28", "21", "21")
+			return (28, 21, 21)
 		elif bookId == "MRK":
-			return ("16", "21", "21")
+			return (16, 21, 21)
 		elif bookId == "LUK":
-			return ("24", "54", "54")
+			return (24, 54, 54)
 		elif bookId == "JHN":
-			return ("21", "26", "26")
+			return (21, 26, 26)
 		else:
 			print("ERROR: Unexpected book %s in UpdateDBPDatabase." % (bookId))
 			sys.exit()
@@ -253,7 +295,7 @@ if (__name__ == '__main__'):
 
 	dbOut.displayStatements()
 	dbOut.displayCounts()
-	#dbOut.execute()
+	dbOut.execute()
 
 
 ##

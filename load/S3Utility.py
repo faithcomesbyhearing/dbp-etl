@@ -172,7 +172,6 @@ class S3Utility:
 
 
 	def _cleanupDirectory(self, directory, filesetPrefix):
-		print("cleanup directory %s/%s" % (directory, filesetPrefix))
 		prefix = filesetPrefix
 		while(len(prefix) > 0):
 			path = directory + prefix
