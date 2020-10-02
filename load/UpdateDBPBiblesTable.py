@@ -68,9 +68,9 @@ class UpdateDBPBiblesTable:
 			#versification = self.biblesVersification(bibleId, lptsRecords)
 			script = self.biblesScript(bibleId, lptsRecords)
 			numerals = self.biblesNumeralId2(bibleId, lptsRecords)
-			date = self.biblesDate(bibleId, lptsRecords)
 			scope = self.biblesSizeCode(bibleId, lptsRecords)
 			copyright = self.bibleTextCopyright(bibleId, lptsRecords)
+			date = self.biblesDate(copyright)
 
 			if bibleId not in dbpBibleMap.keys():
 				if languageId != None:
@@ -84,6 +84,7 @@ class UpdateDBPBiblesTable:
 					script != dbpScript or
 					copyright != dbpCopyright):
 					if languageId != None:
+						copyright = copyright.replace("'", "''")
 						updateRows.append((languageId, dbpVersification, numerals, date, scope, script, copyright, bibleId))
 
 		tableName = "bibles"
@@ -173,17 +174,13 @@ class UpdateDBPBiblesTable:
 		return list(final)[0]
 
 
-	def biblesDate(self, bibleId, lptsRecords):
-		final = set()
-		for (lptsIndex, lptsRecord) in lptsRecords:
-			self.extractYear(final, lptsRecord.Copyrightc())
-		if len(final) == 0:
-			for (lptsIndex, lptsRecord) in lptsRecords:
-				self.extractYear(final, lptsRecord.Volumne_Name())
-		if len(final) == 0:
-			return None
+	def biblesDate(self, copyright):
+		if copyright != None:
+			match = self.yearPattern.search(copyright)
+			if match != None and match.group(1)[0] <= '2':
+				return match.group(1)
 		else:
-			return list(final)[0]
+			return None
 
 
 	def biblesSizeCode(self, bibleId, lptsRecords):
@@ -242,18 +239,36 @@ class UpdateDBPBiblesTable:
 					copyright = copyright[pos:]
 				copyright = copyright.split("\n")[0]
 				copyright = copyright[:128]
-				copyright = copyright.replace("'", "''")
 				final.add(copyright)
 		if len(final) == 0:
 			return None
-		return list(final)[0]
-
-
-	def extractYear(self, finalSet, value):
-		if value != None:
-			match = self.yearPattern.search(value)
-			if match != None and match.group(1)[0] <= '2':
-				finalSet.add(match.group(1))
+		elif len(final) == 1:
+			return list(final)[0]
+		else:
+			year = 0
+			result = ""
+			for item in final:
+				match = self.yearPattern.search(item)
+				if match != None:
+					matchInt = int(match.group(1))
+					if matchInt > year:
+						year = matchInt
+						result = item
+					elif matchInt == year:
+						if len(item) > len(result):
+							result = item
+						elif len(item) == len(result) and item > result:
+							result = item
+			if year > 0:
+				return result # return one with latest year, if years equal then longest, if same length then later
+			else:
+				result = ""
+				for item in final:
+					if len(item) > len(result):
+						result = item
+					elif len(item) == len(result) and item > result:
+						result = item
+				return result # return longest in order to get a consistent result
 
 
 	def testBibleForeignKeys(self, bibleId):
@@ -276,16 +291,6 @@ class UpdateDBPBiblesTable:
 			return True
 		else:
 			return False # has no error
-
-
-#	def findResult(self, bibleId, final, fieldName):
-#		if len(final) == 0:
-#			return None
-#		elif len(final) == 1:
-#			return list(final)[0]
-#		else:
-#			print("WARN_06: bible_id %s has multiple %s values |%s|" % (bibleId, fieldName, "|".join(final)))
-#			return list(final)[0]
 
 
 	## This is a one-time function that creates a table of script codes.
@@ -378,7 +383,7 @@ if (__name__ == '__main__'):
 	bibles.process()
 	db.close()
 
-	#dbOut.displayStatements()
+	dbOut.displayStatements()
 	dbOut.displayCounts()
 	dbOut.execute()
 
