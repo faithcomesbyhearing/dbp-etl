@@ -425,6 +425,12 @@ class LPTSRecord:
 	def FairUseLimitValue(self):
 		return self.record.get("FairUseLimitValue")
 
+	def Gideon_Audio_Excluded(self):
+		return self.record.get("Gideon_Audio_Excluded")
+
+	def Gideon_Text_Excluded(self):
+		return self.record.get("Gideon_Text_Excluded")
+
 	def HeartName(self):
 		return self.record.get("HeartName")
 

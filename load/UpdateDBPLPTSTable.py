@@ -34,16 +34,11 @@ class UpdateDBPLPTSTable:
 		sql = ("SELECT b.bible_id, bf.id, bf.set_type_code, bf.set_size_code, bf.asset_id, bf.hash_id"
 			" FROM bible_filesets bf JOIN bible_fileset_connections b ON bf.hash_id = b.hash_id"
 			" ORDER BY b.bible_id, bf.id, bf.set_type_code")
-		#try:
 		filesetList = self.db.select(sql, ())
 		self.updateAccessGroupFilesets(filesetList)
 		self.updateBibleFilesetTags(filesetList)
 		self.updateBibleFilesetCopyrights(filesetList)
 		self.updateBibleFilesetCopyrightOrganizations()
-		#self.updateBibles(filesetList)
-		#except Exception as err:
-		#print("ERROR: %s" % (err))
-		#self.displayLog()
 
 	##
 	## Access Group Filesets
@@ -336,7 +331,7 @@ class UpdateDBPLPTSTable:
 		#unknownLicensors = orgs.validateLicensors()
 		#unknownCopyrights = orgs.validateCopyrights()
 		sql = "SELECT id, set_type_code, asset_id, hash_id FROM bible_filesets ORDER BY id, set_type_code"
-		filesetList = db.select(sql, ())
+		filesetList = self.db.select(sql, ())
 		#print("num filelists", len(filesetList))
 		orgs.updateLicensors(filesetList)
 		orgs.updateCopyrightHolders(filesetList)
@@ -446,13 +441,11 @@ if (__name__ == '__main__'):
 	db = SQLUtility(config)
 	dbOut = SQLBatchExec(config)
 	filesets = UpdateDBPLPTSTable(config, db, dbOut, lptsReader)
-#	filesets.insertAccessGroups() # temporary
 	filesets.process()
-	#filesets.accessGroupSymmetricTest()
 	db.close()
 	dbOut.displayStatements()
 	dbOut.displayCounts()
-	dbOut.execute()
+	#dbOut.execute()
 
 """
 truncate table access_group_filesets;
