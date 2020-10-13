@@ -71,16 +71,6 @@ class DBPLoadController:
 				self._cleanupHiddenFilesRecurse(toDelete, fullName)
 
 
-	def updateBiblesTable(self):
-		print("********** UPDATE Bibles TABLE **********")
-		dbOut = SQLBatchExec(self.config)
-		bibles = UpdateDBPBiblesTable(self.config, self.db, dbOut, self.lptsReader)
-		bibles.process()
-		#dbOut.displayStatements()
-		dbOut.displayCounts()
-		dbOut.execute()
-
-
 	def validate(self):
 		print("********** VALIDATING **********")
 		validate = Validate("files", self.config, self.db, self.lptsReader)
@@ -103,11 +93,12 @@ class DBPLoadController:
 	def updateDatabase(self):
 		print("********** UPDATING DBP **********")
 		dbOut = SQLBatchExec(self.config)
+		bibles = UpdateDBPBiblesTable(self.config, self.db, dbOut, self.lptsReader)
+		bibles.process()
 		update = UpdateDBPFilesetTables(self.config, self.db, dbOut)
 		filesetList = update.process()
 		lptsDBP = UpdateDBPLPTSTable(self.config, self.db, dbOut, self.lptsReader)
 		lptsDBP.process()
-
 		#dbOut.displayStatements()
 		dbOut.displayCounts()
 		success = dbOut.execute()
@@ -122,7 +113,6 @@ if (__name__ == '__main__'):
 	lptsReader = LPTSExtractReader(config)
 	ctrl = DBPLoadController(config, db, lptsReader)
 	ctrl.cleanup()
-	ctrl.updateBiblesTable()
 	ctrl.validate()
 	ctrl.upload()
 	ctrl.updateDatabase()

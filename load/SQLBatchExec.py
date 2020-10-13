@@ -95,8 +95,9 @@ class SQLBatchExec:
 #			process = subprocess.Popen([cmd], shell=True, stderr=subprocess.STDOUT)
 #			process.wait(timeout=600)
 #			print("PROCESS", process.stdout.read())
-			response = subprocess.run(cmd, shell=True, stderr=subprocess.PIPE, timeout=600)
+			response = subprocess.run(cmd, shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=600)
 			success = response.returncode == 0
+			print("SQLBATCH:", response.stderr)
 			return success
 
 
