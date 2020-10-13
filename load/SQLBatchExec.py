@@ -92,10 +92,13 @@ class SQLBatchExec:
 												self.config.database_passwd,
 												self.config.database_db_name,
 												path))
-			#results2 = os.popen(cmd).read()
-			#print(results2)
-			process = subprocess.Popen([cmd], shell=True, stderr=subprocess.STDOUT)
-			process.wait(timeout=600)
+#			process = subprocess.Popen([cmd], shell=True, stderr=subprocess.STDOUT)
+#			process.wait(timeout=600)
+#			print("PROCESS", process.stdout.read())
+			response = subprocess.run(cmd, shell=True, stderr=subprocess.PIPE, timeout=600)
+			print("PROCESS2", response)
+			success = response.returncode == 0
+			return success
 
 
 if (__name__ == '__main__'):

@@ -110,9 +110,10 @@ class DBPLoadController:
 
 		#dbOut.displayStatements()
 		dbOut.displayCounts()
-		dbOut.execute()
-		for filesetPrefix in filesetList:
-			self.s3Utility.promoteFileset(self.config.directory_database, filesetPrefix)
+		success = dbOut.execute()
+		if success:
+			for filesetPrefix in filesetList:
+				self.s3Utility.promoteFileset(self.config.directory_database, filesetPrefix)
 
 
 if (__name__ == '__main__'):
