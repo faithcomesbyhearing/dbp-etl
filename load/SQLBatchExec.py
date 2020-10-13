@@ -96,7 +96,6 @@ class SQLBatchExec:
 #			process.wait(timeout=600)
 #			print("PROCESS", process.stdout.read())
 			response = subprocess.run(cmd, shell=True, stderr=subprocess.PIPE, timeout=600)
-			print("PROCESS2", response)
 			success = response.returncode == 0
 			return success
 
