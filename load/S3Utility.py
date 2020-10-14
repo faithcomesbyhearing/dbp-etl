@@ -155,7 +155,7 @@ class S3Utility:
 
 	def _cleanupDirectory(self, directory, filesetPrefix):
 		prefix = filesetPrefix
-		while(len(prefix) > 0):
+		while(len(prefix) > 10):
 			path = directory + prefix
 			if os.path.exists(path):
 				files = os.listdir(path)
