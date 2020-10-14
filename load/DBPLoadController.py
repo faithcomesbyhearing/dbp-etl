@@ -71,6 +71,17 @@ class DBPLoadController:
 				self._cleanupHiddenFilesRecurse(toDelete, fullName)
 
 
+	def updateBibles(self):
+		print("********** UPDATING Bibles Table **********")
+		dbOut = SQLBatchExec(self.config)
+		bibles = UpdateDBPBiblesTable(self.config, self.db, dbOut, self.lptsReader)
+		bibles.process()
+		#dbOut.displayStatements()
+		dbOut.displayCounts()
+		success = dbOut.execute()
+		return success		
+
+
 	def validate(self):
 		print("********** VALIDATING **********")
 		validate = Validate("files", self.config, self.db, self.lptsReader)
@@ -90,21 +101,29 @@ class DBPLoadController:
 		self.s3Utility.uploadAllFilesets()
 
 
-	def updateDatabase(self):
-		print("********** UPDATING DBP **********")
+	def updateFilesetTables(self):
+		print("********** UPDATING Fileset Tables **********")
 		dbOut = SQLBatchExec(self.config)
-		bibles = UpdateDBPBiblesTable(self.config, self.db, dbOut, self.lptsReader)
-		bibles.process()
 		update = UpdateDBPFilesetTables(self.config, self.db, dbOut)
 		filesetList = update.process()
-		lptsDBP = UpdateDBPLPTSTable(self.config, self.db, dbOut, self.lptsReader)
-		lptsDBP.process()
 		#dbOut.displayStatements()
 		dbOut.displayCounts()
 		success = dbOut.execute()
 		if success:
 			for filesetPrefix in filesetList:
 				self.s3Utility.promoteFileset(self.config.directory_database, filesetPrefix)
+		return success
+
+
+	def updateLPTSTables(self):
+		print("********** UPDATING LPTS Tables **********")
+		dbOut = SQLBatchExec(self.config)
+		lptsDBP = UpdateDBPLPTSTable(self.config, self.db, dbOut, self.lptsReader)
+		lptsDBP.process()
+		#dbOut.displayStatements()
+		dbOut.displayCounts()
+		success = dbOut.execute()
+		return success
 
 
 if (__name__ == '__main__'):
@@ -113,10 +132,18 @@ if (__name__ == '__main__'):
 	lptsReader = LPTSExtractReader(config)
 	ctrl = DBPLoadController(config, db, lptsReader)
 	ctrl.cleanup()
-	ctrl.validate()
-	ctrl.upload()
-	ctrl.updateDatabase()
-	print("********** COMPLETE **********")
+	if ctrl.updateBibles():
+		ctrl.validate()
+		ctrl.upload()
+		if ctrl.updateFilesetTables():
+			if ctrl.updateLPTSTables():
+				print("********** COMPLETE **********")
+			else:
+				print("********** LPTS Tables Update Failed **********")
+		else:
+			print("********** Fileset Tables Update Failed **********")
+	else:
+		print("********** Bibles Table Update Failed **********")
 
 
 

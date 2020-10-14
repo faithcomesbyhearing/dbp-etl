@@ -71,6 +71,7 @@ class SQLBatchExec:
 	def execute(self):
 		if len(self.statements) == 0:
 			print("NO INSERT, UPDATE, or DELETE Transactions to process")
+			return True
 		else:
 			pattern = self.config.filename_datetime 
 			tranDir = "./" ## we need a config parameter
