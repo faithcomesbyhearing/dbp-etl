@@ -116,7 +116,7 @@ class LoadOrganizations:
 							if licensorOrg != None:
 								lptsOrgList = lptsOrgList.union(licensorOrg)
 							else:
-								print("ERROR: There is no org_id for: %s" % (licensor))
+								print("ERROR: %s has no org_id for licensor: %s" % (filesetId, licensor))
 
 			dbpOrgSet = dbpOrgMapSet.get(hashId, set())
 			for lptsOrg in lptsOrgList:
@@ -168,7 +168,7 @@ class LoadOrganizations:
 						if copyrightOrg != None:
 							lptsOrgList = lptsOrgList.union(copyrightOrg)
 						else:
-							print("ERROR: There is no org_id for: %s" % (name))
+							print("ERROR: %s has no org_id for copyright: %s" % (filesetId, name))
 
 			dbpOrgSet = dbpOrgMapSet.get(hashId, set())
 			for lptsOrg in lptsOrgList:
