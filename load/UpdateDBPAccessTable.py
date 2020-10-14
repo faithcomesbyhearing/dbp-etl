@@ -54,6 +54,16 @@ class UpdateDBPAccessTable:
 					accessIdInLPTS = lpts.get(accessDesc) == "-1" and "NT" in setSizeCode
 				elif accessId == 102: # allow_text_OT_DBP
 					accessIdInLPTS = lpts.get(accessDesc) == "-1" and "OT" in setSizeCode
+				elif accessId == 141: # allow_text_GBA
+					accessIdInLPTS = lpts.get("APIDevText") == "-1"
+					if lptsRecord != None and lptsRecord.Gideon_Text_Excluded() == "1":
+						accessIdInLPTS = False
+				elif accessId == 143: # allow_audio_GBA
+					accessIdInLPTS = lpts.get("APIDevAudio") == "-1"
+					if lptsRecord != None and lptsRecord.Gideon_Audio_Excluded() == "1":
+						accessIdInLPTS = False
+				elif accessId == 145: # allow_video_GBA
+					accessIdInLPTS = lpts.get("APIDevVideo") == "-1"
 				else:
 					accessIdInLPTS = lpts.get(accessDesc) == "-1"
 
