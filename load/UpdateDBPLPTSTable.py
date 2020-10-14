@@ -15,7 +15,8 @@ from LPTSExtractReader import *
 from SQLUtility import *
 from SQLBatchExec import *
 from LoadOrganizations import *
-from UpdateDBPBiblesTable import *
+#from UpdateDBPBiblesTable import *
+from UpdateDBPAccessTable import *
 
 class UpdateDBPLPTSTable:
 
@@ -24,7 +25,6 @@ class UpdateDBPLPTSTable:
 		self.db = db
 		self.dbOut = dbOut
 		self.lptsReader = lptsReader
-		#self.updateBiblesTable = UpdateDBPBiblesTable(config)
 		self.updateCounts = {}
 		self.hashIdMap = None
 		self.sqlLog = []
@@ -35,153 +35,12 @@ class UpdateDBPLPTSTable:
 			" FROM bible_filesets bf JOIN bible_fileset_connections b ON bf.hash_id = b.hash_id"
 			" ORDER BY b.bible_id, bf.id, bf.set_type_code")
 		filesetList = self.db.select(sql, ())
-		self.updateAccessGroupFilesets(filesetList)
+		##self.updateAccessGroupFilesets(filesetList)
+		access = UpdateDBPAccessTable(self.config, self.db, self.dbOut, self.lptsReader)
+		access.process(filesetList)
 		self.updateBibleFilesetTags(filesetList)
 		self.updateBibleFilesetCopyrights(filesetList)
 		self.updateBibleFilesetCopyrightOrganizations()
-
-	##
-	## Access Group Filesets
-	##
-	def updateAccessGroupFilesets(self, filesetList):
-		insertRows = []
-		deleteRows = []
-		## note id > 100 is temporary
-		accessGroupMap = self.db.selectMap("SELECT id, description FROM access_groups WHERE id > 100", ())
-		textAccessSet = self.db.selectSet("SELECT description FROM access_groups WHERE name like %s", ("%text%",))
-		audioAccessSet = self.db.selectSet("SELECT description FROM access_groups WHERE name like %s", ("%audio%",))
-		videoAccessSet = self.db.selectSet("SELECT description FROM access_groups WHERE name like %s", ("%video%",))
-		accessMapSet = self.db.selectMapSet("SELECT hash_id, access_group_id FROM access_group_filesets", ())
-
-		for (bibleId, filesetId, setTypeCode, setSizeCode, assetId, hashId) in filesetList:
-			typeCode = setTypeCode.split("_")[0]
-
-			if typeCode != "app":
-				(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecord(typeCode, bibleId, filesetId)
-				if lptsRecord != None:
-					lpts = lptsRecord.record
-				else:
-					lpts = {}
-					#self.droppedRecordErrors(typeCode, bibleId, filesetId, setTypeCode, assetId)
-			
-				accessSet = accessMapSet.get(hashId, set())
-				for (accessGroupId, lptsName) in accessGroupMap.items():
-					accessIdInDBP = accessGroupId in accessSet;
-					accessIdInLPTS = lpts.get(lptsName) == "-1"
-
-					if accessIdInLPTS:
-						if typeCode == "text":
-							accessIdInLPTS = lptsName in textAccessSet
-							if accessIdInLPTS and lptsName in {"DBPText", "DBPTextOT"}:
-								if "NT" in setSizeCode and "OT" in setSizeCode:
-									accessIdInLPTS = ("DBPText" in accessGroupMap.values()
-													and "DBPTextOT" in accessGroupMap.values())
-								elif "NT" in setSizeCode:
-									accessIdInLPTS = lptsName == "DBPText"
-								elif "OT" in setSizeCode:
-									accessIdInLPTS = lptsName == "DBPTextOT"
-								else:
-									accessIdInLPTS = False
-						elif typeCode == "audio":
-							accessIdInLPTS = lptsName in audioAccessSet
-						elif typeCode == "video":
-							accessIdInLPTS = lptsName in videoAccessSet
-						else:
-							accessIdInLPTS = False
-
-					if accessIdInLPTS and not accessIdInDBP:
-						insertRows.append((hashId, accessGroupId))
-					elif accessIdInDBP and not accessIdInLPTS:
-						deleteRows.append((hashId, accessGroupId))
-
-		tableName = "access_group_filesets"
-		pkeyNames = ("hash_id", "access_group_id")
-		self.dbOut.insert(tableName, pkeyNames, (), insertRows)
-		self.dbOut.delete(tableName, pkeyNames, deleteRows)
-
-
-	## deprecated
-	def insertAccessGroups(self):
-		count = self.db.selectScalar("SELECT count(*) FROM access_groups WHERE id > 100", ())
-		if count > 0:
-			return
-		sql = "INSERT INTO access_groups (id, name, description) VALUES (%s, %s, %s)"
-		values = []
-		values.append((101, "allow_text_NT_DBP", "DBPText"))
-		values.append((102, "allow_text_OT_DBP", "DBPTextOT"))
-		values.append((103, "allow_audio_DBP", "DBPAudio"))
-		#values.append((105, "allow_video_DBP", NULL))
-
-		values.append((111, "allow_text_WEB", "HubText"))
-		values.append((113, "allow_audio_WEB", "DBPWebHub"))
-		values.append((115, "allow_video_WEB", "WebHubVideo"))
-
-		values.append((121, "allow_text_API", "APIDevText"))
-		values.append((123, "allow_audio_API", "APIDevAudio"))
-		values.append((125, "allow_video_API", "APIDevVideo"))
-
-		values.append((131, "allow_text_APP", "MobileText"))
-		values.append((133, "allow_audio_APP", "DBPMobile"))
-		values.append((135, "allow_video_APP", "MobileVideo"))
-
-		values.append((141, "allow_text_GBA", "GBN_Text"))
-		values.append((143, "allow_audio_GBA", "GBN_Audio"))
-		values.append((145, "allow_video_GBA", "GBN_Video"))
-
-		values.append((153, "allow_audio_RADIO", "Streaming"))
-		values.append((155, "allow_video_RADIO", "StreamingVideo"))
-
-		values.append((163, "allow_audio_ITUNES", "ItunesPodcast"))
-		values.append((165, "allow_video_ITUNES", "ItunesPodcastVideo"))
-
-		values.append((173, "allow_audio_SALES", "FCBHStore"))
-		values.append((175, "allow_video_SALES", "FCBHStoreVideo"))
-
-		values.append((183, "allow_audio_DOWNLOAD", "Download"))
-		self.db.executeBatch(sql, values)
-
-
-	## deprecated
-	def accessGroupSymmetricTest(self):
-		sql = ("SELECT distinct bfc.bible_id, agf.access_group_id, ag.description"
-			" FROM bible_fileset_connections bfc, bible_filesets bf, access_group_filesets agf, access_groups ag"
-			" WHERE bfc.hash_id = bf.hash_id"
-			" AND bf.hash_id = agf.hash_id"
-			" AND agf.access_group_id = ag.id"
-			" ORDER BY bfc.bible_id, ag.description")
-		resultSet = self.db.select(sql, ())
-		with open("test_DBP.txt", "w") as outFile:
-			priorKey = None
-			for (bibleId, accessGroupId, lptsName) in resultSet:
-				key = bibleId
-				if key != priorKey:
-					outFile.write("<DBP_Equivalent>%s</DBP_Equivalent>\n" % (bibleId))
-					priorKey = key
-				outFile.write("\t<%s>-1</%s>\n" % (lptsName, lptsName))
-
-		with open(self.config.filename_lpts_xml, "r") as lpts:
-			results = {}
-			permissions = set()
-			hasLive = False
-			for line in lpts:
-				if "<DBP_Eq" in line:
-					if len(permissions) > 0 and hasLive:
-						results[bibleId] = permissions
-					permissions = set()
-					hasLive = False
-					pattern = re.compile("<DBP_Equivalent[123]?>([A-Z0-9]+)</DBP_Equivalent[123]?>")
-					found = pattern.search(line)
-					if found != None:
-						bibleId = found.group(1)
-				if ">-1<" in line:
-					permissions.add(line.strip())
-				if ">Live<" in line or ">live<" in line:
-					hasLive = True
-		with open("test_LPTS.txt", "w") as outFile:
-			for bibleId in sorted(results.keys()):
-				outFile.write("<DBP_Equivalent>%s</DBP_Equivalent>\n" % (bibleId))
-				for permission in sorted(results[bibleId]):
-					outFile.write("\t%s\n" % (permission))
 
 	##
 	## Bible Fileset Tags
