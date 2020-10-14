@@ -375,8 +375,8 @@ class UpdateDBPBiblesTable:
 if (__name__ == '__main__'):
 	config = Config()
 	db = SQLUtility(config)
-	UpdateDBPBiblesTable.lptsScriptCodesInsert(db)
-	UpdateDBPBiblesTable.createTestBiblesTable(db)
+	#UpdateDBPBiblesTable.lptsScriptCodesInsert(db)
+	#UpdateDBPBiblesTable.createTestBiblesTable(db)
 	dbOut = SQLBatchExec(config)
 	lptsReader = LPTSExtractReader(config)
 	bibles = UpdateDBPBiblesTable(config, db, dbOut, lptsReader)
@@ -385,7 +385,7 @@ if (__name__ == '__main__'):
 
 	dbOut.displayStatements()
 	dbOut.displayCounts()
-	dbOut.execute()
+	dbOut.execute("test-bibles")
 
 
 

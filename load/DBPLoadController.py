@@ -78,7 +78,7 @@ class DBPLoadController:
 		bibles.process()
 		#dbOut.displayStatements()
 		dbOut.displayCounts()
-		success = dbOut.execute()
+		success = dbOut.execute("bibles")
 		return success		
 
 
@@ -108,7 +108,7 @@ class DBPLoadController:
 		filesetList = update.process()
 		#dbOut.displayStatements()
 		dbOut.displayCounts()
-		success = dbOut.execute()
+		success = dbOut.execute("filesets")
 		if success:
 			for filesetPrefix in filesetList:
 				self.s3Utility.promoteFileset(self.config.directory_database, filesetPrefix)
@@ -122,7 +122,7 @@ class DBPLoadController:
 		lptsDBP.process()
 		#dbOut.displayStatements()
 		dbOut.displayCounts()
-		success = dbOut.execute()
+		success = dbOut.execute("lpts")
 		return success
 
 

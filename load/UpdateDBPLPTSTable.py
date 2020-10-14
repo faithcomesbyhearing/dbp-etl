@@ -445,7 +445,7 @@ if (__name__ == '__main__'):
 	db.close()
 	dbOut.displayStatements()
 	dbOut.displayCounts()
-	#dbOut.execute()
+	#dbOut.execute("test-lpts")
 
 """
 truncate table access_group_filesets;

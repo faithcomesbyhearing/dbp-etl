@@ -309,7 +309,7 @@ if (__name__ == '__main__'):
 	orgs.updateCopyrightHolders(filesetList)
 	dbOut.displayStatements()
 	dbOut.displayCounts()
-	dbOut.execute()
+	dbOut.execute("test-orgs")
 
 	#orgs.unitTestUpdateLicensors()
 	#orgs.unitTestUpdateCopyrightHolders()

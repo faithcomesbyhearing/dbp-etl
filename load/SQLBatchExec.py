@@ -68,14 +68,14 @@ class SQLBatchExec:
 			print(statement)
 
 
-	def execute(self):
+	def execute(self, batchName):
 		if len(self.statements) == 0:
 			print("NO INSERT, UPDATE, or DELETE Transactions to process")
 			return True
 		else:
 			pattern = self.config.filename_datetime 
 			tranDir = "./" ## we need a config parameter
-			path = tranDir + "Trans-" + datetime.today().strftime(pattern) + ".sql"
+			path = tranDir + "Trans-" + datetime.today().strftime(pattern) + "-" + batchName + ".sql"
 			print("Transactions", path)
 			tranFile = open(path, "w")
 			tranFile.write("START TRANSACTION;\n")
@@ -109,7 +109,7 @@ if (__name__ == '__main__'):
 	sql.statements.append("SHOW DATABASES;")
 	sql.displayStatements()
 	sql.displayCounts()
-	sql.execute()
+	sql.execute("test")
 
 
 

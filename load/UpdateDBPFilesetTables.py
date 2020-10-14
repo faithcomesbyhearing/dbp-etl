@@ -295,7 +295,7 @@ if (__name__ == '__main__'):
 
 	dbOut.displayStatements()
 	dbOut.displayCounts()
-	dbOut.execute()
+	dbOut.execute("test-filesets")
 
 
 ##
