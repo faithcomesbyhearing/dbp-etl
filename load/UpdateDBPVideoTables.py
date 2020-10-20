@@ -51,11 +51,10 @@ class UpdateDBPVideoTables:
 		for filename in [f for f in os.listdir(directory + filesetPrefix) if not f.startswith('.')]:
 			m3u8Files = self.downloadM3U8(filesetPrefix, filename)
 			for (m3u8Filename, m3u8Content) in m3u8Files.items():
-				print(m3u8Filename)
+				#print(m3u8Filename)
 				if m3u8Filename.endswith("_stream.m3u8"):
 					self.processStreamM3U8(m3u8Filename, m3u8Content)
 				else:
-					bandwidthId = 1 ##### must get correct value
 					self.processTSM3U8(m3u8Filename, m3u8Content)
 		return errorCount == 0
 
@@ -75,8 +74,9 @@ class UpdateDBPVideoTables:
 		insertRows = []
 		updateRows = []
 		deleteRows = []
-		fileId = self.fileIdMap.get(m3u8Filename, -1)
-		## need to handle -1
+		fileId = self.fileIdMap.get(m3u8Filename)
+		if fileId == None:
+			fileId = "@" + m3u8Filename.replace("-", "_")
 		for line in m3u8Content.split("\n"):
 			if line.startswith("#EXT-X-STREAM-INF:"):
 				print(line)
@@ -93,7 +93,7 @@ class UpdateDBPVideoTables:
 		tableName = "bible_file_stream_bandwidths"
 		pkeyNames = ("file_name",)
 		attrNames = ("bible_file_id", "bandwidth", "resolution_width", "resolution_height", "codec", "stream")
-		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
+		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows, 6)
 		self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
 		self.dbOut.delete(tableName, pkeyNames, deleteRows)
 
@@ -102,6 +102,7 @@ class UpdateDBPVideoTables:
 		insertRows = []
 		updateRows = []
 		deleteRows = []
+		bandwidthId = "@" + m3u8Filename.replace("-", "_")
 		for line in m3u8Content.split("\n"):
 			if line.startswith("#EXTINF:"):
 				regex = re.compile(r"#EXTINF:([0-9\.]+),")
@@ -109,7 +110,7 @@ class UpdateDBPVideoTables:
 				runtime = match.group(1)
 			elif line.endswith("ts"):
 				filename = line
-				insertRows.append((1, runtime, filename))
+				insertRows.append((bandwidthId, runtime, filename))
 
 		tableName = "bible_file_stream_ts"
 		pkeyNames = ("file_name",)
