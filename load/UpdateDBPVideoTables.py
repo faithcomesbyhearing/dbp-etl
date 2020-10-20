@@ -25,6 +25,10 @@ class UpdateDBPVideoTables:
 		self.config = config
 		self.db = db
 		self.dbOut = dbOut
+		sql = ("SELECT file_name, id FROM bible_files where hash_id in"
+			" (SELECT hash_id FROM bible_filesets WHERE set_type_code = 'video_stream')")
+		self.fileIdMap = db.selectMap(sql, ())
+		print(len(self.fileIdMap))
 
 
 	def process(self):
@@ -46,14 +50,13 @@ class UpdateDBPVideoTables:
 		errorCount = 0
 		for filename in [f for f in os.listdir(directory + filesetPrefix) if not f.startswith('.')]:
 			m3u8Files = self.downloadM3U8(filesetPrefix, filename)
-			for (filename, content) in m3u8Files.items():
-				print(filename)
-				if filename.endswith("_stream.m3u8"):
-					fileId = 1 ##### must get correct value
-					self.processStreamM3U8(fileId, filename, content)
+			for (m3u8Filename, m3u8Content) in m3u8Files.items():
+				print(m3u8Filename)
+				if m3u8Filename.endswith("_stream.m3u8"):
+					self.processStreamM3U8(m3u8Filename, m3u8Content)
 				else:
 					bandwidthId = 1 ##### must get correct value
-					self.processTSM3U8(filename, content)
+					self.processTSM3U8(m3u8Filename, m3u8Content)
 		return errorCount == 0
 
 
@@ -68,11 +71,12 @@ class UpdateDBPVideoTables:
 		return m3u8Files
 
 
-
-	def processStreamM3U8(self, fileId, m3u8Filename, m3u8Content):
+	def processStreamM3U8(self, m3u8Filename, m3u8Content):
 		insertRows = []
 		updateRows = []
 		deleteRows = []
+		fileId = self.fileIdMap.get(m3u8Filename, -1)
+		## need to handle -1
 		for line in m3u8Content.split("\n"):
 			if line.startswith("#EXT-X-STREAM-INF:"):
 				print(line)
