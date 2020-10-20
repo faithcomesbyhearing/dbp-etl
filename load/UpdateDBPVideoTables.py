@@ -28,7 +28,8 @@ class UpdateDBPVideoTables:
 		sql = ("SELECT file_name, id FROM bible_files where hash_id in"
 			" (SELECT hash_id FROM bible_filesets WHERE set_type_code = 'video_stream')")
 		self.fileIdMap = db.selectMap(sql, ())
-		print(len(self.fileIdMap))
+		self.streamRegex = re.compile(r"BANDWIDTH=([0-9]+),RESOLUTION=([0-9]+)x([0-9]+),CODECS=\"(.+)\"")
+		self.tsRegex = re.compile(r"#EXTINF:([0-9\.]+),")
 
 
 	def process(self):
@@ -79,9 +80,7 @@ class UpdateDBPVideoTables:
 			fileId = "@" + m3u8Filename.replace("-", "_")
 		for line in m3u8Content.split("\n"):
 			if line.startswith("#EXT-X-STREAM-INF:"):
-				print(line)
-				regex = re.compile(r"BANDWIDTH=([0-9]+),RESOLUTION=([0-9]+)x([0-9]+),CODECS=\"(.+)\"")
-				match = regex.search(line)
+				match = self.streamRegex.search(line)
 				bandwidth = match.group(1)
 				width = match.group(2)
 				height = match.group(3)
@@ -105,8 +104,7 @@ class UpdateDBPVideoTables:
 		bandwidthId = "@" + m3u8Filename.replace("-", "_")
 		for line in m3u8Content.split("\n"):
 			if line.startswith("#EXTINF:"):
-				regex = re.compile(r"#EXTINF:([0-9\.]+),")
-				match = regex.match(line)
+				match = self.tsRegex.match(line)
 				runtime = match.group(1)
 			elif line.endswith("ts"):
 				filename = line
