@@ -17,7 +17,8 @@ if len(sys.argv) < 2:
 BUCKET_NAME = sys.argv[1]
 
 filename = "new-%s.txt" % (BUCKET_NAME)
-pathname = "%s/FCBH/bucket_data/%s" % (os.environ['HOME'], filename)
+#pathname = "%s/FCBH/bucket_data/%s" % (os.environ['HOME'], filename)
+pathname = "/Volumes/FCBH/bucket_data/%s" % (filename,)
 print(pathname)
 
 out = io.open(pathname, mode="w", encoding="utf-8")
