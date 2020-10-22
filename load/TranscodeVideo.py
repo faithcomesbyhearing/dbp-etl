@@ -29,12 +29,17 @@ class TranscodeVideo:
 		return transcoder.completeJobs()
 
 
+	## Consumed by UpdateDBPVideoTable
+	def getHLSTypes(self):
+		return ["_stream", "_av720p", "_av480p", "_av360p"]
+
+
 	def __init__(self, config, filesetPrefix):
 		self.config = config
 		self.filesetPrefix = filesetPrefix
 		session = boto3.Session(profile_name=config.s3_aws_profile)
 		self.client = session.client('elastictranscoder', region_name=config.video_transcoder_region)
-		self.video_pipeline = config.video_transcoder_pipeline
+		self.videoPipeline = config.video_transcoder_pipeline
 		self.hls_audio_video_1080p = config.video_preset_hls_1080p
 		self.hls_audio_video_720p = config.video_preset_hls_720p
 		self.hls_audio_video_480p = config.video_preset_hls_480p
@@ -50,7 +55,7 @@ class TranscodeVideo:
 		self.openJobs = []
 
 
-	def createJob(file):
+	def createJob(self, file):
 		baseobj = file[:file.rfind(".")]
 		inputs = [
 			{
@@ -89,17 +94,14 @@ class TranscodeVideo:
 				]
 			}
 		]
-		status = transcoder_client.create_job(PipelineId=pipeline,
+		status = self.client.create_job(PipelineId=self.videoPipeline,
 										  Inputs=inputs,
 										  Outputs=outputs,
 										  Playlists=playlists)
-		return status["Job"]["Id"]
+		self.openJobs.append(status["Job"]["Id"])
 
-#### This method should download all of the m3u8 files in playlist
+
 	def completeJobs(self):
-#		results16 = []
-#		results32 = []
-#		results64 = []
 		errorCount = 0
 		while len(self.openJobs) > 0:
 			stillOpenJobs = []
@@ -107,15 +109,9 @@ class TranscodeVideo:
 				response = self.client.read_job(Id=jobId).get("Job")
 				inputObj = response["Input"]["Key"]
 				status = response.get("Status")
-				print("check Job", jobId, status, inputObj)
+				print("check Job", status, inputObj)
 				if status == "Complete":
-					outputs = response["Outputs"]
-					print(outputs[0])
-					print(outputs[1])
-					print(outputs[2])
-					#self.appendOutputs(results16, outputs[0])
-					#self.appendOutputs(results32, outputs[1])
-					#self.appendOutputs(results64, outputs[2])
+					print("Job Complete", status, inputObj)
 
 				elif status == "Error":
 					errorCount += 1
@@ -128,27 +124,8 @@ class TranscodeVideo:
 				else:
 					stillOpenJobs.append(jobId)
 			self.openJobs = stillOpenJobs
-			time.sleep(5)
-		return errorCount == 0
-#		if errorCount == 0:
-#			self.createTranscoded("MP3", "16", results16)
-#			self.createTranscoded("MP3", "32", results32)
-#			self.createTranscoded("MP3", "64", results64)
-
-
-#	def appendOutputs(self, results, output):
-#		filename = output.get("Key").split("/")[-1]
-#		results.append((filename, output.get("FileSize"), output.get("Duration")))
-#
-#
-#	def createTranscoded(self, codecType, bitrate, results):
-#		cvsFilename = self.config.directory_transcoded + self.filesetPrefix.replace("/", "_") + suffix + ".csv"
-#		with open(cvsFilename, 'w', newline='\n') as csvfile:
-#			writer = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-#			writer.writerow(("file_name", "file_size", "duration"))
-#			for row in results:
-#				print(row)
-#				writer.writerow(row)
+			time.sleep(15)
+		return errorCount == 0	
 
 
 if (__name__ == '__main__'):
@@ -161,7 +138,7 @@ if (__name__ == '__main__'):
 		count = 0
 		for row in reader:
 			if count < 1:
-				transcoder.createJob(row["file_name"])
+				transcoder.createJob(testFileset + "/" + row["file_name"])
 				count += 1
 	transcoder.completeJobs()
 
