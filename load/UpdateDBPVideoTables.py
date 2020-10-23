@@ -9,6 +9,8 @@ import subprocess
 from Config import *
 from SQLUtility import *
 from SQLBatchExec import *
+from TranscodeVideo import *
+from UpdateDBPFilesetTables import *
 
 
 class UpdateDBPVideoTables:
@@ -34,7 +36,7 @@ class UpdateDBPVideoTables:
 				for bibleId in [f for f in os.listdir(directory + typeCode) if not f.startswith('.')]:
 					for filesetId in [f for f in os.listdir(directory + typeCode + os.sep + bibleId) if not f.startswith('.')]:
 						self.populateDBPMaps(filesetId)
-						filesetPrefix = typeCode + "/" + bibleId + "/" + filesetId + "/"
+						filesetPrefix = typeCode + "/" + bibleId + "/" + filesetId
 						done = self.updateVideoFileset(directory, filesetPrefix)
 						print(filesetPrefix)
 						if done:
@@ -44,27 +46,29 @@ class UpdateDBPVideoTables:
 
 
 	def populateDBPMaps(self, filesetId):
-		sql = ("SELECT bible_file_id, bandwidth, resolution_width, resolution_height, codec, stream, file_name"
+		print("filesetid", filesetId)
+		sql = ("SELECT bible_file_id, file_name, bandwidth, resolution_width, resolution_height, codec, stream"
 			" FROM bible_file_stream_bandwidths WHERE bible_file_id IN"
 			" (SELECT id FROM bible_files WHERE hash_id IN"
-			" (SELECT hash_id FROM bible_filesets WHERE id='%s' AND set_type_code LIKE 'video%'))")
+			" (SELECT hash_id FROM bible_filesets WHERE id=%s))")
 		resultSet = self.db.select(sql, (filesetId,))
 		self.dbpBandwidthMap = {}
-		for (bibleFileId, bandwidth, resolutionWidth, resolutionHeight, codec, stream, fileName) in resultSet:
+		for (bibleFileId, fileName, bandwidth, resolutionWidth, resolutionHeight, codec, stream) in resultSet:
 			self.dbpBandwidthMap[fileName] = (bibleFileId, bandwidth, resolutionWidth, resolutionHeight, codec, stream)
 
-		sql = ("SELECT stream_bandwidth_id, runtime, file_name FROM bible_file_stream_ts WHERE stream_bandwidth_id IN"
+		sql = ("SELECT stream_bandwidth_id, file_name, runtime FROM bible_file_stream_ts WHERE stream_bandwidth_id IN"
 			" (SELECT id FROM bible_file_stream_bandwidths WHERE bible_file_id IN"
 			" (SELECT id FROM bible_files WHERE hash_id IN"
-			" (SELECT hash_id FROM bible_filesets WHERE id='%s' AND set_type_code LIKE 'video%')))")
+			" (SELECT hash_id FROM bible_filesets WHERE id=%s)))")
 		resultSet = self.db.select(sql, (filesetId,))
 		self.dbpTsFileMap = {}
-		for (streamBandwidthId, runtime, fileName) in resultSet:
+		for (streamBandwidthId, fileName, runtime) in resultSet:
 			self.dbpTsFileMap[fileName] = (streamBandwidthId, runtime)
 
 
 	def updateVideoFileset(self, directory, filesetPrefix):
 		errorCount = 0
+		print("filesetPrefix", filesetPrefix)
 		(typeCode, bibleId, filesetId) = filesetPrefix.split("/")
 		for filename in [f for f in os.listdir(directory + filesetPrefix) if not f.startswith('.')]:
 			m3u8Files = self.downloadM3U8(filesetPrefix, filename)
@@ -76,15 +80,13 @@ class UpdateDBPVideoTables:
 		return errorCount == 0
 
 
-	## To be rewritten as actual download
 	def downloadM3U8(self, filesetPrefix, filename):
 		m3u8Files = {}
-		#suffixes = ["_stream", "_av720p", "_av480p", "_av360p"]
 		suffixes = TranscodeVideo.getHLSTypes()
 		name = filename.split(".")[0]
 		for suffix in suffixes:
 			m3u8Filename = name + suffix + ".m3u8"
-			with open("/Volumes/FCBH/video_m3u8/" + filesetPrefix + m3u8Filename, "r") as m3u8:
+			with open("/Volumes/FCBH/video_m3u8/" + filesetPrefix + "/" + m3u8Filename, "r") as m3u8:
 				m3u8Files[m3u8Filename] = m3u8.read()
 		return m3u8Files
 
@@ -101,27 +103,31 @@ class UpdateDBPVideoTables:
 		for line in m3u8Content.split("\n"):
 			if line.startswith("#EXT-X-STREAM-INF:"):
 				match = self.streamRegex.search(line)
-				bandwidth = match.group(1)
-				width = match.group(2)
-				height = match.group(3)
+				bandwidth = int(match.group(1))
+				width = int(match.group(2))
+				height = int(match.group(3))
 				codec = match.group(4)
 				stream = 1
 			elif line.endswith("m3u8"):
 				filename = line
+				insertUpdateSet.add(filename)
 
 				if filename not in self.dbpBandwidthMap.keys():
-					insertUpdateSet.add(filename)
-					insertRows.append((fileId, bandwidth, width, height, codec, stream, filename))
+					insertRows.append((fileId, filename, bandwidth, width, height, codec, stream))
 				else:
-					(dbpFileId, dbpBandwidth, dbpWidth, dbpHeight, dbpCodec, dbpStream) = dbpBandwidthMap[filename]
-					if (fileId != dbpFileId or
-						bandwidth != dbpBandwidth or
-						width != dbpWidth or
-						height != dbpHeight or
-						codec != dbpCodec or
-						stream != dbpStream):
-						insertUpdateSet.add(filename)
-						updateRows.append((fileId, bandwidth, width, height, codec, stream, filename))
+					(dbpFileId, dbpBandwidth, dbpWidth, dbpHeight, dbpCodec, dbpStream) = self.dbpBandwidthMap[filename]
+					if isinstance(fileId, int) and fileId != dbpFileId:
+						updateRows.append(("bible_file_id", fileId, dbpFileId, filename))
+					if bandwidth != dbpBandwidth:
+						updateRows.append(("bandwidth", bandwidth, dbpBandwidth, filename))
+					if width != dbpWidth:
+						updateRows.append(("resolution_width", width, dbpWidth, filename))
+					if height != dbpHeight:
+						updateRows.append(("resolution_height", height, dbpHeight, filename))
+					if codec != dbpCodec:
+						updateRows.append(("codec", codec, dbpCodec, filename))
+					if stream != dbpStream:
+						updateRows.append(("stream", stream, dbpStream, filename))
 
 		for dbpFilename in self.dbpBandwidthMap.keys():
 			if dbpFilename not in insertUpdateSet:
@@ -130,8 +136,8 @@ class UpdateDBPVideoTables:
 		tableName = "bible_file_stream_bandwidths"
 		pkeyNames = ("file_name",)
 		attrNames = ("bible_file_id", "bandwidth", "resolution_width", "resolution_height", "codec", "stream")
-		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows, 6)
-		self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
+		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows, 1)
+		self.dbOut.updateCol(tableName, pkeyNames, updateRows)
 		self.dbOut.delete(tableName, pkeyNames, deleteRows)
 
 
@@ -145,19 +151,19 @@ class UpdateDBPVideoTables:
 		for line in m3u8Content.split("\n"):
 			if line.startswith("#EXTINF:"):
 				match = self.tsRegex.match(line)
-				runtime = match.group(1)
+				runtime = round(float(match.group(1)), 2)
 			elif line.endswith("ts"):
 				filename = line
+				insertUpdateSet.add(filename)
 
 				if filename not in self.dbpTsFileMap.keys():
-					insertUpdateSet.add(filename)
 					insertRows.append((bandwidthId, runtime, filename))
 				else:
 					(dbpBandwidthId, dbpRuntime) = self.dbpTsFileMap[filename]
-					if (bandwidthId != dbpBandwidthId or
-						runtime != dbpRuntime):
-						insertUpdateSet.add(filename)
-						updateRows.append((bandwidthId, runtime, filename))
+					if isinstance(bandwidthId, int) and bandwidthId != dbpBandwidthId:
+						updateRows.append(("video_resolution_id", bandwidthId, dbpBandwidthId, filename))
+					if runtime != dbpRuntime:
+						updateRows.append(("runtime", runtime, dbpRuntime, filename))
 
 		for dbpFilename in self.dbpTsFileMap.keys():
 			if dbpFilename not in insertUpdateSet:
@@ -165,9 +171,9 @@ class UpdateDBPVideoTables:
 
 		tableName = "bible_file_stream_ts"
 		pkeyNames = ("file_name",)
-		attrNames = ("video_resolution_id", "runtime") ### bandwidth_id is required here
+		attrNames = ("stream_bandwidth_id", "runtime")
 		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
-		self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
+		self.dbOut.updateCol(tableName, pkeyNames, updateRows)
 		self.dbOut.delete(tableName, pkeyNames, deleteRows)
 
 

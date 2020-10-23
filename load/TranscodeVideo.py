@@ -30,7 +30,7 @@ class TranscodeVideo:
 
 
 	## Consumed by UpdateDBPVideoTable
-	def getHLSTypes(self):
+	def getHLSTypes():
 		return ["_stream", "_av720p", "_av480p", "_av360p"]
 
 
