@@ -10,13 +10,6 @@ from Config import *
 from SQLUtility import *
 from SQLBatchExec import *
 
-#Big question: Where does this program get the fileId,
-#Possibly, there is a single query that matches file_id to file_name for video
-#So, when I fileid exists, we have the fileid and use exactly.
-#When the file is being added in the transaction, then I need to generate a variable in the
-#insert of the bible_file, and use it.
-#How will I know which case I have
-
 
 class UpdateDBPVideoTables:
 
@@ -30,6 +23,8 @@ class UpdateDBPVideoTables:
 		self.fileIdMap = db.selectMap(sql, ())
 		self.streamRegex = re.compile(r"BANDWIDTH=([0-9]+),RESOLUTION=([0-9]+)x([0-9]+),CODECS=\"(.+)\"")
 		self.tsRegex = re.compile(r"#EXTINF:([0-9\.]+),")
+		self.dbpBandwidthMap = None
+		self.dbpTsFileMap = None
 
 
 	def process(self):
@@ -38,6 +33,7 @@ class UpdateDBPVideoTables:
 			if typeCode == "video":
 				for bibleId in [f for f in os.listdir(directory + typeCode) if not f.startswith('.')]:
 					for filesetId in [f for f in os.listdir(directory + typeCode + os.sep + bibleId) if not f.startswith('.')]:
+						self.populateDBPMaps(filesetId)
 						filesetPrefix = typeCode + "/" + bibleId + "/" + filesetId + "/"
 						done = self.updateVideoFileset(directory, filesetPrefix)
 						print(filesetPrefix)
@@ -47,12 +43,32 @@ class UpdateDBPVideoTables:
 							print("Update video %s FAILED." % (filesetPrefix))
 
 
+	def populateDBPMaps(self, filesetId):
+		sql = ("SELECT bible_file_id, bandwidth, resolution_width, resolution_height, codec, stream, file_name"
+			" FROM bible_file_stream_bandwidths WHERE bible_file_id IN"
+			" (SELECT id FROM bible_files WHERE hash_id IN"
+			" (SELECT hash_id FROM bible_filesets WHERE id='%s' AND set_type_code LIKE 'video%'))")
+		resultSet = self.db.select(sql, (filesetId,))
+		self.dbpBandwidthMap = {}
+		for (bibleFileId, bandwidth, resolutionWidth, resolutionHeight, codec, stream, fileName) in resultSet:
+			self.dbpBandwidthMap[fileName] = (bibleFileId, bandwidth, resolutionWidth, resolutionHeight, codec, stream)
+
+		sql = ("SELECT stream_bandwidth_id, runtime, file_name FROM bible_file_stream_ts WHERE stream_bandwidth_id IN"
+			" (SELECT id FROM bible_file_stream_bandwidths WHERE bible_file_id IN"
+			" (SELECT id FROM bible_files WHERE hash_id IN"
+			" (SELECT hash_id FROM bible_filesets WHERE id='%s' AND set_type_code LIKE 'video%')))")
+		resultSet = self.db.select(sql, (filesetId,))
+		self.dbpTsFileMap = {}
+		for (streamBandwidthId, runtime, fileName) in resultSet:
+			self.dbpTsFileMap[fileName] = (streamBandwidthId, runtime)
+
+
 	def updateVideoFileset(self, directory, filesetPrefix):
 		errorCount = 0
+		(typeCode, bibleId, filesetId) = filesetPrefix.split("/")
 		for filename in [f for f in os.listdir(directory + filesetPrefix) if not f.startswith('.')]:
 			m3u8Files = self.downloadM3U8(filesetPrefix, filename)
 			for (m3u8Filename, m3u8Content) in m3u8Files.items():
-				#print(m3u8Filename)
 				if m3u8Filename.endswith("_stream.m3u8"):
 					self.processStreamM3U8(m3u8Filename, m3u8Content)
 				else:
@@ -60,9 +76,11 @@ class UpdateDBPVideoTables:
 		return errorCount == 0
 
 
+	## To be rewritten as actual download
 	def downloadM3U8(self, filesetPrefix, filename):
 		m3u8Files = {}
-		suffixes = ["_stream", "_av720p", "_av480p", "_av360p"]
+		#suffixes = ["_stream", "_av720p", "_av480p", "_av360p"]
+		suffixes = TranscodeVideo.getHLSTypes()
 		name = filename.split(".")[0]
 		for suffix in suffixes:
 			m3u8Filename = name + suffix + ".m3u8"
@@ -75,6 +93,8 @@ class UpdateDBPVideoTables:
 		insertRows = []
 		updateRows = []
 		deleteRows = []
+		insertUpdateSet = set()
+
 		fileId = self.fileIdMap.get(m3u8Filename)
 		if fileId == None:
 			fileId = "@" + m3u8Filename.replace("-", "_")
@@ -85,9 +105,27 @@ class UpdateDBPVideoTables:
 				width = match.group(2)
 				height = match.group(3)
 				codec = match.group(4)
+				stream = 1
 			elif line.endswith("m3u8"):
 				filename = line
-				insertRows.append((fileId, bandwidth, width, height, codec, 1, filename))
+
+				if filename not in self.dbpBandwidthMap.keys():
+					insertUpdateSet.add(filename)
+					insertRows.append((fileId, bandwidth, width, height, codec, stream, filename))
+				else:
+					(dbpFileId, dbpBandwidth, dbpWidth, dbpHeight, dbpCodec, dbpStream) = dbpBandwidthMap[filename]
+					if (fileId != dbpFileId or
+						bandwidth != dbpBandwidth or
+						width != dbpWidth or
+						height != dbpHeight or
+						codec != dbpCodec or
+						stream != dbpStream):
+						insertUpdateSet.add(filename)
+						updateRows.append((fileId, bandwidth, width, height, codec, stream, filename))
+
+		for dbpFilename in self.dbpBandwidthMap.keys():
+			if dbpFilename not in insertUpdateSet:
+				deleteRows.append((dbpFilename,))
 
 		tableName = "bible_file_stream_bandwidths"
 		pkeyNames = ("file_name",)
@@ -101,6 +139,8 @@ class UpdateDBPVideoTables:
 		insertRows = []
 		updateRows = []
 		deleteRows = []
+		insertUpdateSet = set()
+
 		bandwidthId = "@" + m3u8Filename.replace("-", "_")
 		for line in m3u8Content.split("\n"):
 			if line.startswith("#EXTINF:"):
@@ -108,7 +148,20 @@ class UpdateDBPVideoTables:
 				runtime = match.group(1)
 			elif line.endswith("ts"):
 				filename = line
-				insertRows.append((bandwidthId, runtime, filename))
+
+				if filename not in self.dbpTsFileMap.keys():
+					insertUpdateSet.add(filename)
+					insertRows.append((bandwidthId, runtime, filename))
+				else:
+					(dbpBandwidthId, dbpRuntime) = self.dbpTsFileMap[filename]
+					if (bandwidthId != dbpBandwidthId or
+						runtime != dbpRuntime):
+						insertUpdateSet.add(filename)
+						updateRows.append((bandwidthId, runtime, filename))
+
+		for dbpFilename in self.dbpTsFileMap.keys():
+			if dbpFilename not in insertUpdateSet:
+				deleteRows.append((dbpFilename,))
 
 		tableName = "bible_file_stream_ts"
 		pkeyNames = ("file_name",)
@@ -123,8 +176,10 @@ if (__name__ == '__main__'):
 	config = Config()
 	db = SQLUtility(config)
 	dbOut = SQLBatchExec(config)
-	update = UpdateDBPVideoTables(config, db, dbOut)
+	update = UpdateDBPFilesetTables(config, db, dbOut)
 	update.process()
+	video = UpdateDBPVideoTables(config, db, dbOut)
+	video.process()
 	dbOut.displayStatements()
 	dbOut.displayCounts()
 	#dbOut.execute()
