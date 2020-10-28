@@ -30,13 +30,14 @@ class UpdateDBPVideoTables:
 		self.dbpBandwidthIdMap = None
 
 
-	def process(self):
+	def process(self, filesetIdHashIdMap):
 		directory = self.config.directory_database
 		for typeCode in os.listdir(directory):
 			if typeCode == "video":
 				for bibleId in [f for f in os.listdir(directory + typeCode) if not f.startswith('.')]:
 					for filesetId in [f for f in os.listdir(directory + typeCode + os.sep + bibleId) if not f.startswith('.')]:
-						hashId = self.populateDBPMaps(filesetId)
+						hashId = filesetIdHashIdMap[filesetId]
+						self.populateDBPMaps(hashId)
 						filesetPrefix = typeCode + "/" + bibleId + "/" + filesetId
 						done = self.updateVideoFileset(directory, filesetPrefix)
 						print(filesetPrefix)
@@ -47,11 +48,7 @@ class UpdateDBPVideoTables:
 						self.computeDurations(hashId)
 
 
-	def populateDBPMaps(self, filesetId):
-		print("filesetid", filesetId)
-		#### This may need to be a compute hashId where the files are new.
-		hashId = self.db.selectScalar("SELECT hash_id FROM bible_filesets WHERE id=%s", (filesetId,))
-
+	def populateDBPMaps(self, hashId):
 		sql = ("SELECT bible_file_id, file_name, bandwidth, resolution_width, resolution_height, codec, stream"
 			" FROM bible_file_stream_bandwidths WHERE bible_file_id IN"
 			" (SELECT id FROM bible_files WHERE hash_id = %s)")
@@ -71,7 +68,6 @@ class UpdateDBPVideoTables:
 		sql = ("SELECT file_name, id FROM bible_file_stream_bandwidths WHERE bible_file_id IN"
 			" (SELECT id FROM bible_files WHERE hash_id = %s)")
 		self.dbpBandwidthIdMap = self.db.selectMap(sql, (hashId,))
-		return hashId
 
 
 	def updateVideoFileset(self, directory, filesetPrefix):
@@ -121,7 +117,7 @@ class UpdateDBPVideoTables:
 				insertUpdateSet.add(filename)
 
 				if filename not in self.dbpBandwidthMap.keys():
-					insertRows.append((fileId, filename, bandwidth, width, height, codec, stream))
+					insertRows.append((fileId, bandwidth, width, height, codec, stream, filename))
 				else:
 					(dbpFileId, dbpBandwidth, dbpWidth, dbpHeight, dbpCodec, dbpStream) = self.dbpBandwidthMap[filename]
 					if isinstance(fileId, int) and fileId != dbpFileId:
@@ -144,7 +140,7 @@ class UpdateDBPVideoTables:
 		tableName = "bible_file_stream_bandwidths"
 		pkeyNames = ("file_name",)
 		attrNames = ("bible_file_id", "bandwidth", "resolution_width", "resolution_height", "codec", "stream")
-		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows, 1)
+		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows, 6)
 		self.dbOut.updateCol(tableName, pkeyNames, updateRows)
 		self.dbOut.delete(tableName, pkeyNames, deleteRows)
 
@@ -197,7 +193,7 @@ class UpdateDBPVideoTables:
 			" JOIN bible_file_stream_bandwidths bfvr ON bfvr.bible_file_id=bf.id"
 			" JOIN bible_file_stream_ts bfvts ON bfvts.stream_bandwidth_id=bfvr.id"
 			" WHERE bf.id IN (SELECT bf.id FROM bible_files bf"
-			" WHERE bf.hash_id=%s AND bf.duration IS NULL)"
+			" WHERE bf.hash_id='%s' AND bf.duration IS NULL)"
 			#" GROUP BY bf.id, bfvr.id) bfu"
 			" GROUP BY bf.id) bfu"
 			" ON bf.id=bfu.ID SET bf.duration=bfu.Duration;")
@@ -223,7 +219,7 @@ class UpdateDBPVideoTables:
 			sql.append("DELETE FROM bible_fileset_connections WHERE hash_id = %s")
 			sql.append("DELETE FROM bible_fileset_tags WHERE hash_id = %s")
 			sql.append("DELETE FROM bible_filesets WHERE hash_id = %s")
-		hashId = db.selectScalar("SELECT hash_id FROM bible_filesets WHERE id=%s", (filesetId,))
+		hashId = db.selectScalar("SELECT hash_id FROM bible_filesets WHERE id=%s", (filesetId,)) ## This won't work
 		for stmt in sql:
 			db.execute(stmt, (hashId,))
 
@@ -235,9 +231,9 @@ if (__name__ == '__main__'):
 	#sys.exit()
 	dbOut = SQLBatchExec(config)
 	update = UpdateDBPFilesetTables(config, db, dbOut)
-	update.process()
+	completed = update.process()
 	video = UpdateDBPVideoTables(config, db, dbOut)
-	video.process()
+	video.process(completed)
 	dbOut.displayStatements()
 	dbOut.displayCounts()
 	dbOut.execute("video")

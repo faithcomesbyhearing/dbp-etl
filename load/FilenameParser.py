@@ -236,6 +236,7 @@ class FilenameRegex:
 				if file.chapter.isdigit():
 					file.setVerseStart(match.group(4))
 					file.setVerseEnd(match.group(5))
+					file.setChapterEnd(file.chapter, parser.maxChapterMap)
 	
 			elif self.name == "text1":
 				file.setDamid(match.group(1))
