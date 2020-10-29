@@ -10,6 +10,7 @@ from Config import *
 from SQLUtility import *
 from SQLBatchExec import *
 from TranscodeVideo import *
+from S3Utility import *
 from UpdateDBPFilesetTables import *
 
 
@@ -20,6 +21,7 @@ class UpdateDBPVideoTables:
 		self.config = config
 		self.db = db
 		self.dbOut = dbOut
+		self.s3Utility = S3Utility(config)
 		sql = ("SELECT file_name, id FROM bible_files where hash_id in"
 			" (SELECT hash_id FROM bible_filesets WHERE set_type_code = 'video_stream')")
 		self.fileIdMap = db.selectMap(sql, ())
@@ -28,6 +30,8 @@ class UpdateDBPVideoTables:
 		self.dbpBandwidthMap = None
 		self.dbpTsFileMap = None
 		self.dbpBandwidthIdMap = None
+		self.dbpBandwidthInsertUpdateSet = set()
+		self.dbpTsInsertUpdateSet = set()
 
 
 	def process(self, filesetIdHashIdMap):
@@ -46,6 +50,7 @@ class UpdateDBPVideoTables:
 						else:
 							print("Update video %s FAILED." % (filesetPrefix))
 						self.computeDurations(hashId)
+						self.processDeletions()
 
 
 	def populateDBPMaps(self, hashId):
@@ -68,6 +73,8 @@ class UpdateDBPVideoTables:
 		sql = ("SELECT file_name, id FROM bible_file_stream_bandwidths WHERE bible_file_id IN"
 			" (SELECT id FROM bible_files WHERE hash_id = %s)")
 		self.dbpBandwidthIdMap = self.db.selectMap(sql, (hashId,))
+		self.dbpBandwidthInsertUpdateSet = set()
+		self.dbpTsInsertUpdateSet = set()
 
 
 	def updateVideoFileset(self, directory, filesetPrefix):
@@ -89,9 +96,10 @@ class UpdateDBPVideoTables:
 		suffixes = TranscodeVideo.getHLSTypes()
 		name = filename.split(".")[0]
 		for suffix in suffixes:
-			m3u8Filename = name + suffix + ".m3u8"
-			with open("/Volumes/FCBH/video_m3u8/" + filesetPrefix + "/" + m3u8Filename, "r") as m3u8:
-				m3u8Files[m3u8Filename] = m3u8.read()
+			m3u8Filename =  name + suffix + ".m3u8"
+			s3Key = filesetPrefix + "/" + m3u8Filename
+			content = self.s3Utility.getObject(self.config.s3_vid_bucket, s3Key)
+			m3u8Files[m3u8Filename] = content
 		return m3u8Files
 
 
@@ -99,7 +107,6 @@ class UpdateDBPVideoTables:
 		insertRows = []
 		updateRows = []
 		deleteRows = []
-		insertUpdateSet = set()
 
 		fileId = self.fileIdMap.get(m3u8Filename)
 		if fileId == None:
@@ -114,7 +121,7 @@ class UpdateDBPVideoTables:
 				stream = 1
 			elif line.endswith("m3u8"):
 				filename = line
-				insertUpdateSet.add(filename)
+				self.dbpBandwidthInsertUpdateSet.add(filename)
 
 				if filename not in self.dbpBandwidthMap.keys():
 					insertRows.append((fileId, bandwidth, width, height, codec, stream, filename))
@@ -133,23 +140,17 @@ class UpdateDBPVideoTables:
 					if stream != dbpStream:
 						updateRows.append(("stream", stream, dbpStream, filename))
 
-		for dbpFilename in self.dbpBandwidthMap.keys():
-			if dbpFilename not in insertUpdateSet:
-				deleteRows.append((dbpFilename,))
-
 		tableName = "bible_file_stream_bandwidths"
 		pkeyNames = ("file_name",)
 		attrNames = ("bible_file_id", "bandwidth", "resolution_width", "resolution_height", "codec", "stream")
 		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows, 6)
 		self.dbOut.updateCol(tableName, pkeyNames, updateRows)
-		self.dbOut.delete(tableName, pkeyNames, deleteRows)
 
 
 	def processTSM3U8(self, m3u8Filename, m3u8Content):
 		insertRows = []
 		updateRows = []
 		deleteRows = []
-		insertUpdateSet = set()
 
 		bandwidthId = self.dbpBandwidthIdMap.get(m3u8Filename)
 		if bandwidthId == None:
@@ -162,7 +163,7 @@ class UpdateDBPVideoTables:
 				runtime = round(float(match.group(1)), 2)
 			elif line.endswith("ts"):
 				filename = line
-				insertUpdateSet.add(filename)
+				self.dbpTsInsertUpdateSet.add(filename)
 
 				if filename not in self.dbpTsFileMap.keys():
 					insertRows.append((bandwidthId, runtime, filename))
@@ -173,16 +174,11 @@ class UpdateDBPVideoTables:
 					if runtime != dbpRuntime:
 						updateRows.append(("runtime", runtime, dbpRuntime, filename))
 
-		for dbpFilename in self.dbpTsFileMap.keys():
-			if dbpFilename not in insertUpdateSet:
-				deleteRows.append((dbpFilename,))
-
 		tableName = "bible_file_stream_ts"
 		pkeyNames = ("file_name",)
 		attrNames = ("stream_bandwidth_id", "runtime")
 		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
 		self.dbOut.updateCol(tableName, pkeyNames, updateRows)
-		self.dbOut.delete(tableName, pkeyNames, deleteRows)
 
 
 	def computeDurations(self, hashId):
@@ -198,6 +194,24 @@ class UpdateDBPVideoTables:
 			" GROUP BY bf.id) bfu"
 			" ON bf.id=bfu.ID SET bf.duration=bfu.Duration;")
 		self.dbOut.rawStatment(sql % (hashId,))
+
+
+	def processDeletions(self):
+		deleteRows = []
+		for dbpFilename in self.dbpBandwidthMap.keys():
+			if dbpFilename not in self.dbpBandwidthInsertUpdateSet:
+				deleteRows.append((dbpFilename,))
+		tableName = "bible_file_stream_bandwidths"
+		pkeyNames = ("file_name",)
+		self.dbOut.delete(tableName, pkeyNames, deleteRows)
+
+		deleteRows = []
+		for dbpFilename in self.dbpTsFileMap.keys():
+			if dbpFilename not in self.dbpTsInsertUpdateSet:
+				deleteRows.append((dbpFilename,))
+		tableName = "bible_file_stream_ts"
+		pkeyNames = ("file_name",)
+		self.dbOut.delete(tableName, pkeyNames, deleteRows)
 
 
 	## This is here for development debugging only
