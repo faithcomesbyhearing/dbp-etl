@@ -45,6 +45,12 @@ class S3Utility:
 		self.client = session.client('s3')
 
 
+	def getAsciiObject(self, s3Bucket, s3Key):
+		obj = self.client.get_object(Bucket=s3Bucket, Key=s3Key)
+		content = obj['Body'].read().decode('ascii')
+		return content
+
+
 	def downloadFile(self, s3Bucket, s3Key, filename):
 		try:
 			print("Download %s, %s to %s" % (s3Bucket, s3Key, filename))

@@ -5,6 +5,7 @@
 import io
 import os
 import sys
+import re
 from datetime import datetime
 import subprocess
 from Config import *
@@ -16,26 +17,30 @@ class SQLBatchExec:
 		self.config = config
 		self.statements = []
 		self.counts = []
+		self.unquotedRegex = re.compile(r"(^.*)(\'@.*?m3u8\')(.*$)")
 
 
-	def insert(self, tableName, pkeyNames, attrNames, values):
-		self.insertReplace("INSERT", tableName, pkeyNames, attrNames, values)
-
-
-	def replace(self, tableName, pkeyNames, attrNames, values):
-		self.insertReplace("REPLACE", tableName, pkeyNames, attrNames, values)		
-
-
-	def insertReplace(self, operator, tableName, pkeyNames, attrNames, values):
+	def insert(self, tableName, pkeyNames, attrNames, values, keyPosition=None):
 		if len(values) > 0:
 			names = attrNames + pkeyNames
 			valsubs = ["'%s'"] * len(names)
-			sql = "%s INTO %s (%s) VALUES (%s);" % (operator, tableName, ", ".join(names), ", ".join(valsubs))
+			sql = "INSERT INTO %s (%s) VALUES (%s);" % (tableName, ", ".join(names), ", ".join(valsubs))
 			for value in values:
 				stmt = sql % value
-				stmt = stmt.replace("'None'", "NULL")
+				stmt = self.unquoteValues(stmt)
 				self.statements.append(stmt)
-			self.counts.append((operator.lower(), tableName, len(values)))
+				if keyPosition != None:
+					keyValue = value[keyPosition].replace("-", "_")
+					self.statements.append("SET @%s = LAST_INSERT_ID();" % (keyValue,))
+			self.counts.append(("insert", tableName, len(values)))
+
+
+	def unquoteValues(self, stmt):
+		match = self.unquotedRegex.match(stmt)
+		if match != None:
+			stmt = match.group(1) + match.group(2).replace("'", "") + match.group(3)
+		stmt = stmt.replace("'None'", "NULL")
+		return stmt
 
 
 	def update(self, tableName, pkeyNames, attrNames, values):
@@ -48,6 +53,20 @@ class SQLBatchExec:
 			self.counts.append(("update", tableName, len(values)))
 
 
+	def updateCol(self, tableName, pkeyNames, values):
+		if len(values) > 0:
+			for value in values:
+				colName = value[0]
+				colValue = "'" + str(value[1]) + "'"
+				oldValue = value[2]
+				pkeyValues = value[3:]
+				sql = "UPDATE %s SET %s = %s WHERE %s; -- prior=%s" % (tableName, colName, colValue, "='%s' AND ".join(pkeyNames) + "='%s'", oldValue)
+				stmt = sql % pkeyValues
+				stmt = stmt.replace("'None'", "NULL")
+				self.statements.append(stmt)
+			self.counts.append(("updateCol", tableName, len(values)))
+
+
 	def delete(self, tableName, pkeyNames, pkeyValues):
 		if len(pkeyValues) > 0:
 			sql = "DELETE FROM %s WHERE %s;" % (tableName, "='%s' AND ".join(pkeyNames) + "='%s'")
@@ -58,9 +77,25 @@ class SQLBatchExec:
 			self.counts.append(("delete", tableName, len(pkeyValues)))
 
 
+	def rawStatment(self, stmt):
+		self.statements.append(stmt)
+
+
 	def displayCounts(self):
+		finalCount = {}
+		finalSequence = []
+		## Summarize counts
 		for (tran, tableName, count) in self.counts:
-			print(tran, tableName, count)
+			key = (tran, tableName)
+			if key not in finalSequence:
+				finalSequence.append(key)
+			counts = finalCount.get(key, 0)
+			counts += count
+			finalCount[key] = counts
+		## Display counts
+		for (tran, tableName) in finalSequence:
+			counts = finalCount[(tran, tableName)]
+			print(tran, tableName, counts)
 
 
 	def displayStatements(self):
@@ -108,6 +143,10 @@ if (__name__ == '__main__'):
 	sql.statements.append("SELECT * FROM bibles;")
 	sql.statements.append("SHOW DATABASES;")
 	sql.displayStatements()
+	sql.counts.append(("insert", "tablea", 12))
+	sql.counts.append(("insert", "tablea", 24))
+	sql.counts.append(("insert", "table0", 36))
+	sql.counts.append(("delete", "table9", 1))
 	sql.displayCounts()
 	sql.execute("test")
 

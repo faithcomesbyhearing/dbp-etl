@@ -71,7 +71,10 @@ class FilenameReducer:
 	def quarantineErrors(self, fileList, errorCount):
 		quarantineList = []
 		acceptedList = []
-		errPct = 100.00 * errorCount / len(fileList)
+		if errorCount == 0 or len(fileList) == 0:
+			errPct = 0.0
+		else:
+			errPct = 100.00 * errorCount / len(fileList)
 		if errPct >= self.config.error_limit_pct:
 			quarantineList = fileList
 		elif self.filePrefix == "audio/ONBLTC/ONBLTCN2DA16":

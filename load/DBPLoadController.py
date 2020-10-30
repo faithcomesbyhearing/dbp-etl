@@ -17,6 +17,8 @@ from SQLBatchExec import *
 from UpdateDBPFilesetTables import *
 from UpdateDBPBiblesTable import *
 from UpdateDBPLPTSTable import *
+from TranscodeVideo import *
+from UpdateDBPVideoTables import *
 
 
 class DBPLoadController:
@@ -30,7 +32,7 @@ class DBPLoadController:
 
 
 	def cleanup(self):
-		print("********** CLEANUP **********")
+		print("********** CLEANUP **********", flush=True)
 		validateDir = self.config.directory_validate
 		for typeCode in os.listdir(validateDir):
 			if typeCode == "audio":
@@ -72,7 +74,7 @@ class DBPLoadController:
 
 
 	def updateBibles(self):
-		print("********** UPDATING Bibles Table **********")
+		print("********** UPDATING Bibles Table **********", flush=True)
 		dbOut = SQLBatchExec(self.config)
 		bibles = UpdateDBPBiblesTable(self.config, self.db, dbOut, self.lptsReader)
 		bibles.process()
@@ -83,7 +85,7 @@ class DBPLoadController:
 
 
 	def validate(self):
-		print("********** VALIDATING **********")
+		print("********** VALIDATING **********", flush=True)
 		validate = Validate("files", self.config, self.db, self.lptsReader)
 		validate.process()
 		validate.reportErrors()
@@ -97,26 +99,29 @@ class DBPLoadController:
 
 
 	def upload(self):
-		print("********** UPLOADING TO S3 **********")
+		print("********** UPLOADING TO S3 **********", flush=True)
 		self.s3Utility.uploadAllFilesets()
+		TranscodeVideo.transcodeVideoFilesets(self.config)
 
 
 	def updateFilesetTables(self):
-		print("********** UPDATING Fileset Tables **********")
+		print("********** UPDATING Fileset Tables **********", flush=True)
 		dbOut = SQLBatchExec(self.config)
 		update = UpdateDBPFilesetTables(self.config, self.db, dbOut)
-		filesetList = update.process()
+		filesetMap = update.process()
+		video = UpdateDBPVideoTables(self.config, self.db, dbOut)
+		video.process(filesetMap)
 		#dbOut.displayStatements()
 		dbOut.displayCounts()
 		success = dbOut.execute("filesets")
 		if success:
-			for filesetPrefix in filesetList:
+			for filesetPrefix in filesetMap.keys():
 				self.s3Utility.promoteFileset(self.config.directory_database, filesetPrefix)
 		return success
 
 
 	def updateLPTSTables(self):
-		print("********** UPDATING LPTS Tables **********")
+		print("********** UPDATING LPTS Tables **********", flush=True)
 		dbOut = SQLBatchExec(self.config)
 		lptsDBP = UpdateDBPLPTSTable(self.config, self.db, dbOut, self.lptsReader)
 		lptsDBP.process()

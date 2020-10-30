@@ -9,24 +9,20 @@ from S3Utility import *
 class TranscodeVideo:
 
 	def transcodeVideoFilesets(config):
-		directory = self.config.directory_database
+		directory = config.directory_database
 		for typeCode in os.listdir(directory):
 			if typeCode == "video":
 				for bibleId in [f for f in os.listdir(directory + typeCode) if not f.startswith('.')]:
 					for filesetId in [f for f in os.listdir(directory + typeCode + os.sep + bibleId) if not f.startswith('.')]:
 						filesetPrefix = typeCode + "/" + bibleId + "/" + filesetId + "/"
-						done = self.transcodeFileset(filesetPrefix)
+						transcoder = TranscodeVideo(config, filesetPrefix)
+						for filename in [f for f in os.listdir(directory + filesetPrefix) if not f.startswith('.')]:
+							transcoder.createJob(filesetPrefix + filename)
+						done = transcoder.completeJobs()
 						if done:
 							print("Transcode %s succeeded." % (filesetPrefix))
 						else:
 							print("Transcode %s FAILED." % (filesetPrefix))
-
-
-	def transcodeFileset(config, directory, filesetPrefix):
-		transcoder = TranscodeVideo(config, filesetPrefix)
-		for filename in [f for f in os.listdir(directory + filesetPrefix) if not f.startswith('.')]:
-			transcoder.createJob(filename)
-		return transcoder.completeJobs()
 
 
 	## Consumed by UpdateDBPVideoTable
@@ -109,12 +105,15 @@ class TranscodeVideo:
 				response = self.client.read_job(Id=jobId).get("Job")
 				inputObj = response["Input"]["Key"]
 				status = response.get("Status")
-				print("check Job", status, inputObj)
+				#print("check Job", status, inputObj)
 				if status == "Complete":
-					print("Job Complete", status, inputObj)
+					print("Job Complete", inputObj)
 
 				elif status == "Error":
-					errorCount += 1
+					output = response.get("Output", {})
+					errorMsg = output.get("StatusDetail", "")
+					if not errorMsg.startswith("3002"):
+						errorCount += 1
 					for output in response.get("Outputs", []):
 						if output.get("Status") == "Error":
 							print("ERROR %s" % (output.get("StatusDetail")))
@@ -124,7 +123,7 @@ class TranscodeVideo:
 				else:
 					stillOpenJobs.append(jobId)
 			self.openJobs = stillOpenJobs
-			time.sleep(15)
+			time.sleep(10)
 		return errorCount == 0	
 
 

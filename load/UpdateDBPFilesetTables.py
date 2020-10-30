@@ -103,7 +103,7 @@ class UpdateDBPFilesetTables:
 
 	def process(self):
 		databaseFilesetSet = self.getDatabaseFilesets()
-		results = []
+		results = {}
 		dirname = self.config.directory_accepted
 		filenameList = os.listdir(dirname)
 		for filename in filenameList:
@@ -111,18 +111,15 @@ class UpdateDBPFilesetTables:
 				(typeCode, bibleId, filesetId) = filename.split(".")[0].split("_")
 				print(typeCode, bibleId, filesetId)
 				csvFilename = self.config.directory_accepted + filename
-				if typeCode == "audio":
+				if typeCode in {"audio", "video"}:
 					hashId = self.insertBibleFileset(typeCode, filesetId, csvFilename)
 					self.insertFilesetConnections(hashId, bibleId)
 					filesetDir = "%s%s/%s/%s" % (self.config.directory_database, typeCode, bibleId, filesetId)
-					self.insertBibleFiles(hashId, csvFilename, filesetDir)
-					results.append("%s/%s/%s" % (typeCode, bibleId, filesetId))
+					self.insertBibleFiles(typeCode, hashId, csvFilename, filesetDir)
+					results["%s/%s/%s" % (typeCode, bibleId, filesetId)] = hashId
 
 				elif typeCode == "text":
 					print("TBD text update")
-					sys.exit()
-				elif typeCode == "video":
-					print("TBD video update")
 					sys.exit()
 		return results
 
@@ -149,26 +146,6 @@ class UpdateDBPFilesetTables:
 		return UpdateDBPFilesetTables.getSetSizeCode(ntBooks, otBooks)
 
 
-#	def deleteBibleFiles(self, hashId):
-#		sql = []
-#		sql.append("DELETE bfss FROM bible_file_stream_ts AS bfss"
-#			" JOIN bible_file_stream_bandwidths AS bfsb ON bfss.stream_bandwidth_id = bfsb.id"
-#			" JOIN bible_files AS bf ON bfsb.bible_file_id = bf.id"
-#			" WHERE bf.hash_id = %s")
-#		sql.append("DELETE bfsb FROM bible_file_stream_bandwidths AS bfsb"
-#			" JOIN bible_files AS bf ON bfsb.bible_file_id = bf.id"
-#			" WHERE bf.hash_id = %s")
-#		sql.append("DELETE bft FROM bible_file_tags AS bft"
-#			" JOIN bible_files AS bf ON bft.file_id = bf.id"
-#			" WHERE bf.hash_id = %s")
-#		sql.append("DELETE FROM bible_files WHERE hash_id = %s")
-#		sql.append("DELETE FROM access_group_filesets WHERE hash_id = %s")
-#		sql.append("DELETE FROM bible_fileset_connections WHERE hash_id = %s")
-#		sql.append("DELETE FROM bible_fileset_tags WHERE hash_id = %s")
-#		sql.append("DELETE FROM bible_filesets WHERE hash_id = %s")
-#		for stmt in sql:
-#			self.statements.append((stmt, [(hashId,)]))
-
 
 	def insertBibleFileset(self, typeCode, filesetId, csvFilename):
 		tableName = "bible_filesets"
@@ -176,6 +153,7 @@ class UpdateDBPFilesetTables:
 		attrNames = ("id", "asset_id", "set_type_code", "set_size_code")
 		updateRows = []
 		bucket = self.config.s3_vid_bucket if typeCode == "video" else self.config.s3_bucket
+		bucket = "dbp-vid" if typeCode == "video" else "dbp-prod" ############## must be deleted
 		setTypeCode = UpdateDBPFilesetTables.getSetTypeCode(typeCode, filesetId)
 		setSizeCode = self.getSetSizeCodeByFile(csvFilename)
 		hashId = UpdateDBPFilesetTables.getHashId(bucket, filesetId, setTypeCode)
@@ -205,7 +183,7 @@ class UpdateDBPFilesetTables:
 			self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
 
 
-	def insertBibleFiles(self, hashId, csvFilename, filesetDir):
+	def insertBibleFiles(self, typeCode, hashId, csvFilename, filesetDir):
 		insertRows = []
 		updateRows = []
 		deleteRows = []
@@ -230,8 +208,10 @@ class UpdateDBPFilesetTables:
 					verseEnd = int(row["verse_end"]) if row["verse_end"] != "" else None
 				chapterEnd = int(row["chapter_end"]) if row["chapter_end"] != "" else None
 				fileName = row["file_name"]
+				if typeCode == "video":
+					fileName = fileName.split(".")[0] + "_stream.m3u8"
 				fileSize = int(row["file_size"]) if row["file_size"] != "" else None
-				duration = self.getDuration(filesetDir + os.sep + fileName)
+				duration = self.getDuration(filesetDir + os.sep + fileName) if typeCode == "audio" else None
 				key = (bookId, chapterStart, verseStart)
 				dbpValue = dbpMap.get(key)
 				if dbpValue == None:
@@ -254,7 +234,7 @@ class UpdateDBPFilesetTables:
 		tableName = "bible_files"
 		pkeyNames = ("hash_id", "book_id", "chapter_start", "verse_start")
 		attrNames = ("chapter_end", "verse_end", "file_name", "file_size", "duration")
-		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
+		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows, 2)
 		self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
 		self.dbOut.delete(tableName, pkeyNames, deleteRows)
 
@@ -291,15 +271,11 @@ if (__name__ == '__main__'):
 	db = SQLUtility(config)
 	dbOut = SQLBatchExec(config)
 	update = UpdateDBPFilesetTables(config, db, dbOut)
-	update.process()
+	completedMap = update.process()
 
 	dbOut.displayStatements()
 	dbOut.displayCounts()
 	dbOut.execute("test-filesets")
 
-
-##
-## delete fileset_id, requires a check in dbp_users.playlist_items (fileset_id)
-##
 
 

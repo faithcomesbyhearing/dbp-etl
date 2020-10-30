@@ -40,17 +40,17 @@ class UpdateDBPVideoTables:
 			if typeCode == "video":
 				for bibleId in [f for f in os.listdir(directory + typeCode) if not f.startswith('.')]:
 					for filesetId in [f for f in os.listdir(directory + typeCode + os.sep + bibleId) if not f.startswith('.')]:
-						hashId = filesetIdHashIdMap[filesetId]
-						self.populateDBPMaps(hashId)
 						filesetPrefix = typeCode + "/" + bibleId + "/" + filesetId
-						done = self.updateVideoFileset(directory, filesetPrefix)
-						print(filesetPrefix)
-						if done:
-							print("Update video %s succeeded." % (filesetPrefix))
-						else:
-							print("Update video %s FAILED." % (filesetPrefix))
-						self.computeDurations(hashId)
-						self.processDeletions()
+						hashId = filesetIdHashIdMap.get(filesetPrefix)
+						if hashId != None:
+							self.populateDBPMaps(hashId)
+							done = self.updateVideoFileset(directory, filesetPrefix)
+							if done:
+								print("Update video %s succeeded." % (filesetPrefix))
+							else:
+								print("Update video %s FAILED." % (filesetPrefix))
+							self.computeDurations(hashId)
+							self.processDeletions()
 
 
 	def populateDBPMaps(self, hashId):
@@ -79,7 +79,6 @@ class UpdateDBPVideoTables:
 
 	def updateVideoFileset(self, directory, filesetPrefix):
 		errorCount = 0
-		print("filesetPrefix", filesetPrefix)
 		(typeCode, bibleId, filesetId) = filesetPrefix.split("/")
 		for filename in [f for f in os.listdir(directory + filesetPrefix) if not f.startswith('.')]:
 			m3u8Files = self.downloadM3U8(filesetPrefix, filename)
@@ -98,7 +97,7 @@ class UpdateDBPVideoTables:
 		for suffix in suffixes:
 			m3u8Filename =  name + suffix + ".m3u8"
 			s3Key = filesetPrefix + "/" + m3u8Filename
-			content = self.s3Utility.getObject(self.config.s3_vid_bucket, s3Key)
+			content = self.s3Utility.getAsciiObject(self.config.s3_vid_bucket, s3Key)
 			m3u8Files[m3u8Filename] = content
 		return m3u8Files
 
@@ -190,8 +189,8 @@ class UpdateDBPVideoTables:
 			" JOIN bible_file_stream_ts bfvts ON bfvts.stream_bandwidth_id=bfvr.id"
 			" WHERE bf.id IN (SELECT bf.id FROM bible_files bf"
 			" WHERE bf.hash_id='%s' AND bf.duration IS NULL)"
-			#" GROUP BY bf.id, bfvr.id) bfu"
-			" GROUP BY bf.id) bfu"
+			" GROUP BY bf.id, bfvr.id) bfu"
+			#" GROUP BY bf.id) bfu"
 			" ON bf.id=bfu.ID SET bf.duration=bfu.Duration;")
 		self.dbOut.rawStatment(sql % (hashId,))
 
