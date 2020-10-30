@@ -153,7 +153,6 @@ class UpdateDBPFilesetTables:
 		attrNames = ("id", "asset_id", "set_type_code", "set_size_code")
 		updateRows = []
 		bucket = self.config.s3_vid_bucket if typeCode == "video" else self.config.s3_bucket
-		bucket = "dbp-vid" if typeCode == "video" else "dbp-prod" ############## must be deleted
 		setTypeCode = UpdateDBPFilesetTables.getSetTypeCode(typeCode, filesetId)
 		setSizeCode = self.getSetSizeCodeByFile(csvFilename)
 		hashId = UpdateDBPFilesetTables.getHashId(bucket, filesetId, setTypeCode)
