@@ -74,6 +74,8 @@ class UpdateDBPBiblesTable:
 
 			if bibleId not in dbpBibleMap.keys():
 				if languageId != None:
+					if copyright != None:
+						copyright = copyright.replace("'", "''")
 					insertRows.append((languageId, "protestant", numerals, date, scope, script, copyright, bibleId))
 			else:
 				(dbpLanguageId, dbpVersification, dbpNumerals, dbpDate, dbpScope, dbpScript, dbpCopyright) = dbpBibleMap[bibleId]
@@ -84,7 +86,8 @@ class UpdateDBPBiblesTable:
 					script != dbpScript or
 					copyright != dbpCopyright):
 					if languageId != None:
-						copyright = copyright.replace("'", "''")
+						if copyright != None:
+							copyright = copyright.replace("'", "''")
 						updateRows.append((languageId, dbpVersification, numerals, date, scope, script, copyright, bibleId))
 
 		tableName = "bibles"
