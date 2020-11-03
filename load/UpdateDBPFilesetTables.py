@@ -37,6 +37,8 @@ class UpdateDBPFilesetTables:
 			return "text_format"
 		elif typeCode == "video":
 			return "video_stream"
+		elif typeCode == "verses":
+			return "text_plain"
 		elif typeCode == "audio":
 			code = filesetId[7:9]
 			if code == "1D":
@@ -111,16 +113,22 @@ class UpdateDBPFilesetTables:
 				(typeCode, bibleId, filesetId) = filename.split(".")[0].split("_")
 				print(typeCode, bibleId, filesetId)
 				csvFilename = self.config.directory_accepted + filename
-				if typeCode in {"audio", "video"}:
+				if typeCode in {"audio", "text", "video"}:
 					hashId = self.insertBibleFileset(typeCode, filesetId, csvFilename)
 					self.insertFilesetConnections(hashId, bibleId)
 					filesetDir = "%s%s/%s/%s" % (self.config.directory_database, typeCode, bibleId, filesetId)
 					self.insertBibleFiles(typeCode, hashId, csvFilename, filesetDir)
 					results["%s/%s/%s" % (typeCode, bibleId, filesetId)] = hashId
 
-				elif typeCode == "text":
-					print("TBD text update")
-					sys.exit()
+				elif typeCode == "verses":
+					print("TBD sql update")
+					hashId = self.insertBibleFileset(typeCode, filesetId, csvFilename)
+					self.insertFilesetConnections(hashId, bibleId)
+					# self.textUpdater.updateVerses(bibleId, filesetId)
+
+				elif typeCode == "BookNames":
+					print("TBD bookNames update")
+					# self.textUpdater.updateBookNames(bibleId)
 		return results
 
 
