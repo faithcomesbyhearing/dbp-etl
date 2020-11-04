@@ -41,7 +41,7 @@ class FilenameReducer:
 
 
 	def process(self, errorMessages):
-		errorCount = len(self.extraChapters) + len(self.missingChapters) + int(len(self.missingVerses) / 20.0)
+		errorCount = len(self.extraChapters) + int(len(self.missingVerses) / 20.0)
 		for file in self.fileList:
 			errorCount += len(file.errors)
 
@@ -56,8 +56,7 @@ class FilenameReducer:
 		else:
 			duplicateList = []
 
-		if errorCount > 0:
-			self.writeErrors(errorMessages)
+		self.writeErrors(errorMessages)
 		if len(quarantineList) > 0:
 			self.writeOutput("quarantine", quarantineList)
 			errorMessages.append("%s %d Files moved to quarantine %d accepted.\tINFO" % (self.filePrefix, len(quarantineList), len(acceptedList)))
@@ -175,19 +174,19 @@ class FilenameReducer:
 
 		if self.filePrefix.startswith("video"):
 			if len(self.extraChapters) > 0:
-				self.summaryMessage("chapters too large", self.extraChapters, errorMessages)
+				self.summaryMessage("EROR", "chapters too large", self.extraChapters, errorMessages)
 			if len(self.missingChapters) > 0:
-				self.summaryMessage("chapters missing", self.missingChapters, errorMessages)
+				self.summaryMessage("WARN", "chapters missing", self.missingChapters, errorMessages)
 			if len(self.missingVerses) > 0:
-				self.summaryVerseMessage("verses missing", self.missingVerses, errorMessages)
+				self.summaryVerseMessage("EROR", "verses missing", self.missingVerses, errorMessages)
 		else:
 			if len(self.extraChapters) > 0:
-				self.summaryMessage("chapters too large", self.extraChapters, errorMessages)
+				self.summaryMessage("EROR", "chapters too large", self.extraChapters, errorMessages)
 			if len(self.missingChapters) > 0:
-				self.summaryMessage("chapters missing", self.missingChapters, errorMessages)			
+				self.summaryMessage("WARN", "chapters missing", self.missingChapters, errorMessages)			
 
 
-	def summaryMessage(self, message, errors, errorMessages):
+	def summaryMessage(self, level, message, errors, errorMessages):
 		currBook, chapter = errors[0].split(":")
 		startChap = int(chapter)
 		nextChap = startChap
@@ -202,7 +201,7 @@ class FilenameReducer:
 				startChap = int(chapter)
 				nextChap = startChap + 1
 		self.appendError(results, currBook, startChap, nextChap)
-		errorMessages.append("%s %s %s\tEROR" % (self.filePrefix, message, ", ".join(results)))
+		errorMessages.append("%s %s %s\t%s" % (self.filePrefix, message, ", ".join(results), level))
 
 
 	def appendError(self, results, book, chapStart, chapEnd):
@@ -212,7 +211,7 @@ class FilenameReducer:
 			results.append("%s %d-%d" % (book, chapStart, chapEnd - 1))
 
 
-	def summaryVerseMessage(self, message, errors, errorMessages):
+	def summaryVerseMessage(self, level, message, errors, errorMessages):
 		currBook, chapter, verse = errors[0].split(":")
 		startChap = int(chapter)
 		startVerse = int(verse)
@@ -229,7 +228,7 @@ class FilenameReducer:
 				startVerse = int(verse)
 				nextVerse = startVerse + 1
 		self.appendVerseError(results, currBook, startChap, startVerse, nextVerse)
-		errorMessages.append("%s %s %s\tEROR" % (self.filePrefix, message, ", ".join(results)))
+		errorMessages.append("%s %s %s\t%s" % (self.filePrefix, message, ", ".join(results), level))
 
 
 	def appendVerseError(self, results, book, chapStart, verseStart, verseEnd):

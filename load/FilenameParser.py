@@ -565,11 +565,10 @@ class FilenameParser:
 		extraChapters = []
 		missingChapters = []
 		for book, chapters in books.items():
-			## removed check for missing chapters 11/4/2020
-			#maxChapter = self.chapterMap[book]
-			#for index in range(1, maxChapter + 1):
-			#	if index not in chapters:
-			#		missingChapters.append("%s:%d" % (book, index))
+			maxChapter = self.chapterMap[book]
+			for index in range(1, maxChapter + 1):
+				if index not in chapters:
+					missingChapters.append("%s:%d" % (book, index))
 			maxChapter = self.maxChapterMap[book]
 			for chapter in chapters:
 				#print(chapter)
@@ -593,10 +592,9 @@ class FilenameParser:
 		missingVerses = []
 		for book, chapters in books.items():
 			maxChapter = self.chapterMap[book]
-			## removed check for missing chapters 11/4/2020
-			#for index in range(1, maxChapter + 1):
-			#	if index not in chapters:
-			#		missingChapters.append("%s:%d" % (book, index))
+			for index in range(1, maxChapter + 1):
+				if index not in chapters:
+					missingChapters.append("%s:%d" % (book, index))
 			for chapter, verses in chapters.items():
 				#print(chapter)
 				if chapter > maxChapter:
