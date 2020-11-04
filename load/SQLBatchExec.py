@@ -117,6 +117,7 @@ class SQLBatchExec:
 			for statement in self.statements:
 				tranFile.write(statement + "\n")
 			tranFile.write("COMMIT;\n")
+			tranFile.write("EXIT\n")
 			tranFile.close()
 			if self.config.database_tunnel != None:
 				results1 = os.popen(self.config.database_tunnel).read()

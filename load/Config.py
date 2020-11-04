@@ -87,7 +87,6 @@ class Config:
 			self.directory_quarantine = self._getPath("directory.quarantine")
 			self.directory_duplicate = self._getPath("directory.duplicate")
 			self.directory_accepted = self._getPath("directory.accepted")
-			self.directory_transcoded = self._getPath("directory.transcoded")
 
 			self.directory_errors = self._getPath("directory.errors")
 			self.error_limit_pct = self._getFloat("error.limit.pct")
