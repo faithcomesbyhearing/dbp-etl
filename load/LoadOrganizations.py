@@ -120,8 +120,8 @@ class LoadOrganizations:
 				if lptsLicensor == None:
 					lptsLicensor = lptsRecord.CoLicensor()
 				if lptsLicensor != None:
-					name = self.lptsReader.reduceCopyrightToName(lptsLicensor)
-					licensorOrg = organizationMap.get(name)
+					#name = self.lptsReader.reduceCopyrightToName(lptsLicensor)
+					licensorOrg = organizationMap.get(lptsLicensor)
 					if licensorOrg == None:
 						print("EROR %s has no org_id for licensor: %s" % (filesetId, lptsLicensor))
 
