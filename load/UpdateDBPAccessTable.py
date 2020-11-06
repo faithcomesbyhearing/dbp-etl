@@ -30,6 +30,10 @@ class UpdateDBPAccessTable:
 		for (bibleId, filesetId, setTypeCode, setSizeCode, assetId, hashId) in filesetList:
 			#print(bibleId, filesetId, setTypeCode, setSizeCode, assetId, hashId)
 			typeCode = setTypeCode.split("_")[0]
+			if filesetId[8:10] == "SA":
+				dbpFilesetId = filesetId[:8] + "DA" + filesetId[10:]
+			else:
+				dbpFilesetId = filesetId
 			dbpAccessSet = dbpAccessMapSet.get(hashId, set())
 
 			if typeCode == "audio":
@@ -42,7 +46,7 @@ class UpdateDBPAccessTable:
 				print("FATAL: Unknown typeCode % in fileset: %s, hashId: %s" % (typeCode, filesetId, hashId))
 				sys.exit()
 
-			(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecord(typeCode, bibleId, filesetId)
+			(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecord(typeCode, bibleId, dbpFilesetId)
 			if lptsRecord != None:
 				lpts = lptsRecord.record
 			else:
