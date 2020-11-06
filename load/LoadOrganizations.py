@@ -29,14 +29,16 @@ class LoadOrganizations:
 			" AND constraint_name='PRIMARY'"
 			" ORDER BY ordinal_position") % (self.config.database_db_name))
 		pkey = self.db.selectList(sql, ())
-		if len(pkey) == 2 and pkey[0] == "hash_id" and pkey[1] == "organization_id":
+		if len(pkey) == 2 and pkey[0] == "hash_id" and pkey[1] == "organization_id" or len(pkey) == 3:
+			sql = "TRUNCATE TABLE %s.bible_fileset_copyright_organizations" % (self.config.database_db_name)
+			self.db.execute(sql, ())
 			sql = (("ALTER TABLE %s.bible_fileset_copyright_organizations"   
   				" DROP PRIMARY KEY,"
-  				" ADD PRIMARY KEY (hash_id, organization_id, organization_role)") 
+  				" ADD PRIMARY KEY (hash_id, organization_role)") 
 				% (self.config.database_db_name))
 			self.db.execute(sql, ())
 			print("The primary key of bible_fileset_copyright_organizations was changed.")
-			print("The key is now hash_id, organization_id, organization_role.")
+			print("The key is now hash_id, organization_role.")
 
 
 	## This method looks for licensors that are in LPTS, 
@@ -99,89 +101,95 @@ class LoadOrganizations:
 	## This method updates the bible_fileset_copyright_organization with licensors
 	def updateLicensors(self, filesetList):
 		inserts = []
+		updates = []
 		deletes = []
 		sql = "SELECT lpts_organization, organization_id FROM lpts_organizations WHERE organization_role=2"
-		organizationMap = self.db.selectMapSet(sql, ())
+		organizationMap = self.db.selectMap(sql, ())
 		sql = "SELECT hash_id, organization_id FROM bible_fileset_copyright_organizations WHERE organization_role=2"
-		dbpOrgMapSet = self.db.selectMapSet(sql, ())
-		for (filesetId, setTypeCode, assetId, hashId) in filesetList:
+		dbpOrgMap = self.db.selectMap(sql, ())
+		for (bibleId, filesetId, setTypeCode, setSizeCode, assetId, hashId) in filesetList:
 			typeCode = setTypeCode.split("_")[0]
-			lptsRecords = self.lptsReader.getFilesetRecords(filesetId)
-			lptsOrgList = set()
-			if setTypeCode[:4] == "text" and lptsRecords != None:
-				for (status, lptsRecord) in lptsRecords:
-					for licensor in [lptsRecord.Licensor(), lptsRecord.CoLicensor()]:
-						if licensor != None:
-							licensorOrg = organizationMap.get(licensor)
-							if licensorOrg != None:
-								lptsOrgList = lptsOrgList.union(licensorOrg)
-							else:
-								print("ERROR: %s has no org_id for licensor: %s" % (filesetId, licensor))
+			if filesetId[8:10] == "SA":
+				dbpFilesetId = filesetId[:8] + "DA" + filesetId[10:]
+			else:
+				dbpFilesetId = filesetId
+			(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecordLoose(typeCode, bibleId, dbpFilesetId)
+			licensorOrg = None
+			if lptsRecord != None:
+				lptsLicensor = lptsRecord.Licensor()
+				if lptsLicensor == None:
+					lptsLicensor = lptsRecord.CoLicensor()
+				if lptsLicensor != None:
+					name = self.lptsReader.reduceCopyrightToName(lptsLicensor)
+					licensorOrg = organizationMap.get(name)
+					if licensorOrg == None:
+						print("EROR %s has no org_id for licensor: %s" % (filesetId, lptsLicensor))
 
-			dbpOrgSet = dbpOrgMapSet.get(hashId, set())
-			for lptsOrg in lptsOrgList:
-				if lptsOrg not in dbpOrgSet:
-					inserts.append((hashId, lptsOrg, 2))
-			for dbpOrg in dbpOrgSet:
-				if dbpOrg not in lptsOrgList:
-					deletes.append((hashId, dbpOrg, 2))
+			dbpOrg = dbpOrgMap.get(hashId)
+			if licensorOrg != None and dbpOrg == None:
+				inserts.append((licensorOrg, hashId, 2))
+			elif licensorOrg == None and dbpOrg != None:
+				deletes.append((hashId, 2))
+			elif licensorOrg != dbpOrg:
+				updates.append(("organization_id", licensorOrg, dbpOrg, hashId, 2))
 
 		tableName = "bible_fileset_copyright_organizations"
-		pkeyNames = ("hash_id", "organization_id", "organization_role")
-		attrNames = ()
+		pkeyNames = ("hash_id", "organization_role")
+		attrNames = ("organization_id",)
 		self.dbOut.insert(tableName, pkeyNames, attrNames, inserts)
+		self.dbOut.updateCol(tableName, pkeyNames, updates)
 		self.dbOut.delete(tableName, pkeyNames, deletes)
 		
 
 	## This method updates the bible_fileset_copyright_organizations with copyrightholders
 	def updateCopyrightHolders(self, filesetList):
 		inserts = []
+		updates = []
 		deletes = []
 		sql = "SELECT lpts_organization, organization_id FROM lpts_organizations WHERE organization_role=1"
-		organizationMap = self.db.selectMapSet(sql, ())
+		organizationMap = self.db.selectMap(sql, ())
 		sql = "SELECT hash_id, organization_id FROM bible_fileset_copyright_organizations WHERE organization_role=1"
-		dbpOrgMapSet = self.db.selectMapSet(sql, ())
-		for (filesetId, setTypeCode, assetId, hashId) in filesetList:
+		dbpOrgMap = self.db.selectMap(sql, ())
+		for (bibleId, filesetId, setTypeCode, setSizeCode, assetId, hashId) in filesetList:
 			typeCode = setTypeCode.split("_")[0]
 			if filesetId[8:10] == "SA":
 				dbpFilesetId = filesetId[:8] + "DA" + filesetId[10:]
 			else:
 				dbpFilesetId = filesetId
-			lptsRecords = self.lptsReader.getFilesetRecords(dbpFilesetId)
-			lptsOrgList = set()
-			if lptsRecords != None:
-				for (status, lptsRecord) in lptsRecords:
-					lptsList = set()
+			copyrightOrg = None
+			if typeCode != "app":
+				(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecordLoose(typeCode, bibleId, dbpFilesetId)
+				if lptsRecord != None:
+					lptsCopyright = None
 					if typeCode == "text":
 						if self.hasDamIds(lptsRecord, "text") and lptsRecord.Copyrightc() != None:
-							lptsList.add(lptsRecord.Copyrightc())
+							lptsCopyright = lptsRecord.Copyrightc()
 					elif typeCode == "audio":
 						if self.hasDamIds(lptsRecord, "audio") and lptsRecord.Copyrightp() != None:
-							lptsList.add(lptsRecord.Copyrightp())
+							lptsCopyright = lptsRecord.Copyrightp()
 					elif typeCode == "video":
 						if self.hasDamIds(lptsRecord, "video") and lptsRecord.Copyright_Video() != None:
-							lptsList.add(lptsRecord.Copyright_Video())
+							lptsCopyright = lptsRecord.Copyright_Video()
 
-					for copyright in lptsList:
-						name = self.lptsReader.reduceCopyrightToName(copyright)
+					if lptsCopyright != None:
+						name = self.lptsReader.reduceCopyrightToName(lptsCopyright)
 						copyrightOrg = organizationMap.get(name)
-						if copyrightOrg != None:
-							lptsOrgList = lptsOrgList.union(copyrightOrg)
-						else:
-							print("ERROR: %s has no org_id for copyright: %s" % (filesetId, name))
+						if copyrightOrg == None:
+							print("EROR %s has no org_id for copyright: %s" % (filesetId, name))
 
-			dbpOrgSet = dbpOrgMapSet.get(hashId, set())
-			for lptsOrg in lptsOrgList:
-				if lptsOrg not in dbpOrgSet:
-					inserts.append((hashId, lptsOrg, 1))
-			for dbpOrg in dbpOrgSet:
-				if dbpOrg not in lptsOrgList:
-					deletes.append((hashId, dbpOrg, 1))
+			dbpOrg = dbpOrgMap.get(hashId)
+			if copyrightOrg != None and dbpOrg == None:
+				inserts.append((copyrightOrg, hashId, 1))
+			elif copyrightOrg == None and dbpOrg != None:
+				deletes.append((hashId, 1))
+			elif copyrightOrg != dbpOrg:
+				updates.append(("organization_id", copyrightOrg, dbpOrg, hashId, 1))
 
 		tableName = "bible_fileset_copyright_organizations"
-		pkeyNames = ("hash_id", "organization_id", "organization_role")
-		attrNames = ()
+		pkeyNames = ("hash_id", "organization_role")
+		attrNames = ("organization_id",)
 		self.dbOut.insert(tableName, pkeyNames, attrNames, inserts)
+		self.dbOut.updateCol(tableName, pkeyNames, updates)
 		self.dbOut.delete(tableName, pkeyNames, deletes)
 
 
@@ -298,11 +306,10 @@ if (__name__ == '__main__'):
 	lptsReader = LPTSExtractReader(config)
 	orgs = LoadOrganizations(config, db, dbOut, lptsReader)
 	orgs.changeCopyrightOrganizationsPrimaryKey()
-	# These methods should be called by Validate
-	#unknownLicensors = orgs.validateLicensors()
-	#unknownCopyrights = orgs.validateCopyrights()
-	#sys.exit()
-	sql = "SELECT id, set_type_code, asset_id, hash_id FROM bible_filesets ORDER BY id, set_type_code"
+	sql = ("SELECT b.bible_id, bf.id, bf.set_type_code, bf.set_size_code, bf.asset_id, bf.hash_id"
+		" FROM bible_filesets bf JOIN bible_fileset_connections b ON bf.hash_id = b.hash_id"
+		" ORDER BY b.bible_id, bf.id, bf.set_type_code"
+		" LOCK IN SHARE MODE")
 	filesetList = db.select(sql, ())
 	print("num filelists", len(filesetList))
 	orgs.updateLicensors(filesetList)
@@ -310,16 +317,6 @@ if (__name__ == '__main__'):
 	dbOut.displayStatements()
 	dbOut.displayCounts()
 	dbOut.execute("test-orgs")
-
-	#orgs.unitTestUpdateLicensors()
-	#orgs.unitTestUpdateCopyrightHolders()
 	db.close()
 
 
-"""
-truncate table bible_fileset_copyright_organizations;
-SET FOREIGN_KEY_CHECKS=0;
-insert into bible_fileset_copyright_organizations 
-select * from bible_fileset_copyright_organizations_backup;
-SET FOREIGN_KEY_CHECKS=1;
-"""

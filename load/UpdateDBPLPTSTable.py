@@ -182,15 +182,12 @@ class UpdateDBPLPTSTable:
 		self.dbOut.delete(tableName, pkeyNames, deleteRows)
 
 
-	def updateBibleFilesetCopyrightOrganizations(self):
+	def updateBibleFilesetCopyrightOrganizations(self, filesetList):
 		orgs = LoadOrganizations(self.config, self.db, self.dbOut, self.lptsReader)
 		orgs.changeCopyrightOrganizationsPrimaryKey()
 		# These methods should be called by Validate
 		#unknownLicensors = orgs.validateLicensors()
 		#unknownCopyrights = orgs.validateCopyrights()
-		sql = "SELECT id, set_type_code, asset_id, hash_id FROM bible_filesets ORDER BY id, set_type_code"
-		filesetList = self.db.select(sql, ())
-		#print("num filelists", len(filesetList))
 		orgs.updateLicensors(filesetList)
 		orgs.updateCopyrightHolders(filesetList)
 
