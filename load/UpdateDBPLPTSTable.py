@@ -39,7 +39,7 @@ class UpdateDBPLPTSTable:
 		access.process(filesetList)
 		self.updateBibleFilesetTags(filesetList)
 		self.updateBibleFilesetCopyrights(filesetList)
-		self.updateBibleFilesetCopyrightOrganizations()
+		self.updateBibleFilesetCopyrightOrganizations(filesetList)
 
 	##
 	## Bible Fileset Tags
