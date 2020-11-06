@@ -51,6 +51,7 @@ class Config:
 		splitPattern = re.compile("\\\\|/") # I have no idea why \\\\ escapes to one \
 		programRunning = splitPattern.split(sys.argv[0])[-1]
 
+		self.mysql_bin = self._getPath("mysql.exe")
 		self.database_host = self._get("database.host")
 		self.database_user = self._get("database.user")
 		self.database_passwd = self._get("database.passwd")

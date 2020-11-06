@@ -122,18 +122,26 @@ class SQLBatchExec:
 			if self.config.database_tunnel != None:
 				results1 = os.popen(self.config.database_tunnel).read()
 				print("tunnel opened:", results1)
-			cmd = ("mysql -h %s -P %s -u %s -p%s  %s < %s" % 
-												(self.config.database_host,
-												self.config.database_port,
-												self.config.database_user, 
-												self.config.database_passwd,
-												self.config.database_db_name,
-												path))
-			response = subprocess.run(cmd, shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=600)
-			success = response.returncode == 0
-			print("SQLBATCH:", response.stderr)
-			return success
-
+			with open(path, "r") as sql:
+				#cmd = ("/usr/local/mysql/bin/mysql -h %s -P %s -u %s -p%s  %s " % 
+				#								(self.config.database_host,
+				#								self.config.database_port,
+				#								self.config.database_user, 
+				#								self.config.database_passwd,
+				#								self.config.database_db_name))
+				#								#path))
+				cmd = [self.config.mysql_bin, "-h", self.config.database_host, 
+						"-P", str(self.config.database_port),
+						"-u", self.config.database_user,
+						"-p" + self.config.database_passwd,
+						self.config.database_db_name]
+				response = subprocess.run(cmd, shell=False, stdin=sql, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=600)
+				success = response.returncode == 0
+				print("SQLBATCH:", str(response.stderr.decode('utf-8')))
+				#for line in response.stdout.decode('utf-8').split("\n"):
+				#	print(line)
+				return success
+				
 
 if (__name__ == '__main__'):
 	config = Config()
