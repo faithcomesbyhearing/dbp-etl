@@ -120,10 +120,10 @@ class UpdateDBPFilesetTables:
 					self.insertBibleFiles(typeCode, hashId, csvFilename, filesetDir)
 					results["%s/%s/%s" % (typeCode, bibleId, filesetId)] = hashId
 
-				elif typeCode == "text":
-					hashId = self.insertBibleFileset("verses", filesetId, csvFilename)
-					self.insertFilesetConnections(hashId, bibleId)
-					self.textUpdater.updateFileset(bibleId, filesetId)
+				#elif typeCode == "text":
+				#	hashId = self.insertBibleFileset("verses", filesetId, csvFilename)
+				#	self.insertFilesetConnections(hashId, bibleId)
+				#	self.textUpdater.updateFileset(bibleId, filesetId)
 
 		return results
 

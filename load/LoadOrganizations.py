@@ -316,7 +316,7 @@ if (__name__ == '__main__'):
 	orgs.updateCopyrightHolders(filesetList)
 	dbOut.displayStatements()
 	dbOut.displayCounts()
-	dbOut.execute("test-orgs")
+	#dbOut.execute("test-orgs")
 	db.close()
 
 

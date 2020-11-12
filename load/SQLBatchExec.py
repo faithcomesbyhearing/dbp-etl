@@ -130,7 +130,7 @@ class SQLBatchExec:
 				#								self.config.database_passwd,
 				#								self.config.database_db_name))
 				#								#path))
-				cmd = [self.config.mysql_bin, "-h", self.config.database_host, 
+				cmd = [self.config.mysql_exe, "-h", self.config.database_host, 
 						"-P", str(self.config.database_port),
 						"-u", self.config.database_user,
 						"-p" + self.config.database_passwd,

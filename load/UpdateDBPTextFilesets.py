@@ -8,8 +8,11 @@ import io
 import sys
 import os
 import sqlite3
-#from xml.dom import minidom
 from Config import *
+from LPTSExtractReader import *
+from SQLUtility import *
+from SQLBatchExec import *
+from S3Utility import *
 
 
 class UpdateDBPTextFilesets:
@@ -23,26 +26,46 @@ class UpdateDBPTextFilesets:
 
 	## This is called one fileset at a time by Validate.process around line 82
 	def validateFileset(self, bibleId, filesetId):
-		print("TBD")
-		# The options.xini file will be read to obtain the filesetId and the languageId code.
-		# The filesetId in options.xini must be equal to the filesetId of the directory, or it will produce an error and stop processing this fileset.
-		# The languageId code in the options.xini must be equal iso code in LPTS for the fileset, or it will produce and error and stop processing this fileset.
-		# The process will lookup the iso1 code that corresponds to the iso language code using the languages table.
-		# The process will use the LPTS orthography code, and look it up in the alphabets table to get the direction of the language
-		# The process will compare the LPTS orthography with the orthography allowed for the language using the language_alphabets table, and produce and error and stop the process if they do not match.
-		# The process will execute my Bible text processing program using the above parameters.
-		# The output of the process is a sqlite database with the name {filesetId}.db
-		# Possibly, the process could derive the exact script code from the text and compare to the the LPTS orthography, and stop the process if it is not correct.
-		# It will place this database file in the the accepted directory (I think)
+		(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecordLoose("text", bibleId, filesetId)
+		if lptsRecord == None:
+			return("text/%s/%s has no LPTS record.\tEROR" % (bibleId, filesetId))
+		iso3 = lptsRecord.ISO()
+		if iso3 == None:
+			return("text/%s/%s has no iso language code.\tEROR" % (bibleId, filesetId))
+		iso1 = self.db.selectScalar("SELECT iso1 FROM languages WHERE iso = %s AND iso1 IS NOT NULL", (iso3,))
+		scriptName = lptsRecord.Orthography(lptsIndex)
+		if scriptName == None:
+			return("text/%s/%s has no Orthography.\tEROR" % (bibleId, filesetId))
+		scriptId = self.db.selectScalar("SELECT script_id FROM lpts_script_codes WHERE lpts_name = %s", (scriptName,))
+		if scriptId == None:
+			return("text/%s/%s %s script name is not in lpts_script_codes.\tEROR" % (bibleId, filesetId, scriptName))
+		direction = self.db.selectScalar("SELECT direction FROM alphabets WHERE script = %s", (scriptId,))
+		if direction not in {"ltr", "rtl"}:
+			return("text/%s/%s %s script has no direction in alphabets.\tEROR" % (bibleId, filesetId, scriptId))
+			sys.exit()
+		cmd = [self.config.node_exe,
+			self.config.mysql_exe,
+			self.config.directory_validate,
+			self.config.directory_accepted,
+			iso3, iso1, direction]
+		print(cmd)
+		response = subprocess.run(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=120)
+		success = response.returncode == 0
+		if success != None:
+			print("text/%s/%s %s\tEROR" % (bibleId, filesetId, str(response.stderr.decode("utf-8"))))
+		print("text/%s/%s %s\tINFO" % (bibleId, filesetId, str(response.stderr.decode("utf-8"))))
+		print("OUTPUT", str(response.stdout.decode("utf-8")))	
+		return None
+		
 		# This must return error messages and error count by some mechanism
 
 
 	def uploadFileset(self, bibleId, filesetId):
-		print("Text Filesets are not uploaded")
 		# At some future time the process might extract .html chapter files from the {fileset}.db database and upload them.
 		# At some future time the process might upload .usx files.
 		# Or, at some future time, the process might create json equivalents of the usx and upload them.
-		# At this time, there is nothing the upload process must do
+		s3 = S3Utility(self.config)
+		s3.promoteFileset(self, self.config.directory_upload, "text/%s/%s" % (bibleId, filesetId))
 
 
 	def updateFileset(self, bibleId, filesetId, hashId):
@@ -78,7 +101,7 @@ class UpdateDBPTextFilesets:
 					updateRows.append(("name", ssTitle, dbpName, bibleId, ssBookId))
 				if dbpNameShort != ssName:
 					updateRows.append(("name_short", ssName, dbpNameShort, bibleId, ssBookId))
-				if dbpChapters != ssChapterList
+				if dbpChapters != ssChapterList:
 					updateRows.append(("chapters", ssChapterList, dbpChapters, bibleId, ssBookId))
 
 		for dbpBookId in dbpBookMap.keys():
@@ -131,7 +154,7 @@ class UpdateDBPTextFilesets:
 
 
 	## Update table with bible books data from audio or video fileset
-	def createIfAbsent(self, filesetPrefix):
+	def insertBibleBooksIfAbsent(self, filesetPrefix):
 		(typeCode, bibleId, filesetId) = filesetPrefix.split("/")
 		if typeCode in {"audio", "video"}:
 			bookCount = db.selectScalar("SELECT count(*) FROM bible_books WHERE bible_id = %s", (bibleId,))
@@ -175,17 +198,26 @@ if (__name__ == '__main__'):
 	dbOut = SQLBatchExec(config)
 	lptsReader = LPTSExtractReader(config)
 	texts = UpdateDBPTextFilesets(config, db, dbOut, lptsReader)
-	dirname = self.config.directory_database
+	s3 = S3Utility(config)
+	dirname = config.directory_validate
 	for typeCode in os.listdir(dirname):
-		for bibleId in os.listdir(dirname + typeCode):
-			for filesetId in os.listdir(dirname + typeCode + os.sep + bibleId):
-				csvFilename = config.directory_accepted + typeCode + "_" + bibleId + "_" + filesetId + ".csv"
-				if os.exists(csvFilename):
-					if typeCode == "sql":
-						hashId = "abcdefg" ### test only
-						text.updateVerses(dirname, hashId, bibleId, filesetId)
-					elif typeCode == "bookNames":
-						text.updateBookNames(dirname, bibleId)
+		if typeCode == "text":
+			for bibleId in os.listdir(dirname + typeCode):
+				for filesetId in os.listdir(dirname + typeCode + os.sep + bibleId):
+					error = texts.validateFileset(bibleId, filesetId)
+					if error == None:
+						s3.promoteFileset(self, self.config.directory_validation, "text/%s/%s" % (bibleId, filesetId))
+						texts.uploadFileset(bibleId, filesetId)
+
+	dirname = config.directory_database
+	for typeCode in os.listdir(dirname):
+		if typeCode == "text":
+			for bibleId in os.listdir(dirname + typeCode):
+				for filesetId in os.listdir(dirname + typeCode + os.sep + bibleId):
+					databasePath = config.directory_accepted + filesetId + ".db"
+					hashId = fileset.insertBibleFileset("verses", filesetId, databasePath)
+					fileset.insertFilesetConnections(hashId, bibleId)
+					text.updateFileset(bibleId, filesetId, hashId)
 	dbOut.displayCounts()
 	dbOut.displayStatements()
 	#dbOut.execute()
