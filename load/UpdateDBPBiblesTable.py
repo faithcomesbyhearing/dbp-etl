@@ -35,6 +35,15 @@ class UpdateDBPBiblesTable:
 		self.scriptNameMap = self.db.selectMap("SELECT lpts_name, script_id FROM lpts_script_codes", ())
 		self.numeralIdSet = self.db.selectSet("SELECT id FROM numeral_systems", ())
 		self.sizeCodeMap = self.db.selectMapList("SELECT id, set_size_code FROM bible_filesets", ())	
+		resultSet = self.db.select("SELECT lower(l.iso), lower(t.name), l.id FROM languages l,language_translations t WHERE l.id=t.language_source_id ORDER BY l.id desc", ())
+		self.languageMap1 = {}
+		for (iso, name, langId) in resultSet:
+			self.languageMap1[(iso, name)] = langId
+		resultSet = self.db.select("SELECT lower(iso), lower(name), id FROM languages", ())# ORDER BY id desc", ())
+		self.languageMap2 = {}
+		for (iso, name, langId) in resultSet:
+			self.languageMap2[(iso, name)] = langId
+		self.languageMap3 = self.db.selectMap("SELECT lower(iso), id FROM languages ORDER BY id desc", ())
 		self.yearPattern = re.compile("([0-9]{4})")
 
 
@@ -79,23 +88,28 @@ class UpdateDBPBiblesTable:
 					insertRows.append((languageId, "protestant", numerals, date, scope, script, copyright, bibleId))
 			else:
 				(dbpLanguageId, dbpVersification, dbpNumerals, dbpDate, dbpScope, dbpScript, dbpCopyright) = dbpBibleMap[bibleId]
-				if (languageId != dbpLanguageId or
-					numerals != dbpNumerals or
-					date != dbpDate or
-					scope != dbpScope or
-					script != dbpScript or
-					copyright != dbpCopyright):
-					if languageId != None:
-						if copyright != None:
-							copyright = copyright.replace("'", "''")
-						updateRows.append((languageId, dbpVersification, numerals, date, scope, script, copyright, bibleId))
+				if languageId != dbpLanguageId:
+					updateRows.append(("language_id", languageId, dbpLanguageId, bibleId))
+				if numerals != dbpNumerals:
+					updateRows.append(("numeral_sustem_id", numerals, dbpNumerals, bibleId))
+				if date != dbpDate:
+					updateRows.append(("date", date, dbpDate, bibleId))
+				if scope != dbpScope:
+					updateRows.append(("scope", scope, dbpScope, bibleId))
+				if script != dbpScript:
+					updateRows.append(("script", script, dbpScript, bibleId))
+				if copyright != dbpCopyright:
+					if copyright != None:
+						copyright = copyright.replace("'", "''")
+					updateRows.append(("copyright", copyright, dbpCopyright, bibleId))
 
 		tableName = "bibles"
 		pkeyNames = ("id",)
 		attrNames = ("language_id", "versification", "numeral_system_id", "date", "scope", "script", "copyright")
 		ignoredNames = ("derived", "copyright", "priority", "reviewed", "notes") # here for doc only
 		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
-		self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
+		#self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
+		self.dbOut.updateCol(tableName, pkeyNames, updateRows)
 		self.dbOut.delete(tableName, pkeyNames, deleteRows)
 
 
@@ -103,21 +117,28 @@ class UpdateDBPBiblesTable:
 		final = set()
 		for (lptsIndex, lptsRecord) in lptsRecords:
 			iso = lptsRecord.ISO()
+			iso = iso.lower() if iso != None else None
 			langName = lptsRecord.LangName()
-			result = self.db.selectScalar("SELECT l.id FROM languages l,language_translations t WHERE l.iso=%s AND t.name=%s AND l.id=t.language_source_id", (iso, langName))
+			langName = langName.lower() if langName != None else None
+			result = self.languageMap1.get((iso, langName))
 			if result != None:
 				final.add(result)
 		if len(final) == 0:
 			for (lptsIndex, lptsRecord) in lptsRecords:
 				iso = lptsRecord.ISO()
-				result = self.db.selectScalar("SELECT id FROM languages WHERE iso=%s AND name=%s", (iso, langName))
+				iso = iso.lower() if iso != None else None
+				langName = lptsRecord.LangName()
+				langName = langName.lower() if langName != None else None
+				result = self.languageMap2.get((iso, langName))
 				if result != None:
 					final.add(result)
 		if len(final) == 0:
-			iso = lptsRecord.ISO()
-			result = self.db.selectScalar("SELECT id FROM languages WHERE iso=%s", (iso))
-			if result != None:
-				final.add(result)
+			for (lptsIndex, lptsRecord) in lptsRecords:
+				iso = lptsRecord.ISO()
+				iso = iso.lower() if iso != None else None
+				result = self.languageMap3.get(iso)
+				if result != None:
+					final.add(result)
 		if len(final) == 0:
 			print("ERROR_01 ISO code of bibleId unknown", iso, bibleId)
 			return None
@@ -308,7 +329,7 @@ if (__name__ == '__main__'):
 
 	dbOut.displayStatements()
 	dbOut.displayCounts()
-	dbOut.execute("test-bibles")
+	#dbOut.execute("test-bibles")
 
 
 
