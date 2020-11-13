@@ -296,90 +296,10 @@ class UpdateDBPBiblesTable:
 			return False # has no error
 
 
-	## This is a one-time function that creates a table of script codes.
-	@staticmethod
-	def lptsScriptCodesInsert(db):
-		sql = ("CREATE TABLE IF NOT EXISTS lpts_script_codes ("
-			" lpts_name VARCHAR(256) NOT NULL PRIMARY KEY,"
-			" script_id CHAR(4) NOT NULL)")
-			#, FOREIGN KEY (script_id) REFERENCES alphabets(script))")
-		db.execute(sql, ())
-		count = db.selectScalar("SELECT count(*) FROM lpts_script_codes", ())
-		if count == 0:
-			scriptCodes = {
-				"Amharic":"Ethi", 
-				"Arabic":"Arab", 
-				"Armenian":"Armn",
-				"Bengali":"Beng", 
-				"Bengali Script":"Beng",
-				"Berber":"Tfng",
-				"Burmese":"Mymr", 
-				"Canadian Aboriginal Syllabic":"Cans", 
-				"Canadian Aboriginal Syllabics":"Cans", 
-				"Cherokee Sylabary":"Cher", 
-				"Cyrillic":"Cyrl", 
-				"Devanagari":"Deva", 
-				"Devangari":"Deva", 
-				"Ethiopic":"Ethi", 
-				"Ethoiopic":"Ethi", 
-				"Ethopic":"Ethi", 
-				"Ge'ez":"Ethi", 
-				"Greek":"Grek", 
-				"Gujarati":"Gujr", 
-				"Gurmukhi":"Guru", 
-				"Han":"Hani", 
-				"Hangul (Korean)":"Kore", 
-				"Hebrew":"Hebr", 
-				"Japanese":"Jpan", 
-				"Kannada":"Knda", 
-				"Khmer":"Khmr", 
-				"Khmer Script":"Khmr", 
-				"Lao":"Laoo", 
-				"Latin":"Latn", 
-				"Latin (Africa)":"Latn", 
-				"Latin (African)":"Latn", 
-				"Latin (Latin America)":"Latn", 
-				"Latin (Latin American)":"Latn", 
-				"Latin (PNG)":"Latn", 
-				"Latin (SE Asia)":"Latn", 
-				"Malayalam":"Mlym", 
-				"NA":"Zyyy", 
-				"Oriya":"Orya",
-				"Tamil":"Taml", 
-				"Telugu":"Telu", 
-				"Thaana":"Thaa",
-				"Thai":"Thai", 
-				"Tibetan":"Tibt"}
-			insertRows = []
-			for (key, value) in scriptCodes.items():
-				insertRows.append((key, value))
-			sql = "INSERT lpts_script_codes (lpts_name, script_id) VALUES (%s, %s)"
-			db.executeBatch(sql, insertRows)
-
-
-	## This is a one-time function that creates test_bibles table.
-	@staticmethod
-	def createTestBiblesTable(db):
-		#db.execute("DROP TABLE IF EXISTS test_bibles", ())
-		#db.execute("CREATE TABLE test_bibles SELECT * FROM bibles", ())
-		db.execute("ALTER TABLE bibles MODIFY COLUMN scope VARCHAR(8) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL", ())
-		db.execute("ALTER TABLE bibles MODIFY COLUMN script char(4) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL", ())
-		db.execute("ALTER TABLE bibles MODIFY COLUMN numeral_system_id VARCHAR(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL", ())
-		#db.execute("ALTER TABLE test_bibles add primary key (id)", ())
-		#db.execute("ALTER TABLE test_bibles add index (language_id)", ())
-		#db.execute("ALTER TABLE test_bibles add index (numeral_system_id)", ())
-		#db.execute("ALTER TABLE test_bibles add index (script)", ())
-		#db.execute("ALTER TABLE test_bibles add foreign key (script) references alphabets (script)", ())
-		#db.execute("ALTER TABLE test_bibles add foreign key (language_id) references languages (id)", ())
-		#db.execute("ALTER TABLE test_bibles add foreign key (numeral_system_id) references numeral_systems (id)", ())
-
-
 ## Unit Test
 if (__name__ == '__main__'):
 	config = Config()
 	db = SQLUtility(config)
-	#UpdateDBPBiblesTable.lptsScriptCodesInsert(db)
-	#UpdateDBPBiblesTable.createTestBiblesTable(db)
 	dbOut = SQLBatchExec(config)
 	lptsReader = LPTSExtractReader(config)
 	bibles = UpdateDBPBiblesTable(config, db, dbOut, lptsReader)
