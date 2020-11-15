@@ -52,6 +52,7 @@ class Config:
 		programRunning = splitPattern.split(sys.argv[0])[-1]
 
 		self.node_exe = self._getPath("node.exe")
+		self.publisher_js = self._getPath("publisher.js")
 		self.mysql_exe = self._getPath("mysql.exe")
 		self.database_host = self._get("database.host")
 		self.database_user = self._get("database.user")
@@ -109,6 +110,8 @@ class Config:
 	def _getPath(self, name):
 		value = self._get(name)
 		path = value.replace("/", os.path.sep)
+		if path.startswith("~"):
+			path = path.replace("~", os.environ["HOME"])
 		if not os.path.exists(path):
 			print("ERROR: path %s for %s does not exist" % (path, name))
 			sys.exit()
@@ -129,6 +132,7 @@ if (__name__ == '__main__'):
 	config = Config()
 	print("User", config.database_user)
 	print("DB", config.database_db_name)
+	print("Publisher", config.publisher_js)
 
 
 

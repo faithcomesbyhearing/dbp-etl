@@ -13,6 +13,7 @@ from LPTSExtractReader import *
 from SQLUtility import *
 from SQLBatchExec import *
 from S3Utility import *
+from DBPLoadController import *
 
 
 class UpdateDBPTextFilesets:
@@ -33,6 +34,8 @@ class UpdateDBPTextFilesets:
 		if iso3 == None:
 			return("text/%s/%s has no iso language code.\tEROR" % (bibleId, filesetId))
 		iso1 = self.db.selectScalar("SELECT iso1 FROM languages WHERE iso = %s AND iso1 IS NOT NULL", (iso3,))
+		if iso1 == None:
+			iso1 = "null"
 		scriptName = lptsRecord.Orthography(lptsIndex)
 		if scriptName == None:
 			return("text/%s/%s has no Orthography.\tEROR" % (bibleId, filesetId))
@@ -44,10 +47,10 @@ class UpdateDBPTextFilesets:
 			return("text/%s/%s %s script has no direction in alphabets.\tEROR" % (bibleId, filesetId, scriptId))
 			sys.exit()
 		cmd = [self.config.node_exe,
-			self.config.mysql_exe,
-			self.config.directory_validate,
+			self.config.publisher_js,
+			self.config.directory_validate + "text/%s/%s/" % (bibleId, filesetId),
 			self.config.directory_accepted,
-			iso3, iso1, direction]
+			filesetId, iso3, iso1, direction]
 		print(cmd)
 		response = subprocess.run(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=120)
 		success = response.returncode == 0
@@ -65,7 +68,7 @@ class UpdateDBPTextFilesets:
 		# At some future time the process might upload .usx files.
 		# Or, at some future time, the process might create json equivalents of the usx and upload them.
 		s3 = S3Utility(self.config)
-		s3.promoteFileset(self, self.config.directory_upload, "text/%s/%s" % (bibleId, filesetId))
+		s3.promoteFileset(self.config.directory_upload, "text/%s/%s" % (bibleId, filesetId))
 
 
 	def updateFileset(self, bibleId, filesetId, hashId):
@@ -197,26 +200,30 @@ if (__name__ == '__main__'):
 	db = SQLUtility(config)
 	dbOut = SQLBatchExec(config)
 	lptsReader = LPTSExtractReader(config)
-	texts = UpdateDBPTextFilesets(config, db, dbOut, lptsReader)
-	s3 = S3Utility(config)
-	dirname = config.directory_validate
-	for typeCode in os.listdir(dirname):
-		if typeCode == "text":
-			for bibleId in os.listdir(dirname + typeCode):
-				for filesetId in os.listdir(dirname + typeCode + os.sep + bibleId):
-					error = texts.validateFileset(bibleId, filesetId)
-					if error == None:
-						s3.promoteFileset(self, self.config.directory_validation, "text/%s/%s" % (bibleId, filesetId))
-						texts.uploadFileset(bibleId, filesetId)
 
+#	main = DBPLoadController(config, db, lptsReader)
+#	main.cleanup() # Only part of controller used here
+	texts = UpdateDBPTextFilesets(config, db, dbOut, lptsReader)
+#	s3 = S3Utility(config)
+#	dirname = config.directory_validate
+#	for typeCode in os.listdir(dirname):
+#		if typeCode == "text":
+#			for bibleId in os.listdir(dirname + typeCode):
+#				for filesetId in os.listdir(dirname + typeCode + os.sep + bibleId):
+#					error = texts.validateFileset(bibleId, filesetId)
+#					if error == None:
+#						s3.promoteFileset(config.directory_validate, "text/%s/%s" % (bibleId, filesetId))
+#						texts.uploadFileset(bibleId, filesetId)
+
+	filesets = UpdateDBPFilesetTables(config, db, dbOut)
 	dirname = config.directory_database
 	for typeCode in os.listdir(dirname):
 		if typeCode == "text":
 			for bibleId in os.listdir(dirname + typeCode):
 				for filesetId in os.listdir(dirname + typeCode + os.sep + bibleId):
 					databasePath = config.directory_accepted + filesetId + ".db"
-					hashId = fileset.insertBibleFileset("verses", filesetId, databasePath)
-					fileset.insertFilesetConnections(hashId, bibleId)
+					hashId = filesets.insertBibleFileset("verses", filesetId, databasePath)
+					filesets.insertFilesetConnections(hashId, bibleId)
 					text.updateFileset(bibleId, filesetId, hashId)
 	dbOut.displayCounts()
 	dbOut.displayStatements()

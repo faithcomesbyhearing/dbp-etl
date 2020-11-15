@@ -73,9 +73,9 @@ class Validate:
 			(typeCode, bibleId, filesetId) = filePrefix.split("/")
 			for (filename, filesize, lastmodified) in filenames:
 				ext = os.path.splitext(filename)[1]
-				if typeCode == "audio" and ext not in {".mp3", ".ogg", ".wav"}:
+				if typeCode == "audio" and ext not in {".mp3"}:
 					self.invalidFileExt.append((typeCode, bibleId, filesetId, filename))
-				elif typeCode == "text" and not ext in {".html", ".json"}:
+				elif typeCode == "text" and not ext in {".html", ".usx"}:
 					self.invalidFileExt.append((typeCode, bibleId, filesetId, filename))
 				elif typeCode == "video" and ext != ".mp4":
 					self.invalidFileExt.append((typeCode, bibleId, filesetId, filename))

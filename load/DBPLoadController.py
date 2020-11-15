@@ -35,14 +35,16 @@ class DBPLoadController:
 		print("********** CLEANUP **********", flush=True)
 		validateDir = self.config.directory_validate
 		for typeCode in os.listdir(validateDir):
-			if typeCode == "audio":
+			if typeCode in {"audio", "video", "text"}:
 				audioDir = validateDir + typeCode
 				for bibleId in os.listdir(audioDir):
 					bibleDir = audioDir + os.sep + bibleId
 					for filesetId in os.listdir(bibleDir):
 						filesetDir = bibleDir + os.sep + filesetId
-						self._repairFileNames(filesetDir, filesetId)
 						self._cleanupHiddenFiles(filesetDir)
+						if typeCode == "audio":
+							self._repairFileNames(filesetDir, filesetId)
+
 
 
 	## This corrects filesets that have stock number instead of damId in the filename.
