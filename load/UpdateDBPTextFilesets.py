@@ -72,15 +72,13 @@ class UpdateDBPTextFilesets:
 
 
 	def updateFileset(self, bibleId, filesetId, hashId):
-		bibleDB = connect(self.config.directory_accepted + filesetId + ".db")
-		cursor = bibleDB.cursor()
-		self.updateBibleBooks(cursor, bibleId)
-		self.updateVerseTable(cursor, hashId)
-		cursor.close()
+		bibleDB = SqliteUtility(self.config.directory_accepted + filesetId + ".db")
+		self.updateBibleBooks(bibleDB, bibleId)
+		self.updateVersesTable(bibleDB, hashId)
 		bibleDB.close()
 
 
-	def updateBibleBooks(self, cursor, bibleId):
+	def updateBibleBooks(self, bibleDB, bibleId):
 		insertRows = []
 		updateRows = []
 		deleteRows = []
@@ -91,9 +89,9 @@ class UpdateDBPTextFilesets:
 			dbpBooksMap[dbpBookId] = (dbpName, dbpNameShort, dbpChapters)
 
 		ssBookIdSet = set()
-		for (ssBookId, ssTitle, ssName, ssLastChapter) in cursor.execute("SELECT code, title, name, lastChapter FROM tableContents"):
+		for (ssBookId, ssTitle, ssName, ssLastChapter) in bibleDB.select("SELECT code, title, name, lastChapter FROM tableContents", ()):
 			ssBookIdSet.add(ssBookId)
-			chapterList = map(str, range(firstChapter, lastChapter))
+			chapterList = map(str, range(1, ssLastChapter + 1))
 			ssChapterList =  ",".join(chapterList)
 
 			if ssBookId not in dbpBooksMap.keys():
@@ -107,7 +105,7 @@ class UpdateDBPTextFilesets:
 				if dbpChapters != ssChapterList:
 					updateRows.append(("chapters", ssChapterList, dbpChapters, bibleId, ssBookId))
 
-		for dbpBookId in dbpBookMap.keys():
+		for dbpBookId in dbpBooksMap.keys():
 			if dbpBookId not in ssBookIdSet:
 				deleteRows.append((bibleId, dbpBookId))
 
@@ -115,12 +113,12 @@ class UpdateDBPTextFilesets:
 		pkeyNames = ("bible_id", "book_id")
 		attrNames = ("name", "name_short", "chapters")
 		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
-		self.dbOut.updateCol(tableName, pkeyNames, attrNames, updateRows)
+		self.dbOut.updateCol(tableName, pkeyNames, updateRows)
 		self.dbOut.delete(tableName, pkeyNames, deleteRows)
 
 
 
-	def updateVersesTable(self, cursor, hashId):
+	def updateVersesTable(self, bibleDB, hashId):
 		insertRows = []
 		updateRows = []
 		deleteRows = []
@@ -131,28 +129,37 @@ class UpdateDBPTextFilesets:
 			dbpVerseMap[(dbpBookId, dbpChapter, dbpVerseStart)] = (dbpVerseEnd, dbpVerseText)
 
 		ssBookIdSet = set()
-		for (ssReference, ssVerseText) in cursor.execute("SELECT reference, html FROM verses"):
+		for (ssReference, ssVerseText) in bibleDB.select("SELECT reference, html FROM verses", ()):
 			(ssBookId, ssChapter, ssVerse) = ssReference.split(":")
-			ssBookIdSet.add((ssBookId, ssChapter, ssVerse))
+			parts = ssVerse.split("-")
+			if len(parts) > 1:
+				ssVerseStart = parts[0]
+				ssVerseEnd = parts[1]
+			else:
+				ssVerseStart = ssVerse
+				ssVerseEnd = ssVerse
+			ssBookIdSet.add((ssBookId, ssChapter, ssVerseStart))
 
-		if (ssBookIdSet, ssChapter, ssVerse) not in dbpVerseMap.keys():
-			insertRows.append((ssVerse, ssVerseText, hashId, ssBookId, ssChapter, ssVerse))
-		else:
-			(dbpVerseEnd, dbpVerseText) = dbpVerseMap.get((ssBookIdSet, ssChapter, ssVerse))
-			if dbpVerseEnd != ssVerse:
-				updateRows.append(("verse_end", ssVerse, dbpVerseEnd, hashId, ssBookId, ssChapter, ssVerse))
-			if dbpVerseText != ssVerseText:
-				updateRows.append(("verse_text", ssVerseText, dbpVerseText, hashId, ssBookId, ssChapter, ssVerse))
+			if (ssBookId, ssChapter, ssVerseStart) not in dbpVerseMap.keys():
+				ssVerseText = ssVerseText.replace("'", "''")
+				insertRows.append((ssVerseEnd, ssVerseText, hashId, ssBookId, ssChapter, ssVerseStart))
+			else:
+				(dbpVerseEnd, dbpVerseText) = dbpVerseMap.get((ssBookIdSet, ssChapter, ssVerseStart))
+				if dbpVerseEnd != ssVerseEnd:
+					updateRows.append(("verse_end", ssVerseEnd, dbpVerseEnd, hashId, ssBookId, ssChapter, ssVerseStart))
+				if dbpVerseText != ssVerseText:
+					ssVerseText = ssVerseText.replace("'", "''")
+					updateRows.append(("verse_text", ssVerseText, dbpVerseText, hashId, ssBookId, ssChapter, ssVerseStart))
 
-		for (dbpBookId, dbpChapter, dbpVerseStart) in dbpBookMap.keys():
+		for (dbpBookId, dbpChapter, dbpVerseStart) in dbpVerseMap.keys():
 			if (dbpBookId, dbpChapter, dbpVerseStart) not in ssBookIdSet:
 				deleteRows.append((hashId, (dbpBookId, dbpChapter, dbpVerseStart)))
 
 		tableName = "bible_verses"
 		pkeyNames = ("hash_id", "book_id", "chapter", "verse_start")
-		attrNames = ("verse_end", "verse_test")
+		attrNames = ("verse_end", "verse_text")
 		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
-		self.dbOut.updateCol(tableName, pkeyNames, attrNames, updateRows)
+		self.dbOut.updateCol(tableName, pkeyNames, updateRows)
 		self.dbOut.delete(tableName, pkeyNames, deleteRows)
 
 
@@ -224,9 +231,10 @@ if (__name__ == '__main__'):
 					databasePath = config.directory_accepted + filesetId + ".db"
 					hashId = filesets.insertBibleFileset("verses", filesetId, databasePath)
 					filesets.insertFilesetConnections(hashId, bibleId)
-					text.updateFileset(bibleId, filesetId, hashId)
-	dbOut.displayCounts()
+					texts.updateFileset(bibleId, filesetId, hashId)
+
 	dbOut.displayStatements()
+	dbOut.displayCounts()
 	#dbOut.execute()
 
 

@@ -18,6 +18,7 @@ import math
 import subprocess
 from Config import *
 from SQLUtility import *
+from SqliteUtility import *
 from SQLBatchExec import *
 
 
@@ -150,6 +151,15 @@ class UpdateDBPFilesetTables:
 		return UpdateDBPFilesetTables.getSetSizeCode(ntBooks, otBooks)
 
 
+	def getSetSizeCodeByDatabase(self, filesetId):
+		databaseName = self.config.directory_accepted + filesetId + ".db"
+		db = SqliteUtility(databaseName)
+		bookIdSet = db.selectSet("SELECT DISTINCT code FROM tableContents", ())
+		db.close()
+		otBooks = bookIdSet.intersection(self.OT)
+		ntBooks = bookIdSet.intersection(self.NT)
+		return UpdateDBPFilesetTables.getSetSizeCode(ntBooks, otBooks)
+
 
 	def insertBibleFileset(self, typeCode, filesetId, csvFilename):
 		tableName = "bible_filesets"
@@ -158,7 +168,10 @@ class UpdateDBPFilesetTables:
 		updateRows = []
 		bucket = self.config.s3_vid_bucket if typeCode == "video" else self.config.s3_bucket
 		setTypeCode = UpdateDBPFilesetTables.getSetTypeCode(typeCode, filesetId)
-		setSizeCode = self.getSetSizeCodeByFile(csvFilename)
+		if typeCode in {"text", "verses"}:
+			setSizeCode = self.getSetSizeCodeByDatabase(filesetId)
+		else:
+			setSizeCode = self.getSetSizeCodeByFile(csvFilename)
 		hashId = UpdateDBPFilesetTables.getHashId(bucket, filesetId, setTypeCode)
 		row = self.db.selectRow("SELECT id, asset_id, set_type_code, set_size_code FROM bible_filesets WHERE hash_id=%s", (hashId,))
 		if row == None:
