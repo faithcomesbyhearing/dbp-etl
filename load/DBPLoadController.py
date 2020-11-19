@@ -67,12 +67,13 @@ class DBPLoadController:
 
 
 	def _cleanupHiddenFilesRecurse(self, toDelete, directory):
-		for pathName in os.listdir(directory):
-			fullName = directory + os.sep + pathName
-			if pathName.startswith(".") or pathName == "Thumbs.db":
-				toDelete.append(fullName)
-			if os.path.isdir(fullName):
-				self._cleanupHiddenFilesRecurse(toDelete, fullName)
+		if os.path.isdir(directory):
+			for pathName in os.listdir(directory):
+				fullName = directory + os.sep + pathName
+				if pathName.startswith(".") or pathName == "Thumbs.db":
+					toDelete.append(fullName)
+				if os.path.isdir(fullName):
+					self._cleanupHiddenFilesRecurse(toDelete, fullName)
 
 
 	def updateBibles(self):

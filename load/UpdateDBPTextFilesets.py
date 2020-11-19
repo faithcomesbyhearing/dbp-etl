@@ -73,52 +73,6 @@ class UpdateDBPTextFilesets:
 
 	def updateFileset(self, bibleId, filesetId, hashId):
 		bibleDB = SqliteUtility(self.config.directory_accepted + filesetId + ".db")
-		self.updateBibleBooks(bibleDB, bibleId)
-		self.updateVersesTable(bibleDB, hashId)
-		bibleDB.close()
-
-
-	def updateBibleBooks(self, bibleDB, bibleId):
-		insertRows = []
-		updateRows = []
-		deleteRows = []
-		sql = "SELECT book_id, name, name_short, chapters FROM bible_books WHERE bible_id = %s"
-		resultSet = self.db.select(sql, (bibleId,))
-		dbpBooksMap = {}
-		for (dbpBookId, dbpName, dbpNameShort, dbpChapters) in resultSet:
-			dbpBooksMap[dbpBookId] = (dbpName, dbpNameShort, dbpChapters)
-
-		ssBookIdSet = set()
-		for (ssBookId, ssTitle, ssName, ssLastChapter) in bibleDB.select("SELECT code, title, name, lastChapter FROM tableContents", ()):
-			ssBookIdSet.add(ssBookId)
-			chapterList = map(str, range(1, ssLastChapter + 1))
-			ssChapterList =  ",".join(chapterList)
-
-			if ssBookId not in dbpBooksMap.keys():
-				insertRows.append((ssTitle, ssName, ssChapterList, bibleId, ssBookId))
-			else:
-				(dbpName, dbpNameShort, dbpChapters) = dbpBooksMap[ssBookId]
-				if dbpName != ssTitle:
-					updateRows.append(("name", ssTitle, dbpName, bibleId, ssBookId))
-				if dbpNameShort != ssName:
-					updateRows.append(("name_short", ssName, dbpNameShort, bibleId, ssBookId))
-				if dbpChapters != ssChapterList:
-					updateRows.append(("chapters", ssChapterList, dbpChapters, bibleId, ssBookId))
-
-		for dbpBookId in dbpBooksMap.keys():
-			if dbpBookId not in ssBookIdSet:
-				deleteRows.append((bibleId, dbpBookId))
-
-		tableName = "bible_books"
-		pkeyNames = ("bible_id", "book_id")
-		attrNames = ("name", "name_short", "chapters")
-		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
-		self.dbOut.updateCol(tableName, pkeyNames, updateRows)
-		self.dbOut.delete(tableName, pkeyNames, deleteRows)
-
-
-
-	def updateVersesTable(self, bibleDB, hashId):
 		insertRows = []
 		updateRows = []
 		deleteRows = []
@@ -161,45 +115,7 @@ class UpdateDBPTextFilesets:
 		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
 		self.dbOut.updateCol(tableName, pkeyNames, updateRows)
 		self.dbOut.delete(tableName, pkeyNames, deleteRows)
-
-
-	## Update table with bible books data from audio or video fileset
-	def insertBibleBooksIfAbsent(self, filesetPrefix):
-		(typeCode, bibleId, filesetId) = filesetPrefix.split("/")
-		if typeCode in {"audio", "video"}:
-			bookCount = db.selectScalar("SELECT count(*) FROM bible_books WHERE bible_id = %s", (bibleId,))
-			if bookCount == 0:
-				bookIdList = []
-				bookChapterMap = {}
-				priorBookId = None
-				priorChapter = None
-				csvFilename = self.config.directory_accepted + filesetPrefix.replace("/", "_") + ".csv"
-				with open(csvFilename, newline='\n') as csvfile:
-					reader = csv.DictReader(csvfile)
-					for row in reader:
-						bookId = row["book_id"]
-						chapter = row["chapter_start"]
-						if bookId != priorBookId:
-							bookIdList.append(bookId)
-							bookChapterMap[bookId] = [chapter]
-						elif chapter != priorChapter:
-							chapters = bookChapterMap[bookId]
-							chapters.append("," + chapter)
-							bookChapterMap[bookId] = chapters
-						priorBookId = bookId
-						priorChapter = chapter
-
-				insertRows = []
-				for bookId in bookIdList:
-					bookName = self.bookNameMap.get(bookId)
-					chapters = bookChapterMap[bookId]
-					insertRows.append((bookName, bookName, chapters, bibleId, bookId))
-
-				tableName = "bible_books"
-				pkeyNames = ("bible_id", "book_id")
-				attrNames = ("name", "name_short", "chapters")
-				self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
-
+		bibleDB.close()
 
 
 if (__name__ == '__main__'):
@@ -208,19 +124,22 @@ if (__name__ == '__main__'):
 	dbOut = SQLBatchExec(config)
 	lptsReader = LPTSExtractReader(config)
 
-#	main = DBPLoadController(config, db, lptsReader)
-#	main.cleanup() # Only part of controller used here
+	main = DBPLoadController(config, db, lptsReader)
+	main.cleanup() # Only part of controller used here
+
 	texts = UpdateDBPTextFilesets(config, db, dbOut, lptsReader)
-#	s3 = S3Utility(config)
-#	dirname = config.directory_validate
-#	for typeCode in os.listdir(dirname):
-#		if typeCode == "text":
-#			for bibleId in os.listdir(dirname + typeCode):
-#				for filesetId in os.listdir(dirname + typeCode + os.sep + bibleId):
-#					error = texts.validateFileset(bibleId, filesetId)
-#					if error == None:
-#						s3.promoteFileset(config.directory_validate, "text/%s/%s" % (bibleId, filesetId))
-#						texts.uploadFileset(bibleId, filesetId)
+	s3 = S3Utility(config)
+	dirname = config.directory_validate
+	for typeCode in os.listdir(dirname):
+		if typeCode == "text":
+			for bibleId in os.listdir(dirname + typeCode):
+				for filesetId in os.listdir(dirname + typeCode + os.sep + bibleId):
+					error = texts.validateFileset(bibleId, filesetId)
+					if error == None:
+						s3.promoteFileset(config.directory_validate, "text/%s/%s" % (bibleId, filesetId))
+						texts.uploadFileset(bibleId, filesetId)
+					else:
+						print(error)
 
 	filesets = UpdateDBPFilesetTables(config, db, dbOut)
 	dirname = config.directory_database
@@ -236,7 +155,4 @@ if (__name__ == '__main__'):
 	dbOut.displayStatements()
 	dbOut.displayCounts()
 	#dbOut.execute()
-
-
-
 
