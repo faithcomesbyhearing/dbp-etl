@@ -263,14 +263,18 @@ class UpdateDBPBooksTable:
 
 		for toc in tocBooks:
 			if toc.bookId not in bibleBookMap.keys():
-				insertRows.append((toc.bookSeq, toc.name, toc.nameShort, toc.chapters, bibleId, toc.bookId))
+				name = toc.name.replace("'", "\\'")
+				nameShort = toc.nameShort.replace("'", "\\'")
+				insertRows.append((toc.bookSeq, name, nameShort, toc.chapters, bibleId, toc.bookId))
 
 			elif typeCode == "text":
 				(dbpBookId, dbpBookSeq, dbpName, dbpNameShort, dbpChapters) = bibleBookMap[toc.bookId]
 				if toc.name != dbpName:
-					updateRows.append(("name", toc.name, dbpName, bibleId, toc.bookId))
+					name = toc.name.replace("'", "\\'")
+					updateRows.append(("name", name, dbpName, bibleId, toc.bookId))
 				if toc.nameShort != dbpNameShort:
-					updateRows.append(("nameShort", toc.nameShort, dbpNameShort, bibleId, toc.bookId))
+					nameShort = toc.nameShort.replace("'", "\\'")
+					updateRows.append(("nameShort", nameShort, dbpNameShort, bibleId, toc.bookId))
 
 			elif typeCode == "audio":
 				(dbpBookId, dbpBookSeq, dbpName, dbpNameShort, dbpChapters) = bibleBookMap[toc.bookId]	
