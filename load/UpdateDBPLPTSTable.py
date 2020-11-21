@@ -64,11 +64,17 @@ class UpdateDBPLPTSTable:
 		for (bibleId, filesetId, setTypeCode, setSizeCode, assetId, hashId) in filesetList:
 			typeCode = setTypeCode.split("_")[0]
 			if typeCode != "app":
+				if filesetId[8:10] == "SA":
+					dbpFilesetId = filesetId[:8] + "DA" + filesetId[10:]
+					tagNameList = ["sku", "stock_no", "volume"]
+				else:
+					dbpFilesetId = filesetId
+					tagNameList = ["bitrate", "sku", "stock_no", "volume"]
 
-				(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecordLoose(typeCode, bibleId, filesetId)
+				(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecordLoose(typeCode, bibleId, dbpFilesetId)
 
 				tagMap = tagHashIdMap.get(hashId, {})
-				for name in ["bitrate", "sku", "stock_no", "volume"]:
+				for name in tagNameList:
 					oldDescription = tagMap.get(name)
 
 					if typeCode == "audio" or name != "bitrate": # do not do bitrate for non-audio
