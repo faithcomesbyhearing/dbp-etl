@@ -45,13 +45,16 @@ class TOCBook:
 
 class UpdateDBPBooksTable:
 
-
-	def __init__(self, config, typeCode, bibleId, filesetId):
+	def __init__(self, config, db, dbOut):
 		self.config = config
-		self.typeCode = typeCode
-		self.bibleId = bibleId
-		self.filesetId = filesetId
-		self.tocBooks = []
+		self.db = db
+		self.dbOut = dbOut
+		#def __init__(self, config, typeCode, bibleId, filesetId):
+		#self.config = config
+		##self.typeCode = typeCode
+		##elf.bibleId = bibleId
+		##self.filesetId = filesetId
+		##self.tocBooks = []
 		self.extraBooks = {
 			"FRT": "001", # Front Matter
 			"INT": "002", # Introductions
@@ -174,22 +177,23 @@ class UpdateDBPBooksTable:
 
 
 	## temporary method to add the book_seq column to the bible_books table
-	def alterBibleBooksTable(self, db):
+	def alterBibleBooksTable(self):
 		sql = ("SELECT count(*) FROM information_schema.columns"
 		" WHERE table_name = 'bible_books' AND table_schema = %s AND column_name = 'book_seq'")
-		count = db.selectScalar(sql, (self.config.database_db_name,))
+		count = self.db.selectScalar(sql, (self.config.database_db_name,))
 		if count == 0:
-			db.execute("ALTER TABLE bible_books ADD COLUMN book_seq char(4) NULL", ())
+			self.db.execute("ALTER TABLE bible_books ADD COLUMN book_seq char(4) NULL", ())
 
 
 	## extract a book level table of contents for this fileset we are updating in DBP
-	def getTableOfContents(self):
-		if self.typeCode == "text":
+	def getTableOfContents(self, typeCode, bibleId, filesetId):
+		tocBooks = []
+		if typeCode == "text":
 			firstOTBook = True
 			firstNTBook = True
 			extraBook = True
 			priorBookSeq = None
-			bibleDB = SqliteUtility(self.config.directory_accepted + self.filesetId + ".db")
+			bibleDB = SqliteUtility(self.config.directory_accepted + filesetId + ".db")
 			resultSet = bibleDB.select("SELECT code, title, name, chapters FROM tableContents ORDER BY rowId", ())
 			for (bookId, title, name, chapters) in resultSet:
 				if firstOTBook and bookId in self.otBooks.keys():
@@ -207,10 +211,10 @@ class UpdateDBPBooksTable:
 					bookSeq = prefix + str(number) if number > 9 else prefix + "0" + str(number)
 				priorBookSeq = bookSeq
 				tocBook = TOCBook(bookId, bookSeq, title, name, chapters)
-				self.tocBooks.append(tocBook)
+				tocBooks.append(tocBook)
 			bibleDB.close()
 
-		elif self.typeCode in {"audio", "video"}:
+		elif typeCode in {"audio", "video"}:
 			bookChapterMap = {}
 			priorBookId = None
 			priorChapter = None
@@ -224,7 +228,7 @@ class UpdateDBPBooksTable:
 					chapter = row["chapter_start"]
 					if bookId != priorBookId:
 						tocBook = TOCBook(bookId, bookSeq, bookName, bookName, None)
-						self.tocBooks.append(tocBook)
+						tocBooks.append(tocBook)
 						bookChapterMap[bookId] = [chapter]
 					elif chapter != priorChapter:
 						chapters = bookChapterMap[bookId]
@@ -236,58 +240,59 @@ class UpdateDBPBooksTable:
 			for tocBook in this.tocBooks:
 				tocBook.chapters = bookChapterMap[tocBook.bookId]
 
-			if self.typeCode == "video":
+			if typeCode == "video":
 				seqMap = {"MAT": "B01", "MRK": "B02", "LUK": "B03", "JHN": "B04", "ACT": "B05"}
 				nameMap = {"MAT": "Matthew", "MRK": "Mark", "LUK": "Luke", "JHN": "John", "ACT": "Acts"}
 				for tocBook in this.tocBooks:
 					tocBook.bookSeq = seqMap.get(tocBook.bookId)
 					tocBook.name = nameMap.get(tocBook.bookId)
 					tocBook.nameShort = tocBook.name
+		return tocBooks
 
 
 	## extract sequence of the current bible books table, and merge to tocBooks
-	def updateBibleBooks(self, db, dbOut):
+	def updateBibleBooks(self, typeCode, bibleId, tocBooks):
 		insertRows = []
 		updateRows = []
 		deleteRows = []
 		sql = "SELECT book_id, book_seq, name, name_short, chapters FROM bible_books WHERE bible_id = %s ORDER BY book_seq"
-		resultSet = db.select(sql, (self.bibleId,))
+		resultSet = db.select(sql, (bibleId,))
 		bibleBookMap = {}
 		for row in resultSet:
 			bibleBookMap[row[0]] = row
 
-		for toc in self.tocBooks:
+		for toc in tocBooks:
 			if toc.bookId not in bibleBookMap.keys():
-				insertRows.append((toc.bookSeq, toc.name, toc.nameShort, toc.chapters, self.bibleId, toc.bookId))
+				insertRows.append((toc.bookSeq, toc.name, toc.nameShort, toc.chapters, bibleId, toc.bookId))
 
-			elif self.typeCode == "text":
+			elif typeCode == "text":
 				(dbpBookId, dbpBookSeq, dbpName, dbpNameShort, dbpChapters) = bibleBookMap[toc.bookId]
 				if toc.name != dbpName:
-					updateRows.append(("name", toc.name, dbpName, self.bibleId, toc.bookId))
+					updateRows.append(("name", toc.name, dbpName, bibleId, toc.bookId))
 				if toc.nameShort != dbpNameShort:
-					updateRows.append(("nameShort", toc.nameShort, dbpNameShort, self.bibleId, toc.bookId))
+					updateRows.append(("nameShort", toc.nameShort, dbpNameShort, bibleId, toc.bookId))
 
-			elif self.typeCode == "audio":
+			elif typeCode == "audio":
 				(dbpBookId, dbpBookSeq, dbpName, dbpNameShort, dbpChapters) = bibleBookMap[toc.bookId]	
 				if toc.bookSeq != dbpBookSeq:
-					updateRows.append(("book_seq", toc.bookSeq, dbpBookSeq, self.bibleId, toc.bookId))
+					updateRows.append(("book_seq", toc.bookSeq, dbpBookSeq, bibleId, toc.bookId))
 
 		sql = ("SELECT distinct book_id FROM bible_files bf"
 			" JOIN bible_fileset_connections bfc ON bf.hash_id = bfc.hash_id"
 			" WHERE bfc.bible_id = %s")
-		dbpBookIdSet = db.selectSet(sql, (self.bibleId,))
-		for toc in self.tocBooks:
+		dbpBookIdSet = self.db.selectSet(sql, (bibleId,))
+		for toc in tocBooks:
 			dbpBookIdSet.add(toc.bookId)
 		for bookId in bibleBookMap.keys():
 			if bookId not in dbpBookIdSet:
-				deleteRows.append((self.bibleId, bookId))
+				deleteRows.append((bibleId, bookId))
 
 		tableName = "bible_books"
 		pkeyNames = ("bible_id", "book_id")
 		attrNames = ("book_seq", "name", "name_short", "chapters")
-		dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
-		dbOut.updateCol(tableName, pkeyNames, updateRows)
-		dbOut.delete(tableName, pkeyNames, deleteRows)
+		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
+		self.dbOut.updateCol(tableName, pkeyNames, updateRows)
+		self.dbOut.delete(tableName, pkeyNames, deleteRows)
 
 		# Perform this query to look for duplication.
 		# SELECT book_id, book_seq, name, name_short, chapters FROM bible_books WHERE bible_id = %s AND book_seq IN
@@ -297,8 +302,12 @@ class UpdateDBPBooksTable:
 	def updateEntireBibleBooksTable():
 		print("TBD")
 		# Doing this would require reading all records in bible_files
-		# Parsing the filenames, hopefully with FilenameParser
-		# Then using the parsed sequence
+		# Putting them into a map by bibleId, in order to do one bible_id at a time.
+		# Parsing the filenames, hopefully with FilenameParser or doing a simplified parse
+		# The parse only needs to get typeCode, book_id, book_seq, name, chapters
+		# Then use the above information to build TOCBook objects
+		# Then process each TOCBook
+
 
 
 ## Unit Test
@@ -306,12 +315,14 @@ if (__name__ == '__main__'):
 	config = Config()
 	db = SQLUtility(config)
 	dbOut = SQLBatchExec(config)
-	#update = UpdateDBPBooksTable(config, "text", "AA1WBT", "AA1WBT")
-	update = UpdateDBPBooksTable(config, "text", "ENGWEBT", "ENGWEBT")
-	#update = UpdateDBPBooksTable(config, "text", "PESNMV", "PESNMV")
-	update.alterBibleBooksTable(db)
-	update.getTableOfContents()
-	update.updateBibleBooks(db, dbOut)
+	update = UpdateDBPBooksTable(config, db, dbOut)
+	testCases = [("text", "AA1WBT", "AA1WBT"),
+				("text", "ENGWEBT", "ENGWEBT"),
+				("text", "PESNMV", "PESNMV")]
+	for (typeCode, bibleId, filesetId) in testCases:
+		update.alterBibleBooksTable()
+		tocBooks = update.getTableOfContents(typeCode, bibleId, filesetId)
+		update.updateBibleBooks(typeCode, bibleId, tocBooks)
 
 	dbOut.displayStatements()
 	dbOut.displayCounts()
