@@ -27,6 +27,7 @@
 # select all distinct book_id from all fileset in the bible 
 # and delete from bible_books any that are missing from that select
 
+import csv
 from Config import *
 from SqliteUtility import *
 from SQLUtility import *
@@ -232,18 +233,18 @@ class UpdateDBPBooksTable:
 						bookChapterMap[bookId] = [chapter]
 					elif chapter != priorChapter:
 						chapters = bookChapterMap[bookId]
-						chapters.append("," + chapter)
+						chapters.append(chapter)
 						bookChapterMap[bookId] = chapters
 					priorBookId = bookId
 					priorChapter = chapter
 
-			for tocBook in this.tocBooks:
-				tocBook.chapters = bookChapterMap[tocBook.bookId]
+			for tocBook in tocBooks:
+				tocBook.chapters = ",".join(bookChapterMap[tocBook.bookId])
 
 			if typeCode == "video":
 				seqMap = {"MAT": "B01", "MRK": "B02", "LUK": "B03", "JHN": "B04", "ACT": "B05"}
 				nameMap = {"MAT": "Matthew", "MRK": "Mark", "LUK": "Luke", "JHN": "John", "ACT": "Acts"}
-				for tocBook in this.tocBooks:
+				for tocBook in tocBooks:
 					tocBook.bookSeq = seqMap.get(tocBook.bookId)
 					tocBook.name = nameMap.get(tocBook.bookId)
 					tocBook.nameShort = tocBook.name
@@ -320,9 +321,13 @@ if (__name__ == '__main__'):
 	db = SQLUtility(config)
 	dbOut = SQLBatchExec(config)
 	update = UpdateDBPBooksTable(config, db, dbOut)
-	testCases = [("text", "AA1WBT", "AA1WBT"),
-				("text", "ENGWEBT", "ENGWEBT"),
-				("text", "PESNMV", "PESNMV")]
+	#testCases = [("text", "AA1WBT", "AA1WBT"),
+	#			("text", "ENGWEBT", "ENGWEBT"),
+	#			("text", "PESNMV", "PESNMV")]
+	#testCases = [("audio", "ENGESV", "ENGESVN1DA"),
+	#			("audio", "ENGESV", "ENGESVN2DA"),
+	#			("audio", "ENGESV", "ENGESVP1DA")]
+	testCases = [("video", "ENGESV", "ENGESVP2DV")]
 	for (typeCode, bibleId, filesetId) in testCases:
 		update.alterBibleBooksTable()
 		tocBooks = update.getTableOfContents(typeCode, bibleId, filesetId)

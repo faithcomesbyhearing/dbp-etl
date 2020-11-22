@@ -264,6 +264,8 @@ class LPTSRecord:
 				damIdDict = LPTSRecord.text3DamIdDict
 		elif typeCode == "video":
 			damIdDict = LPTSRecord.videoDamIdDict
+		else:
+			damIdDict = {}
 		hasKeys = set(damIdDict.keys()).intersection(set(self.record.keys()))
 		results = {}
 		for key in hasKeys:
