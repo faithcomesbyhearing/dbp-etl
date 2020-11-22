@@ -284,8 +284,12 @@ class UpdateDBPBooksTable:
 
 		sql = ("SELECT distinct book_id FROM bible_files bf"
 			" JOIN bible_fileset_connections bfc ON bf.hash_id = bfc.hash_id"
+			" WHERE bfc.bible_id = %s"
+			" UNION"
+			" SELECT distinct book_id FROM bible_verses bv"
+			" JOIN bible_fileset_connections bfc ON bv.hash_id = bfc.hash_id"
 			" WHERE bfc.bible_id = %s")
-		dbpBookIdSet = self.db.selectSet(sql, (bibleId,))
+		dbpBookIdSet = self.db.selectSet(sql, (bibleId, bibleId))
 		for toc in tocBooks:
 			dbpBookIdSet.add(toc.bookId)
 		for bookId in bibleBookMap.keys():
