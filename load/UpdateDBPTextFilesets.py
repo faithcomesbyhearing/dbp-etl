@@ -80,7 +80,7 @@ class UpdateDBPTextFilesets:
 		resultSet = self.db.select(sql, (hashId,))
 		dbpVerseMap = {}
 		for (dbpBookId, dbpChapter, dbpVerseStart, dbpVerseEnd, dbpVerseText) in resultSet:
-			dbpVerseMap[(dbpBookId, dbpChapter, dbpVerseStart)] = (dbpVerseEnd, dbpVerseText)
+			dbpVerseMap[(dbpBookId, str(dbpChapter), str(dbpVerseStart))] = (str(dbpVerseEnd), dbpVerseText)
 
 		ssBookIdSet = set()
 		for (ssReference, ssVerseText) in bibleDB.select("SELECT reference, html FROM verses", ()):
@@ -95,19 +95,19 @@ class UpdateDBPTextFilesets:
 			ssBookIdSet.add((ssBookId, ssChapter, ssVerseStart))
 
 			if (ssBookId, ssChapter, ssVerseStart) not in dbpVerseMap.keys():
-				ssVerseText = ssVerseText.replace("'", "''")
+				ssVerseText = ssVerseText.replace("'", "\\'")
 				insertRows.append((ssVerseEnd, ssVerseText, hashId, ssBookId, ssChapter, ssVerseStart))
 			else:
-				(dbpVerseEnd, dbpVerseText) = dbpVerseMap.get((ssBookIdSet, ssChapter, ssVerseStart))
+				(dbpVerseEnd, dbpVerseText) = dbpVerseMap.get((ssBookId, ssChapter, ssVerseStart))
 				if dbpVerseEnd != ssVerseEnd:
 					updateRows.append(("verse_end", ssVerseEnd, dbpVerseEnd, hashId, ssBookId, ssChapter, ssVerseStart))
 				if dbpVerseText != ssVerseText:
-					ssVerseText = ssVerseText.replace("'", "''")
+					ssVerseText = ssVerseText.replace("'", "\\'")
 					updateRows.append(("verse_text", ssVerseText, dbpVerseText, hashId, ssBookId, ssChapter, ssVerseStart))
 
 		for (dbpBookId, dbpChapter, dbpVerseStart) in dbpVerseMap.keys():
 			if (dbpBookId, dbpChapter, dbpVerseStart) not in ssBookIdSet:
-				deleteRows.append((hashId, (dbpBookId, dbpChapter, dbpVerseStart)))
+				deleteRows.append((hashId, dbpBookId, dbpChapter, dbpVerseStart))
 
 		tableName = "bible_verses"
 		pkeyNames = ("hash_id", "book_id", "chapter", "verse_start")
@@ -154,5 +154,5 @@ if (__name__ == '__main__'):
 
 	dbOut.displayStatements()
 	dbOut.displayCounts()
-	#dbOut.execute()
+	dbOut.execute("verses-test")
 
