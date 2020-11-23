@@ -275,7 +275,7 @@ class UpdateDBPBooksTable:
 					updateRows.append(("name", name, dbpName, bibleId, toc.bookId))
 				if toc.nameShort != dbpNameShort:
 					nameShort = toc.nameShort.replace("'", "\\'")
-					updateRows.append(("nameShort", nameShort, dbpNameShort, bibleId, toc.bookId))
+					updateRows.append(("name_short", nameShort, dbpNameShort, bibleId, toc.bookId))
 
 			elif typeCode == "audio":
 				(dbpBookId, dbpBookSeq, dbpName, dbpNameShort, dbpChapters) = bibleBookMap[toc.bookId]	
@@ -325,13 +325,13 @@ if (__name__ == '__main__'):
 	db = SQLUtility(config)
 	dbOut = SQLBatchExec(config)
 	update = UpdateDBPBooksTable(config, db, dbOut)
-	#testCases = [("text", "AA1WBT", "AA1WBT"),
-	#			("text", "ENGWEBT", "ENGWEBT"),
-	#			("text", "PESNMV", "PESNMV")]
+	testCases = [("text", "AA1WBT", "AA1WBT"),
+				#("text", "ENGWEBT", "ENGWEBT"),
+				("text", "PESNMV", "PESNMV")]
 	#testCases = [("audio", "ENGESV", "ENGESVN1DA"),
 	#			("audio", "ENGESV", "ENGESVN2DA"),
 	#			("audio", "ENGESV", "ENGESVP1DA")]
-	testCases = [("video", "ENGESV", "ENGESVP2DV")]
+	#testCases = [("video", "ENGESV", "ENGESVP2DV")]
 	for (typeCode, bibleId, filesetId) in testCases:
 		update.alterBibleBooksTable()
 		tocBooks = update.getTableOfContents(typeCode, bibleId, filesetId)
@@ -339,6 +339,6 @@ if (__name__ == '__main__'):
 
 	dbOut.displayStatements()
 	dbOut.displayCounts()
-	#dbOut.execute("test-books")
+	dbOut.execute("test-books")
 
 
