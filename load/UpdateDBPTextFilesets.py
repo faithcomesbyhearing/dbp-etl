@@ -13,7 +13,7 @@ from LPTSExtractReader import *
 from SQLUtility import *
 from SQLBatchExec import *
 from S3Utility import *
-from DBPLoadController import *
+from SqliteUtility import *
 
 
 class UpdateDBPTextFilesets:
@@ -25,7 +25,7 @@ class UpdateDBPTextFilesets:
 		self.lptsReader = lptsReader
 
 
-	## This is called one fileset at a time by Validate.process around line 82
+	## This is called one fileset at a time by Validate.process
 	def validateFileset(self, bibleId, filesetId):
 		(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecordLoose("text", bibleId, filesetId)
 		if lptsRecord == None:
@@ -45,30 +45,18 @@ class UpdateDBPTextFilesets:
 		direction = self.db.selectScalar("SELECT direction FROM alphabets WHERE script = %s", (scriptId,))
 		if direction not in {"ltr", "rtl"}:
 			return("text/%s/%s %s script has no direction in alphabets.\tEROR" % (bibleId, filesetId, scriptId))
-			sys.exit()
 		cmd = [self.config.node_exe,
 			self.config.publisher_js,
 			self.config.directory_validate + "text/%s/%s/" % (bibleId, filesetId),
 			self.config.directory_accepted,
 			filesetId, iso3, iso1, direction]
-		print(cmd)
 		response = subprocess.run(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=120)
 		success = response.returncode == 0
 		if success != None:
-			print("text/%s/%s %s\tEROR" % (bibleId, filesetId, str(response.stderr.decode("utf-8"))))
+			return("text/%s/%s %s\tEROR" % (bibleId, filesetId, str(response.stderr.decode("utf-8"))))
 		print("text/%s/%s %s\tINFO" % (bibleId, filesetId, str(response.stderr.decode("utf-8"))))
 		print("OUTPUT", str(response.stdout.decode("utf-8")))	
 		return None
-		
-		# This must return error messages and error count by some mechanism
-
-
-	def uploadFileset(self, bibleId, filesetId):
-		# At some future time the process might extract .html chapter files from the {fileset}.db database and upload them.
-		# At some future time the process might upload .usx files.
-		# Or, at some future time, the process might create json equivalents of the usx and upload them.
-		s3 = S3Utility(self.config)
-		s3.promoteFileset(self.config.directory_upload, "text/%s/%s" % (bibleId, filesetId))
 
 
 	def updateFileset(self, bibleId, filesetId, hashId):
@@ -119,6 +107,7 @@ class UpdateDBPTextFilesets:
 
 
 if (__name__ == '__main__'):
+	from DBPLoadController import *
 	config = Config()
 	db = SQLUtility(config)
 	dbOut = SQLBatchExec(config)

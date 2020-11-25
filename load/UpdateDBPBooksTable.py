@@ -257,7 +257,7 @@ class UpdateDBPBooksTable:
 		updateRows = []
 		deleteRows = []
 		sql = "SELECT book_id, book_seq, name, name_short, chapters FROM bible_books WHERE bible_id = %s ORDER BY book_seq"
-		resultSet = db.select(sql, (bibleId,))
+		resultSet = self.db.select(sql, (bibleId,))
 		bibleBookMap = {}
 		for row in resultSet:
 			bibleBookMap[row[0]] = row

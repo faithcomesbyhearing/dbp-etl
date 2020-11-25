@@ -99,8 +99,6 @@ class DBPLoadController:
 				filename = fileset.split(".")[0]
 				filesetPrefix = filename.replace("_", "/")
 				self.s3Utility.promoteFileset(self.config.directory_validate, filesetPrefix)
-			#elif fileset.endswith(".db"):
-				#promote db
 
 
 	def upload(self):

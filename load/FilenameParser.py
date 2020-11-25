@@ -248,6 +248,14 @@ class FilenameRegex:
 				file.setUSFX2(match.group(1), parser.chapterMap, parser.usfx2Map)
 				file.setChapter(match.group(2), parser.maxChapterMap)
 				file.setType(match.group(3))
+			elif self.name == "text3":
+				if match.group(1) != None:
+					file.setBookSeq(match.group(1))
+				file.setBookId(match.group(2), parser.chapterMap)
+				file.setChapter("1", parser.maxChapterMap)
+				chapter = str(parser.maxChapterMap.get(match.group(2)))
+				file.setChapterEnd(chapter, parser.maxChapterMap)
+				file.setType(match.group(3))
 
 			elif self.name == "audio99":
 				file.setDamid(match.group(1))
@@ -386,6 +394,8 @@ class FilenameParser:
 			FilenameRegex("text1", r"([A-Z0-9]{5,7})_([0-9]{1,3})_([A-Z0-9]{3})_?([0-9]{0,3}).(html)"),
 			## {usfx2}{optionalchap}.html  AC12.html
 			FilenameRegex("text2", r"([A-Z][A-Z0-9])([0-9]{0,3}).(html)"),
+			## {seq}{bookid}.usx
+			FilenameRegex("text3", r"([0-9]{3})?([A-Z0-9][A-Z]{2}).(usx)")
 		)
 		self.audioTemplates = (
 			## New audio format

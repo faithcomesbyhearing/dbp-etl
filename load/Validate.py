@@ -10,6 +10,7 @@ from InputReader import *
 from LPTSExtractReader import *
 from FilenameParser import *
 from FilenameReducer import *
+from UpdateDBPTextFilesets import *
 
 
 class Validate:
@@ -80,7 +81,15 @@ class Validate:
 				elif typeCode == "video" and ext != ".mp4":
 					self.invalidFileExt.append((typeCode, bibleId, filesetId, filename))
 
-
+		## Validate Text Filesets
+		texts = UpdateDBPTextFilesets(self.config, self.db, None, self.lptsReader)
+		s3 = S3Utility(self.config)
+		for (filePrefix, filenames) in filesets.items():
+			if filePrefix.startswith("text"):
+				(typeCode, bibleId, filesetId) = filePrefix.split("/")
+				error = texts.validateFileset(bibleId, filesetId)
+				if error != None:
+					self.errorMessages.append(error)			
 
 		## Reduce input files to typeCode/bibleId: [filesetId]
 		inputIdMap = {}
@@ -117,7 +126,7 @@ class Validate:
 				zipDir = zipfile.ZipFile(zipfilePath, "w")
 				with zipDir:
 					for file in os.listdir(directory):
-						if file.endswith("csv") and not file.startswith("._"):
+						if (file.endswith(".csv") or file.endswith(".db")) and not file.startswith("._"):
 							fullPath = directory + os.sep + file
 							zipDir.write(fullPath, file)
 							os.remove(fullPath)

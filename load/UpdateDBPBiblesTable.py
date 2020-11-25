@@ -91,7 +91,7 @@ class UpdateDBPBiblesTable:
 				if languageId != dbpLanguageId:
 					updateRows.append(("language_id", languageId, dbpLanguageId, bibleId))
 				if numerals != dbpNumerals:
-					updateRows.append(("numeral_sustem_id", numerals, dbpNumerals, bibleId))
+					updateRows.append(("numeral_system_id", numerals, dbpNumerals, bibleId))
 				if date != dbpDate:
 					updateRows.append(("date", date, dbpDate, bibleId))
 				if scope != dbpScope:

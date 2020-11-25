@@ -20,6 +20,8 @@ from Config import *
 from SQLUtility import *
 from SqliteUtility import *
 from SQLBatchExec import *
+from UpdateDBPTextFilesets import *
+from UpdateDBPBooksTable import *
 
 
 class UpdateDBPFilesetTables:
@@ -105,6 +107,10 @@ class UpdateDBPFilesetTables:
 
 
 	def process(self):
+		textUpdater = UpdateDBPTextFilesets(self.config, self.db, self.dbOut, None)
+		booksUpdater = UpdateDBPBooksTable(self.config, self.db, self.dbOut)
+		booksUpdater.alterBibleBooksTable() ### One time method, remove
+
 		databaseFilesetSet = self.getDatabaseFilesets()
 		results = {}
 		dirname = self.config.directory_accepted
@@ -121,10 +127,15 @@ class UpdateDBPFilesetTables:
 					self.insertBibleFiles(typeCode, hashId, csvFilename, filesetDir)
 					results["%s/%s/%s" % (typeCode, bibleId, filesetId)] = hashId
 
-				#elif typeCode == "text":
-				#	hashId = self.insertBibleFileset("verses", filesetId, csvFilename)
-				#	self.insertFilesetConnections(hashId, bibleId)
-				#	self.textUpdater.updateFileset(bibleId, filesetId)
+				elif typeCode == "text":
+					databasePath = self.config.directory_accepted + filesetId + ".db"
+					hashId = self.insertBibleFileset("verses", filesetId, databasePath)
+					self.insertFilesetConnections(hashId, bibleId)
+					textUpdater.updateFileset(bibleId, filesetId, hashId)
+					results["%s/%s/%s" % (typeCode, bibleId, filesetId)] = hashId
+
+				tocBooks = booksUpdater.getTableOfContents(typeCode, bibleId, filesetId)
+				booksUpdater.updateBibleBooks(typeCode, bibleId, tocBooks)
 
 		return results
 
