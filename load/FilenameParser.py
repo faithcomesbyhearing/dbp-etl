@@ -177,7 +177,7 @@ class Filename:
 
 	def setType(self, typ):
 		self.type = typ
-		if typ not in {"mp3", "html", "mp4"}:
+		if typ not in {"mp3", "html", "mp4", "usx"}:
 			self.errors.append("unknown type .%s" % (typ))
 
 
@@ -538,7 +538,7 @@ class FilenameParser:
 		parserTries = []
 		for template in templates:
 			file = template.parse(filenameTuple, self)
-			#print("error", filename, template.name, file.errors, file.type)
+			#print("error", file.file, template.name, file.errors, file.type)
 			if file.numErrors() == 0:
 				return file
 			parserTries.append(file)
