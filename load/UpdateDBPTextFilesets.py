@@ -9,6 +9,7 @@ import sys
 import os
 import sqlite3
 from Config import *
+from Log import *
 from LPTSExtractReader import *
 from SQLUtility import *
 from SQLBatchExec import *
@@ -28,33 +29,32 @@ class UpdateDBPTextFilesets:
 	## This is called one fileset at a time by Validate.process
 	def validateFileset(self, bibleId, filesetId):
 		(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecordLoose("text", bibleId, filesetId)
-		if lptsRecord == None:
-			return("text/%s/%s has no LPTS record.\tEROR" % (bibleId, filesetId))
+		if lptsRecord == None or lptsIndex == None:
+			return((Log.EROR, "has no LPTS record."))
 		iso3 = lptsRecord.ISO()
 		if iso3 == None:
-			return("text/%s/%s has no iso language code.\tEROR" % (bibleId, filesetId))
+			return((Log.EROR, "has no iso language code."))
 		iso1 = self.db.selectScalar("SELECT iso1 FROM languages WHERE iso = %s AND iso1 IS NOT NULL", (iso3,))
 		if iso1 == None:
 			iso1 = "null"
 		scriptName = lptsRecord.Orthography(lptsIndex)
 		if scriptName == None:
-			return("text/%s/%s has no Orthography.\tEROR" % (bibleId, filesetId))
+			return((Log.EROR, "has no Orthography."))
 		scriptId = self.db.selectScalar("SELECT script_id FROM lpts_script_codes WHERE lpts_name = %s", (scriptName,))
 		if scriptId == None:
-			return("text/%s/%s %s script name is not in lpts_script_codes.\tEROR" % (bibleId, filesetId, scriptName))
+			return((Log.EROR, "%s script name is not in lpts_script_codes." % (scriptName,)))
 		direction = self.db.selectScalar("SELECT direction FROM alphabets WHERE script = %s", (scriptId,))
 		if direction not in {"ltr", "rtl"}:
-			return("text/%s/%s %s script has no direction in alphabets.\tEROR" % (bibleId, filesetId, scriptId))
+			return((Log.EROR, "%s script has no direction in alphabets." % (scriptId,)))
 		cmd = [self.config.node_exe,
 			self.config.publisher_js,
 			self.config.directory_validate + "text/%s/%s/" % (bibleId, filesetId),
 			self.config.directory_accepted,
 			filesetId, iso3, iso1, direction]
 		response = subprocess.run(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=120)
-		success = response.returncode == 0
-		if success != None:
-			return("text/%s/%s %s\tEROR" % (bibleId, filesetId, str(response.stderr.decode("utf-8"))))
-		print("text/%s/%s %s\tINFO" % (bibleId, filesetId, str(response.stderr.decode("utf-8"))))
+		if response == None or response.returncode != 0:
+			return((Log.EROR, str(response.stdout.decode("utf-8"))))
+		#print("text/%s/%s %s\tINFO" % (bibleId, filesetId, str(response.stdout.decode("utf-8"))))
 		print("OUTPUT", str(response.stdout.decode("utf-8")))	
 		return None
 

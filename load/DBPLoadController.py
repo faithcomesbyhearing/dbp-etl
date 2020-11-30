@@ -11,6 +11,7 @@
 import os
 from Config import *
 from LPTSExtractReader import *
+from Log import *
 from Validate import *
 from S3Utility import *
 from SQLBatchExec import *
@@ -91,7 +92,7 @@ class DBPLoadController:
 		print("********** VALIDATING **********", flush=True)
 		validate = Validate("files", self.config, self.db, self.lptsReader)
 		validate.process()
-		validate.reportErrors()
+		Log.writeLog(self.config)
 
 		filesets = os.listdir(self.config.directory_accepted)
 		for fileset in filesets:
@@ -140,8 +141,8 @@ if (__name__ == '__main__'):
 	lptsReader = LPTSExtractReader(config)
 	ctrl = DBPLoadController(config, db, lptsReader)
 	ctrl.cleanup()
+	ctrl.validate()
 	if ctrl.updateBibles():
-		ctrl.validate()
 		ctrl.upload()
 		if ctrl.updateFilesetTables():
 			if ctrl.updateLPTSTables():

@@ -15,6 +15,7 @@ from operator import attrgetter
 import csv
 from datetime import datetime
 from Config import *
+from Log import *
 from FindDuplicateFilesets import *
 
 class FilenameReducer:
@@ -40,10 +41,8 @@ class FilenameReducer:
 		self.missingVerses = missingVerses
 
 
-	def process(self, errorMessages):
-		errorCount = len(self.extraChapters) + int(len(self.missingVerses) / 20.0)
-		for file in self.fileList:
-			errorCount += len(file.errors)
+	def process(self, logger):
+		errorCount = logger.errorCount()
 
 		if self.filePrefix in FilenameReducer.acceptErrorSet:
 			acceptedList = self.fileList
@@ -56,13 +55,13 @@ class FilenameReducer:
 		else:
 			duplicateList = []
 
-		self.writeErrors(errorMessages)
+		self.writeErrors(logger)
 		if len(quarantineList) > 0:
 			self.writeOutput("quarantine", quarantineList)
-			errorMessages.append("%s %d Files moved to quarantine %d accepted.\tINFO" % (self.filePrefix, len(quarantineList), len(acceptedList)))
+			logger.message(Log.INFO, "%d Files moved to quarantine %d accepted." % (len(quarantineList), len(acceptedList)))
 		if len(duplicateList) > 0:
 			self.writeOutput("duplicate", duplicateList)
-			errorMessages.append("%s %d Files moved to duplicate %d accepted.\tINFO" % (self.filePrefix, len(duplicateList), len(acceptedList)))
+			logger.message(Log.INFO, "%d Files moved to duplicate %d accepted." % (len(duplicateList), len(acceptedList)))
 		if len(acceptedList) > 0:
 			self.writeOutput("accepted", acceptedList)
 
@@ -167,26 +166,24 @@ class FilenameReducer:
 					"; ".join(file.errors)))
 
 
-	def writeErrors(self, errorMessages):
-		for file in self.fileList:
-			if len(file.errors) > 0:
-				errorMessages.append("%s/%s %s\tEROR" % (self.filePrefix, file.file, ", ".join(file.errors)))
+	def writeErrors(self, logger):
+		logger.fileErrors(self.fileList)
 
 		if self.filePrefix.startswith("video"):
 			if len(self.extraChapters) > 0:
-				self.summaryMessage("EROR", "chapters too large", self.extraChapters, errorMessages)
+				self.summaryMessage(Log.EROR, "chapters too large", self.extraChapters, logger)
 			if len(self.missingChapters) > 0:
-				self.summaryMessage("WARN", "chapters missing", self.missingChapters, errorMessages)
+				self.summaryMessage(Log.WARN, "chapters missing", self.missingChapters, logger)
 			if len(self.missingVerses) > 0:
-				self.summaryVerseMessage("EROR", "verses missing", self.missingVerses, errorMessages)
+				self.summaryVerseMessage(Log.EROR, "verses missing", self.missingVerses, logger)
 		else:
 			if len(self.extraChapters) > 0:
-				self.summaryMessage("EROR", "chapters too large", self.extraChapters, errorMessages)
+				self.summaryMessage(Log.EROR, "chapters too large", self.extraChapters, logger)
 			if len(self.missingChapters) > 0:
-				self.summaryMessage("WARN", "chapters missing", self.missingChapters, errorMessages)			
+				self.summaryMessage(Log.WARN, "chapters missing", self.missingChapters, logger)			
 
 
-	def summaryMessage(self, level, message, errors, errorMessages):
+	def summaryMessage(self, level, message, errors, logger):
 		currBook, chapter = errors[0].split(":")
 		startChap = int(chapter)
 		nextChap = startChap
@@ -201,7 +198,7 @@ class FilenameReducer:
 				startChap = int(chapter)
 				nextChap = startChap + 1
 		self.appendError(results, currBook, startChap, nextChap)
-		errorMessages.append("%s %s %s\t%s" % (self.filePrefix, message, ", ".join(results), level))
+		logger.message(level, "%s %s" % (message, ", ".join(results)))
 
 
 	def appendError(self, results, book, chapStart, chapEnd):
@@ -211,7 +208,7 @@ class FilenameReducer:
 			results.append("%s %d-%d" % (book, chapStart, chapEnd - 1))
 
 
-	def summaryVerseMessage(self, level, message, errors, errorMessages):
+	def summaryVerseMessage(self, level, message, errors, logger):
 		currBook, chapter, verse = errors[0].split(":")
 		startChap = int(chapter)
 		startVerse = int(verse)
@@ -228,7 +225,7 @@ class FilenameReducer:
 				startVerse = int(verse)
 				nextVerse = startVerse + 1
 		self.appendVerseError(results, currBook, startChap, startVerse, nextVerse)
-		errorMessages.append("%s %s %s\t%s" % (self.filePrefix, message, ", ".join(results), level))
+		logger.message(level, "%s %s" % (message, ", ".join(results)))
 
 
 	def appendVerseError(self, results, book, chapStart, verseStart, verseEnd):

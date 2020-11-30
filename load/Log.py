@@ -11,16 +11,25 @@ class Log:
 	INFO = 3
 	loggers = {}
 
-	def factory(typeCode, bibleId, filesetId):
-		key = "%s/%s/%s" % (typeCode, bibleId, filesetId)
-		if Log.loggers.get(key) != None:
-			print("FATAL ERROR tried to create second logger as ", key)
-			sys.exit()
-		logger = Log(typeCode, bibleId, filesetId)
-		Log.loggers[key] = logger
+	def getLogger(filesetPrefix):
+		logger = Log.loggers.get(filesetPrefix)
+		if logger == None:
+			logger = Log(filesetPrefix)
+			Log.loggers[filesetPrefix] = logger
 		return logger
 
-	def output(config):
+	def getLogger3(typeCode, bibleId, filesetId):
+		filesetPrefix = "%s/%s/%s" % (typeCode, bibleId, filesetId)
+		return Log.getLogger(filesetPrefix)
+
+	def fatalError(message):
+		logger = Log.getLogger("~")
+		logger.message(Log.FATAL, message)
+		config = Config()
+		Log.writeLog(config)
+		sys.exit()
+
+	def writeLog(config):
 		errors = []
 		for key in sorted(Log.loggers.keys()):
 			logger = Log.loggers[key]
@@ -33,27 +42,24 @@ class Log:
 			path = errorDir + "Errors-" + datetime.today().strftime(pattern) + ".out"
 			print("openErrorReport", path)
 			errorFile = open(path, "w")
-			for message in sorted(errors):
+			for message in errors:
 				errorFile.write(message)
 				print(message, end='\n')
 			errorFile.close()
 		print("Num Errors ", len(errors))		
 
 
-	def __init__(self, typeCode, bibleId, filesetId):
-		self.typeCode = typeCode
-		self.bibleId = bibleId
-		self.filesetId = filesetId
-		self.filesetPrefix = "%s/%s/%s" % (typeCode, bibleId, filesetId)
+	def __init__(self, filesetPrefix):
+		self.filesetPrefix = filesetPrefix
 		self.messages = []
 
-	def hasMessages(self):
-		return len(self.messages) > 0
+#	def hasMessages(self):
+#		return len(self.messages) > 0
 
 	def errorCount(self):
 		count = 0;
 		for msg in self.messages:
-			if msg[0] == "EROR":
+			if msg[0] == Log.EROR:
 				count += 1
 		return count
 
@@ -72,19 +78,22 @@ class Log:
 	def missingFilesetIds(self):
 		self.messages.append((Log.EROR, "filesetId is not in LPTS record."))
 
+	def damIdStatus(self, stockNo, status):
+		self.messages.append((Log.WARN, "LPTS %s has status = %s." % (stockNo, status)))
+
 	def requiredFields(self, stockNo, fieldName):
 		self.messages.append((Log.EROR, "LPTS %s field %s is required." % (stockNo, fieldName)))
 
 	def suggestedFields(self, stockNo, fieldName):
 		self.messages.append((Log.WARN, "LPTS %s field %s is missing." % (stockNo, fieldName)))
 
-	def invalidValues(self, fieldName, fieldValue):
-		self.messages.append((Log.EROR, "%s has invalid value '%s'." % (fieldName, fieldValue)))
+	def invalidValues(self, stockNo, fieldName, fieldValue):
+		self.messages.append((Log.EROR, "in %s %s has invalid value '%s'." % (stockNo, fieldName, fieldValue)))
 
 	def fileErrors(self, fileList):
 		for file in fileList:
 			if len(file.errors) > 0:
-				self.essages.append((Log.EROR, "%s/%s %s." % (self.filePrefix, file.file, ", ".join(file.errors))))
+				self.messages.append((Log.EROR, "%s/%s %s." % (self.filesetPrefix, file.file, ", ".join(file.errors))))
 
 	def format(self):
 		levelMap = { Log.FATAL: "FATAL", Log.EROR: "EROR", Log.WARN: "WARN", Log.INFO: "INFO"}
@@ -97,8 +106,8 @@ class Log:
 
 if (__name__ == '__main__'):
 	config = Config()
-	#error = Log("text", "ENGESV", "ENGESVN2DA")
-	error = Log.factory("text", "ENGESV", "ENGESVN2DA")
+	#error = Log.factory("text/ENGESV/ENGESVN2DA")
+	error = Log.getLogger("text/ENGESV/ENGESVN2DA")
 	error.message(Log.INFO, "First message")
 	error.messageTuple((Log.WARN, "Second message"))
 	error.invalidFileExt("MyFilename")
@@ -107,21 +116,5 @@ if (__name__ == '__main__'):
 	error.requiredFields("aStockNo", "aFieldName")
 	error.suggestedFields("aStockNo", "aFieldName")
 	error.invalidValues("afieldName", "aFieldValue")
-	Log.output(config)
+	Log.writeLog(config)
 
-
-"""
-	#def damIdStatus(self, text):
-	#	self.messages.append(("WARN", "%s LPTS %s has status = %s." % (self.filesetPrefix, stockNo, status)))
-
-	def extraChapters(self, book, chapter):
-		missingChapters.append("%s:%d" % (book, index))
-		self.summaryMessage("EROR", "chapters too large", self.extraChapters)
-
-	def missingChapters(self, book, index):
-		extraChapters.append("%s:%d" % (book, chapter))
-		self.summaryMessage("WARN", "chapters missing", self.missingChapters)
-
-	def missingVerses(self, book, chapter, verse):
-		missingVerses.append("%s:%d:%d" % (book, chapter, nextVerse))
-"""

@@ -230,7 +230,7 @@ class UpdateDBPFilesetTables:
 				if row["chapter_start"] == "end":
 					(chapterStart, verseStart, verseEnd) = self.convertChapterStart(bookId)
 				else:
-					chapterStart = int(row["chapter_start"])
+					chapterStart = int(row["chapter_start"]) if row["chapter_start"] != "" else None
 					verseStart = int(row["verse_start"]) if row["verse_start"] != "" else 1
 					verseEnd = int(row["verse_end"]) if row["verse_end"] != "" else None
 				chapterEnd = int(row["chapter_end"]) if row["chapter_end"] != "" else None
@@ -289,7 +289,7 @@ class UpdateDBPFilesetTables:
 			#print("duration", dur)
 			return int(math.ceil(float(dur)))
 		else:
-			raise Exception("ffprobe for duration failed for %s" % (file))
+			raise Exception("ffprobe for duration failed for %s = %s" % (file, response.stderr))
 
 
 ## Unit Test

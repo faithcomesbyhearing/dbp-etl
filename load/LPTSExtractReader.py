@@ -8,6 +8,7 @@ import sys
 import os
 from xml.dom import minidom
 from Config import *
+from Log import *
 
 class LPTSExtractReader:
 
@@ -494,8 +495,7 @@ class LPTSRecord:
 		elif index == 3:
 			return self.record.get("_x0033_Orthography")
 		else:
-			print("ERROR: Orthography index must be 1, 2, or 3.")
-			sys.exit()
+			Log.fatalError("Orthography index must be 1, 2, or 3, but was %s" % str(index,))
 
 	def OTOrder(self):
 		result = self.record.get("OTOrder")

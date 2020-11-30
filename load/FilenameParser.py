@@ -8,6 +8,7 @@ from Booknames import *
 from FilenameReducer import *
 from SQLUtility import *
 from Config import *
+from Log import *
 
 class Filename:
 
@@ -370,7 +371,22 @@ class FilenameRegex:
 				sys.exit()
 		else:
 			file.errors.append("no regex match to %s" % (self.name))
+			self.validateCompleteness(file)
 		return file
+
+
+	def validateCompleteness(self, file):
+		if "audioStory" not in file.template.name:
+			if file.bookId == None or file.bookId == "":
+				file.errors.append("book_id is not found")
+			if file.chapter == None or file.chapter == "":
+					file.errors.append("chapter not found")
+			if file.type == "mp4" and file.chapter.isdigit(): ### this is not used??
+				if file.verseStart == None or file.verseStart == "":
+					file.errors.append("verse start not found")
+				if file.verseEnd == None or file.verseEnd == "":
+					file.errors.append("verse end not found")
+
 
 
 class FilenameParser:
@@ -452,7 +468,7 @@ class FilenameParser:
 		)
 
 
-	def process3(self, filenamesMap, lptsReader, errorMessages):
+	def process3(self, filenamesMap, lptsReader):
 		db = SQLUtility(self.config)
 		self.chapterMap = db.selectMap("SELECT id, chapters FROM books", None)
 		## I am not certain the LXX actually exists
@@ -473,7 +489,7 @@ class FilenameParser:
 
 		print("\nFound %s filesets to process" % (len(filenamesMap.keys())))
 		for prefix in filenamesMap.keys():
-			print(prefix)
+			logger = Log.getLogger(prefix)
 			(typeCode, bibleId, filesetId) = prefix.split("/")
 			if typeCode == "audio":
 				templates = self.audioTemplates
@@ -488,14 +504,14 @@ class FilenameParser:
 			if typeCode == "audio" or typeCode == "video":
 				## Validate filesetId
 				if not filesetId[6:7] in {"C","N","O","P","S"}:
-					errorMessages.append("%s filesetId must be C,N,O,P, or S in 7th position.\tEROR" % (prefix))
+					logger.message(Log.EROR, "filesetId must be C,N,O,P, or S in 7th position.")
 				if not filesetId[7:8] in {"1", "2"}:
-					errorMessages.append("%s filesetId must be 1 or 2 in the 8th position.\tEROR" % (prefix))
+					logger.message(Log.EROR, "filesetId must be 1 or 2 in the 8th position.")
 				if not filesetId[8:10] in {"DA", "DV"}:
-					errorMessages.append("%s filesetId must be DA or DV.\tEROR" % (prefix))
+					logger.message(Log.EROR, "filesetId must be DA or DV.")
 				bitrateSuffix = filesetId[10:12]
 				if bitrateSuffix != '' and not bitrateSuffix.isdigit():
-					errorMessages.append("%s filesetId positions 11,12 must be a bitrate number if present.\tEROR" % (prefix))
+					logger.message(Log.EROR, "filesetId positions 11,12 must be a bitrate number if present.")
 
 			(lptsRecord, index) = lptsReader.getLPTSRecord(typeCode, bibleId, filesetId)
 			self.otOrder = self.OTOrderTemp(filesetId, lptsRecord)
@@ -514,7 +530,7 @@ class FilenameParser:
 				(extraChapters, missingChapters, missingVerses) = self.checkVideoBookChapterVerse(prefix, files)
 			
 			reducer = FilenameReducer(self.config, prefix, files, extraChapters, missingChapters, missingVerses)
-			reducer.process(errorMessages)
+			reducer.process(logger)
 		print("")
 
 
@@ -524,7 +540,6 @@ class FilenameParser:
 		#for (filename, length, datetime) in filenames:
 		for filenameTuple in filenamesTuple:
 			file = self.parseOneFilename3(templates, prefix, filenameTuple)
-			self.validateCompleteness(file)
 			files.append(file)
 			if file.numErrors() > 0:
 				numErrors += 1
@@ -549,19 +564,6 @@ class FilenameParser:
 				best = file.numErrors()
 				selected = file
 		return selected
-
-
-	def validateCompleteness(self, file):
-		if "audioStory" not in file.template.name:
-			if file.bookId == None or file.bookId == "":
-				file.errors.append("book_id is not found")
-			if file.chapter == None or file.chapter == "":
-					file.errors.append("chapter not found")
-			if file.type == "mp4" and file.chapter.isdigit(): ### this is not used??
-				if file.verseStart == None or file.verseStart == "":
-					file.errors.append("verse start not found")
-				if file.verseEnd == None or file.verseEnd == "":
-					file.errors.append("verse end not found")
 
 
 	def checkBookChapter(self, prefix, files):
@@ -617,19 +619,6 @@ class FilenameParser:
 						nextVerse += 1
 					nextVerse = verseEnd + 1
 		return (extraChapters, missingChapters, missingVerses)
-
-
-#	def summary3(self):
-#		path = self.config.directory_errors + os.sep + "FilenameParser.out"
-#		file = io.open(path, mode="w", encoding="utf-8")
-#		for entry in self.parsedList:
-#			file.write("%s\n" % entry)
-#		file.write("\n\nUnparsed\n\n")
-#		for entry in self.unparsedList:
-#			file.write("%d  %s\n" % entry)
-#		file.close()
-#		for parser, count in self.successCount.items():
-#			print("Parser Success Count: %s -> %s" % (parser, count))
 
 
 	def NTOrderTemp(self, filesetId, lptsRecord):

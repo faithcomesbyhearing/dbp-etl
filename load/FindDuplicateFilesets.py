@@ -55,7 +55,7 @@ class FindDuplicateFilesets:
 					return (row[3], row[9])
 
 
-	def moveDuplicates(self, duplicatesMap, errorMessages):
+	def moveDuplicates(self, duplicatesMap):
 		for filesetId, resultFilenames in duplicatesMap.items():
 			indexOfAccepted = self.findMostRecent(resultFilenames)
 			acceptedPrefix = resultFilenames[indexOfAccepted][0].replace("_", "/")
@@ -63,7 +63,8 @@ class FindDuplicateFilesets:
 				if index != indexOfAccepted:
 					#print("Move %s %sfile to duplicate" % (filesetId, resultFilenames[index]))
 					filesetPrefix = resultFilenames[index][0].replace("_", "/")
-					errorMessages.append("%s Entire Fileset moved to duplicate, %s accepted.\tINFO" % (filesetPrefix, acceptedPrefix))
+					logger = Log.getLogger(filesetPrefix)
+					logger.message(Log.INFO, "Entire Fileset moved to duplicate, %s accepted." % (acceptedPrefix,))
 					filename = resultFilenames[index][0] + ".csv"
 					source = self.acceptedDir + os.sep + filename
 					target = self.duplicateDir + os.sep + filename
