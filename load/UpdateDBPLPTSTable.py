@@ -32,8 +32,8 @@ class UpdateDBPLPTSTable:
 	def process(self):
 		sql = ("SELECT b.bible_id, bf.id, bf.set_type_code, bf.set_size_code, bf.asset_id, bf.hash_id"
 			" FROM bible_filesets bf JOIN bible_fileset_connections b ON bf.hash_id = b.hash_id"
-			" ORDER BY b.bible_id, bf.id, bf.set_type_code"
-			" LOCK IN SHARE MODE")
+			" ORDER BY b.bible_id, bf.id, bf.set_type_code")
+			#" LOCK IN SHARE MODE")
 		filesetList = self.db.select(sql, ())
 		access = UpdateDBPAccessTable(self.config, self.db, self.dbOut, self.lptsReader)
 		access.process(filesetList)
