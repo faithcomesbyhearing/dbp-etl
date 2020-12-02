@@ -155,7 +155,7 @@ class SQLBatchExec:
 						"-u", self.config.database_user,
 						"-p" + self.config.database_passwd,
 						self.config.database_db_name]
-				response = subprocess.run(cmd, shell=False, stdin=sql, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=600)
+				response = subprocess.run(cmd, shell=False, stdin=sql, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=2400)
 				success = response.returncode == 0
 				print("SQLBATCH:", str(response.stderr.decode('utf-8')))
 				#for line in response.stdout.decode('utf-8').split("\n"):
