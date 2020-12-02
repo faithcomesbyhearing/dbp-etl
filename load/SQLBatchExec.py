@@ -35,6 +35,26 @@ class SQLBatchExec:
 			self.counts.append(("insert", tableName, len(values)))
 
 
+	def insertSet(self, tableName, pkeyNames, attrNames, values):
+		if len(values) > 0:
+			names = attrNames + pkeyNames
+			stmt = "INSERT INTO %s (%s) VALUES " % (tableName, ", ".join(names))
+			self.statements.append(stmt)
+			valsubs = ["'%s'"] * len(names)
+			sql = "(%s)," % (", ".join(valsubs))
+			lastSql = "(%s);" % (", ".join(valsubs))
+			lastValueIndex = len(values) - 1
+			for i in range(len(values)):
+				value = values[i]
+				if i < lastValueIndex:
+					stmt = sql % value
+				else:
+					stmt = lastSql % value
+				stmt = self.unquoteValues(stmt)
+				self.statements.append(stmt)
+			self.counts.append(("insert", tableName, len(values)))		
+
+
 	def unquoteValues(self, stmt):
 		match = self.unquotedRegex.match(stmt)
 		if match != None:
@@ -148,13 +168,19 @@ if (__name__ == '__main__'):
 	sql = SQLBatchExec(config)
 	sql.statements.append("SELECT * FROM bibles;")
 	sql.statements.append("SHOW DATABASES;")
+	values = []
+	values.append(("a", "b", "c"))
+	values.append(("d", "e", "f"))
+	values.append(("gg", "hh", "ii"))
+	values.append(("jjj", "kkk", "lll"))
+	sql.insertSet("test_table", ("pkey",), ("attr1", "attr2"), values)
 	sql.displayStatements()
 	sql.counts.append(("insert", "tablea", 12))
 	sql.counts.append(("insert", "tablea", 24))
 	sql.counts.append(("insert", "table0", 36))
 	sql.counts.append(("delete", "table9", 1))
 	sql.displayCounts()
-	sql.execute("test")
+	#sql.execute("test")
 
 
 

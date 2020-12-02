@@ -489,6 +489,7 @@ class FilenameParser:
 
 		print("\nFound %s filesets to process" % (len(filenamesMap.keys())))
 		for prefix in filenamesMap.keys():
+			print(prefix)
 			logger = Log.getLogger(prefix)
 			(typeCode, bibleId, filesetId) = prefix.split("/")
 			if typeCode == "audio":

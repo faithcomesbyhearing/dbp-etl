@@ -176,7 +176,7 @@ class UpdateDBPVideoTables:
 		tableName = "bible_file_stream_ts"
 		pkeyNames = ("file_name",)
 		attrNames = ("stream_bandwidth_id", "runtime")
-		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
+		self.dbOut.insertSet(tableName, pkeyNames, attrNames, insertRows)
 		self.dbOut.updateCol(tableName, pkeyNames, updateRows)
 
 
@@ -190,7 +190,6 @@ class UpdateDBPVideoTables:
 			" WHERE bf.id IN (SELECT bf.id FROM bible_files bf"
 			" WHERE bf.hash_id='%s' AND bf.duration IS NULL)"
 			" GROUP BY bf.id, bfvr.id) bfu"
-			#" GROUP BY bf.id) bfu"
 			" ON bf.id=bfu.ID SET bf.duration=bfu.Duration;")
 		self.dbOut.rawStatment(sql % (hashId,))
 
