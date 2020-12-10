@@ -24,6 +24,7 @@ class UpdateDBPBiblesTable:
 		self.db = db
 		self.dbOut = dbOut
 		self.lptsReader = lptsReader
+		self.filesetConnectionSet = self.db.selectSet("SELECT distinct bible_id FROM bible_fileset_connections", ())
 		sql = ("SELECT l.iso, a.script_id FROM alphabet_language a"
 				" JOIN languages l ON a.language_id = l.id"
 				" WHERE a.script_id IN" 
@@ -68,7 +69,9 @@ class UpdateDBPBiblesTable:
 
 		for dbpBibleId in sorted(dbpBibleMap.keys()):
 			if dbpBibleId not in lptsBibleMap.keys():
-				if not self.testBibleForeignKeys(dbpBibleId):
+				if dbpBibleId in self.filesetConnectionSet:
+					print("WARN Attempt to delete bible_id: %s when it has filesets." % (dbpBibleId))
+				elif not self.testBibleForeignKeys(dbpBibleId):
 					deleteRows.append(dbpBibleId)
 
 		for bibleId in sorted(lptsBibleMap.keys()):
@@ -108,7 +111,6 @@ class UpdateDBPBiblesTable:
 		attrNames = ("language_id", "versification", "numeral_system_id", "date", "scope", "script", "copyright")
 		ignoredNames = ("derived", "copyright", "priority", "reviewed", "notes") # here for doc only
 		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
-		#self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
 		self.dbOut.updateCol(tableName, pkeyNames, updateRows)
 		self.dbOut.delete(tableName, pkeyNames, deleteRows)
 
