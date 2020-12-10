@@ -14,7 +14,12 @@ class LPTSExtractReader:
 
 	def __init__(self, config):
 		self.resultSet = []
-		doc = minidom.parse(config.filename_lpts_xml)
+		dom = None
+		try:
+			doc = minidom.parse(config.filename_lpts_xml)
+		except Exception as err:
+			print("FATAL ERROR parsing LPTS extract", err)
+			sys.exit(1)
 		root = doc.childNodes
 		if len(root) != 1 or root[0].nodeName != "dataroot":
 			print ("ERROR: First node of LPTS Export must be <docroot>")
