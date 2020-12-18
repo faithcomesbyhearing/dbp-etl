@@ -60,7 +60,6 @@ class UpdateDBPTextFilesets:
 
 
 	def updateFileset(self, bibleId, filesetId, hashId):
-		bibleDB = SqliteUtility(self.config.directory_accepted + filesetId + ".db")
 		insertRows = []
 		updateRows = []
 		deleteRows = []
@@ -71,15 +70,8 @@ class UpdateDBPTextFilesets:
 			dbpVerseMap[(dbpBookId, str(dbpChapter), str(dbpVerseStart))] = (str(dbpVerseEnd), dbpVerseText)
 
 		ssBookIdSet = set()
-		for (ssReference, ssVerseText) in bibleDB.select("SELECT reference, html FROM verses", ()):
-			(ssBookId, ssChapter, ssVerse) = ssReference.split(":")
-			parts = ssVerse.split("-")
-			if len(parts) > 1:
-				ssVerseStart = parts[0]
-				ssVerseEnd = parts[1]
-			else:
-				ssVerseStart = ssVerse
-				ssVerseEnd = ssVerse
+		verseList = self.getBiblePublisherVerses(filesetId)
+		for (ssBookId, ssChapter, ssVerseStart, ssVerseEnd, ssVerseText) in verseList:
 			ssBookIdSet.add((ssBookId, ssChapter, ssVerseStart))
 
 			if (ssBookId, ssChapter, ssVerseStart) not in dbpVerseMap.keys():
@@ -103,9 +95,25 @@ class UpdateDBPTextFilesets:
 		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
 		self.dbOut.updateCol(tableName, pkeyNames, updateRows)
 		self.dbOut.delete(tableName, pkeyNames, deleteRows)
+
+
+	def getBiblePublisherVerses(self, filesetId):
+		results = []
+		bibleDB = SqliteUtility(self.config.directory_accepted + filesetId + ".db")		
+		for (reference, verseText) in bibleDB.select("SELECT reference, html FROM verses", ()):
+			(bookId, chapter, verseNum) = reference.split(":")
+			parts = verseNum.split("-")
+			verseStart = parts[0]
+			if len(parts) > 1:
+				verseEnd = parts[1]
+			else:
+				verseEnd = verseStart
+
+			results.append((bookId, chapter, verseStart, verseEnd, verseText))
 		bibleDB.close()
+		return results
 
-
+"""
 if (__name__ == '__main__'):
 	from DBPLoadController import *
 	config = Config()
@@ -126,7 +134,8 @@ if (__name__ == '__main__'):
 					error = texts.validateFileset(bibleId, filesetId)
 					if error == None:
 						s3.promoteFileset(config.directory_validate, "text/%s/%s" % (bibleId, filesetId))
-						texts.uploadFileset(bibleId, filesetId)
+						s3.promoteFileset(config.directory_upload, "text/%s/%s" % (bibleId, filesetId))
+						#texts.uploadFileset(bibleId, filesetId)
 					else:
 						print(error)
 
@@ -143,5 +152,29 @@ if (__name__ == '__main__'):
 
 	dbOut.displayStatements()
 	dbOut.displayCounts()
-	dbOut.execute("verses-test")
+	#dbOut.execute("verses-test")
+"""
+if (__name__ == '__main__'):
+	config = Config()
+	db = SQLUtility(config)
+	dbOut = SQLBatchExec(config)
+	lptsReader = LPTSExtractReader(config)
+	texts = UpdateDBPTextFilesets(config, db, dbOut, lptsReader)
+	from UpdateDBPFilesetTables import *
+	filesets = UpdateDBPFilesetTables(config, db, dbOut)
+	dirname = config.directory_database
+	for typeCode in os.listdir(dirname):
+		if typeCode == "text":
+			for bibleId in os.listdir(dirname + typeCode):
+				for filesetId in os.listdir(dirname + typeCode + os.sep + bibleId):
+					databasePath = config.directory_accepted + filesetId + ".db"
+					hashId = filesets.insertBibleFileset("verses", filesetId, databasePath)
+					filesets.insertFilesetConnections(hashId, bibleId)
+					texts.updateFileset(bibleId, filesetId, hashId)
+
+	dbOut.displayStatements()
+	dbOut.displayCounts()
+	#dbOut.execute("verses-test")
+
+
 
