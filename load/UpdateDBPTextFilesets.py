@@ -67,7 +67,7 @@ class UpdateDBPTextFilesets:
 		resultSet = self.db.select(sql, (hashId,))
 		dbpVerseMap = {}
 		for (dbpBookId, dbpChapter, dbpVerseStart, dbpVerseEnd, dbpVerseText) in resultSet:
-			dbpVerseMap[(dbpBookId, str(dbpChapter), str(dbpVerseStart))] = (str(dbpVerseEnd), dbpVerseText)
+			dbpVerseMap[(dbpBookId, dbpChapter, dbpVerseStart)] = (dbpVerseEnd, dbpVerseText)
 
 		ssBookIdSet = set()
 		verseList = self.getBiblePublisherVerses(filesetId)
@@ -83,7 +83,8 @@ class UpdateDBPTextFilesets:
 					updateRows.append(("verse_end", ssVerseEnd, dbpVerseEnd, hashId, ssBookId, ssChapter, ssVerseStart))
 				if dbpVerseText != ssVerseText:
 					ssVerseText = ssVerseText.replace("'", "\\'")
-					updateRows.append(("verse_text", ssVerseText, dbpVerseText, hashId, ssBookId, ssChapter, ssVerseStart))
+					shortenedPriorText = dbpVerseText.split('\n')[0][0:50]
+					updateRows.append(("verse_text", ssVerseText, shortenedPriorText, hashId, ssBookId, ssChapter, ssVerseStart))
 
 		for (dbpBookId, dbpChapter, dbpVerseStart) in dbpVerseMap.keys():
 			if (dbpBookId, dbpChapter, dbpVerseStart) not in ssBookIdSet:
@@ -97,21 +98,45 @@ class UpdateDBPTextFilesets:
 		self.dbOut.delete(tableName, pkeyNames, deleteRows)
 
 
+	# This method concatonates together those verses which have the same ending code.
 	def getBiblePublisherVerses(self, filesetId):
 		results = []
+		priorBookId = None
+		priorChapter = -1
+		priorVerseEnd = 0
 		bibleDB = SqliteUtility(self.config.directory_accepted + filesetId + ".db")		
 		for (reference, verseText) in bibleDB.select("SELECT reference, html FROM verses", ()):
 			(bookId, chapter, verseNum) = reference.split(":")
+			chapterNum = int(chapter)
+			if (priorBookId != bookId or priorChapter != chapterNum):
+				priorBookId = bookId
+				priorChapter = chapterNum
+				priorVerseEnd = 0
 			parts = verseNum.split("-")
-			verseStart = parts[0]
+			verseStart = self.verseString2Int(parts[0])
 			if len(parts) > 1:
-				verseEnd = parts[1]
+				verseEnd = self.verseString2Int(parts[1])
 			else:
 				verseEnd = verseStart
+			verseText = verseText.replace('\r', '')
 
-			results.append((bookId, chapter, verseStart, verseEnd, verseText))
+			if verseStart > priorVerseEnd:
+				results.append((bookId, chapterNum, verseStart, verseEnd, verseText))
+			else:
+				(lastBookId, lastChapter, lastVerseStart, lastVerseEnd, lastVerseText) = results.pop()
+				newVerseText = lastVerseText + '  ' + verseText
+				results.append((bookId, chapterNum, lastVerseStart, verseEnd, newVerseText))
+			priorVerseEnd = verseEnd
 		bibleDB.close()
 		return results
+
+
+	def verseString2Int(self, verse):
+		if verse.isdigit():
+			return int(verse)
+		else:
+			return int(verse[0:-1])
+
 
 """
 if (__name__ == '__main__'):
