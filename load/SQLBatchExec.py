@@ -6,6 +6,7 @@ import io
 import os
 import sys
 import re
+import time
 from datetime import datetime
 import subprocess
 from Config import *
@@ -139,6 +140,7 @@ class SQLBatchExec:
 			tranFile.write("COMMIT;\n")
 			tranFile.write("EXIT\n")
 			tranFile.close()
+			startTime = time.perf_counter()
 			if self.config.database_tunnel != None:
 				results1 = os.popen(self.config.database_tunnel).read()
 				print("tunnel opened:", results1)
@@ -158,6 +160,8 @@ class SQLBatchExec:
 				response = subprocess.run(cmd, shell=False, stdin=sql, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=2400)
 				success = response.returncode == 0
 				print("SQLBATCH:", str(response.stderr.decode('utf-8')))
+				duration = (time.perf_counter() - startTime)
+				print("SQLBATCH execution time", round(duration, 2), "sec for", batchName)
 				#for line in response.stdout.decode('utf-8').split("\n"):
 				#	print(line)
 				return success
