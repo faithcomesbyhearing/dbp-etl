@@ -34,23 +34,16 @@ class UpdateDBPVideoTables:
 		self.dbpTsInsertUpdateSet = set()
 
 
-	def process(self, filesetIdHashIdMap):
-		directory = self.config.directory_database
-		for typeCode in os.listdir(directory):
-			if typeCode == "video":
-				for bibleId in [f for f in os.listdir(directory + typeCode) if not f.startswith('.')]:
-					for filesetId in [f for f in os.listdir(directory + typeCode + os.sep + bibleId) if not f.startswith('.')]:
-						filesetPrefix = typeCode + "/" + bibleId + "/" + filesetId
-						hashId = filesetIdHashIdMap.get(filesetPrefix)
-						if hashId != None:
-							self.populateDBPMaps(hashId)
-							done = self.updateVideoFileset(directory, filesetPrefix)
-							if done:
-								print("Update video %s succeeded." % (filesetPrefix))
-							else:
-								print("Update video %s FAILED." % (filesetPrefix))
-							self.computeDurations(hashId)
-							self.processDeletions()
+	def processFileset(self, filesetPrefix, hashId):
+		if hashId != None:
+			self.populateDBPMaps(hashId)
+			done = self.updateVideoFileset(self.config.directory_database, filesetPrefix)
+			if done:
+				print("Update video %s succeeded." % (filesetPrefix))
+			else:
+				print("Update video %s FAILED." % (filesetPrefix))
+			self.computeDurations(hashId)
+			self.processDeletions()
 
 
 	def populateDBPMaps(self, hashId):
@@ -79,7 +72,6 @@ class UpdateDBPVideoTables:
 
 	def updateVideoFileset(self, directory, filesetPrefix):
 		errorCount = 0
-		(typeCode, bibleId, filesetId) = filesetPrefix.split("/")
 		for filename in [f for f in os.listdir(directory + filesetPrefix) if not f.startswith('.')]:
 			m3u8Files = self.downloadM3U8(filesetPrefix, filename)
 			for (m3u8Filename, m3u8Content) in m3u8Files.items():
@@ -196,18 +188,18 @@ class UpdateDBPVideoTables:
 
 	def processDeletions(self):
 		deleteRows = []
-		for dbpFilename in self.dbpBandwidthMap.keys():
-			if dbpFilename not in self.dbpBandwidthInsertUpdateSet:
-				deleteRows.append((dbpFilename,))
-		tableName = "bible_file_stream_bandwidths"
-		pkeyNames = ("file_name",)
-		self.dbOut.delete(tableName, pkeyNames, deleteRows)
-
-		deleteRows = []
 		for dbpFilename in self.dbpTsFileMap.keys():
 			if dbpFilename not in self.dbpTsInsertUpdateSet:
 				deleteRows.append((dbpFilename,))
 		tableName = "bible_file_stream_ts"
+		pkeyNames = ("file_name",)
+		self.dbOut.delete(tableName, pkeyNames, deleteRows)
+
+		deleteRows = []		
+		for dbpFilename in self.dbpBandwidthMap.keys():
+			if dbpFilename not in self.dbpBandwidthInsertUpdateSet:
+				deleteRows.append((dbpFilename,))
+		tableName = "bible_file_stream_bandwidths"
 		pkeyNames = ("file_name",)
 		self.dbOut.delete(tableName, pkeyNames, deleteRows)
 

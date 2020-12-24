@@ -104,40 +104,40 @@ class UpdateDBPFilesetTables:
 		self.OT = self.db.selectSet("SELECT id FROM books WHERE book_testament = 'OT'", ())
 		self.NT = self.db.selectSet("SELECT id FROM books WHERE book_testament = 'NT'", ())
 		self.durationRegex = re.compile(r"duration=([0-9\.]+)")
+		self.textUpdater = UpdateDBPTextFilesets(self.config, self.db, self.dbOut, None)
+		self.booksUpdater = UpdateDBPBooksTable(self.config, self.dbOut)
 
 
 	def process(self):
-		textUpdater = UpdateDBPTextFilesets(self.config, self.db, self.dbOut, None)
-		booksUpdater = UpdateDBPBooksTable(self.config, self.db, self.dbOut)
-		booksUpdater.alterBibleBooksTable() ### One time method, remove
-
 		databaseFilesetSet = self.getDatabaseFilesets()
-		results = {}
+		results = []
 		dirname = self.config.directory_accepted
 		filenameList = os.listdir(dirname)
 		for filename in filenameList:
 			if filename in databaseFilesetSet:
 				(typeCode, bibleId, filesetId) = filename.split(".")[0].split("_")
-				print(typeCode, bibleId, filesetId)
-				csvFilename = self.config.directory_accepted + filename
-				if typeCode in {"audio", "video"}:
-					hashId = self.insertBibleFileset(typeCode, filesetId, csvFilename)
-					self.insertFilesetConnections(hashId, bibleId)
-					filesetDir = "%s%s/%s/%s" % (self.config.directory_database, typeCode, bibleId, filesetId)
-					self.insertBibleFiles(typeCode, hashId, csvFilename, filesetDir)
-					results["%s/%s/%s" % (typeCode, bibleId, filesetId)] = hashId
-
-				elif typeCode == "text":
-					databasePath = self.config.directory_accepted + filesetId + ".db"
-					hashId = self.insertBibleFileset("verses", filesetId, databasePath)
-					self.insertFilesetConnections(hashId, bibleId)
-					textUpdater.updateFileset(bibleId, filesetId, hashId)
-					results["%s/%s/%s" % (typeCode, bibleId, filesetId)] = hashId
-
-				tocBooks = booksUpdater.getTableOfContents(typeCode, bibleId, filesetId)
-				booksUpdater.updateBibleBooks(typeCode, bibleId, tocBooks)
-
+				results.append((typeCode, bibleId, filesetId, filename))
 		return results
+
+
+	def processFileset(self, typeCode, bibleId, filesetId, filename):
+		print(typeCode, bibleId, filesetId)
+		csvFilename = self.config.directory_accepted + filename
+		if typeCode in {"audio", "video"}:
+			hashId = self.insertBibleFileset(typeCode, filesetId, csvFilename)
+			self.insertFilesetConnections(hashId, bibleId)
+			filesetDir = "%s%s/%s/%s" % (self.config.directory_database, typeCode, bibleId, filesetId)
+			self.insertBibleFiles(typeCode, hashId, csvFilename, filesetDir)
+
+		elif typeCode == "text":
+			databasePath = self.config.directory_accepted + filesetId + ".db"
+			hashId = self.insertBibleFileset("verses", filesetId, databasePath)
+			self.insertFilesetConnections(hashId, bibleId)
+			self.textUpdater.updateFileset(bibleId, filesetId, hashId)
+
+		tocBooks = self.booksUpdater.getTableOfContents(typeCode, bibleId, filesetId)
+		self.booksUpdater.updateBibleBooks(typeCode, bibleId, tocBooks)
+		return hashId
 
 
 	def getDatabaseFilesets(self):

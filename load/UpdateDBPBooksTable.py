@@ -28,6 +28,7 @@
 # and delete from bible_books any that are missing from that select
 
 import csv
+import time
 from Config import *
 from SqliteUtility import *
 from SQLUtility import *
@@ -46,16 +47,9 @@ class TOCBook:
 
 class UpdateDBPBooksTable:
 
-	def __init__(self, config, db, dbOut):
+	def __init__(self, config, dbOut):
 		self.config = config
-		self.db = db
 		self.dbOut = dbOut
-		#def __init__(self, config, typeCode, bibleId, filesetId):
-		#self.config = config
-		##self.typeCode = typeCode
-		##elf.bibleId = bibleId
-		##self.filesetId = filesetId
-		##self.tocBooks = []
 		self.extraBooks = {
 			"FRT": "001", # Front Matter
 			"INT": "002", # Introductions
@@ -227,6 +221,8 @@ class UpdateDBPBooksTable:
 					bookSeq = row["sequence"]
 					bookName = row["book_name"]
 					chapter = row["chapter_start"]
+					if len(chapter) > 1 and chapter[0] == "0":
+						chapter = chapter[1:]
 					if bookId != priorBookId:
 						tocBook = TOCBook(bookId, bookSeq, bookName, bookName, None)
 						tocBooks.append(tocBook)
@@ -253,11 +249,13 @@ class UpdateDBPBooksTable:
 
 	## extract sequence of the current bible books table, and merge to tocBooks
 	def updateBibleBooks(self, typeCode, bibleId, tocBooks):
+		db = SQLUtility(self.config)
 		insertRows = []
 		updateRows = []
 		deleteRows = []
-		sql = "SELECT book_id, book_seq, name, name_short, chapters FROM bible_books WHERE bible_id = %s ORDER BY book_seq"
-		resultSet = self.db.select(sql, (bibleId,))
+		sql = ("SELECT book_id, book_seq, name, name_short, chapters"
+			" FROM bible_books WHERE bible_id = %s ORDER BY book_seq")
+		resultSet = db.select(sql, (bibleId,))
 		bibleBookMap = {}
 		for row in resultSet:
 			bibleBookMap[row[0]] = row
@@ -289,7 +287,8 @@ class UpdateDBPBooksTable:
 			" SELECT distinct book_id FROM bible_verses bv"
 			" JOIN bible_fileset_connections bfc ON bv.hash_id = bfc.hash_id"
 			" WHERE bfc.bible_id = %s")
-		dbpBookIdSet = self.db.selectSet(sql, (bibleId, bibleId))
+		dbpBookIdSet = db.selectSet(sql, (bibleId, bibleId))
+		db.close()
 		for toc in tocBooks:
 			dbpBookIdSet.add(toc.bookId)
 		for bookId in bibleBookMap.keys():

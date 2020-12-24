@@ -145,13 +145,6 @@ class SQLBatchExec:
 				results1 = os.popen(self.config.database_tunnel).read()
 				print("tunnel opened:", results1)
 			with open(path, "r") as sql:
-				#cmd = ("/usr/local/mysql/bin/mysql -h %s -P %s -u %s -p%s  %s " % 
-				#								(self.config.database_host,
-				#								self.config.database_port,
-				#								self.config.database_user, 
-				#								self.config.database_passwd,
-				#								self.config.database_db_name))
-				#								#path))
 				cmd = [self.config.mysql_exe, "-h", self.config.database_host, 
 						"-P", str(self.config.database_port),
 						"-u", self.config.database_user,
@@ -162,9 +155,9 @@ class SQLBatchExec:
 				print("SQLBATCH:", str(response.stderr.decode('utf-8')))
 				duration = (time.perf_counter() - startTime)
 				print("SQLBATCH execution time", round(duration, 2), "sec for", batchName)
-				#for line in response.stdout.decode('utf-8').split("\n"):
-				#	print(line)
-				return success
+			self.statements = []
+			self.counts = []
+			return success
 				
 
 if (__name__ == '__main__'):

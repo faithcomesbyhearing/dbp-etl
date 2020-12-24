@@ -112,22 +112,23 @@ class DBPLoadController:
 		print("********** UPDATING Fileset Tables **********", flush=True)
 		dbOut = SQLBatchExec(self.config)
 		update = UpdateDBPFilesetTables(self.config, self.db, dbOut)
-		filesetMap = update.process()
 		video = UpdateDBPVideoTables(self.config, self.db, dbOut)
-		video.process(filesetMap)
-		#dbOut.displayStatements()
-		dbOut.displayCounts()
-		success = dbOut.execute("filesets")
-		if success:
-			for filesetPrefix in filesetMap.keys():
+		filesets = update.process()
+		for (typeCode, bibleId, filesetId, cvsFilename) in filesets:
+			filesetPrefix = typeCode + "/" + bibleId + "/" + filesetId
+			hashId = update.processFileset(typeCode, bibleId, filesetId, cvsFilename)
+			if typeCode == "video":
+				video.processFileset(filesetPrefix, hashId)
+			dbOut.displayCounts()
+			success = dbOut.execute(filesetId)
+			if success:
 				self.s3Utility.promoteFileset(self.config.directory_database, filesetPrefix)
-		return success
 
 
 	def updateLPTSTables(self):
 		print("********** UPDATING LPTS Tables **********", flush=True)
 		dbOut = SQLBatchExec(self.config)
-		lptsDBP = UpdateDBPLPTSTable(self.config, self.db, dbOut, self.lptsReader)
+		lptsDBP = UpdateDBPLPTSTable(self.config, dbOut, self.lptsReader)
 		lptsDBP.process()
 		#dbOut.displayStatements()
 		dbOut.displayCounts()
