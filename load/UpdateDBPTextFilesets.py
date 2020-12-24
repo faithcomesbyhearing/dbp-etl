@@ -53,7 +53,7 @@ class UpdateDBPTextFilesets:
 			filesetId, iso3, iso1, direction]
 		response = subprocess.run(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=120)
 		if response == None or response.returncode != 0:
-			return((Log.EROR, str(response.stdout.decode("utf-8"))))
+			return((Log.EROR, "BiblePublisher: " + str(response.stderr.decode("utf-8"))))
 		#print("text/%s/%s %s\tINFO" % (bibleId, filesetId, str(response.stdout.decode("utf-8"))))
 		print("OUTPUT", str(response.stdout.decode("utf-8")))	
 		return None

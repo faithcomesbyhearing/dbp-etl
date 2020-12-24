@@ -43,7 +43,7 @@ class Log:
 			print("openErrorReport", path)
 			errorFile = open(path, "w")
 			for message in errors:
-				errorFile.write(message)
+				errorFile.write(message + '\n')
 				print(message, end='\n')
 			errorFile.close()
 		print("Num Errors ", len(errors))		
