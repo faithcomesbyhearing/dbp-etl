@@ -123,6 +123,8 @@ class DBPLoadController:
 			success = dbOut.execute(filesetId)
 			if success:
 				self.s3Utility.promoteFileset(self.config.directory_database, filesetPrefix)
+			else:
+				print("********** Fileset Table %s Update Failed **********" % (filesetId))
 
 
 	def updateLPTSTables(self):
@@ -145,13 +147,11 @@ if (__name__ == '__main__'):
 	ctrl.validate()
 	if ctrl.updateBibles():
 		ctrl.upload()
-		if ctrl.updateFilesetTables():
-			if ctrl.updateLPTSTables():
-				print("********** COMPLETE **********")
-			else:
-				print("********** LPTS Tables Update Failed **********")
+		ctrl.updateFilesetTables()
+		if ctrl.updateLPTSTables():
+			print("********** COMPLETE **********")
 		else:
-			print("********** Fileset Tables Update Failed **********")
+			print("********** LPTS Tables Update Failed **********")
 	else:
 		print("********** Bibles Table Update Failed **********")
 
