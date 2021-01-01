@@ -183,7 +183,7 @@ class UpdateDBPVideoTables:
 			" WHERE bf.hash_id='%s' AND bf.duration IS NULL)"
 			" GROUP BY bf.id, bfvr.id) bfu"
 			" ON bf.id=bfu.ID SET bf.duration=bfu.Duration;")
-		self.dbOut.rawStatment(sql % (hashId,))
+		self.dbOut.rawStatement(sql % (hashId,))
 
 
 	def processDeletions(self):

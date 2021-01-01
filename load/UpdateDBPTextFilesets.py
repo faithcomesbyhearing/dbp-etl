@@ -96,6 +96,20 @@ class UpdateDBPTextFilesets:
 		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
 		self.dbOut.updateCol(tableName, pkeyNames, updateRows)
 		self.dbOut.delete(tableName, pkeyNames, deleteRows)
+		self.tempDeleteTextFormat(filesetId) ## Remove when we start adding text_format with load
+
+
+	def tempDeleteTextFormat(self, filesetId):
+		sql = "SELECT hash_id FROM bible_filesets WHERE set_type_code = 'text_format' AND id=%s"
+		hashId = self.db.selectScalar(sql, (filesetId,))
+		if hashId != None:
+			self.dbOut.rawStatement("DELETE FROM bible_files WHERE hash_id = '%s';" % (hashId,))
+			self.dbOut.rawStatement("DELETE FROM access_group_filesets WHERE hash_id = '%s';" % (hashId,))
+			self.dbOut.rawStatement("DELETE FROM bible_fileset_tags WHERE hash_id = '%s';" % (hashId,))
+			self.dbOut.rawStatement("DELETE FROM bible_fileset_copyright_organizations WHERE hash_id = '%s';" % (hashId,))
+			self.dbOut.rawStatement("DELETE FROM bible_fileset_copyrights WHERE hash_id = '%s';" % (hashId,))
+			self.dbOut.rawStatement("DELETE FROM bible_fileset_connections WHERE hash_id = '%s';" % (hashId,))
+			self.dbOut.rawStatement("DELETE FROM bible_filesets WHERE hash_id = '%s';" % (hashId,))	
 
 
 	# This method concatonates together those verses which have the same ending code.

@@ -98,7 +98,7 @@ class SQLBatchExec:
 			self.counts.append(("delete", tableName, len(pkeyValues)))
 
 
-	def rawStatment(self, stmt):
+	def rawStatement(self, stmt):
 		self.statements.append(stmt)
 
 
