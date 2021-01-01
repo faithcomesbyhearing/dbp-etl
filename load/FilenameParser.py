@@ -525,10 +525,12 @@ class FilenameParser:
 			else:
 				self.unparsedList.append((numErrors, prefix))
 
-			if typeCode in {"text", "audio"}:
+			if typeCode == "audio":
 				(extraChapters, missingChapters, missingVerses) = self.checkBookChapter(prefix, files)
 			elif typeCode == "video":
 				(extraChapters, missingChapters, missingVerses) = self.checkVideoBookChapterVerse(prefix, files)
+			elif typeCode == "text":
+				(extraChapters, missingChapters, missingVerses) = ([], [], [])
 			
 			reducer = FilenameReducer(self.config, prefix, files, extraChapters, missingChapters, missingVerses)
 			reducer.process(logger)
