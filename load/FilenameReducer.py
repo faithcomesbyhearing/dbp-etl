@@ -75,11 +75,6 @@ class FilenameReducer:
 			errPct = 100.00 * errorCount / len(fileList)
 		if errPct >= self.config.error_limit_pct:
 			quarantineList = fileList
-		elif self.filePrefix == "audio/ONBLTC/ONBLTCN2DA16":
-			if fileList[0].damid == "ONBLTCN1DA":
-				quarantineList = fileList
-			else: # damid == ONBLTCN2DA
-				acceptedList = fileList
 		else:
 			acceptedList = fileList
 		return (acceptedList, quarantineList)

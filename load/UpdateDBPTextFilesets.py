@@ -48,7 +48,7 @@ class UpdateDBPTextFilesets:
 			return((Log.EROR, "%s script has no direction in alphabets." % (scriptId,)))
 		cmd = [self.config.node_exe,
 			self.config.publisher_js,
-			self.config.directory_validate + "text/%s/%s/" % (bibleId, filesetId),
+			self.config.directory_upload + "text/%s/%s/" % (bibleId, filesetId),
 			self.config.directory_accepted,
 			filesetId, iso3, iso1, direction]
 		response = subprocess.run(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=120)
@@ -165,14 +165,13 @@ if (__name__ == '__main__'):
 
 	texts = UpdateDBPTextFilesets(config, db, dbOut, lptsReader)
 	s3 = S3Utility(config)
-	dirname = config.directory_validate
+	dirname = config.directory_upload
 	for typeCode in os.listdir(dirname):
 		if typeCode == "text":
 			for bibleId in os.listdir(dirname + typeCode):
 				for filesetId in os.listdir(dirname + typeCode + os.sep + bibleId):
 					error = texts.validateFileset(bibleId, filesetId)
 					if error == None:
-						s3.promoteFileset(config.directory_validate, "text/%s/%s" % (bibleId, filesetId))
 						s3.promoteFileset(config.directory_upload, "text/%s/%s" % (bibleId, filesetId))
 						#texts.uploadFileset(bibleId, filesetId)
 					else:

@@ -108,21 +108,8 @@ class UpdateDBPFilesetTables:
 		self.booksUpdater = UpdateDBPBooksTable(self.config, self.dbOut)
 
 
-	def process(self):
-		databaseFilesetSet = self.getDatabaseFilesets()
-		results = []
-		dirname = self.config.directory_accepted
-		filenameList = os.listdir(dirname)
-		for filename in filenameList:
-			if filename in databaseFilesetSet:
-				(typeCode, bibleId, filesetId) = filename.split(".")[0].split("_")
-				results.append((typeCode, bibleId, filesetId, filename))
-		return results
-
-
-	def processFileset(self, typeCode, bibleId, filesetId, filename):
+	def processFileset(self, typeCode, bibleId, filesetId, csvFilename):
 		print(typeCode, bibleId, filesetId)
-		csvFilename = self.config.directory_accepted + filename
 		if typeCode in {"audio", "video"}:
 			hashId = self.insertBibleFileset(typeCode, filesetId, csvFilename)
 			self.insertFilesetConnections(hashId, bibleId)
@@ -138,17 +125,6 @@ class UpdateDBPFilesetTables:
 		tocBooks = self.booksUpdater.getTableOfContents(typeCode, bibleId, filesetId)
 		self.booksUpdater.updateBibleBooks(typeCode, bibleId, tocBooks)
 		return hashId
-
-
-	def getDatabaseFilesets(self):
-		results = set()
-		dirname = self.config.directory_database
-		for typeCode in os.listdir(dirname):
-			for bibleId in os.listdir(dirname + typeCode):
-				for filesetId in os.listdir(dirname + typeCode + os.sep + bibleId):
-					csvFilename = typeCode + "_" + bibleId + "_" + filesetId + ".csv"
-					results.add(csvFilename)
-		return results
 
 
 	def getSetSizeCodeByFile(self, csvFilename):

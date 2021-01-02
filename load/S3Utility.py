@@ -68,22 +68,18 @@ class S3Utility:
 			print("ERROR: Upload %s failed  with error %s" % (s3Key, err))
 
 
-	def uploadAllFilesets(self):
-		directory = self.config.directory_upload
-		for typeCode in [f for f in os.listdir(directory) if not f.startswith('.')]:
+	def uploadAllFilesets(self, filesets):
+		for (typeCode, bibleId, filesetId, filesetPrefix, csvFilename) in filesets:
 			s3Bucket = self.config.s3_vid_bucket if typeCode == "video" else self.config.s3_bucket
-			for bibleId in [f for f in os.listdir(directory + typeCode) if not f.startswith('.')]:
-				for filesetId in [f for f in os.listdir(directory + typeCode + os.sep + bibleId) if not f.startswith('.')]:
-					filesetPrefix = typeCode + "/" + bibleId + "/" + filesetId + "/"
-					if typeCode in {"audio", "video"}:
-						done = self.uploadFileset(s3Bucket, directory, filesetPrefix)
-						if done:
-							print("Upload %s succeeded." % (filesetPrefix,))
-						else:
-							print("Upload %s FAILED." % (filesetPrefix,))
+			if typeCode in {"audio", "video"}:
+				done = self.uploadFileset(s3Bucket, self.config.directory_upload, filesetPrefix)
+				if done:
+					print("Upload %s succeeded." % (filesetPrefix,))
+				else:
+					print("Upload %s FAILED." % (filesetPrefix,))
 							
-					elif typeCode == "text":
-						self.promoteFileset(directory, filesetPrefix)
+			elif typeCode == "text":
+				self.promoteFileset(self.config.directory_upload, filesetPrefix)
 
 
 	def uploadFileset(self, s3Bucket, sourceDir, filesetPrefix):
@@ -99,8 +95,7 @@ class S3Utility:
 
 
 	def promoteFileset(self, sourceDir, filesetPrefix):
-		folders = [self.config.directory_validate,
-				self.config.directory_upload,
+		folders = [self.config.directory_upload,
 				self.config.directory_database,
 				self.config.directory_complete]
 		if not sourceDir in folders:

@@ -55,7 +55,8 @@ class Validate:
 			filesets = reader.bucketListing(self.config.s3_vid_bucket)
 
 		elif self.runType == "files":
-			filesets = reader.fileListing(self.config.directory_validate)
+			filesets = reader.fileListing(self.config.directory_upload)
+			filesets = reader.fileListing(self.config.directory_database)
 
 		else:
 			print("ERROR: run_type must be files or bucketlists.")

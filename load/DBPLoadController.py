@@ -34,7 +34,7 @@ class DBPLoadController:
 
 	def cleanup(self):
 		print("********** CLEANUP **********", flush=True)
-		validateDir = self.config.directory_validate
+		validateDir = self.config.directory_upload
 		for typeCode in os.listdir(validateDir):
 			if typeCode in {"audio", "video", "text"}:
 				audioDir = validateDir + typeCode
@@ -94,18 +94,12 @@ class DBPLoadController:
 		validate.process()
 		Log.writeLog(self.config)
 
-		filesets = os.listdir(self.config.directory_accepted)
-		for fileset in filesets:
-			if fileset.endswith(".csv"):
-				filename = fileset.split(".")[0]
-				filesetPrefix = filename.replace("_", "/")
-				self.s3Utility.promoteFileset(self.config.directory_validate, filesetPrefix)
-
 
 	def upload(self):
 		print("********** UPLOADING TO S3 **********", flush=True)
-		self.s3Utility.uploadAllFilesets()
-		TranscodeVideo.transcodeVideoFilesets(self.config)
+		filesets = self._acceptedFilesets(self.config.directory_upload)
+		self.s3Utility.uploadAllFilesets(filesets)
+		TranscodeVideo.transcodeVideoFilesets(self.config, filesets)
 
 
 	def updateFilesetTables(self):
@@ -113,10 +107,9 @@ class DBPLoadController:
 		dbOut = SQLBatchExec(self.config)
 		update = UpdateDBPFilesetTables(self.config, self.db, dbOut)
 		video = UpdateDBPVideoTables(self.config, self.db, dbOut)
-		filesets = update.process()
-		for (typeCode, bibleId, filesetId, cvsFilename) in filesets:
-			filesetPrefix = typeCode + "/" + bibleId + "/" + filesetId
-			hashId = update.processFileset(typeCode, bibleId, filesetId, cvsFilename)
+		filesets = self._acceptedFilesets(self.config.directory_database)
+		for (typeCode, bibleId, filesetId, filesetPrefix, csvFilename) in filesets:
+			hashId = update.processFileset(typeCode, bibleId, filesetId, csvFilename)
 			if typeCode == "video":
 				video.processFileset(filesetPrefix, hashId)
 			dbOut.displayCounts()
@@ -138,6 +131,18 @@ class DBPLoadController:
 		return success
 
 
+	def _acceptedFilesets(self, directory):
+		results = []
+		for typeCode in [f for f in os.listdir(directory) if not f.startswith('.')]:
+			for bibleId in [f for f in os.listdir(directory + typeCode) if not f.startswith('.')]:
+				for filesetId in [f for f in os.listdir(directory + typeCode + os.sep + bibleId) if not f.startswith('.')]:
+					filesetPrefix = typeCode + "/" + bibleId + "/" + filesetId + "/"
+					csvFilename = "%s%s_%s_%s.csv" % (self.config.directory_accepted, typeCode, bibleId, filesetId)
+					if os.path.exists(csvFilename):
+						results.append((typeCode, bibleId, filesetId, filesetPrefix, csvFilename))
+		return results
+
+
 if (__name__ == '__main__'):
 	config = Config()
 	db = SQLUtility(config)
@@ -155,5 +160,12 @@ if (__name__ == '__main__'):
 	else:
 		print("********** Bibles Table Update Failed **********")
 
-
-
+"""
+config = Config()
+db = SQLUtility(config)
+lptsReader = LPTSExtractReader(config)
+ctrl = DBPLoadController(config, db, lptsReader)
+filesets = ctrl._acceptedFilesets(config.directory_complete)
+for (typeCode, bibleId, filesetId, filesetPrefix, csvFilename) in filesets:
+	print(typeCode, bibleId, filesetId, filesetPrefix, csvFilename)
+"""

@@ -8,24 +8,20 @@ from S3Utility import *
 
 class TranscodeVideo:
 
-	def transcodeVideoFilesets(config):
-		directory = config.directory_database
-		for typeCode in os.listdir(directory):
+	def transcodeVideoFilesets(config, filesets):
+		for (typeCode, bibleId, filesetId, filesetPrefix, csvFilename) in filesets:
 			if typeCode == "video":
-				for bibleId in [f for f in os.listdir(directory + typeCode) if not f.startswith('.')]:
-					for filesetId in [f for f in os.listdir(directory + typeCode + os.sep + bibleId) if not f.startswith('.')]:
-						filesetPrefix = typeCode + "/" + bibleId + "/" + filesetId + "/"
-						transcoder = TranscodeVideo(config, filesetPrefix)
-						for filename in [f for f in os.listdir(directory + filesetPrefix) if not f.startswith('.')]:
-							transcoder.createJob(filesetPrefix + filename)
-						done = transcoder.completeJobs()
-						if done:
-							print("Transcode %s succeeded." % (filesetPrefix))
-						else:
-							print("Transcode %s FAILED." % (filesetPrefix))
+				transcoder = TranscodeVideo(config, filesetPrefix)
+				for filename in [f for f in os.listdir(directory + filesetPrefix) if not f.startswith('.')]:
+					transcoder.createJob(filesetPrefix + filename)
+				done = transcoder.completeJobs()
+				if done:
+					print("Transcode %s succeeded." % (filesetPrefix))
+				else:
+					print("Transcode %s FAILED." % (filesetPrefix))
 
 
-	## Consumed by UpdateDBPVideoTable
+	## Used by UpdateDBPVideoTable
 	def getHLSTypes():
 		return ["_stream", "_av720p", "_av480p", "_av360p"]
 
