@@ -126,7 +126,7 @@ class InputReader:
 					resultFileList = []
 					for file in files:
 						if not file.startswith("."):
-							if file not in {"about.html", "index.html", "info.json", "title.json"}:
+							if file not in {"about.html", "index.html", "info.json", "title.json", "metadata.xml"}:
 								filePath = root + os.sep + file
 								filesize = os.path.getsize(filePath)
 								modifiedTS = os.path.getmtime(filePath)
