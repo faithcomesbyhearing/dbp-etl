@@ -1,0 +1,77 @@
+#!/bin/sh
+
+# This script is used to remove S3 data and DBP data in order to put S3 and DBP in a consistent state
+# so that a test can be done with repeatable results.
+
+
+1) One failed fileset for each type.
+2) One successful fileset for each type, with no upload and no update
+3) One successful fileset for each type with partial upload and partial update
+4) One successful fileset for each type with complete upload and complete update
+5) For video must have fileset with Transcode partially or fully deleted.
+6) Video must be done separately 
+7) How do I combine filesets.
+
+ToDo
+
+a) identify filesets for each case
+b) prepare deletion scripts for each that requires removed from s3
+c) prepare deletion scripts for each that requires removed from dbp
+d) prepare scripts to modify LPTS fields. 
+
+# audio/ENGESV/ENGESVN2DA 
+# delete nothing, expect it to succeed with no upload and no update
+
+#audio/ENGESV/ENGESVN2DA16
+# remove gospels from S3 and DBP, so they should succeed in upload and update
+SELECT * FROM bible_files WHERE hash_id IN (SELECT hash_id FROM bible_filesets WHERE id='ENGESVN2DA16')
+AND left(file_name, 3) IN ('B01', 'B02', 'B03', 'B04');
+DELETE FROM bible_files WHERE hash_id IN (SELECT hash_id FROM bible_filesets WHERE id='ENGESVN2DA16')
+AND left(file_name, 3) IN ('B01', 'B02', 'B03', 'B04');
+
+#audio/UNRWFW/UNRWFWP1DA
+# remove fileset from DBP, and S3.  It is only MRK
+SELECT * FROM bible_filesets WHERE id='UNRWFWP1DA';
+DELETE FROM bible_filesets WHERE id='UNRWFWP1DA';
+
+#audio/UNRWFW/UNRWFWP1DA16
+# remove fileset from DBP and s3.  It is only MRK
+SELECT * FROM bible_filesets WHERE id='UNRWFWP1DA16';
+DELETE FROM bible_filesets WHERE id='UNRWFWP1DA16';
+
+#text/AA1WBT/AAIWBT
+# delete nothing, expect it to succeed with no upload and no update
+
+#text/HOCIEM/HOCIEM - remove gospels from s3 and DBP
+SELECT * FROM bible_verses WHERE hash_id IN (SELECT hash_id FROM bible_filesets WHERE id='HOCIEM') 
+AND book_id IN ('MAT', 'MRK', 'LUK', 'JHN');
+DELETE FROM bible_verses WHERE hash_id IN (SELECT hash_id FROM bible_filesets WHERE id='HOCIEM') 
+AND book_id IN ('MAT', 'MRK', 'LUK', 'JHN');
+
+#text/TXQWYI/TXQWYI
+# remove filesets from s3 and DBP, expect it to upload and update
+SELECT * FROM bible_filesets WHERE id='TXQWYI';
+DELETE FROM bible_filesets WHERE id='TXQWYI';
+
+# must be run separately, and use test-video config 
+#video/ENGESV/ENGESVP2DV - remove MRK:1, MRK:2 from S3 and DBP
+SELECT * FROM bible_files WHERE hash_id IN (SELECT hash_id FROM bible_filesets WHERE id='ENGESVP2DV') AND book_id='MRK'
+AND chapter_start < 3;
+DELETE FROM bible_files WHERE hash_id IN (SELECT hash_id FROM bible_filesets WHERE id='ENGESVP2DV') AND book_id='MRK'
+AND chapter_start < 3;
+
+#
+# quarantine
+#
+
+# audio/ENGESV/ENGESVP1DA - MAT chapter 31, error
+
+# audio/SGQPIP/SGQPIPN1DA - has extension mp2
+
+#text/ENGWEBT/ENGWEBT - has no LPTS record
+
+——
+
+write deletion scripts
+
+
