@@ -36,6 +36,7 @@ import os
 import shutil
 import subprocess
 from Config import *
+from TranscodeVideo import *
 
 class S3Utility:
 
@@ -90,6 +91,8 @@ class S3Utility:
 			print("ERROR: Upload of %s to %s failed. MESSAGE: %s" % (filesetPrefix, s3Bucket, response.stderr))
 			return False
 		else:
+			if filesetPrefix.startswith("video"):
+				TranscodeVideo.transcodeVideoFileset(self.config, filesetPrefix)
 			self.promoteFileset(sourceDir, filesetPrefix)
 			return True
 

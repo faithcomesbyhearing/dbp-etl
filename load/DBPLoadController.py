@@ -18,7 +18,6 @@ from SQLBatchExec import *
 from UpdateDBPFilesetTables import *
 from UpdateDBPBiblesTable import *
 from UpdateDBPLPTSTable import *
-from TranscodeVideo import *
 from UpdateDBPVideoTables import *
 
 
@@ -99,7 +98,6 @@ class DBPLoadController:
 		print("********** UPLOADING TO S3 **********", flush=True)
 		filesets = self._acceptedFilesets(self.config.directory_upload)
 		self.s3Utility.uploadAllFilesets(filesets)
-		TranscodeVideo.transcodeVideoFilesets(self.config, filesets)
 
 
 	def updateFilesetTables(self):

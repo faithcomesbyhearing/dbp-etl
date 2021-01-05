@@ -8,17 +8,15 @@ from S3Utility import *
 
 class TranscodeVideo:
 
-	def transcodeVideoFilesets(config, filesets):
-		for (typeCode, bibleId, filesetId, filesetPrefix, csvFilename) in filesets:
-			if typeCode == "video":
-				transcoder = TranscodeVideo(config, filesetPrefix)
-				for filename in [f for f in os.listdir(directory + filesetPrefix) if not f.startswith('.')]:
-					transcoder.createJob(filesetPrefix + filename)
-				done = transcoder.completeJobs()
-				if done:
-					print("Transcode %s succeeded." % (filesetPrefix))
-				else:
-					print("Transcode %s FAILED." % (filesetPrefix))
+	def transcodeVideoFileset(config, filesetPrefix):
+		transcoder = TranscodeVideo(config, filesetPrefix)
+		for filename in [f for f in os.listdir(config.directory_upload + filesetPrefix) if not f.startswith('.')]:
+			transcoder.createJob(filesetPrefix + filename)
+			done = transcoder.completeJobs()
+			if done:
+				print("Transcode %s succeeded." % (filesetPrefix))
+			else:
+				print("Transcode %s FAILED." % (filesetPrefix))
 
 
 	## Used by UpdateDBPVideoTable

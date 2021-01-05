@@ -88,7 +88,7 @@ class UpdateDBPVideoTables:
 		name = filename.split(".")[0]
 		for suffix in suffixes:
 			m3u8Filename =  name + suffix + ".m3u8"
-			s3Key = filesetPrefix + "/" + m3u8Filename
+			s3Key = filesetPrefix + m3u8Filename
 			content = self.s3Utility.getAsciiObject(self.config.s3_vid_bucket, s3Key)
 			m3u8Files[m3u8Filename] = content
 		return m3u8Files
