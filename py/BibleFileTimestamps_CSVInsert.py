@@ -9,6 +9,7 @@
 # 1 = verified by unknown native speaker
 # 2 = verified by non-native speaker
 # 3 = verified by non-speaker (eg members of the text team at FCBH who do this type of thing for a living)
+# 4 = automated spot-checked by native speaker
 # 5 = automated spot-checked by non-native speaker (this is the case of most of the SAB appDef timings)
 # 9 = automated unverified (probably would never put these into the DB, but if I did at least I’d have this indicator of non-confidence)
 
