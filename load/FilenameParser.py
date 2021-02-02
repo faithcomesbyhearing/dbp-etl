@@ -411,7 +411,7 @@ class FilenameParser:
 			## {usfx2}{optionalchap}.html  AC12.html
 			FilenameRegex("text2", r"([A-Z][A-Z0-9])([0-9]{0,3}).(html)"),
 			## {seq}{bookid}.usx
-			FilenameRegex("text3", r"([0-9]{3})?([A-Z0-9][A-Z]{2}).(usx)")
+			FilenameRegex("text3", r"([0-9]{3})?([A-Z0-9]{3}).(usx)")
 		)
 		self.audioTemplates = (
 			## New audio format
