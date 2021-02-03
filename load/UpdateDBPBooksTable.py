@@ -191,6 +191,10 @@ class UpdateDBPBooksTable:
 			bibleDB = SqliteUtility(self.config.directory_accepted + filesetId + ".db")
 			resultSet = bibleDB.select("SELECT code, title, name, chapters FROM tableContents ORDER BY rowId", ())
 			for (bookId, title, name, chapters) in resultSet:
+				if title == None:
+					title = name
+				elif name == None:
+					name = title
 				if firstOTBook and bookId in self.otBooks.keys():
 					firstOTBook = False
 					bookSeq = self.otBooks[bookId]
