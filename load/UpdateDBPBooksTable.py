@@ -50,6 +50,7 @@ class UpdateDBPBooksTable:
 	def __init__(self, config, dbOut):
 		self.config = config
 		self.dbOut = dbOut
+		self.bookNamesEnglish = None
 		self.extraBooks = {
 			"FRT": "001", # Front Matter
 			"INT": "002", # Introductions
@@ -191,10 +192,13 @@ class UpdateDBPBooksTable:
 			bibleDB = SqliteUtility(self.config.directory_accepted + filesetId + ".db")
 			resultSet = bibleDB.select("SELECT code, title, name, chapters FROM tableContents ORDER BY rowId", ())
 			for (bookId, title, name, chapters) in resultSet:
-				if title == None:
+				if title == None and name != None:
 					title = name
-				elif name == None:
+				elif name == None and title != None:
 					name = title
+				elif name == None and title == None:
+					name = self.getBookNameEnglish(bookId)
+					title = name
 				if firstOTBook and bookId in self.otBooks.keys():
 					firstOTBook = False
 					bookSeq = self.otBooks[bookId]
@@ -249,6 +253,15 @@ class UpdateDBPBooksTable:
 					tocBook.name = nameMap.get(tocBook.bookId)
 					tocBook.nameShort = tocBook.name
 		return tocBooks
+
+
+	def getBookNameEnglish(self, bookId):
+		if self.bookNamesEnglish == None:
+			db = SQLUtility(self.config)		
+			sql = ("SELECT book_id, name FROM book_translations WHERE language_id IN"
+				" (SELECT id FROM languages WHERE iso=%s)")
+			self.bookNamesEnglish = db.selectMap(sql, ("eng"))
+		return self.bookNamesEnglish.get(bookId, "Unknown")
 
 
 	## extract sequence of the current bible books table, and merge to tocBooks

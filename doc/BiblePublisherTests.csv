@@ -3,7 +3,7 @@ BULBOB,12/23/2020,OK,OK,
 BULCBV,12/29/2020,OK,OK,
 DEDWYI,12/23/2020,-,-, failed because it had figures
 DIQWYI,12/23/2020,OK,-,"marked USX 2.5, but looks like 3.0"
-ENGTLV,1/4/2021,-,-," fails because heading is null toc1, mt1, imt1"
+ENGTLV,2/2/2021,OK,OK,
 ENGWEB,12/29/2020,OK,OK,
 ERV-ARB (not FCBH),12/29/2020,OK,OK,Retest with FCBH fileset
 ERV-ENG (not FCBH),12/29/2020,OK,OK,Retest with FCBH fileset
@@ -15,4 +15,4 @@ PESNMV (not FCBH),12/29/2020,OK,OK,Retest with FCBH fileset
 RIFNVS,12/23/2020,OK,-,MAT 27:6 verse validation problem
 SDMGFA,12/23/2020,-,-,"failed Publisher line 935 need to support tc3 style, contains table"
 TXQWYI,12/23/2020,OK,OK,
-UKRLPF,12/23/2020,-,-,failed because it contained no table of contents information
+UKRLPF,12/23/2020,OK,OK,
