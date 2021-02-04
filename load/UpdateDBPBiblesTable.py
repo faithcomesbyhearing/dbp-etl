@@ -91,7 +91,7 @@ class UpdateDBPBiblesTable:
 					insertRows.append((languageId, "protestant", numerals, date, scope, script, copyright, bibleId))
 			else:
 				(dbpLanguageId, dbpVersification, dbpNumerals, dbpDate, dbpScope, dbpScript, dbpCopyright) = dbpBibleMap[bibleId]
-				if languageId != dbpLanguageId:
+				if languageId != dbpLanguageId and languageId != None:
 					updateRows.append(("language_id", languageId, dbpLanguageId, bibleId))
 				if numerals != dbpNumerals:
 					updateRows.append(("numeral_system_id", numerals, dbpNumerals, bibleId))
