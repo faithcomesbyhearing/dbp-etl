@@ -1,6 +1,8 @@
 FilesetId,Date Tested,Processed,Validated,Errors
+BO1CAP,2/3/2021,OK,OK,
 BULBOB,12/23/2020,OK,OK,
 BULCBV,12/29/2020,OK,OK,
+CKJWBT,2/3/2021,-,-,contains figure elements
 DEDWYI,12/23/2020,-,-, failed because it had figures
 DIQWYI,12/23/2020,OK,-,"marked USX 2.5, but looks like 3.0"
 ENGTLV,2/2/2021,OK,OK,
@@ -10,9 +12,13 @@ ERV-ENG (not FCBH),12/29/2020,OK,OK,Retest with FCBH fileset
 HOCIEM,12/29/2020,OK,OK,
 HYWWAV,12/29/2020,OK,OK,
 KDTWYI,12/29/2020,OK,OK,
+KIUBSK,2/3/2021,OK,OK,
 KQEBLI,12/23/2020,OK,OK,
+MENBSL,2/3/2021,-,-,contains figure elements
 PESNMV (not FCBH),12/29/2020,OK,OK,Retest with FCBH fileset
+PLUWBT,2/3/2021,OK,-,Verse validation problem at LUK 6:12
 RIFNVS,12/23/2020,OK,-,MAT 27:6 verse validation problem
 SDMGFA,12/23/2020,-,-,"failed Publisher line 935 need to support tc3 style, contains table"
 TXQWYI,12/23/2020,OK,OK,
 UKRLPF,12/23/2020,OK,OK,
+VIELHG,2/3/2021,-,-,Corrupted JHN it cannot be processed.
