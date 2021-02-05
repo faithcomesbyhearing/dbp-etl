@@ -134,6 +134,7 @@ class SQLBatchExec:
 			path = tranDir + "Trans-" + datetime.today().strftime(pattern) + "-" + batchName + ".sql"
 			print("Transactions", path)
 			tranFile = open(path, "w")
+			tranFile.write("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;\n")
 			tranFile.write("START TRANSACTION;\n")
 			for statement in self.statements:
 				tranFile.write(statement + "\n")
