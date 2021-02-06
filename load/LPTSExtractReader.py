@@ -65,6 +65,22 @@ class LPTSExtractReader:
 		return bibleIdMap
 
 
+	## Generates a Map Records where stock number is the Key {stockNum: LPTSRecord}
+	def getStockNumberMap(self):
+		stockNumMap = {}
+		for rec in self.resultSet:
+			stockNum = rec.Reg_StockNumber()
+			if stockNum != None:
+				if stockNumMap.get(stockNum) == None:
+					stockNumMap[stockNum] = rec
+				else:
+					print("ERROR: Duplicate Stock Num", stockNum);
+			else:
+				print("ERROR: Record has no stock number")
+		return stockNumMap
+
+
+
 	## Returns one (record, index) for typeCode, bibleId, filesetId
 	## This is a strict method that only returns when BibleId matches and status is Live
 	def getLPTSRecord(self, typeCode, bibleId, filesetId):
@@ -282,6 +298,26 @@ class LPTSRecord:
 			status = self.record.get(statusKey)
 			if results.get(damId) == None or status in {"Live", "live"}:
 				results[damId] = status
+		return results
+
+	## This is for text only, and is identical to DamIdMap, except it returns 10 characters
+	def TextDamIdMap(self, index):
+		if not index in {1, 2, 3}:
+			print("ERROR: Unknown DamId index '%s', 1,2, or 3 expected." % (index))
+			sys.exit()
+		if index == 1:
+			damIdDict = LPTSRecord.text1DamIdDict
+		elif index == 2:
+			damIdDict = LPTSRecord.text2DamIdDict
+		elif index == 3:
+			damIdDict = LPTSRecord.text3DamIdDict
+		hasKeys = set(damIdDict.keys()).intersection(set(self.record.keys()))
+		results = {}
+		for key in hasKeys:
+			statusKey = damIdDict[key]
+			damId = self.record[key]
+			status = self.record.get(statusKey)
+			results[damId] = status
 		return results
 
 	def AltName(self):
@@ -580,8 +616,22 @@ class LPTSRecord:
 if (__name__ == '__main__'):
 	config = Config()
 	reader = LPTSExtractReader(config)
-	reader.getFieldNames()
+	stockNumMap = reader.getStockNumberMap()
+	for stockNum in sorted(stockNumMap.keys()):
+		record = stockNumMap[stockNum]
+		print(stockNum)
+		for index in [1, 2, 3]:
+			damIdMap = record.TextDamIdMap(index)
+			for (damId, status) in damIdMap.items():
+				bibleId = record.DBP_EquivalentByIndex(index)
+				print('\t', index, bibleId, damId, status)
 
+"""
+if (__name__ == '__main__'):
+	config = Config()
+	reader = LPTSExtractReader(config)
+	reader.getFieldNames()
+"""
 """
 if (__name__ == '__main__'):
 	config = Config()
