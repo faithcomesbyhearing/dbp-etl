@@ -15,28 +15,45 @@
 #			chapters.txt
 #			verses.txt
 #
-"""
-Is there a way to scan the top level directory of an S3 bucket?
 
-
-"""
 import sys
+import subprocess
 import boto3
 from Config import *
 
 class TestBiblePublisher:
 
-	def __init__(self, config, testDirectory, stockNum):
+	def __init__(self, config, testDirectory, bucket, stockNum):
 		self.config = config
 		self.testDirectory = testDirectory
+		self.bucket = bucket
 		self.stockNum = stockNum
 		print(testDirectory, stockNum)
+		self.publisherRoot = os.path.dirname(os.path.dirname(config.publisher_js))
+		print("publisherRoot", self.publisherRoot)
 		session = boto3.Session(profile_name=config.s3_aws_profile)
 		self.client = session.client('s3')
+		self.programs = ["publish", "xml", "usx", "html", "verses", "toc"]
 
-	def listStockNums(self, bucket):
+	def syncTextFileset(self):
+		directory = self.testDirectory + "/" + self.stockNum
+		if os.path.isdir(directory):
+			print("fileset", self.stockNum, "present.")
+		else:
+			stockNums = self.listStockNums();
+			for stockNum in stockNums:
+				print(stockNum)
+			stockNums2 = self.listStockNums2(stockNums[0])
+			for stockNum in stockNums2:
+				print(stockNum)
+			objects = self.listObjects(stockNums2[0])
+			for obj in objects:
+				print(obj)
+			self.downloadObjects(objects)
+
+	def listStockNums(self):
 		stockNums = []
-		request = { 'Bucket': bucket, 'Delimiter': '_', 'MaxKeys':1000 }
+		request = { 'Bucket': self.bucket, 'Delimiter': '_', 'MaxKeys':1000 }
 		hasMore = True
 		while hasMore:
 			response = self.client.list_objects_v2(**request)
@@ -47,9 +64,9 @@ class TestBiblePublisher:
 				request['ContinuationToken'] = response['NextContinuationToken']
 		return stockNums
 
-	def listStockNums2(self, bucket, prefix):
+	def listStockNums2(self, prefix):
 		stockNums = []
-		request = { 'Bucket': bucket, 'Delimiter': '_', 'MaxKeys':1000, 'Prefix': prefix }
+		request = { 'Bucket': self.bucket, 'Delimiter': '_', 'MaxKeys':1000, 'Prefix': prefix }
 		hasMore = True
 		while hasMore:
 			response = self.client.list_objects_v2(**request)
@@ -60,9 +77,9 @@ class TestBiblePublisher:
 				request['ContinuationToken'] = response['NextContinuationToken']
 		return stockNums
 
-	def listObjects(self, bucket, prefix):
+	def listObjects(self, prefix):
 		objects = []
-		request = { 'Bucket': bucket, 'MaxKeys':1000, 'Prefix': prefix }
+		request = { 'Bucket': self.bucket, 'MaxKeys':1000, 'Prefix': prefix }
 		hasMore = True
 		while hasMore:
 			response = self.client.list_objects_v2(**request)
@@ -71,85 +88,54 @@ class TestBiblePublisher:
 			hasMore = response['IsTruncated']
 			if hasMore:
 				request['ContinuationToken'] = response['NextContinuationToken']
-		return objects				
+		return objects
 
-"""
-		this.fs = require('fs');
-		this.child = require('child_process');
-		this.directory = directory;
-		this.versionId = versionId;
-		this.versions = [];
-		this.programs = ['BuildPublisher', 'XMLTokenizerTest', 'USXParserTest', 'HTMLValidator', 
-					'VersesValidator', 'StyleUseValidator', 'TableContentsValidator' ];//, 'ConcordanceValidator'];
-		this.programs = ['BuildPublisher'];
-		//session = boto3.Session(profile_name=config.s3_aws_profile)
-		//self.client = session.client('s3')
-	}
-	execute() {
-		//try:
-		//	print("Download %s, %s to %s" % (s3Bucket, s3Key, filename))
-		//	self.client.download_file(s3Bucket, s3Key, filename)
-		//	print("Done With Download")
-		//except Exception as err:
-		//	print("ERROR: Download %s failed with error %s" % (s3Key, err))
+	def downloadObjects(self, keys):
+		directory = self.testDirectory + "/" + self.stockNum
+		os.mkdir(directory)
+		for key in keys:
+			try:
+				filename = directory + "/" + key
+				print("Download %s, %s to %s" % (self.bucket, key, filename))
+				self.client.download_file(self.bucket, key, filename)
+				print("Done With Download")
+			except Exception as err:
+				print("ERROR: Download %s failed with error %s" % (key, err))
 
-		// unzip version
-		this.executeNext(-1);
-	}
-	downloadFile() {
-		session = boto3.Session(profile_name=config.s3_aws_profile)
-		self.client = session.client('s3')
-	}
-	executeNext(programIndex) {
-		if (++programIndex < this.programs.length) {
-			this.executeOne(programIndex);
-		}
-	}
-	executeOne(programIndex) {
-		var that = this;
-		var program = this.programs[programIndex];
-		const command = this.commandLine(program, this.versionId);
-		console.log(command);
-		var options = {maxBuffer:1024*1024*8}; // process killed with no error code if buffer size exceeded
-		this.child.exec(command, options, function(error, stdout, stderr) {
-			if (error) {
-				that.errorMessage(command, error);
-			}
-			console.log(output);
-			that.executeNext(programIndex);
-		});
-	}
-	commandLine(program, version) {
-		const rootDir = this.directory + "/" + version;
-		if (program === "unzip") {
-			return `${program} ${version}.zip -d ${this.directory}/`
-		} else if (program === "BuildPublisher") {
-			return `../publish/${program}.sh ${rootDir}/ ${rootDir}/ ${version} eng null ltr`;
-		} else if (program === "XMLTokenizerTest") {
-			return `${program}.sh ${rootDir}/source ${rootDir}/ ${rootDir}/output ${version}`;
-		} else if (program === "USXParserTest") {
-			return `${program}.sh ${rootDir}/source ${rootDir}/ ${rootDir}/output ${version}`;
-		} else if (program === "HTMLValidator") {
-			return `${program}.sh ${rootDir}/source ${rootDir}/ ${rootDir}/output ${version}`;
-		} else if (program === "StyleUseValidator") {
-			return `${program}.sh ${rootDir}/ ${rootDir}/output ${version}`;
-		} else if (program === "VersesValidator") {
-			return `${program}.sh ${rootDir}/ ${rootDir}/output ${version}`;
-		} else if (program === "TableContentsValidator") {
-			return `${program}.sh ${rootDir}/ ${version}`;
-		} else if (program === "ConcordanceValidator") {
-			return `${program}.sh ${rootDir}/ ${rootDir}/output ${version}`;
-		} else {
-			return `${program}.sh ${rootDir}/source ${rootDir}/ ${rootDir}/output ${version}`;
-		}
-	}
-	errorMessage(description, version, program, error) {
-		console.log('ERROR:', description, JSON.stringify(error));
-		console.log(version, program);
-		process.exit(1);
-	}
-}
-"""
+	def execute(self, program):
+		cmd = self.command(program)
+		print("cmd:", cmd)
+		response = subprocess.run(cmd, shell=False, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=2400)
+		success = response.returncode == 0
+		print("stderr:", str(response.stderr.decode('utf-8')))
+		print(str(response.stdout.decode('utf-8')))
+
+	def command(self, program):
+		if program == "publish":
+			exePath = "%s/publish" % (self.publisherRoot)
+		else:
+			exePath = "%s/validate" % (self.publisherRoot)
+		print("exePath", exePath)
+		os.chdir(exePath)
+		source = self.testDirectory + "/text/" + self.stockNum + "/" + self.stockNum
+		if program == "publish":
+			return ["BuildPublisher.sh", source, source, self.stockNum, "eng", "en", "ltr"]
+		elif program == "xml":
+			return ["XMLTokenizerTest.sh", source, source, source + "/output", self.stockNum]
+		elif program == "usx":
+			return ["USXParserTest.sh", source, source, source + "/output", self.stockNum]
+		elif program == "html":
+			return ["HTMLValidator.sh", source, source, source + "/output", self.stockNum]
+		elif program == "style":
+			return ["StyleUseValidator.sh", source, source + "/output", self.stockNum]
+		elif program == "verses":
+			return ["VersesValidator.sh", source, source + "/output", self.stockNum]
+		elif program == "toc":
+			return ["TableContentsValidator.sh", source, self.stockNum]
+		elif program == "concordance":
+			return ["ConcordanceValidator.sh", source, source + "/output", self.stockNum]
+		else:
+			print("ERROR: Unknown program %s" % (program))
 
 if len(sys.argv) < 4:
 	print("Usage: python3 TestBiblePublisher.js  config_profile root_directory  stockNum")
@@ -159,14 +145,8 @@ rootDirectory = sys.argv[2]
 stockNum = sys.argv[3]
 
 config = Config()
-test = TestBiblePublisher(config, rootDirectory, stockNum);
-stockNums = test.listStockNums("chnunvn2da.shortsands.com");
-for stockNum in stockNums:
-	print(stockNum)
-stockNums2 = test.listStockNums2("chnunvn2da.shortsands.com", stockNums[0])
-for stockNum in stockNums2:
-	print(stockNum)
-objects = test.listObjects("chnunvn2da.shortsands.com", stockNums2[0])
-for obj in objects:
-	print(obj)
+test = TestBiblePublisher(config, rootDirectory, "chnunvn2da.shortsands.com", stockNum);
+test.syncTextFileset()
+for program in test.programs:
+	test.execute(program)
 
