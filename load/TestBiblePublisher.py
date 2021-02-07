@@ -138,15 +138,22 @@ class TestBiblePublisher:
 			print("ERROR: Unknown program %s" % (program))
 
 if len(sys.argv) < 4:
-	print("Usage: python3 TestBiblePublisher.js  config_profile root_directory  stockNum")
+	print("Usage: python3 TestBiblePublisher.js  config_profile root_directory  stockNum  [program]")
 	sys.exit()
 
 rootDirectory = sys.argv[2]
 stockNum = sys.argv[3]
+if len(sys.argv) > 4:
+	program = sys.argv[4]
+else:
+	program = None
 
 config = Config()
 test = TestBiblePublisher(config, rootDirectory, "chnunvn2da.shortsands.com", stockNum);
 test.syncTextFileset()
-for program in test.programs:
+if program != None:
 	test.execute(program)
+else:
+	for program in test.programs:
+		test.execute(program)
 
