@@ -4,9 +4,8 @@
 #
 # ROOT_DIR/
 #	{filesetId}/
-#		source/
-#			*.usx
-#			metadata.xml
+#		*.usx
+#		metadata.xml
 #		{filesetId}.db
 #		output/
 #			xml
