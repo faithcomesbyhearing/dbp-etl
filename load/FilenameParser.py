@@ -178,7 +178,7 @@ class Filename:
 
 	def setType(self, typ):
 		self.type = typ
-		if typ not in {"mp3", "html", "mp4", "usx"}:
+		if typ not in {"mp3", "opus", "webm", "html", "mp4", "usx"}:
 			self.errors.append("unknown type .%s" % (typ))
 
 
@@ -416,55 +416,55 @@ class FilenameParser:
 		self.audioTemplates = (
 			## New audio format
 			## {filesetid}_{A/B}{ordering}_{USFM}_{chap_start}[_{verse_start}-{chapter_end}_{verse_end}].mp3
-			FilenameRegex("audio99", r"([A-Z0-9]+)_([AB][0-9]+)_([A-Z]+)_([0-9]+).(mp3)"),
-			FilenameRegex("audio100", r"([A-Z0-9]+)_([AB][0-9]+)_([A-Z]+)_([0-9]+)_([0-9]+)-([0-9]+)_([0-9]+).(mp3)"),
+			FilenameRegex("audio99", r"([A-Z0-9]+)_([AB][0-9]+)_([A-Z]+)_([0-9]+).(mp3|opus|webm)"),
+			FilenameRegex("audio100", r"([A-Z0-9]+)_([AB][0-9]+)_([A-Z]+)_([0-9]+)_([0-9]+)-([0-9]+)_([0-9]+).(mp3|opus|webm)"),
 			## using three did not pick up more than 2, but I think it will.
 			## {bookseq}___{chap}_{bookname}____{damid}.mp3   B01___01_Matthew_____ENGGIDN2DA.mp3
-			FilenameRegex("audio101", r"([AB][0-9]{2})_+([0-9]{2,3})_+([1-4]?[A-Za-z\-]+)_+([A-Z0-9]+).(mp3)"),
+			FilenameRegex("audio101", r"([AB][0-9]{2})_+([0-9]{2,3})_+([1-4]?[A-Za-z\-]+)_+([A-Z0-9]+).(mp3|opus|webm)"),
 			## {bookseq}___{chap}_{bookname}____{damid}.mp3   B01___01_1CorinthiansENGGIDN2DA.mp3
-			FilenameRegex("audio102", r"([AB][0-9]{2})_+([0-9]{2,3})_+([1-4]?[A-Za-z\-]+[a-z])([A-Z0-9]+).(mp3)"),
+			FilenameRegex("audio102", r"([AB][0-9]{2})_+([0-9]{2,3})_+([1-4]?[A-Za-z\-]+[a-z])([A-Z0-9]+).(mp3|opus|webm)"),
 			## {bookseq}___{chap}_{bookname1}_{bookname2}____{damid}.mp3   B01___01_San_Mateo___ACCIBSN1DA.mp3			
-			FilenameRegex("audio103", r"([AB][0-9]{2})_+([0-9]{2,3})_+([1-4]?[A-Za-z]+)_([1-4]?[A-Za-z]+)_+([A-Z0-9]+).(mp3)"),
+			FilenameRegex("audio103", r"([AB][0-9]{2})_+([0-9]{2,3})_+([1-4]?[A-Za-z]+)_([1-4]?[A-Za-z]+)_+([A-Z0-9]+).(mp3|opus|webm)"),
 
 ## Rename 106, 107, 108 to be a specific name
 			## {bookseq}_{bookname}_{chap}_{damid}.mp3   B01_Genesis_01_S1COXWBT.mp3
-			FilenameRegex("audioCOXWBT", r"([AB][0-9]{1,2})_([1-4]?[A-Za-z]+)_([0-9]+)_([A-Z0-9]+).(mp3)"),
+			FilenameRegex("audioCOXWBT", r"([AB][0-9]{1,2})_([1-4]?[A-Za-z]+)_([0-9]+)_([A-Z0-9]+).(mp3|opus|webm)"),
 
 			## {misc}_{damid}_Set_{fileseq}_{bookname}_{chap}_{verse_start}-{verse_end}.mp3   Nikaraj_P2KFTNIE_Set_051_Luke_21_1-19.mp3
-			FilenameRegex("audioBJJNEI", r"([A-Za-z]+)_([A-Z0-9]+)_Set_([0-9]{3})_([A-Za-z]+)_([0-9]{2,3})_([0-9]{1,2})-([0-9]{1,2}).(mp3)"),
+			FilenameRegex("audioBJJNEI", r"([A-Za-z]+)_([A-Z0-9]+)_Set_([0-9]{3})_([A-Za-z]+)_([0-9]{2,3})_([0-9]{1,2})-([0-9]{1,2}).(mp3|opus|webm)"),
 
 			## Set_{fileseq}_{bookname}_{chapter}_{versestart}-{verseend}__{damid}.mp3  Set_003_Luke_01_26-38__YMRWINP1DA.mp3
-			FilenameRegex("audioYMRWIN", r"Set_([0-9]{3})_([A-Za-z0-9]+)_([0-9]{1,3})_([0-9]{1,2})-([0-9]{1,2})_+([A-Z0-9]+).(mp3)"),
+			FilenameRegex("audioYMRWIN", r"Set_([0-9]{3})_([A-Za-z0-9]+)_([0-9]{1,3})_([0-9]{1,2})-([0-9]{1,2})_+([A-Z0-9]+).(mp3|opus|webm)"),
 
 			## {seq}_{bookid}_{chapter}_{verse}_{verse}_Set|SET_{setnum}_damid.mp3  096_GEN_045_1-15_Set_98____SNMNVSP1DA.mp3
-			FilenameRegex("audioSNMNVS", r"([0-9]{3})_([A-Z1-4]{3})_([0-9]{3})_([0-9]{1,2})[abc]?-([0-9]{1,2})[abc]?_S[Ee][Tt]_?[0-9]+_+([A-Z1]+).(mp3)"),
+			FilenameRegex("audioSNMNVS", r"([0-9]{3})_([A-Z1-4]{3})_([0-9]{3})_([0-9]{1,2})[abc]?-([0-9]{1,2})[abc]?_S[Ee][Tt]_?[0-9]+_+([A-Z1]+).(mp3|opus|webm)"),
 
 			## B01___{bookseq}_{bookname}_{chapter}_{verse}_{verse}{title}___{damid}.mp3   B01___13_Genesis_9_8_16GodsPromisetoNoah__S1PRSGNN.mp3
-			FilenameRegex("audioPRSGNN", r"B01_+([0-9]{2})_([A-Za-z]+)_([0-9]{1,3})_.*_+([A-Z0-9]+).(mp3)"),
+			FilenameRegex("audioPRSGNN", r"B01_+([0-9]{2})_([A-Za-z]+)_([0-9]{1,3})_.*_+([A-Z0-9]+).(mp3|opus|webm)"),
 
 			## {fileseq}__{chapter}_{bookname}_Capitulo___{damid}.mp3  088__05_2Reyes_Capitulo________NHXNTVS1DA.mp3
-			FilenameRegex("audioNHX", r"([0-9]{3})_+([0-9]{2})_([A-Za-z1-4]+)_Capitulo_+([A-Z0-9]+).(mp3)"),
+			FilenameRegex("audioNHX", r"([0-9]{3})_+([0-9]{2})_([A-Za-z1-4]+)_Capitulo_+([A-Z0-9]+).(mp3|opus|webm)"),
 
 			## A01_{fileseq}_{bookname}_{chapter}___{damid}.mp3   A01__171_Salmo_51________S1HUVTBL.mp3
-			FilenameRegex("audioHUVTBL", r"A01__([0-9]{3})_([Ss]almo)_([0-9]{1,3})_+([A-Z0-1]+).(mp3)"),
+			FilenameRegex("audioHUVTBL", r"A01__([0-9]{3})_([Ss]almo)_([0-9]{1,3})_+([A-Z0-1]+).(mp3|opus|webm)"),
 
 			## {fileseq}_O2_KDZ_ESV_{bookname}_{chapter}.(mp3)  1230_O2_KDZ_ESV_PROVERBS_4.mp3
-			FilenameRegex("audioENGEKI", r"([0-9]{4})_O2_KDZ_ESV_([A-Z]+)_([0-9]{1,3}).(mp3)"),
+			FilenameRegex("audioENGEKI", r"([0-9]{4})_O2_KDZ_ESV_([A-Z]+)_([0-9]{1,3}).(mp3|opus|webm)"),
 
 			## A01__{fileseq}__{spanishbookid}_{chapter}_{chapter}?__{damid}.mp3  A01__012_GEN_42_50__S1DESWBT.mp3
-			FilenameRegex("audioDESWBT", r"A01__([0-9]{3})_([A-Z1-4]{3})_([0-9]{1,3}).*_+([A-Z0-1]+).(mp3)"),
+			FilenameRegex("audioDESWBT", r"A01__([0-9]{3})_([A-Z1-4]{3})_([0-9]{1,3}).*_+([A-Z0-1]+).(mp3|opus|webm)"),
 
 			## {bookseq}_{fileseq}__{bookname}_{chapter}___{damid}.mp3  A13_131__2Reis_02________S2RAMTBL.mp3
-			FilenameRegex("audioRAMWBT", r"([AB][0-9]{2})_([0-9]{3})_+([A-Za-z1-4]+)_([0-9]{1,3})_+([A-Z0-9]+).(mp3)"),
+			FilenameRegex("audioRAMWBT", r"([AB][0-9]{2})_([0-9]{3})_+([A-Za-z1-4]+)_([0-9]{1,3})_+([A-Z0-9]+).(mp3|opus|webm)"),
 
 			## A01_{seq3}_title_title_title__damid.mp3
-			FilenameRegex("audioStory1", r"A01_+([0-9]{3})_([A-Za-z0-9_]+)_+([A-Z0-9]+).(mp3)"),
+			FilenameRegex("audioStory1", r"A01_+([0-9]{3})_([A-Za-z0-9_]+)_+([A-Z0-9]+).(mp3|opus|webm)"),
 
 			## {seq2,3}_title_title_title_damid.mp3
-			FilenameRegex("audioStory2", r"([0-9]{2,3})_([A-Za-z0-9_]+)_([A-Z0-9]+).(mp3)"),
+			FilenameRegex("audioStory2", r"([0-9]{2,3})_([A-Za-z0-9_]+)_([A-Z0-9]+).(mp3|opus|webm)"),
 
 			## {seq2,4}_title_tiltle_title.mp3
-			FilenameRegex("audioStory3", r"([0-9]{2,4})_([A-Za-z0-9_ \'\-&\(\)]+).(mp3)"),
+			FilenameRegex("audioStory3", r"([0-9]{2,4})_([A-Za-z0-9_ \'\-&\(\)]+).(mp3|opus|webm)"),
 		)
 
 
