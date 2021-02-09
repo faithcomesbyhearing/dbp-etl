@@ -612,7 +612,7 @@ class LPTSRecord:
 	def WebHubVideo(self):
 		return self.record.get("WebHubVideo")
 
-
+"""
 if (__name__ == '__main__'):
 	config = Config()
 	reader = LPTSExtractReader(config)
@@ -625,7 +625,7 @@ if (__name__ == '__main__'):
 			for (damId, status) in damIdMap.items():
 				bibleId = record.DBP_EquivalentByIndex(index)
 				print('\t', index, bibleId, damId, status)
-
+"""
 """
 if (__name__ == '__main__'):
 	config = Config()
@@ -650,3 +650,28 @@ if (__name__ == '__main__'):
 			#if len(prefixSet) > 1:
 			#	print("ERROR: More than one DamId prefix in set %s" % (",".join(prefixSet)))
 """
+# Find bible_ids that exist in multiple stock numbers
+# Find stock numbers that contain multiple bible_ids
+if (__name__ == '__main__'):
+	bibleIdMap = {}
+	config = Config()
+	reader = LPTSExtractReader(config)
+	for rec in reader.resultSet:
+		#print(rec.Reg_StockNumber(), rec.DBP_Equivalent(), rec.DBP_Equivalent2())
+		#if len(rec.Reg_StockNumber()) != 9:
+		#	print("Different Stocknumber", rec.Reg_StockNumber())
+		stockNo = rec.Reg_StockNumber()
+		bibleId1 = rec.DBP_Equivalent()
+		bibleId2 = rec.DBP_Equivalent2()
+		#if bibleId2 != None:
+		#	print("StockNo:", stockNo, "BibleId 1:", bibleId1, "BibleId 2:", bibleId2)
+		#if bibleId1 in bibleIdMap.keys():
+		#	priorStockNum = bibleIdMap[bibleId1]
+		#	print("StockNo:", stockNo, "StockNo:", priorStockNum, "BibleId1:", bibleId1)
+		if bibleId2 in bibleIdMap.keys():
+			priorStockNum = bibleIdMap[bibleId2]
+			print("StockNo:", stockNo, "StockNo:", priorStockNum, "BibleId2:", bibleId2)
+		if bibleId1 != None:
+			bibleIdMap[bibleId1] = stockNo
+		if bibleId2 != None:
+			bibleIdMap[bibleId2] = stockNo
