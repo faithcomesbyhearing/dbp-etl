@@ -91,7 +91,7 @@ class Config:
 			self.directory_accepted = self._getPath("directory.accepted")
 
 			self.directory_errors = self._getPath("directory.errors")
-			self.error_limit_pct = self._getFloat("error.limit.pct")
+			#self.error_limit_pct = self._getFloat("error.limit.pct")
 			self.filename_accept_errors = self._getPath("filename.accept.errors")
 
 			self.filename_datetime = self._get("filename.datetime")

@@ -47,8 +47,12 @@ class FilenameReducer:
 		if self.filePrefix in FilenameReducer.acceptErrorSet:
 			acceptedList = self.fileList
 			quarantineList = []
+		elif errorCount > 0:
+			acceptedList = []
+			quarantineList = self.fileList
 		else:
-			(acceptedList, quarantineList) = self.quarantineErrors(self.fileList, errorCount)
+			acceptedList = self.fileList
+			quarantineList = []
 
 		if len(acceptedList) > 0:
 			(acceptedList, duplicateList) = self.removeDuplicates(acceptedList)
@@ -64,20 +68,6 @@ class FilenameReducer:
 			logger.message(Log.INFO, "%d Files moved to duplicate %d accepted." % (len(duplicateList), len(acceptedList)))
 		if len(acceptedList) > 0:
 			self.writeOutput("accepted", acceptedList)
-
-
-	def quarantineErrors(self, fileList, errorCount):
-		quarantineList = []
-		acceptedList = []
-		if errorCount == 0 or len(fileList) == 0:
-			errPct = 0.0
-		else:
-			errPct = 100.00 * errorCount / len(fileList)
-		if errPct >= self.config.error_limit_pct:
-			quarantineList = fileList
-		else:
-			acceptedList = fileList
-		return (acceptedList, quarantineList)
 
 
 	def removeDuplicates(self, fileList):
