@@ -16,14 +16,14 @@ import configparser
 class Config:
 
 	def __init__(self):
-		home = os.environ.get('HOME') # unix
-		if home == None:
-			home = os.environ.get('HOMEPATH') # windows
-		if home == None:
+		self.home = os.environ.get('HOME') # unix
+		if self.home == None:
+			self.home = os.environ.get('HOMEPATH') # windows
+		if self.home == None:
 			print("ERROR: Environment variable HOME or HOMEPATH must be set to a directory.")
 			sys.exit()
 
-		configFile = os.path.join(home, "dbp-etl.cfg")
+		configFile = os.path.join(self.home, "dbp-etl.cfg")
 		if not os.path.exists(configFile):
 			print("ERROR: Config file '%s' does not exist." % (configFile))
 			sys.exit()
@@ -67,7 +67,7 @@ class Config:
 		self.s3_aws_profile = self._get("s3.aws_profile")
 
 		if programRunning in {"AudioHLS.py"}:
-			self.directory_audio_hls = self._getPath("directory.audio_hls") #"%s/FCBH/files/tmp" % (os.environ["HOME"])
+			self.directory_audio_hls = self._getPath("directory.audio_hls") #"%s/FCBH/files/tmp" % (self.home)
 			self.audio_hls_duration_limit = self._getInt("audio.hls.duration.limit") #10  #### Must become command line param
 
 		else:
@@ -110,7 +110,7 @@ class Config:
 		value = self._get(name)
 		path = value.replace("/", os.path.sep)
 		if path.startswith("~"):
-			path = path.replace("~", os.environ["HOME"])
+			path = path.replace("~", self.home)
 		if not os.path.exists(path):
 			print("ERROR: path %s for %s does not exist" % (path, name))
 			sys.exit()
