@@ -148,7 +148,7 @@ else:
 	program = None
 
 config = Config()
-test = TestBiblePublisher(config, rootDirectory, "chnunvn2da.shortsands.com", stockNum);
+test = TestBiblePublisher(config, rootDirectory, "test-dbp", stockNum);
 test.syncTextFileset()
 if program != None:
 	test.execute(program)

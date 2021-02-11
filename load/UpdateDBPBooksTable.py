@@ -190,6 +190,7 @@ class UpdateDBPBooksTable:
 			extraBook = True
 			priorBookSeq = None
 			bibleDB = SqliteUtility(self.config.directory_accepted + filesetId + ".db")
+			## add heading to this logic
 			resultSet = bibleDB.select("SELECT code, title, name, chapters FROM tableContents ORDER BY rowId", ())
 			for (bookId, title, name, chapters) in resultSet:
 				if title == None and name != None:
@@ -291,11 +292,15 @@ class UpdateDBPBooksTable:
 				if toc.nameShort != dbpNameShort:
 					nameShort = toc.nameShort.replace("'", "\\'")
 					updateRows.append(("name_short", nameShort, dbpNameShort, bibleId, toc.bookId))
+				if toc.chapters != dbpChapters:
+					updateRows.append(("chapters", toc.chapters, dbpChapters, bibleId, toc.bookId))
 
 			elif typeCode == "audio":
 				(dbpBookId, dbpBookSeq, dbpName, dbpNameShort, dbpChapters) = bibleBookMap[toc.bookId]	
 				if toc.bookSeq != dbpBookSeq:
 					updateRows.append(("book_seq", toc.bookSeq, dbpBookSeq, bibleId, toc.bookId))
+				if toc.chapters != dbpChapters:
+					updateRows.append(("chapters", toc.chapters, dbpChapters, bibleId, toc.bookId))
 
 		sql = ("SELECT distinct book_id FROM bible_files bf"
 			" JOIN bible_fileset_connections bfc ON bf.hash_id = bfc.hash_id"
