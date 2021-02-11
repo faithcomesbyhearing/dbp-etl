@@ -190,9 +190,10 @@ class UpdateDBPBooksTable:
 			extraBook = True
 			priorBookSeq = None
 			bibleDB = SqliteUtility(self.config.directory_accepted + filesetId + ".db")
-			## add heading to this logic
-			resultSet = bibleDB.select("SELECT code, title, name, chapters FROM tableContents ORDER BY rowId", ())
-			for (bookId, title, name, chapters) in resultSet:
+			resultSet = bibleDB.select("SELECT code, heading, title, name, chapters FROM tableContents ORDER BY rowId", ())
+			for (bookId, heading, title, name, chapters) in resultSet:
+				if name == None and heading != None:
+					name = heading
 				if title == None and name != None:
 					title = name
 				elif name == None and title != None:
