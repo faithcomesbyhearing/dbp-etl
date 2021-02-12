@@ -36,7 +36,8 @@ class UpdateDBPBiblesTable:
 		self.scriptNameMap = self.db.selectMap("SELECT lpts_name, script_id FROM lpts_script_codes", ())
 		self.numeralIdSet = self.db.selectSet("SELECT id FROM numeral_systems", ())
 		self.sizeCodeMap = self.db.selectMapList("SELECT id, set_size_code FROM bible_filesets", ())	
-		resultSet = self.db.select("SELECT lower(l.iso), lower(t.name), l.id FROM languages l,language_translations t WHERE l.id=t.language_source_id ORDER BY l.id desc", ())
+		resultSet = self.db.select("SELECT lower(l.iso), lower(t.name), l.id FROM languages l,language_translations t"
+			" WHERE l.id=t.language_source_id AND priority = 9 ORDER BY l.id desc", ())
 		self.languageMap1 = {}
 		for (iso, name, langId) in resultSet:
 			self.languageMap1[(iso, name)] = langId
@@ -123,6 +124,7 @@ class UpdateDBPBiblesTable:
 			langName = lptsRecord.LangName()
 			langName = langName.lower() if langName != None else None
 			result = self.languageMap1.get((iso, langName))
+			#print("languageMap1", bibleId, iso, langName, result)
 			if result != None:
 				final.add(result)
 		if len(final) == 0:
@@ -132,6 +134,7 @@ class UpdateDBPBiblesTable:
 				langName = lptsRecord.LangName()
 				langName = langName.lower() if langName != None else None
 				result = self.languageMap2.get((iso, langName))
+				#print("languageMap2", bibleId, iso, langName, result)
 				if result != None:
 					final.add(result)
 		if len(final) == 0:
@@ -139,6 +142,7 @@ class UpdateDBPBiblesTable:
 				iso = lptsRecord.ISO()
 				iso = iso.lower() if iso != None else None
 				result = self.languageMap3.get(iso)
+				#print("languageMap3", bibleId, iso, result)
 				if result != None:
 					final.add(result)
 		if len(final) == 0:
