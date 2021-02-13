@@ -10,6 +10,7 @@ import time
 from datetime import datetime
 import subprocess
 from Config import *
+from UploadRunFileS3 import *
 
 
 class SQLBatchExec:
@@ -131,7 +132,7 @@ class SQLBatchExec:
 		else:
 			pattern = self.config.filename_datetime 
 			tranDir = "./" ## we need a config parameter
-			path = tranDir + "Trans-" + datetime.today().strftime(pattern) + "-" + batchName + ".sql"
+			path = tranDir + "Trans-" + batchName + ".sql"
 			print("Transactions", path)
 			tranFile = open(path, "w")
 			tranFile.write("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;\n")
@@ -141,6 +142,7 @@ class SQLBatchExec:
 			tranFile.write("COMMIT;\n")
 			tranFile.write("EXIT\n")
 			tranFile.close()
+			UploadRunFileS3.uploadFile(self.config, path)
 			startTime = time.perf_counter()
 			if self.config.database_tunnel != None:
 				results1 = os.popen(self.config.database_tunnel).read()

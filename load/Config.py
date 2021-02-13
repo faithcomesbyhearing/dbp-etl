@@ -64,6 +64,7 @@ class Config:
 
 		self.s3_bucket = self._get("s3.bucket")
 		self.s3_vid_bucket = self._get("s3.vid_bucket")
+		self.s3_artifacts_bucket = self._get("s3.artifacts_bucket")
 		self.s3_aws_profile = self._get("s3.aws_profile")
 
 		if programRunning in {"AudioHLS.py"}:

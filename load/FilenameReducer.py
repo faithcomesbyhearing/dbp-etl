@@ -17,6 +17,7 @@ from datetime import datetime
 from Config import *
 from Log import *
 from FindDuplicateFilesets import *
+from UploadRunFileS3 import *
 
 class FilenameReducer:
 
@@ -149,6 +150,7 @@ class FilenameReducer:
 					file.file, file.bookId, file.name, file.chapter, file.chapterEnd, 
 					file.verseStart, file.verseEnd, file.datetime, file.length, 
 					"; ".join(file.errors)))
+		UploadRunFileS3.uploadParsedCSV(self.config, filename)
 
 
 	def writeErrors(self, logger):
