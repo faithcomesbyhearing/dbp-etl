@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from Config import *
-from UploadRunFileS3 import *
+from DBPRunFilesS3 import *
 
 class Log:
 
@@ -47,7 +47,7 @@ class Log:
 				errorFile.write(message + '\n')
 				print(message, end='\n')
 			errorFile.close()
-			UploadRunFileS3.uploadFile(config, path)
+			DBPRunFilesS3.uploadFile(config, path)
 		print("Num Errors ", len(errors))		
 
 

@@ -10,7 +10,7 @@ import time
 from datetime import datetime
 import subprocess
 from Config import *
-from UploadRunFileS3 import *
+from DBPRunFilesS3 import *
 
 
 class SQLBatchExec:
@@ -142,7 +142,7 @@ class SQLBatchExec:
 			tranFile.write("COMMIT;\n")
 			tranFile.write("EXIT\n")
 			tranFile.close()
-			UploadRunFileS3.uploadFile(self.config, path)
+			DBPRunFilesS3.uploadFile(self.config, path)
 			startTime = time.perf_counter()
 			if self.config.database_tunnel != None:
 				results1 = os.popen(self.config.database_tunnel).read()
