@@ -106,7 +106,8 @@ if (__name__ == '__main__'):
 		month = int(sys.argv[4]) if len(sys.argv) > 4 else None
 		day = int(sys.argv[5]) if len(sys.argv) > 5 else None
 		runs = run.listRuns(year, month, day)
-		print(runs)
+		for run in runs:
+			print(run)
 
 	elif runtype == "download":
 		print("Usage DBPRunFilesS3  config_profile  download  directory  prefix")
