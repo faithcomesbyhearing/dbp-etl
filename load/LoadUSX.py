@@ -41,21 +41,3 @@ with open("/Volumes/FCBH/TextUSXDirs/usx.txt", "r") as usx:
 		#if not found:
 			#print("NOT FOUND", row)
 
-"""
-		#print(row.strip())
-		dirs = row.split("/")
-		#print(dirs[0])
-		stockLang = dirs[0].split(" ")[-1]
-		#print(stockLang)
-		if stockLang[0] == "[" or stockLang[0] == "{":
-			lang = stockLang[1:-1]
-			#print(lang, dirs[1])
-		else:
-			stockNo = stockLang[:-3] + "/" + stockLang[-3:]
-			#print(stockLang, stockNo)
-			# lookup stock no in LPTS
-			# see if there is only 1 text DamId
-			#print(stockNo, "|", dirs[1:])
-			if stockNo not in stockNoMap.keys():
-				print("********", stockNo, dirs[1:])
-"""
