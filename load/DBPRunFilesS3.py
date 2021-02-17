@@ -29,7 +29,7 @@ class DBPRunFilesS3:
 		session = boto3.Session(profile_name=config.s3_aws_profile)
 		client = session.client('s3')
 		bucket = config.s3_artifacts_bucket
-		print(s3Key, filepath)
+		#print(s3Key, filepath)
 		try:
 			client.upload_file(filepath, bucket, s3Key, ExtraArgs={'ContentType': contentType})
 		except Exception as err:

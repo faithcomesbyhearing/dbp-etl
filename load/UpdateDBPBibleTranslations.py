@@ -1,5 +1,11 @@
 # UpdateDBPBibleTranslations
 
+from Config import *
+from SQLUtility import *
+from SQLBatchExec import *
+from LPTSExtractReader import *
+
+
 class UpdateDBPBibleTranslations:
 
 
@@ -32,14 +38,14 @@ class UpdateDBPBibleTranslations:
 
 			dbpNameCols = dbpMap.get(bibleId)
 
-			if dbpNameCol == None and volumeName != None:
-				insertRows.append((volumeName, 0, bibleId, engLanguageId))
-			elif dbpNameCol != None and volumeName == None:
+			if dbpNameCols == None and volumeName != None:
+				insertRows.append((volumeName.replace("'", "\\'"), 0, bibleId, engLanguageId))
+			elif dbpNameCols != None and volumeName == None:
 				deleteRows.append((bibleId, engLanguageId))
-			else:
+			elif dbpNameCols != None and volumeName != None:
 				(dbpName, dbpVernacular) = dbpNameCols
 				if dbpName != volumeName:
-					updateRows((volumeName, dbpName, bibleId, engLanguageId))
+					updateRows.append(("name", volumeName.replace("'", "\\'"), dbpName.split("\n")[0], bibleId, engLanguageId))
 
 		tableName = "bible_translations"
 		pkeyNames = ("bible_id", "language_id")
@@ -57,8 +63,9 @@ class UpdateDBPBibleTranslations:
 				final.add(volName)
 		if len(final) == 0:
 			return None
-		elif len(final) >= 1:
-			print("WARN: bible_id %s has multiple volumne_name |%s|" % (bibleId, "|".join(final)))
+		elif len(final) > 1:
+			#print("WARN: bible_id %s has multiple volumne_name |%s|" % (bibleId, "|".join(final)))
+			return max(final, key=len)
 		return list(final)[0]
 
 
@@ -68,8 +75,8 @@ if (__name__ == '__main__'):
 	db = SQLUtility(config)
 	dbOut = SQLBatchExec(config)
 	lptsReader = LPTSExtractReader(config)
-	bibles = UpdateDBPBiblesTranslations(config, db, dbOut, lptsReader)
-	bibles.process()
+	bibles = UpdateDBPBibleTranslations(config, db, dbOut, lptsReader)
+	bibles.insertEngVolumeName()
 	db.close()
 
 	dbOut.displayStatements()
