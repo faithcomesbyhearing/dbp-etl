@@ -109,24 +109,23 @@ if (__name__ == '__main__'):
 		for run in runs:
 			print(run)
 
-	elif runtype == "download":
-		print("Usage DBPRunFilesS3  config_profile  download  directory  prefix")
-		if len(sys.argv) < 5:
-			print("directory and prefix are required")
-			sys.exit() 
-		directory = sys.argv[3]
-		prefix = sys.argv[4]
-		objects = run.listRunFiles(prefix)
-		#print(objects)
-		run.downloadObjects(directory, prefix, objects)
-
 	elif runtype == "test":
 		DBPRunFilesS3.uploadFile(config, "Trans-21-02-09-23-24-14-ENGESVN2DA.sql")
 		DBPRunFilesS3.uploadFile(config, "/Volumes/FCBH/files/errors//Errors-21-02-12-17-20-44.out")
 		DBPRunFilesS3.uploadParsedCSV(config, "/Volumes/FCBH/files/active/accepted/21-02-11-18-01-18/text_GNWNTM_GNWNTM.csv")
 
 	else:
-		print("Usage DBPRunFilesS3  config_profile  list|download|test")
+		print("Usage DBPRunFilesS3  config_profile  run-date-time | list")
+		if len(sys.argv) < 3:
+			print("run-date-time is required")
+			sys.exit() 
+		directory = "."
+		prefix = sys.argv[2]
+		print(sys.argv)
+		objects = run.listRunFiles(prefix)
+		#print(objects)
+		run.downloadObjects(directory, prefix, objects)
+
 
 
 
