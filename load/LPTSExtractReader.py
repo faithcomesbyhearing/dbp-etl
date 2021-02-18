@@ -38,9 +38,26 @@ class LPTSExtractReader:
 								resultRow[fldNode.nodeName] = fldNode.firstChild.nodeValue
 
 						self.resultSet.append(LPTSRecord(resultRow))
+		self.checkRecordCount()
 		self.bibleIdMap = self.getBibleIdMap()
 		self.filesetIdMap = None
 		print("LPTS Extract with %d records and %d BibleIds is loaded." % (len(self.resultSet), len(self.bibleIdMap.keys())))
+
+
+	# Check the record count against prior run to make certain we have the entire file. And save new record count.
+	def checkRecordCount(self):
+		filename = os.path.expanduser("~") + "/dbp-etl-LPTS_count.txt"
+		nowCount = len(self.resultSet)
+		if os.path.isfile(filename):
+			with open(filename, "r") as cntIn:
+				priorCount = cntIn.read().strip()
+				if priorCount.isdigit():
+					if (int(priorCount) - nowCount) > 25:
+						print("FATAL: %s is too small. Prior run was %s records. Now it has %d records. This count is stored at %s" 
+							% (config.filename_lpts_xml, priorCount, nowCount, filename))
+						sys.exit()
+		with open(filename, "w") as cntOut:
+			cntOut.write(str(nowCount))
 
 
     ## Generates Map bibleId: [(index, LPTSRecord)], called by class init
