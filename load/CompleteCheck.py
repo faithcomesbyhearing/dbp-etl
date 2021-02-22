@@ -56,36 +56,30 @@ class CompleteCheck:
 		filesetIds = self.db.selectSet("SELECT id FROM bible_filesets", ())
 		for rec in self.lptsReader.resultSet:
 			for typeCode in ["audio", "text", "video"]:
-				permission = None
+				apiPermiss = None
+				appPermiss = None
+				webPermiss = None
 				indexes = [1, 2, 3]
 				if typeCode == "audio":
-					permission = rec.APIDevAudio()
+					apiPermiss = rec.APIDevAudio()
+					appPermiss = rec.DBPMobile()
+					webPermiss = rec.DBPWebHub()
 				if typeCode == "text":
-					permission = rec.APIDevText()
+					apiPermiss = rec.APIDevText()
+					appPermiss = rec.MobileText()
+					webPermiss = rec.HubText()
 				if typeCode == "video":
-					permission = rec.APIDevVideo()
+					apiPermiss = rec.APIDevVideo()
+					appPermiss = rec.MobileVideo()
+					webPermiss = rec.WebHubVideo()
 					indexes = [1]
-				if permission == "-1":
+				if apiPermiss == "-1" or appPermiss == "-1" or webPermiss == "-1":
 					for index in indexes:
 						damIdMap = rec.DamIdMap(typeCode, index)
 						for (damId, status) in damIdMap.items():
 							if status in {"Live", "live"}:
 								if damId not in filesetIds:
 									print(rec.Reg_StockNumber(), typeCode, index, damId, "has no bible_filesets record.")
-
-						# include those that have an API or App privilege for the type
-						# Lookup DamId in bible_fileset.  If absent, report
-
-
-
-
-
-
-
-
-
-
-
 
 
 

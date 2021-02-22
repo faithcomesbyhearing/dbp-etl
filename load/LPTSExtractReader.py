@@ -513,6 +513,9 @@ class LPTSRecord:
 	def MobileText(self):
 		return self.record.get("MobileText")
 
+	def MobileVideo(self):
+		return self.record.get("MobileVideo")
+
 	def ND_DBL_Load_Notes(self):
 		return self.record.get("ND_DBL_Load_Notes")
 
