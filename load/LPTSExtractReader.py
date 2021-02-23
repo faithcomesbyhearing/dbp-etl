@@ -41,6 +41,7 @@ class LPTSExtractReader:
 		self.checkRecordCount()
 		self.bibleIdMap = self.getBibleIdMap()
 		self.filesetIdMap = None
+		self.filesetIdMap10 = None
 		print("LPTS Extract with %d records and %d BibleIds is loaded." % (len(self.resultSet), len(self.bibleIdMap.keys())))
 
 
@@ -173,6 +174,36 @@ class LPTSExtractReader:
 					statuses.append((status, lptsRecord))
 					self.filesetIdMap[damId] = statuses
 		return self.filesetIdMap.get(filesetId[:10], None)
+
+
+	## This method is different than getFilesetRecords in that it expects an entire 10 digit text filesetId
+	## It also removes excess characters for filesets and corrects for SA types.
+	## This method does not return the 1, 2, 3 index
+	## It returns an array of statuses and records, i.e. Set((lptsRecord, status, fieldName))
+	def getFilesetRecords10(self, filesetId):	
+		if self.filesetIdMap10 == None:
+			self.filesetIdMap10 = {}
+			damIdDict = {**LPTSRecord.audio1DamIdDict,
+						**LPTSRecord.audio2DamIdDict,
+						**LPTSRecord.audio3DamIdDict,
+						**LPTSRecord.text1DamIdDict,
+						**LPTSRecord.text2DamIdDict,
+						**LPTSRecord.text3DamIdDict,
+						**LPTSRecord.videoDamIdDict}
+			for lptsRecord in self.resultSet:
+				record = lptsRecord.record
+				hasKeys = set(damIdDict.keys()).intersection(set(record.keys()))
+				for key in hasKeys:
+					statusKey = damIdDict[key]
+					damId = record[key]
+					status = record.get(statusKey)
+					statuses = self.filesetIdMap10.get(damId, set())
+					statuses.add((lptsRecord, status, key))
+					self.filesetIdMap10[damId] = statuses
+		damId = filesetId[:10]
+		if len(damId) == 10 and damId[-2:] == "SA":
+			damId = damId[:8] + "DA";	
+		return self.filesetIdMap10.get(damId, None)
 
 
 	## This method returns a list of field names for development the purposes.

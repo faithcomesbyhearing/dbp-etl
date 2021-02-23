@@ -83,6 +83,7 @@ class Config:
 			self.directory_bucket_list = self._getPath("directory.bucket_list")
 			self.filename_lpts_xml = self._getPath("filename.lpts_xml")
 
+			self.directory_upload_aws = self._getPath("directory.upload_aws")
 			self.directory_upload = self._getPath("directory.upload")
 			self.directory_database	= self._getPath("directory.database")
 			self.directory_complete	= self._getPath("directory.complete")

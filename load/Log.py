@@ -30,6 +30,12 @@ class Log:
 		Log.writeLog(config)
 		sys.exit()
 
+	def totalErrorCount():
+		count = 0
+		for logger in Log.loggers.values():
+			count += logger.errorCount()
+		return count
+
 	def writeLog(config):
 		errors = []
 		for key in sorted(Log.loggers.keys()):
@@ -61,7 +67,7 @@ class Log:
 	def errorCount(self):
 		count = 0;
 		for msg in self.messages:
-			if msg[0] == Log.EROR:
+			if msg[0] == Log.EROR or msg[0] == Log.FATAL:
 				count += 1
 		return count
 

@@ -31,6 +31,65 @@ class DBPLoadController:
 		self.stockNumRegex = re.compile("__[A-Z0-9]{8}")
 
 
+	def preprocessUploadAWS(self):
+		for filesetId in [f for f in os.listdir(self.config.directory_upload_aws) if not f.startswith('.')]:
+			logger = Log.getLogger(filesetId)
+			results = self.lptsReader.getFilesetRecords10(filesetId)
+			if results == None:
+				logger.message(Log.EROR, "is not in LPTS" % ())
+			else:
+				stockNumSet = set()
+				mediaSet = set()
+				bibleIdSet = set()
+				for (lptsRecord, status, fieldName) in results:
+					stockNum = lptsRecord.Reg_StockNumber()
+					stockNumSet.add(stockNum)
+
+					dbpFilesetId = filesetId
+					if "Audio" in fieldName:
+						media = "audio"
+					elif "Text" in fieldName:
+						media = "text"
+						dbpFilesetId = filesetId[:6]
+					elif "Video" in fieldName:
+						media = "video"
+					else:
+						media = "unknown"
+						logger.message(Log.EROR, "in %s does not have Audio, Text, or Video in DamId fieldname." % (stockNum,))
+					mediaSet.add(media)
+
+					if "3" in fieldName:
+						index = 3
+					elif "2" in fieldName:
+						index = 2
+					else:
+						index = 1
+					bibleId = lptsRecord.DBP_EquivalentByIndex(index)
+					bibleIdSet.add(bibleId)
+
+				if len(mediaSet) > 1:
+					logger.message(Log.EROR, "in %s has more than one media type: %s" % (", ".join(stockNumSet), ", ".join(mediaSet)))
+				if len(bibleIdSet) == 0:
+					logger.message(Log.EROR, "in %s does not have a DBP_Equivalent" % (", ".join(stockNumSet)))
+				if len(bibleIdSet) > 1:
+					logger.message(Log.EROR, "in %s has more than one DBP_Equivalent: %s" % (", ".join(stockNumSet), ", ".join(bibleIdSet)))
+
+				if logger.errorCount() == 0:
+					directory = self.config.directory_upload + media + os.sep
+					if not os.path.isdir(directory):
+						os.mkdir(directory)
+					directory += bibleId + os.sep
+					if not os.path.isdir(directory):
+						os.mkdir(directory)
+					sourceDir = self.config.directory_upload_aws + filesetId + os.sep
+					targetDir = directory + dbpFilesetId + os.sep
+					os.replace(sourceDir, targetDir)
+
+		if Log.totalErrorCount() > 0:
+			Log.writeLog(self.config)
+			sys.exit()
+
+
 	def cleanup(self):
 		print("********** CLEANUP **********", flush=True)
 		validateDir = self.config.directory_upload
@@ -146,6 +205,7 @@ if (__name__ == '__main__'):
 	db = SQLUtility(config)
 	lptsReader = LPTSExtractReader(config)
 	ctrl = DBPLoadController(config, db, lptsReader)
+	ctrl.preprocessUploadAWS()
 	ctrl.cleanup()
 	ctrl.validate()
 	if ctrl.updateBibles():
