@@ -663,20 +663,24 @@ class LPTSRecord:
 	def WebHubVideo(self):
 		return self.record.get("WebHubVideo")
 
-"""
+
+# Get alphabetic list distinct field names
 if (__name__ == '__main__'):
+	fieldCount = {}
 	config = Config()
 	reader = LPTSExtractReader(config)
-	stockNumMap = reader.getStockNumberMap()
-	for stockNum in sorted(stockNumMap.keys()):
-		record = stockNumMap[stockNum]
-		print(stockNum)
-		for index in [1, 2, 3]:
-			damIdMap = record.TextDamIdMap(index)
-			for (damId, status) in damIdMap.items():
-				bibleId = record.DBP_EquivalentByIndex(index)
-				print('\t', index, bibleId, damId, status)
-"""
+	for lptsRecord in reader.resultSet:
+		record = lptsRecord.record
+		for fieldName in record.keys():
+			#print(fieldName)
+			count = fieldCount.get(fieldName, 0)
+			count += 1
+			fieldCount[fieldName] = count
+	for fieldName in sorted(fieldCount.keys()):
+		count = fieldCount[fieldName]
+		print("%s,%s" % (fieldName, count))
+
+
 """
 if (__name__ == '__main__'):
 	config = Config()
@@ -700,6 +704,7 @@ if (__name__ == '__main__'):
 						#	prefixSet.add(damid[:6])
 			#if len(prefixSet) > 1:
 			#	print("ERROR: More than one DamId prefix in set %s" % (",".join(prefixSet)))
+"""
 """
 # Find bible_ids that exist in multiple stock numbers
 # Find stock numbers that contain multiple bible_ids
@@ -726,3 +731,4 @@ if (__name__ == '__main__'):
 			bibleIdMap[bibleId1] = stockNo
 		if bibleId2 != None:
 			bibleIdMap[bibleId2] = stockNo
+"""
