@@ -293,14 +293,14 @@ class UpdateDBPBooksTable:
 				if toc.nameShort != dbpNameShort:
 					nameShort = toc.nameShort.replace("'", "\\'")
 					updateRows.append(("name_short", nameShort, dbpNameShort, bibleId, toc.bookId))
-				if toc.chapters != dbpChapters:
+				if len(toc.chapters) >= len(dbpChapters):
 					updateRows.append(("chapters", toc.chapters, dbpChapters, bibleId, toc.bookId))
 
 			elif typeCode == "audio":
 				(dbpBookId, dbpBookSeq, dbpName, dbpNameShort, dbpChapters) = bibleBookMap[toc.bookId]	
 				if toc.bookSeq != dbpBookSeq:
 					updateRows.append(("book_seq", toc.bookSeq, dbpBookSeq, bibleId, toc.bookId))
-				if toc.chapters != dbpChapters:
+				if len(toc.chapters) >= len(dbpChapters):
 					updateRows.append(("chapters", toc.chapters, dbpChapters, bibleId, toc.bookId))
 
 		sql = ("SELECT distinct book_id FROM bible_files bf"

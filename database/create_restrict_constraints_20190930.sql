@@ -51,12 +51,14 @@ ALTER TABLE bible_file_titles ADD CONSTRAINT FK_languages_bible_file_titles FORE
 -- ALTER TABLE bible_file_video_resolutions DROP FOREIGN KEY FK_bible_files_bible_file_video_resolutions;
 -- ALTER TABLE bible_file_video_resolutions ADD CONSTRAINT FK_bible_files_bible_file_video_resolutions FOREIGN KEY (bible_file_id) REFERENCES bible_files (id) ON DELETE RESTRICT ON UPDATE RESTRICT;
 ALTER TABLE bible_file_stream_ts DROP FOREIGN KEY FK_stream_bandwidths_stream_ts;
-ALTER TABLE bible_file_stream_ts ADD CONSTRAINT FK_stream_bandwidths_stream_ts FOREIGN KEY (stream_bandwidth_id) REFERENCES bible_file_stream_bandwidths (id) ON DELETE RESTRICT ON UPDATE RESTRICT;
+-- ALTER TABLE bible_file_stream_ts ADD CONSTRAINT FK_stream_bandwidths_stream_ts FOREIGN KEY (stream_bandwidth_id) REFERENCES bible_file_stream_bandwidths (id) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE bible_file_stream_ts ADD CONSTRAINT FK_stream_bandwidths_stream_ts FOREIGN KEY (stream_bandwidth_id) REFERENCES bible_file_stream_bandwidths (id) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- ALTER TABLE bible_file_video_transport_stream DROP FOREIGN KEY FK_bible_file_video_resolutions_bible_file_video_transport_strea;
 -- ALTER TABLE bible_file_video_transport_stream ADD CONSTRAINT FK_bible_file_video_resolutions_bible_file_video_transport_strea FOREIGN KEY (video_resolution_id) REFERENCES bible_file_video_resolutions (id) ON DELETE RESTRICT ON UPDATE RESTRICT;
 ALTER TABLE bible_file_stream_bytes DROP FOREIGN KEY FK_bible_file_bandwidth_stream_bytes;
-ALTER TABLE bible_file_stream_bytes ADD CONSTRAINT FK_bible_file_bandwidth_stream_bytes FOREIGN KEY (stream_bandwidth_id) REFERENCES bible_file_stream_bandwidths (id) ON DELETE RESTRICT ON UPDATE RESTRICT;
+-- ALTER TABLE bible_file_stream_bytes ADD CONSTRAINT FK_bible_file_bandwidth_stream_bytes FOREIGN KEY (stream_bandwidth_id) REFERENCES bible_file_stream_bandwidths (id) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE bible_file_stream_bytes ADD CONSTRAINT FK_bible_file_bandwidth_stream_bytes FOREIGN KEY (stream_bandwidth_id) REFERENCES bible_file_stream_bandwidths (id) ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE bible_file_stream_bytes DROP FOREIGN KEY FK_bible_file_timestamp_stream_bytes;
 ALTER TABLE bible_file_stream_bytes ADD CONSTRAINT FK_bible_file_timestamp_stream_bytes FOREIGN KEY (timestamp_id) REFERENCES bible_file_timestamps (id) ON DELETE RESTRICT ON UPDATE RESTRICT;
 

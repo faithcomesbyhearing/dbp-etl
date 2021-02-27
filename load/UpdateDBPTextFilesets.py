@@ -55,20 +55,20 @@ class UpdateDBPTextFilesets:
 		if response == None or response.returncode != 0:
 			return((Log.EROR, "BiblePublisher: " + str(response.stderr.decode("utf-8"))))
 		#print("text/%s/%s %s\tINFO" % (bibleId, filesetId, str(response.stdout.decode("utf-8"))))
-		print("OUTPUT", str(response.stdout.decode("utf-8")))	
+		print("BiblePublisher:", str(response.stdout.decode("utf-8")))	
 		return None
 
 
-	def updateFileset(self, bibleId, filesetId, hashId):
+	def updateFileset(self, bibleId, filesetId, hashId, bookIdSet):
 		insertRows = []
 		updateRows = []
 		deleteRows = []
-		sql = "SELECT book_id, chapter, verse_start, verse_end, verse_text FROM bible_verses WHERE hash_id = %s"
-		resultSet = self.db.select(sql, (hashId,))
+		sql = ("SELECT book_id, chapter, verse_start, verse_end, verse_text FROM bible_verses"
+			" WHERE hash_id = %s AND book_id IN ('") + "','".join(bookIdSet) + "')"
+		resultSet = self.db.select(sql, (hashId))
 		dbpVerseMap = {}
 		for (dbpBookId, dbpChapter, dbpVerseStart, dbpVerseEnd, dbpVerseText) in resultSet:
 			dbpVerseMap[(dbpBookId, dbpChapter, dbpVerseStart)] = (dbpVerseEnd, dbpVerseText)
-
 		ssBookIdSet = set()
 		verseList = self.getBiblePublisherVerses(filesetId)
 		for (ssBookId, ssChapter, ssVerseStart, ssVerseEnd, ssVerseText) in verseList:
@@ -104,6 +104,7 @@ class UpdateDBPTextFilesets:
 		hashId = self.db.selectScalar(sql, (filesetId,))
 		if hashId != None:
 			self.dbOut.rawStatement("DELETE FROM bible_files WHERE hash_id = '%s';" % (hashId,))
+			self.dbOut.rawStatement("DELETE FROM bible_verses WHERE hash_id = '%s';" % (hashId,))
 			self.dbOut.rawStatement("DELETE FROM access_group_filesets WHERE hash_id = '%s';" % (hashId,))
 			self.dbOut.rawStatement("DELETE FROM bible_fileset_tags WHERE hash_id = '%s';" % (hashId,))
 			self.dbOut.rawStatement("DELETE FROM bible_fileset_copyright_organizations WHERE hash_id = '%s';" % (hashId,))
