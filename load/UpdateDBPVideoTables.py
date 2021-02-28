@@ -97,7 +97,7 @@ class UpdateDBPVideoTables:
 	def processStreamM3U8(self, m3u8Filename, m3u8Content):
 		insertRows = []
 		updateRows = []
-		deleteRows = []
+		#deleteRows = []
 
 		fileId = self.fileIdMap.get(m3u8Filename)
 		if fileId == None:
@@ -141,7 +141,7 @@ class UpdateDBPVideoTables:
 	def processTSM3U8(self, m3u8Filename, m3u8Content):
 		insertRows = []
 		updateRows = []
-		deleteRows = []
+		#deleteRows = []
 
 		bandwidthId = self.dbpBandwidthIdMap.get(m3u8Filename)
 		if bandwidthId == None:
