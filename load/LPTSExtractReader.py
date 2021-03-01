@@ -311,7 +311,7 @@ class LPTSRecord:
 				results.add(damId)
 		return results
 
-	## Return a map of damId: status of the damIds in a record
+	## Return a map of {damId: status} of the damIds in a record
 	def DamIdMap(self, typeCode, index):
 		if not typeCode in {"audio", "text", "video"}:
 			print("ERROR: Unknown typeCode '%s', audio, text, or video is expected." % (typeCode))
@@ -664,6 +664,22 @@ class LPTSRecord:
 		return self.record.get("WebHubVideo")
 
 
+# Get listing of damIds, per stock no
+if __name__ == '__main__':
+	config = Config.shared()
+	reader = LPTSExtractReader(config)
+	for lptsRecord in reader.resultSet:
+		stockNo = lptsRecord.Reg_StockNumber()
+		for typeCode in ["audio", "text", "video"]:
+			mediaDamIds = []
+			indexes = [1] if typeCode == "video" else [1,2,3]
+			for index in indexes:
+				damIds = lptsRecord.DamIdMap(typeCode, index)
+				if len(damIds) > 0:
+					print(stockNo, typeCode, index, damIds.keys())
+
+
+"""
 # Get alphabetic list distinct field names
 if (__name__ == '__main__'):
 	fieldCount = {}
@@ -679,7 +695,7 @@ if (__name__ == '__main__'):
 	for fieldName in sorted(fieldCount.keys()):
 		count = fieldCount[fieldName]
 		print("%s,%s" % (fieldName, count))
-
+"""
 
 """
 if (__name__ == '__main__'):
