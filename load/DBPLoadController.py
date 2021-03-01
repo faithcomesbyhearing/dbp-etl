@@ -10,6 +10,7 @@
 
 import os
 from Config import *
+from RunStatus import *
 from LPTSExtractReader import *
 from Log import *
 from Validate import *
@@ -32,6 +33,7 @@ class DBPLoadController:
 
 
 	def preprocessUploadAWS(self):
+		RunStatus.setStatus(RunStatus.PREPROCESS)
 		for filesetId in [f for f in os.listdir(self.config.directory_upload_aws) if not f.startswith('.')]:
 			logger = Log.getLogger(filesetId)
 			results = self.lptsReader.getFilesetRecords10(filesetId)
@@ -147,6 +149,7 @@ class DBPLoadController:
 
 
 	def validate(self):
+		RunStatus.setStatus(RunStatus.VALIDATE)
 		print("********** VALIDATING **********", flush=True)
 		validate = Validate("files", self.config, self.db, self.lptsReader)
 		validate.process()
@@ -154,12 +157,14 @@ class DBPLoadController:
 
 
 	def upload(self):
+		RunStatus.setStatus(RunStatus.UPLOAD)
 		print("********** UPLOADING TO S3 **********", flush=True)
 		filesets = self._acceptedFilesets(self.config.directory_upload)
 		self.s3Utility.uploadAllFilesets(filesets)
 
 
 	def updateFilesetTables(self):
+		RunStatus.setStatus(RunStatus.UPDATE)
 		print("********** UPDATING Fileset Tables **********", flush=True)
 		dbOut = SQLBatchExec(self.config)
 		update = UpdateDBPFilesetTables(self.config, self.db, dbOut)
@@ -201,7 +206,7 @@ class DBPLoadController:
 
 
 if (__name__ == '__main__'):
-	config = Config()
+	config = Config.shared()
 	db = SQLUtility(config)
 	lptsReader = LPTSExtractReader(config)
 	ctrl = DBPLoadController(config, db, lptsReader)
@@ -212,10 +217,13 @@ if (__name__ == '__main__'):
 		ctrl.upload()
 		ctrl.updateFilesetTables()
 		if ctrl.updateLPTSTables():
+			RunStatus.setStatus(RunStatus.SUCCESS)
 			print("********** COMPLETE **********")
 		else:
+			RunStatus.setStatus(RunStatus.FAILURE)
 			print("********** LPTS Tables Update Failed **********")
 	else:
+		RunStatus.setStatus(RunStatus.FAILURE)
 		print("********** Bibles Table Update Failed **********")
 
 """
