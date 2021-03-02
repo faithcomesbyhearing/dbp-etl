@@ -224,7 +224,7 @@ class UpdateDBPBooksTable:
 			priorBookId = None
 			priorChapter = None
 			csvFilename = self.config.directory_accepted + "%s_%s_%s.csv" % (typeCode, bibleId, filesetId)
-			with open(csvFilename, newline='\n') as csvfile:
+			with open(csvFilename, encoding="utf-8", newline='\n') as csvfile:
 				reader = csv.DictReader(csvfile)
 				for row in reader:
 					bookId = row["book_id"]

@@ -147,7 +147,7 @@ class SQLBatchExec:
 			if self.config.database_tunnel != None:
 				results1 = os.popen(self.config.database_tunnel).read()
 				print("tunnel opened:", results1)
-			with open(path, "r") as sql:
+			with open(path, "r", encoding="utf-8") as sql:
 				cmd = [self.config.mysql_exe, "-h", self.config.database_host, 
 						"-P", str(self.config.database_port),
 						"-u", self.config.database_user,
