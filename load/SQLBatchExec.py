@@ -134,7 +134,7 @@ class SQLBatchExec:
 			tranDir = "./" ## we need a config parameter
 			path = tranDir + "Trans-" + batchName + ".sql"
 			print("Transactions", path)
-			tranFile = open(path, "w")
+			tranFile = open(path, "w", encoding="utf-8")
 			tranFile.write("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;\n")
 			tranFile.write("START TRANSACTION;\n")
 			for statement in self.statements:
