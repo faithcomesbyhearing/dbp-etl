@@ -26,8 +26,9 @@ class RunStatus:
 		key = DBPRunFilesS3.s3KeyPrefix + "/metadata"
 		metadata = {}
 		try:
-			response = client.head_object(Bucket=bucket, Key=key)
+			response = client.get_object(Bucket=bucket, Key=key)
 			metadata = response.get('Metadata')
+			#print(metadata.get("x-run-status"))
 		except client.exceptions.NoSuchKey:
 			metadata = {}
 		except Exception as err:
@@ -37,4 +38,9 @@ class RunStatus:
 			client.put_object(Bucket=bucket, Key=key, Metadata=metadata)
 		except Exception as err:
 			print("RunStatus Metadata Upload error", err)
+
+
+
+if __name__ == "__main__":
+	RunStatus.setStatus(RunStatus.VALIDATE)
 
