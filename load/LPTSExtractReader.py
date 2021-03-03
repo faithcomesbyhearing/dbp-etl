@@ -7,16 +7,16 @@ import io
 import sys
 import os
 from xml.dom import minidom
-from Config import *
-from Log import *
+
 
 class LPTSExtractReader:
 
-	def __init__(self, config):
+	def __init__(self, lptsExtractPath):
+		self.lptsExtractPath = lptsExtractPath
 		self.resultSet = []
 		dom = None
 		try:
-			doc = minidom.parse(config.filename_lpts_xml)
+			doc = minidom.parse(lptsExtractPath)
 		except Exception as err:
 			print("FATAL ERROR parsing LPTS extract", err)
 			sys.exit(1)
@@ -53,9 +53,9 @@ class LPTSExtractReader:
 			with open(filename, "r") as cntIn:
 				priorCount = cntIn.read().strip()
 				if priorCount.isdigit():
-					if (int(priorCount) - nowCount) > 25:
+					if (int(priorCount) - nowCount) > 50:
 						print("FATAL: %s is too small. Prior run was %s records. Now it has %d records. This count is stored at %s" 
-							% (config.filename_lpts_xml, priorCount, nowCount, filename))
+							% (self.lptsExtractPath, priorCount, nowCount, filename))
 						sys.exit()
 		with open(filename, "w") as cntOut:
 			cntOut.write(str(nowCount))
@@ -96,7 +96,6 @@ class LPTSExtractReader:
 			else:
 				print("ERROR: Record has no stock number")
 		return stockNumMap
-
 
 
 	## Returns one (record, index) for typeCode, bibleId, filesetId
@@ -587,7 +586,8 @@ class LPTSRecord:
 		elif index == 3:
 			return self.record.get("_x0033_Orthography")
 		else:
-			Log.fatalError("Orthography index must be 1, 2, or 3, but was %s" % str(index,))
+			print("ERROR: Orthography index must be 1, 2, or 3, but was %s" % str(index,))
+			sys.exit()
 
 	def OTOrder(self):
 		result = self.record.get("OTOrder")
@@ -667,7 +667,7 @@ class LPTSRecord:
 # Get listing of damIds, per stock no
 if __name__ == '__main__':
 	config = Config.shared()
-	reader = LPTSExtractReader(config)
+	reader = LPTSExtractReader(config.filename_lpts_xml)
 	for lptsRecord in reader.resultSet:
 		stockNo = lptsRecord.Reg_StockNumber()
 		for typeCode in ["audio", "text", "video"]:
