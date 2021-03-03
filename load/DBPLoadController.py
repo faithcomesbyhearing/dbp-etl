@@ -59,7 +59,6 @@ class DBPLoadController:
 
 
 	def cleanup(self):
-		print("********** CLEANUP **********", flush=True)
 		validateDir = self.config.directory_upload
 		for typeCode in os.listdir(validateDir):
 			if typeCode in {"audio", "video", "text"}:
@@ -104,7 +103,6 @@ class DBPLoadController:
 
 
 	def updateBibles(self):
-		print("********** UPDATING Bibles Table **********", flush=True)
 		dbOut = SQLBatchExec(self.config)
 		bibles = UpdateDBPBiblesTable(self.config, self.db, dbOut, self.lptsReader)
 		bibles.process()
@@ -116,7 +114,6 @@ class DBPLoadController:
 
 	def validate(self):
 		RunStatus.setStatus(RunStatus.VALIDATE)
-		print("********** VALIDATING **********", flush=True)
 		validate = Validate("files", self.config, self.db, self.lptsReader)
 		validate.process()
 		Log.writeLog(self.config)
@@ -124,14 +121,12 @@ class DBPLoadController:
 
 	def upload(self):
 		RunStatus.setStatus(RunStatus.UPLOAD)
-		print("********** UPLOADING TO S3 **********", flush=True)
 		filesets = self._acceptedFilesets(self.config.directory_upload)
 		self.s3Utility.uploadAllFilesets(filesets)
 
 
 	def updateFilesetTables(self):
 		RunStatus.setStatus(RunStatus.UPDATE)
-		print("********** UPDATING Fileset Tables **********", flush=True)
 		dbOut = SQLBatchExec(self.config)
 		update = UpdateDBPFilesetTables(self.config, self.db, dbOut)
 		video = UpdateDBPVideoTables(self.config, self.db, dbOut)
@@ -149,7 +144,6 @@ class DBPLoadController:
 
 
 	def updateLPTSTables(self):
-		print("********** UPDATING LPTS Tables **********", flush=True)
 		dbOut = SQLBatchExec(self.config)
 		lptsDBP = UpdateDBPLPTSTable(self.config, dbOut, self.lptsReader)
 		lptsDBP.process()
@@ -183,8 +177,10 @@ if (__name__ == '__main__'):
 		ctrl.upload()
 		ctrl.updateFilesetTables()
 		if ctrl.updateLPTSTables():
-			RunStatus.setStatus(RunStatus.SUCCESS)
-			print("********** COMPLETE **********")
+			if Log.totalErrorCount() == 0:
+				RunStatus.setStatus(RunStatus.SUCCESS)
+			else:
+				RunStatus.setStatus(RunStatus.FAILURE)
 		else:
 			RunStatus.setStatus(RunStatus.FAILURE)
 			print("********** LPTS Tables Update Failed **********")

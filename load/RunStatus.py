@@ -21,6 +21,7 @@ class RunStatus:
 
 	def setStatus(status):
 		RunStatus.current = status
+		print("********* " + status + " *********")
 		client = Config.shared().s3_client
 		bucket = Config.shared().s3_artifacts_bucket
 		key = DBPRunFilesS3.s3KeyPrefix + "/metadata"
