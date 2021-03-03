@@ -73,6 +73,11 @@ class PreValidate:
 			return None
 		else:
 			stockNo = lptsRecord.Reg_StockNumber()
+			bibleIdFound = lptsRecord.DBP_EquivalentByIndex(index)
+			if bibleIdFound == None:
+				self.requiredFields(stockNo, "DBP_Equivalent (BibleId)")
+			elif bibleIdFound != bibleId:
+				self.errorMessage(stockNo, "BibleId given %s is not BibleId in LPTS %s" % (bibleId, bibleIdFound))
 			if lptsRecord.Copyrightc() == None:
 				self.requiredFields(stockNo, "Copyrightc")
 			if typeCode in {"audio", "video"} and lptsRecord.Copyrightp() == None:

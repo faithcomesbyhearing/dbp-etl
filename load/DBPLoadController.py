@@ -13,6 +13,7 @@ from Config import *
 from RunStatus import *
 from LPTSExtractReader import *
 from Log import *
+from PreValidate import *
 from Validate import *
 from S3Utility import *
 from SQLBatchExec import *
@@ -34,58 +35,23 @@ class DBPLoadController:
 
 	def preprocessUploadAWS(self):
 		RunStatus.setStatus(RunStatus.PREPROCESS)
+		validate = PreValidate(self.lptsReader)
 		for filesetId in [f for f in os.listdir(self.config.directory_upload_aws) if not f.startswith('.')]:
 			logger = Log.getLogger(filesetId)
-			results = self.lptsReader.getFilesetRecords10(filesetId)
-			if results == None:
-				logger.message(Log.EROR, "is not in LPTS" % ())
-			else:
-				stockNumSet = set()
-				mediaSet = set()
-				bibleIdSet = set()
-				for (lptsRecord, status, fieldName) in results:
-					stockNum = lptsRecord.Reg_StockNumber()
-					stockNumSet.add(stockNum)
-
-					dbpFilesetId = filesetId
-					if "Audio" in fieldName:
-						media = "audio"
-					elif "Text" in fieldName:
-						media = "text"
-						dbpFilesetId = filesetId[:6]
-					elif "Video" in fieldName:
-						media = "video"
-					else:
-						media = "unknown"
-						logger.message(Log.EROR, "in %s does not have Audio, Text, or Video in DamId fieldname." % (stockNum,))
-					mediaSet.add(media)
-
-					if "3" in fieldName:
-						index = 3
-					elif "2" in fieldName:
-						index = 2
-					else:
-						index = 1
-					bibleId = lptsRecord.DBP_EquivalentByIndex(index)
-					bibleIdSet.add(bibleId)
-
-				if len(mediaSet) > 1:
-					logger.message(Log.EROR, "in %s has more than one media type: %s" % (", ".join(stockNumSet), ", ".join(mediaSet)))
-				if len(bibleIdSet) == 0:
-					logger.message(Log.EROR, "in %s does not have a DBP_Equivalent" % (", ".join(stockNumSet)))
-				if len(bibleIdSet) > 1:
-					logger.message(Log.EROR, "in %s has more than one DBP_Equivalent: %s" % (", ".join(stockNumSet), ", ".join(bibleIdSet)))
-
-				if logger.errorCount() == 0:
-					directory = self.config.directory_upload + media + os.sep
-					if not os.path.isdir(directory):
-						os.mkdir(directory)
-					directory += bibleId + os.sep
-					if not os.path.isdir(directory):
-						os.mkdir(directory)
-					sourceDir = self.config.directory_upload_aws + filesetId + os.sep
-					targetDir = directory + dbpFilesetId + os.sep
-					os.replace(sourceDir, targetDir)
+			results = validate.validateFilesetId(filesetId)
+			logger.addPreValidationErrors(validate.messages)
+			if results != None and Log.totalErrorCount() == 0:
+				(typeCode, bibleId) = results
+				directory = self.config.directory_upload + typeCode + os.sep
+				if not os.path.isdir(directory):
+					os.mkdir(directory)
+				directory += bibleId + os.sep
+				if not os.path.isdir(directory):
+					os.mkdir(directory)
+				dbpFilesetId = filesetId[:6] if typeCode == "text" else filesetId
+				sourceDir = self.config.directory_upload_aws + filesetId + os.sep
+				targetDir = directory + dbpFilesetId + os.sep
+				os.replace(sourceDir, targetDir)
 
 		if Log.totalErrorCount() > 0:
 			Log.writeLog(self.config)
@@ -208,7 +174,7 @@ class DBPLoadController:
 if (__name__ == '__main__'):
 	config = Config.shared()
 	db = SQLUtility(config)
-	lptsReader = LPTSExtractReader(config)
+	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
 	ctrl = DBPLoadController(config, db, lptsReader)
 	ctrl.preprocessUploadAWS()
 	ctrl.cleanup()

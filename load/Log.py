@@ -103,6 +103,10 @@ class Log:
 			if len(file.errors) > 0:
 				self.messages.append((Log.EROR, "%s/%s %s." % (self.filesetPrefix, file.file, ", ".join(file.errors))))
 
+	def addPreValidationErrors(self, messages):
+		for message in messages:
+			self.messages.append((Log.EROR, message))
+
 	def format(self):
 		levelMap = { Log.FATAL: "FATAL", Log.EROR: "EROR", Log.WARN: "WARN", Log.INFO: "INFO"}
 		output = []
