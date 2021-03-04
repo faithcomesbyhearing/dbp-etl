@@ -193,7 +193,7 @@ class UpdateDBPLPTSTable:
 
 	def updateBibleFilesetCopyrightOrganizations(self, filesetList):
 		orgs = LoadOrganizations(self.config, self.db, self.dbOut, self.lptsReader)
-		orgs.changeCopyrightOrganizationsPrimaryKey()
+#		orgs.changeCopyrightOrganizationsPrimaryKey()
 		# These methods should be called by Validate
 		#unknownLicensors = orgs.validateLicensors()
 		#unknownCopyrights = orgs.validateCopyrights()
