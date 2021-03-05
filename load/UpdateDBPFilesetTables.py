@@ -101,7 +101,7 @@ class UpdateDBPFilesetTables:
 		self.rejectStatements = []
 		self.OT = self.db.selectSet("SELECT id FROM books WHERE book_testament = 'OT'", ())
 		self.NT = self.db.selectSet("SELECT id FROM books WHERE book_testament = 'NT'", ())
-		self.durationRegex = re.compile(r"duration=([0-9\.]+)")
+		self.durationRegex = re.compile(r"duration=([0-9\.]+)", re.MULTILINE)
 		self.textUpdater = UpdateDBPTextFilesets(self.config, self.db, self.dbOut, None)
 		self.booksUpdater = UpdateDBPBooksTable(self.config, self.dbOut)
 
@@ -246,7 +246,7 @@ class UpdateDBPFilesetTables:
 
 
 	def getDuration(self, file):
-		cmd = 'ffprobe -select_streams a -v error -show_format ' + file + ' | grep duration'
+		cmd = 'ffprobe -select_streams a -v error -show_format ' + file
 		response = subprocess.run(cmd, shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 		result = self.durationRegex.search(str(response))
 		if result != None:
