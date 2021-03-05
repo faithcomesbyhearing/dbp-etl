@@ -12,11 +12,11 @@ class TranscodeVideo:
 		transcoder = TranscodeVideo(config, filesetPrefix)
 		for filename in [f for f in os.listdir(config.directory_upload + filesetPrefix) if not f.startswith('.')]:
 			transcoder.createJob(filesetPrefix + filename)
-			done = transcoder.completeJobs()
-			if done:
-				print("Transcode %s succeeded." % (filesetPrefix))
-			else:
-				print("Transcode %s FAILED." % (filesetPrefix))
+		done = transcoder.completeJobs()
+		if done:
+			print("Transcode %s succeeded." % (filesetPrefix))
+		else:
+			print("Transcode %s FAILED." % (filesetPrefix))
 
 
 	## Used by UpdateDBPVideoTable
