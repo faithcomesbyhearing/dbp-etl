@@ -11,6 +11,7 @@ import sys
 import re
 from datetime import datetime
 from Config import *
+from RunStatus import *
 from LPTSExtractReader import *
 from SQLUtility import *
 from SQLBatchExec import *
@@ -31,6 +32,7 @@ class UpdateDBPLPTSTable:
 
 
 	def process(self):
+		RunStatus.printDuration("BEGIN LPTS UPDATE")
 		sql = ("SELECT b.bible_id, bf.id, bf.set_type_code, bf.set_size_code, bf.asset_id, bf.hash_id"
 			" FROM bible_filesets bf JOIN bible_fileset_connections b ON bf.hash_id = b.hash_id"
 			" ORDER BY b.bible_id, bf.id, bf.set_type_code")

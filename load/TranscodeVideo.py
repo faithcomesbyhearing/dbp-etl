@@ -4,19 +4,23 @@ import time
 import csv
 import boto3
 from S3Utility import *
+from RunStatus import *
 
 
 class TranscodeVideo:
 
 	def transcodeVideoFileset(config, filesetPrefix):
 		transcoder = TranscodeVideo(config, filesetPrefix)
+		RunStatus.printDuration("BEGIN SUBMIT TRANSCODE")
 		for filename in [f for f in os.listdir(config.directory_upload + filesetPrefix) if not f.startswith('.')]:
 			transcoder.createJob(filesetPrefix + filename)
+		RunStatus.printDuration("BEGIN CHECK TRANSCODE")
 		done = transcoder.completeJobs()
 		if done:
 			print("Transcode %s succeeded." % (filesetPrefix))
 		else:
 			print("Transcode %s FAILED." % (filesetPrefix))
+		RunStatus.printDuration("TRANSCODE DONE")
 
 
 	## Used by UpdateDBPVideoTable
