@@ -13,14 +13,14 @@ class PreValidate:
 
 	def __init__(self, lptsReader):
 		self.lptsReader = lptsReader
-		self.messages = []
+		self.filesetIds = []
+		self.messages = {}
 
 
 	def validateFilesetId(self, filesetId):
-		print(filesetId)
 		results = self.lptsReader.getFilesetRecords10(filesetId) # This method expect 10 digit DamId's always
 		if results == None:
-			self.errorMessage("is not in LPTS")
+			self.errorMessage(filesetId, "is not in LPTS")
 			return None
 		else:
 			stockNumSet = set()
@@ -40,7 +40,7 @@ class PreValidate:
 					media = "video"
 				else:
 					media = "unknown"
-					self.errorMessage("in %s does not have Audio, Text, or Video in DamId fieldname." % (stockNum,))
+					self.errorMessage(filesetId, "in %s does not have Audio, Text, or Video in DamId fieldname." % (stockNum,))
 				mediaSet.add(media)
 
 				if "3" in fieldName:
@@ -52,13 +52,12 @@ class PreValidate:
 
 				bibleId = lptsRecord.DBP_EquivalentByIndex(index)
 				bibleIdSet.add(bibleId)
-
 			if len(mediaSet) > 1:
-				self.errorMessage("in %s has more than one media type: %s" % (", ".join(stockNumSet), ", ".join(mediaSet)))
+				self.errorMessage(filesetId, "in %s has more than one media type: %s" % (", ".join(stockNumSet), ", ".join(mediaSet)))
 			if len(bibleIdSet) == 0:
-				self.errorMessage("in %s does not have a DBP_Equivalent" % (", ".join(stockNumSet)))
+				self.errorMessage(filesetId, "in %s does not have a DBP_Equivalent" % (", ".join(stockNumSet)))
 			if len(bibleIdSet) > 1:
-				self.errorMessage("in %s has more than one DBP_Equivalent: %s" % (", ".join(stockNumSet), ", ".join(bibleIdSet)))
+				self.errorMessage(filesetId, "in %s has more than one DBP_Equivalent: %s" % (", ".join(stockNumSet), ", ".join(bibleIdSet)))
 
 			if len(mediaSet) > 0 and len(bibleIdSet) > 0:
 				return (list(mediaSet)[0], list(bibleIdSet)[0])
@@ -69,64 +68,85 @@ class PreValidate:
 	def validateLPTS(self, typeCode, bibleId, filesetId):
 		(lptsRecord, index) = self.lptsReader.getLPTSRecord(typeCode, bibleId, filesetId)
 		if lptsRecord == None:
-			self.errorMessage("filesetId is not in LPTS record.")
+			self.errorMessage(filesetId, "filesetId is not in LPTS record.")
 			return None
 		else:
 			stockNo = lptsRecord.Reg_StockNumber()
 			bibleIdFound = lptsRecord.DBP_EquivalentByIndex(index)
 			if bibleIdFound == None:
-				self.requiredFields(stockNo, "DBP_Equivalent (BibleId)")
+				self.requiredFields(filesetId, stockNo, "DBP_Equivalent (BibleId)")
 			elif bibleIdFound != bibleId:
-				self.errorMessage(stockNo, "BibleId given %s is not BibleId in LPTS %s" % (bibleId, bibleIdFound))
+				self.errorMessage(filesetId, "BibleId given %s is not BibleId in LPTS %s" % (bibleId, bibleIdFound))
 			if lptsRecord.Copyrightc() == None:
-				self.requiredFields(stockNo, "Copyrightc")
+				self.requiredFields(filesetId, stockNo, "Copyrightc")
 			if typeCode in {"audio", "video"} and lptsRecord.Copyrightp() == None:
-				self.requiredFields(stockNo, "Copyrightp")
+				self.requiredFields(filesetId, stockNo, "Copyrightp")
 			if typeCode == "video" and lptsRecord.Copyright_Video() == None:
-				self.requiredFields(stockNo, "Copyright_Video")
+				self.requiredFields(filesetId, stockNo, "Copyright_Video")
 			if lptsRecord.ISO() == None:
-				self.requiredFields(stockNo, "ISO")
+				self.requiredFields(filesetId, stockNo, "ISO")
 			if lptsRecord.LangName() == None:
-				self.requiredFields(stockNo, "LangName")
+				self.requiredFields(filesetId, stockNo, "LangName")
 			if lptsRecord.Licensor() == None:
-				self.requiredFields(stockNo, "Licensor")
+				self.requiredFields(filesetId, stockNo, "Licensor")
 			if lptsRecord.Reg_StockNumber() == None:
-				self.requiredFields(stockNo, "Reg_StockNumber")
+				self.requiredFields(filesetId, stockNo, "Reg_StockNumber")
 			if lptsRecord.Volumne_Name() == None:
-				self.requiredFields(stockNo, "Volumne_Name")
+				self.requiredFields(filesetId, stockNo, "Volumne_Name")
 
 			if typeCode == "text" and lptsRecord.Orthography(index) == None:
 				fieldName = "_x003%d_Orthography" % (index)
-				self.requiredFields(stockNo, fieldName)
+				self.requiredFields(filesetId, stockNo, fieldName)
 
 
-	def errorMessage(self, message):
-		self.messages.append(message)
+	def errorMessage(self, filesetId, message):
+		errors = self.messages.get(filesetId, [])
+		errors.append("ERROR %s %s" % (filesetId, message))
+		self.messages[filesetId] = errors
 
 
-	def requiredFields(self, stockNo, fieldName):
-		self.messages.append("LPTS %s field %s is required." % (stockNo, fieldName))
+	def requiredFields(self, filesetId, stockNo, fieldName):
+		message = "LPTS %s field %s is required." % (stockNo, fieldName)
+		self.errorMessage(filesetId, message)
 
 
-	def printLog(self, filesetId):
-		if len(self.messages) > 0:
-			for message in self.messages:
-				print("ERROR %s %s" % (filesetId, message))
-		else:
-			print("INFO %s PreValidation OK" % (filesetId,))
+	def printLog(self):
+		for filesetId in self.filesetIds:
+			if self.hasErrors(filesetId):
+				errors = []
+				errors.append("INFO %s PreValidation OK" % (filesetId,))
+				self.messages[filesetId] = errors
+		result = json.dumps(self.messages)
+		print(result)	
+
+
+	def hasErrors(self, filesetId):
+		has = self.messages.get(filesetId)
+		if has == None and filesetId.endswith("ET"):
+			has = self.messages.get(filesetId[:6])
+		return has == None
 
 
 if (__name__ == '__main__'):
 	lptsReader = LPTSExtractReader(os.environ["LPTS_XML"])
 	validate = PreValidate(lptsReader)
-	data = json.load(sys.stdin)
-	filesetId = data.get("prefix")
-	prefix = validate.validateFilesetId(filesetId)
-	if prefix != None and len(validate.messages) == 0:
-		(typeCode, bibleId) = prefix
-		#print(typeCode, bibleId)
-		if typeCode == "text":
-			filesetId = filesetId[:6]
-		validate.validateLPTS(typeCode, bibleId, filesetId)
-	validate.printLog(filesetId)
+	data = None
+	try:
+		data = json.load(sys.stdin)
+	except Exception as err:
+		errors = []
+		errors.append("Error parsing JSON input")
+		validate.messages["UNKNOWN"] = errors
+		print(json.dumps(validate.messages))
+		sys.exit()
+	for item in data:
+		filesetId = item.get("prefix")
+		validate.filesetIds.append(filesetId)
+		prefix = validate.validateFilesetId(filesetId)
+		if prefix != None:
+			(typeCode, bibleId) = prefix
+			if typeCode == "text":
+				filesetId = filesetId[:6]
+			validate.validateLPTS(typeCode, bibleId, filesetId)
+	validate.printLog()
 
