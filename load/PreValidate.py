@@ -101,7 +101,7 @@ class PreValidate:
 
 	def errorMessage(self, filesetId, message):
 		errors = self.messages.get(filesetId, [])
-		errors.append("ERROR %s %s" % (filesetId, message))
+		errors.append(message)
 		self.messages[filesetId] = errors
 
 
@@ -113,6 +113,13 @@ class PreValidate:
 	def printLog(self):
 		for filesetId in self.filesetIds:
 			if self.hasErrors(filesetId):
+				fullErrors = []
+				errors = self.messages.get(filesetId)
+				if errors != None:
+					for error in errors:
+						fullErrors.append("ERROR %s %s" % (filesetId, error))
+					self.messages[filesetId] = fullErrors
+			else:
 				errors = []
 				errors.append("INFO %s PreValidation OK" % (filesetId,))
 				self.messages[filesetId] = errors
@@ -124,7 +131,7 @@ class PreValidate:
 		has = self.messages.get(filesetId)
 		if has == None and filesetId.endswith("ET"):
 			has = self.messages.get(filesetId[:6])
-		return has == None
+		return has != None
 
 
 if (__name__ == '__main__'):

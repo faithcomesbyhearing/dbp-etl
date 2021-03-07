@@ -48,8 +48,8 @@ class Validate:
 
 		## Validate filetypes
 		for (filePrefix, filenames) in filesets.items():
-			logger = Log.getLogger(filePrefix)
 			(typeCode, bibleId, filesetId) = filePrefix.split("/")
+			logger = Log.getLogger(filesetId)
 			for (filename, filesize, lastmodified) in filenames:
 				ext = os.path.splitext(filename)[1]
 				if typeCode == "audio" and ext not in {".mp3", ".opus", ".webm", ".m4a"}:
@@ -67,7 +67,7 @@ class Validate:
 				(typeCode, bibleId, filesetId) = filePrefix.split("/")
 				errorTuple = texts.validateFileset(bibleId, filesetId)
 				if errorTuple != None:
-					logger = Log.getLogger(filePrefix)
+					logger = Log.getLogger(filesetId)
 					logger.messageTuple(errorTuple)		
 
 		## Reduce input files to typeCode/bibleId: [filesetId]
@@ -127,10 +127,8 @@ class Validate:
 			(typeCode, bibleId) = biblePrefix.split("/")
 			filesetIds = inputIdMap[biblePrefix]
 			for filesetId in filesetIds:
-				logger = Log.getLogger3(typeCode, bibleId, filesetId)
+				logger = Log.getLogger(filesetId)
 				validate.validateLPTS(typeCode, bibleId, filesetId)
-				logger.addPreValidationErrors(validate.messages)
-
 				## These validations require MySQL and so are done here, not PreValidate
 				if typeCode == "text":
 					(lptsRecord, index) = self.lptsReader.getLPTSRecord(typeCode, bibleId, filesetId)
@@ -143,6 +141,7 @@ class Validate:
 						numeralsName = lptsRecord.Numerals()
 						if numeralsName != None and numeralsName not in self.numeralsSet:
 							logger.invalidValues(stockNo, "Numerals", numeralsName)
+		Log.addPreValidationErrors(validate.messages)
 
 
 if (__name__ == '__main__'):

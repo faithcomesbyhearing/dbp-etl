@@ -39,7 +39,6 @@ class DBPLoadController:
 		for filesetId in [f for f in os.listdir(self.config.directory_upload_aws) if not f.startswith('.')]:
 			logger = Log.getLogger(filesetId)
 			results = validate.validateFilesetId(filesetId)
-			logger.addPreValidationErrors(validate.messages)
 			if results != None and Log.totalErrorCount() == 0:
 				(typeCode, bibleId) = results
 				directory = self.config.directory_upload + typeCode + os.sep
@@ -54,6 +53,7 @@ class DBPLoadController:
 				os.replace(sourceDir, targetDir)
 
 		if Log.totalErrorCount() > 0:
+			Log.addPreValidationErrors(validate.messages)
 			Log.writeLog(self.config)
 			sys.exit()
 

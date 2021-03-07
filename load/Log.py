@@ -12,16 +12,12 @@ class Log:
 	INFO = 3
 	loggers = {}
 
-	def getLogger(filesetPrefix):
-		logger = Log.loggers.get(filesetPrefix)
+	def getLogger(filesetId):
+		logger = Log.loggers.get(filesetId)
 		if logger == None:
-			logger = Log(filesetPrefix)
-			Log.loggers[filesetPrefix] = logger
+			logger = Log(filesetId)
+			Log.loggers[filesetId] = logger
 		return logger
-
-	def getLogger3(typeCode, bibleId, filesetId):
-		filesetPrefix = "%s/%s/%s" % (typeCode, bibleId, filesetId)
-		return Log.getLogger(filesetPrefix)
 
 	def fatalError(message):
 		logger = Log.getLogger("~")
@@ -54,11 +50,18 @@ class Log:
 				print(message, end='\n')
 			errorFile.close()
 			DBPRunFilesS3.uploadFile(config, path)
-		print("Num Errors ", len(errors))		
+		print("Num Errors ", len(errors))
 
 
-	def __init__(self, filesetPrefix):
-		self.filesetPrefix = filesetPrefix
+	def addPreValidationErrors(messages):
+		for (filesetId, errors) in messages.items():
+			logger = Log.getLogger(filesetId)
+			for error in errors:
+				logger.messages.append((Log.EROR, error))	
+
+
+	def __init__(self, filesetId):
+		self.filesetId = filesetId
 		self.messages = []
 
 #	def hasMessages(self):
@@ -101,25 +104,20 @@ class Log:
 	def fileErrors(self, fileList):
 		for file in fileList:
 			if len(file.errors) > 0:
-				self.messages.append((Log.EROR, "%s/%s %s." % (self.filesetPrefix, file.file, ", ".join(file.errors))))
-
-	def addPreValidationErrors(self, messages):
-		for message in messages:
-			self.messages.append((Log.EROR, message))
+				self.messages.append((Log.EROR, "%s/%s %s." % (self.filesetId, file.file, ", ".join(file.errors))))
 
 	def format(self):
 		levelMap = { Log.FATAL: "FATAL", Log.EROR: "EROR", Log.WARN: "WARN", Log.INFO: "INFO"}
 		output = []
 		for (level, msg) in self.messages:
 			levelMsg = levelMap.get(level)
-			output.append("%s %s %s" % (levelMsg, self.filesetPrefix, msg))
+			output.append("%s %s %s" % (levelMsg, self.filesetId, msg))
 		return output
 
 
 if (__name__ == '__main__'):
 	config = Config()
-	#error = Log.factory("text/ENGESV/ENGESVN2DA")
-	error = Log.getLogger("text/ENGESV/ENGESVN2DA")
+	error = Log.getLogger("ENGESVN2DA")
 	error.message(Log.INFO, "First message")
 	error.messageTuple((Log.WARN, "Second message"))
 	error.invalidFileExt("MyFilename")
