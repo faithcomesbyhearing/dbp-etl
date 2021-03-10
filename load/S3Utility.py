@@ -85,7 +85,10 @@ class S3Utility:
 
 	def uploadFileset(self, s3Bucket, sourceDir, filesetPrefix):
 		print("uploading: ", filesetPrefix)
-		cmd = "aws --profile %s s3 sync %s%s s3://%s/%s" % (self.config.s3_aws_profile, sourceDir, filesetPrefix, s3Bucket, filesetPrefix)
+		if self.config.s3_aws_profile == None:
+			cmd = "aws s3 sync %s%s s3://%s/%s" % (sourceDir, filesetPrefix, s3Bucket, filesetPrefix)
+		else:
+			cmd = "aws --profile %s s3 sync %s%s s3://%s/%s" % (self.config.s3_aws_profile, sourceDir, filesetPrefix, s3Bucket, filesetPrefix)
 		response = subprocess.run(cmd, shell=True, stderr=subprocess.PIPE)
 		if response.returncode != 0:
 			print("ERROR: Upload of %s to %s failed. MESSAGE: %s" % (filesetPrefix, s3Bucket, response.stderr))
