@@ -38,7 +38,7 @@ class RunStatus:
 			print("RunStatus Metadata Download error", err)
 		try:
 			metadata["status"] = RunStatus.current
-			client.put_object(Bucket=bucket, Key=key, Metadata=metadata)
+			client.put_object(Bucket=bucket, Key=key, Metadata=metadata, ACL='bucket-owner-full-control')
 		except Exception as err:
 			print("RunStatus Metadata Upload error", err)
 

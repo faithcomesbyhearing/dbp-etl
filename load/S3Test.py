@@ -40,9 +40,9 @@ class S3Test:
 			print("upload", s3Key, filename)
 			if file.endswith(".mp3"):
 				self.client.upload_file(filename, self.bucket, s3Key,
-				ExtraArgs={'ContentType': "audio/mpeg"})
+				ExtraArgs={'ContentType': "audio/mpeg", 'ACL': 'bucket-owner-full-control'})
 			elif ! os.path.isdir(filename):
-				self.client.upload_file(filename, self.bucket, s3Key)
+				self.client.upload_file(filename, self.bucket, s3Key, ExtraArgs={'ACL': 'bucket-owner-full-control'})
 		self.duration(start, "boto3 s3.upload_file:")
 
 
