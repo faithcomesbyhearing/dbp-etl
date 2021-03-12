@@ -153,51 +153,11 @@ class UpdateDBPTextFilesets:
 			return int(verse[0:-1])
 
 
-"""
-if (__name__ == '__main__'):
-	from DBPLoadController import *
-	config = Config()
-	db = SQLUtility(config)
-	dbOut = SQLBatchExec(config)
-	lptsReader = LPTSExtractReader(config)
-
-	main = DBPLoadController(config, db, lptsReader)
-	main.cleanup() # Only part of controller used here
-
-	texts = UpdateDBPTextFilesets(config, db, dbOut, lptsReader)
-	s3 = S3Utility(config)
-	dirname = config.directory_upload
-	for typeCode in os.listdir(dirname):
-		if typeCode == "text":
-			for bibleId in os.listdir(dirname + typeCode):
-				for filesetId in os.listdir(dirname + typeCode + os.sep + bibleId):
-					error = texts.validateFileset(bibleId, filesetId)
-					if error == None:
-						s3.promoteFileset(config.directory_upload, "text/%s/%s" % (bibleId, filesetId))
-						#texts.uploadFileset(bibleId, filesetId)
-					else:
-						print(error)
-
-	filesets = UpdateDBPFilesetTables(config, db, dbOut)
-	dirname = config.directory_database
-	for typeCode in os.listdir(dirname):
-		if typeCode == "text":
-			for bibleId in os.listdir(dirname + typeCode):
-				for filesetId in os.listdir(dirname + typeCode + os.sep + bibleId):
-					databasePath = config.directory_accepted + filesetId + ".db"
-					hashId = filesets.insertBibleFileset("verses", filesetId, databasePath)
-					filesets.insertFilesetConnections(hashId, bibleId)
-					texts.updateFileset(bibleId, filesetId, hashId)
-
-	dbOut.displayStatements()
-	dbOut.displayCounts()
-	#dbOut.execute("verses-test")
-"""
 if (__name__ == '__main__'):
 	config = Config()
 	db = SQLUtility(config)
 	dbOut = SQLBatchExec(config)
-	lptsReader = LPTSExtractReader(config)
+	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
 	texts = UpdateDBPTextFilesets(config, db, dbOut, lptsReader)
 	from UpdateDBPFilesetTables import *
 	filesets = UpdateDBPFilesetTables(config, db, dbOut)
@@ -205,15 +165,29 @@ if (__name__ == '__main__'):
 	for typeCode in os.listdir(dirname):
 		if typeCode == "text":
 			for bibleId in os.listdir(dirname + typeCode):
+				print("bibleId", bibleId)
 				for filesetId in os.listdir(dirname + typeCode + os.sep + bibleId):
-					databasePath = config.directory_accepted + filesetId + ".db"
-					hashId = filesets.insertBibleFileset("verses", filesetId, databasePath)
-					filesets.insertFilesetConnections(hashId, bibleId)
-					texts.updateFileset(bibleId, filesetId, hashId)
+					print("filesetId", filesetId)
+					message = texts.validateFileset(bibleId, filesetId)
+					if message != None:
+						print(message)
+					else:
+						databasePath = config.directory_accepted + filesetId + ".db"
+						from SqliteUtility import *
+						sqlite = SqliteUtility(databasePath)
+						bookIdSet = sqlite.selectSet("SELECT code FROM tableContents", ()) 
+						print(bookIdSet)
+
+						## These two lines should be commented out.
+						#for (reference, verseText) in sqlite.select("SELECT reference, html FROM verses", ()):
+						#	print(reference, verseText)
+
+						hashId = filesets.insertBibleFileset("text", filesetId, bookIdSet)
+						filesets.insertFilesetConnections(hashId, bibleId)
+						texts.updateFileset(bibleId, filesetId, hashId, bookIdSet)
 
 	dbOut.displayStatements()
 	dbOut.displayCounts()
 	#dbOut.execute("verses-test")
-
 
 
