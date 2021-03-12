@@ -31,7 +31,7 @@ class DBPRunFilesS3:
 		bucket = config.s3_artifacts_bucket
 		#print(s3Key, filepath)
 		try:
-			client.upload_file(filepath, bucket, s3Key, ExtraArgs={'ContentType': contentType})
+			client.upload_file(filepath, bucket, s3Key, ExtraArgs={'ContentType': contentType, 'ACL': 'bucket-owner-full-control'})
 		except Exception as err:
 			print("ERROR: Upload %s failed  with error %s" % (s3Key, err))
 

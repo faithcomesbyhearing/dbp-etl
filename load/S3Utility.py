@@ -64,7 +64,7 @@ class S3Utility:
 	def uploadFile(self, s3Bucket, s3Key, filename, contentType):
 		try:
 			self.client.upload_file(filename, s3Bucket, s3Key,
-				ExtraArgs={'ContentType': contentType})
+				ExtraArgs={'ContentType': contentType, 'ACL': 'bucket-owner-full-control'})
 		except Exception as err:
 			print("ERROR: Upload %s failed  with error %s" % (s3Key, err))
 
