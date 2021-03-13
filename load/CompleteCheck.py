@@ -23,16 +23,29 @@ class CompleteCheck:
 	# Check for each file in bible_files to insure that it exists in the DBP
 	def bibleFilesToS3(self):
 		files = set()
+		filesets = set()
 		missingFilesetIds = set()
+		absentFilesetIds = set()
 		dbProd = io.open(self.config.directory_bucket_list + "dbp-prod.txt", mode="r", encoding="utf-8")
 		for line in dbProd:
 			if "delete" not in line:
-				files.add(line.split("\t")[0])
+				fullFilename = line.split("\t")[0]
+				files.add(fullFilename)
+				parts = fullFilename.split("/")
+				if len(parts) > 3:
+					fileset = "%s/%s/%s/" % (parts[0], parts[1], parts[2])
+					filesets.add(fileset)
 		dbProd.close()
 		print(len(files), "dbp-prod records")
 		dbVid = io.open(self.config.directory_bucket_list + "dbp-vid.txt", mode="r", encoding="utf-8")
 		for line in dbVid:
-			files.add(line.split("\t")[0])
+			fullFilename = line.split("\t")[0]
+			if fullFilename.endswith(".m3u8"):
+				files.add(fullFilename)
+				parts = fullFilename.split("/")
+				if len(parts) > 3:
+					fileset = "%s/%s/%s/" % (parts[0], parts[1], parts[2])
+					filesets.add(fileset)
 		dbVid.close()
 		print(len(files), "dbp-prod + dbp-vid records")
 		sql = ("SELECT f.set_type_code, c.bible_id, f.id, bf.file_name"
@@ -47,12 +60,19 @@ class CompleteCheck:
 				if fullKey not in files:
 					print("%s NOT in s3 bucket" % (fullKey))
 					missingFilesetIds.add(filesetId)
+				prefixKey = "%s/%s/%s/" % (typeCode.split("_")[0], bibleId, filesetId)
+				if prefixKey not in filesets:
+					absentFilesetIds.add(filesetId)
 		for filesetId in sorted(missingFilesetIds):
-			print("%s Has some or all filese missing from s3 bucket" % (filesetId))
+			if filesetId not in absentFilesetIds:
+				print("%s Has some files missing from s3 bucket" % (filesetId))
+		for filesetId in sorted(absentFilesetIds):
+			print("%s Has all files missing from s3 bucket." % (filesetId))
 
 
 	# Check each DamId in LPTS to see if it has been loaded into DBP
 	def bibleFilesetsToLPTS(self):
+		missing = []
 		filesetIds = self.db.selectSet("SELECT id FROM bible_filesets", ())
 		for rec in self.lptsReader.resultSet:
 			for typeCode in ["audio", "text", "video"]:
@@ -79,14 +99,17 @@ class CompleteCheck:
 						for (damId, status) in damIdMap.items():
 							if status in {"Live", "live"}:
 								if damId not in filesetIds:
-									print(rec.Reg_StockNumber(), typeCode, index, damId, "has no bible_filesets record.")
-
+									missing.append("%s %s %d %s Has no bible_filesets record." % (damId, typeCode, index, rec.Reg_StockNumber()))
+									#print(rec.Reg_StockNumber(), typeCode, index, damId, "Has no bible_filesets record.")
+		for missed in sorted(missing):
+			print(missed)
 
 
 if (__name__ == '__main__'):
 	config = Config()
 	db = SQLUtility(config)
-	lptsReader = LPTSExtractReader(config)
+	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
 	check = CompleteCheck(config, db, lptsReader)
-	#check.bibleFilesToS3()
+	check.bibleFilesToS3()
 	check.bibleFilesetsToLPTS()
+
