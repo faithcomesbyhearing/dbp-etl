@@ -17,8 +17,9 @@
 
 import sys
 import subprocess
-import boto3
+#import boto3
 from Config import *
+from LPTSExtractReader import *
 
 class TestBiblePublisher:
 
@@ -26,80 +27,87 @@ class TestBiblePublisher:
 		self.config = config
 		self.testDirectory = testDirectory
 		self.bucket = bucket
-		self.stockNum = stockNum
+		self.lptsStockNum = stockNum
+		self.textStockNum = stockNum.replace("/", "")
 		print(testDirectory, stockNum)
 		self.publisherRoot = os.path.dirname(os.path.dirname(config.publisher_js))
 		print("publisherRoot", self.publisherRoot)
-		session = boto3.Session(profile_name=config.s3_aws_profile)
-		self.client = session.client('s3')
-		self.programs = ["publish", "xml", "usx", "html", "verses", "toc"]
+		#session = boto3.Session(profile_name=config.s3_aws_profile)
+		#self.client = session.client('s3')
+		#self.client = config.s3_client
+		self.programs = ["publish", "xml", "usx", "html", "verses", "toc"] # "style", "concordance"
 
-	def syncTextFileset(self):
-		directory = self.testDirectory + "/" + self.stockNum
-		if os.path.isdir(directory):
-			print("fileset", self.stockNum, "present.")
+	def findStockNumEntry(self):
+		filePath = self.config.directory_bucket_list + self.bucket
+		fp = open(filePath, "r")
+		for line in fp:
+			if self.textStockNum in line:
+				fp.close()
+				return line.strip()
+		fp.close()
+		print("Stock Number %s is not found" % (self.textStockNum))
+		return None
+
+	def syncTextFileset(self, objectKey):
+		cmd = "aws --profile %s s3 sync s3://%s/%s %s/%s " % (self.config.s3_aws_profile, s3Bucket, objectKey, self.testDirectory, self.textStockNum)
+		response = subprocess.run(cmd, shell=True, stderr=subprocess.PIPE)
+		if response.returncode != 0
+			print("ERROR: Download of %s to %s/%s failed. MESSAGE: %s" % (objectKey, self.testDirectory, self.textStockNum, response.stderr))
+			return False
 		else:
-			stockNums = self.listStockNums();
-			for stockNum in stockNums:
-				print(stockNum)
-			stockNums2 = self.listStockNums2(stockNums[0])
-			for stockNum in stockNums2:
-				print(stockNum)
-			objects = self.listObjects(stockNums2[0])
-			for obj in objects:
-				print(obj)
-			self.downloadObjects(objects)
+			return True
 
-	def listStockNums(self):
-		stockNums = []
-		request = { 'Bucket': self.bucket, 'Delimiter': '_', 'MaxKeys':1000 }
-		hasMore = True
-		while hasMore:
-			response = self.client.list_objects_v2(**request)
-			for prefix in response['CommonPrefixes']:
-				stockNums.append(prefix.get('Prefix'))
-			hasMore = response['IsTruncated']
-			if hasMore:
-				request['ContinuationToken'] = response['NextContinuationToken']
-		return stockNums
 
-	def listStockNums2(self, prefix):
-		stockNums = []
-		request = { 'Bucket': self.bucket, 'Delimiter': '_', 'MaxKeys':1000, 'Prefix': prefix }
-		hasMore = True
-		while hasMore:
-			response = self.client.list_objects_v2(**request)
-			for prefix in response['CommonPrefixes']:
-				stockNums.append(prefix.get('Prefix'))
-			hasMore = response['IsTruncated']
-			if hasMore:
-				request['ContinuationToken'] = response['NextContinuationToken']
-		return stockNums
-
-	def listObjects(self, prefix):
-		objects = []
-		request = { 'Bucket': self.bucket, 'MaxKeys':1000, 'Prefix': prefix }
-		hasMore = True
-		while hasMore:
-			response = self.client.list_objects_v2(**request)
-			for item in response['Contents']:
-				objects.append(item.get('Key'))
-			hasMore = response['IsTruncated']
-			if hasMore:
-				request['ContinuationToken'] = response['NextContinuationToken']
-		return objects
-
-	def downloadObjects(self, keys):
-		directory = self.testDirectory + "/" + self.stockNum
-		os.mkdir(directory)
-		for key in keys:
-			try:
-				filename = directory + "/" + key
-				print("Download %s, %s to %s" % (self.bucket, key, filename))
-				self.client.download_file(self.bucket, key, filename)
-				print("Done With Download")
-			except Exception as err:
-				print("ERROR: Download %s failed with error %s" % (key, err))
+	#def listStockNums(self):
+	#	stockNums = []
+	#	request = { 'Bucket': self.bucket, 'Delimiter': '_', 'MaxKeys':1000 }
+	#	hasMore = True
+	#	while hasMore:
+	#		response = self.client.list_objects_v2(**request)
+	#		for prefix in response['CommonPrefixes']:
+	#			stockNums.append(prefix.get('Prefix'))
+	#		hasMore = response['IsTruncated']
+	#		if hasMore:
+	#			request['ContinuationToken'] = response['NextContinuationToken']
+	#	return stockNums
+	#
+	#def listStockNums2(self, prefix):
+	#	stockNums = []
+	#	request = { 'Bucket': self.bucket, 'Delimiter': '_', 'MaxKeys':1000, 'Prefix': prefix }
+	#	hasMore = True
+	#	while hasMore:
+	#		response = self.client.list_objects_v2(**request)
+	#		for prefix in response['CommonPrefixes']:
+	#			stockNums.append(prefix.get('Prefix'))
+	#		hasMore = response['IsTruncated']
+	#		if hasMore:
+	#			request['ContinuationToken'] = response['NextContinuationToken']
+	#	return stockNums
+	#
+	#def listObjects(self, prefix):
+	#	objects = []
+	#	request = { 'Bucket': self.bucket, 'MaxKeys':1000, 'Prefix': prefix }
+	#	hasMore = True
+	#	while hasMore:
+	#		response = self.client.list_objects_v2(**request)
+	#		for item in response['Contents']:
+	#			objects.append(item.get('Key'))
+	#		hasMore = response['IsTruncated']
+	#		if hasMore:
+	#			request['ContinuationToken'] = response['NextContinuationToken']
+	#	return objects
+	#
+	#def downloadObjects(self, keys):
+	#	directory = self.testDirectory + "/" + self.stockNum
+	#	os.mkdir(directory)
+	#	for key in keys:
+	#		try:
+	#			filename = directory + "/" + key
+	#			print("Download %s, %s to %s" % (self.bucket, key, filename))
+	#			self.client.download_file(self.bucket, key, filename)
+	#			print("Done With Download")
+	#		except Exception as err:
+	#			print("ERROR: Download %s failed with error %s" % (key, err))
 
 	def execute(self, program):
 		cmd = self.command(program)
@@ -136,6 +144,7 @@ class TestBiblePublisher:
 		else:
 			print("ERROR: Unknown program %s" % (program))
 
+
 if len(sys.argv) < 4:
 	print("Usage: python3 TestBiblePublisher.js  config_profile root_directory  stockNum  [program]")
 	sys.exit()
@@ -148,11 +157,13 @@ else:
 	program = None
 
 config = Config()
-test = TestBiblePublisher(config, rootDirectory, "test-dbp", stockNum);
-test.syncTextFileset()
-if program != None:
-	test.execute(program)
-else:
-	for program in test.programs:
-		test.execute(program)
+test = TestBiblePublisher(config, rootDirectory, "dbp-etl-mass-batch", stockNum)
+objectKey = test.findStockNumEntry()
+if objectKey != None:
+	if test.syncTextFileset(objectKey):
+		if program != None:
+			test.execute(program)
+		else:
+			for program in test.programs:
+				test.execute(program)
 
