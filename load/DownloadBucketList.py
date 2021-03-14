@@ -9,22 +9,19 @@ import io
 import os
 import sys
 import datetime
+from Config import *
 
-if len(sys.argv) < 2:
-	print("Usage: DownloadBucketList  bucket_name")
+if len(sys.argv) < 3:
+	print("Usage: DownloadBucketList  config_name  bucket_name")
 	sys.exit()
 
-BUCKET_NAME = sys.argv[1]
+config = Config()
+BUCKET_NAME = sys.argv[2]
 
-filename = "new-%s.txt" % (BUCKET_NAME)
-#pathname = "%s/FCBH/bucket_data/%s" % (os.environ['HOME'], filename)
-pathname = "/Volumes/FCBH/bucket_data/%s" % (filename,)
-print(pathname)
-
+pathname = config.directory_bucket_list + "new-%s.txt" % (BUCKET_NAME)
 out = io.open(pathname, mode="w", encoding="utf-8")
 
-session = boto3.Session(profile_name='FCBH_Gary')
-#session = boto3.Session(profile_name='FCBH_DBS')
+session = boto3.Session(profile_name=config.s3_aws_profile)
 client = session.client('s3')
 
 s3 = session.resource('s3')
