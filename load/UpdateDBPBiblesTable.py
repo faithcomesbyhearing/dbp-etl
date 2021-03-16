@@ -195,7 +195,7 @@ class UpdateDBPBiblesTable:
 				elif numerals == "arabic-/-khmer":
 					numerals = "khmer"
 				if numerals not in self.numeralIdSet:
-					print("ERROR_03 Unknown Numeral System '%s'" % numerals)
+					print("ERROR_03 Unknown Numeral System '%s' for %s" % (numerals, lptsRecord.Reg_StockNumber()))
 				final.add(numerals)
 		if len(final) == 0:
 			return None
