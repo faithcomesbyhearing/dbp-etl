@@ -17,8 +17,10 @@ class PreValidate:
 		self.messages = {}
 
 
+    ## Validate filesetId and return (stockNum, damId, typeCode, bibleId, index)
 	def validateFilesetId(self, filesetId):
-		results = self.lptsReader.getFilesetRecords10(filesetId) # This method expect 10 digit DamId's always
+		self.filesetIds.append(filesetId)
+		results = self.lptsReader.getFilesetRecords10(filesetId) # This method expects 10 digit DamId's always
 		if results == None:
 			self.errorMessage(filesetId, "is not in LPTS")
 			return None
@@ -29,6 +31,7 @@ class PreValidate:
 			for (lptsRecord, status, fieldName) in results:
 				stockNum = lptsRecord.Reg_StockNumber()
 				stockNumSet.add(stockNum)
+				damId = lptsRecord.record.get(fieldName)
 
 				dbpFilesetId = filesetId
 				if "Audio" in fieldName:
@@ -52,6 +55,8 @@ class PreValidate:
 
 				bibleId = lptsRecord.DBP_EquivalentByIndex(index)
 				bibleIdSet.add(bibleId)
+			if len(stockNumSet) > 1:
+				self.errorMessage(filesetId, "has more than one stock no: %s" % (", ".join(stockNumSet)))
 			if len(mediaSet) > 1:
 				self.errorMessage(filesetId, "in %s has more than one media type: %s" % (", ".join(stockNumSet), ", ".join(mediaSet)))
 			if len(bibleIdSet) == 0:
@@ -60,7 +65,7 @@ class PreValidate:
 				self.errorMessage(filesetId, "in %s has more than one DBP_Equivalent: %s" % (", ".join(stockNumSet), ", ".join(bibleIdSet)))
 
 			if len(mediaSet) > 0 and len(bibleIdSet) > 0:
-				return (list(mediaSet)[0], list(bibleIdSet)[0])
+				return (list(stockNumSet)[0], damId, list(mediaSet)[0], list(bibleIdSet)[0], index)
 			else:
 				return None
 
@@ -148,10 +153,9 @@ if (__name__ == '__main__'):
 		sys.exit()
 	for item in data:
 		filesetId = item.get("prefix")
-		validate.filesetIds.append(filesetId)
-		prefix = validate.validateFilesetId(filesetId)
-		if prefix != None:
-			(typeCode, bibleId) = prefix
+		lptsData = validate.validateFilesetId(filesetId)
+		if lptsData != None:
+			(stockNum, damId, typeCode, bibleId, index) = lptsData
 			if typeCode == "text":
 				filesetId = filesetId[:6]
 			validate.validateLPTS(typeCode, bibleId, filesetId)
