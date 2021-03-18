@@ -15,6 +15,18 @@ from Config import *
 from LPTSExtractReader import *
 from PreValidate import *
 
+class InputFile:
+
+	def __init__(self, name, size):
+		self.name = name
+		self.size = size
+
+	def toString(self):
+		results = []
+		results.append("name=" + self.name)
+		results.append("size=" + str(self.size))
+		return " ".join(results)
+
 
 class InputFileset:
 
@@ -30,13 +42,14 @@ class InputFileset:
 
 
 	## parse command line, and return [InputFileset]
-	def commandLineFactory(config, lptsReader, preValidate):
+	def filesetCommandLineParser(config, lptsReader):
 		if len(sys.argv) < 4:
 			print("FATAL command line parameters: config_profile  s3://bucket|localPath  filesetId_list ")
 			sys.exit()
 
 		location = sys.argv[2]
 		filesetIds = sys.argv[3:]
+		preValidate = PreValidate(lptsReader)
 
 		for filesetId in filesetIds:
 			lptsData = preValidate.validateFilesetId(filesetId)
@@ -81,7 +94,8 @@ class InputFileset:
 		results.append(" index=" + str(self.index) + "\n")
 		results.append("filesetPrefix=" + self.filesetPrefix + "\n")
 		results.append("csvFilename=" + self.csvFilename + "\n")
-		results.append("files=" + ", ".join(self.files))
+		for file in self.files:
+			results.append(file.toString() + "  ")
 		return " ".join(results)
 
 
@@ -92,8 +106,10 @@ class InputFileset:
 			pathname = self.location + self.filesetId
 			if os.path.isdir(pathname):
 				for filename in [f for f in os.listdir(pathname) if not f.startswith('.')]:
-					if not ignoreSet.has(filename):
-						results.append(filename)
+					if filename not in ignoreSet and os.path.isfile(pathname + os.sep + filename):
+						fullpath = pathname + os.sep + filename
+						filesize = os.path.getsize(fullpath)
+						results.append(InputFile(filename, filesize))
 			else:
 				Log.getLogger(self.filesetId).message(Log.EROR, "Invalid pathname %s" % (pathname))
 		else:
@@ -105,7 +121,8 @@ class InputFileset:
 				for item in response.get('Contents', []):
 					objKey = item.get('Key')
 					parts = objKey.split("/")
-					results.append(parts[-1])
+					size = item.get('Size')
+					results.append(InputFile(parts[-1], size))
 				hasMore = response['IsTruncated']
 				if hasMore:
 					request['ContinuationToken'] = response['NextContinuationToken']
@@ -120,8 +137,7 @@ class InputFileset:
 if (__name__ == '__main__'):
 	config = Config()
 	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
-	preValidate = PreValidate(lptsReader)
-	InputFileset.commandLineFactory(config, lptsReader, preValidate)
+	InputFileset.filesetCommandLineParser(config, lptsReader)
 	for inp in InputFileset.validate:
 		print(inp.toString())
 	Log.writeLog(config)
