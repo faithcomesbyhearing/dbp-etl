@@ -10,6 +10,7 @@
 
 import os
 import json
+from datetime import datetime
 from Log import *
 from Config import *
 from LPTSExtractReader import *
@@ -17,14 +18,19 @@ from PreValidate import *
 
 class InputFile:
 
-	def __init__(self, name, size):
+	def __init__(self, name, size, lastModified):
 		self.name = name
 		self.size = size
+		self.lastModified = lastModified
+
+	def filenameTuple(self):
+		return (self.name, self.size, self.lastModified)
 
 	def toString(self):
 		results = []
 		results.append("name=" + self.name)
 		results.append("size=" + str(self.size))
+		results.append("modified=" + self.lastModified)
 		return " ".join(results)
 
 
@@ -47,6 +53,7 @@ class InputFileset:
 			print("FATAL command line parameters: config_profile  s3://bucket|localPath  filesetId_list ")
 			sys.exit()
 
+		results = []
 		location = sys.argv[2]
 		filesetIds = sys.argv[3:]
 		preValidate = PreValidate(lptsReader)
@@ -55,15 +62,16 @@ class InputFileset:
 			lptsData = preValidate.validateFilesetId(filesetId)
 			if lptsData != None:
 				(stockNo, damId, typeCode, bibleId, index) = lptsData
-				if typeCode == "text":
-					filesetId = filesetId[:6]
+				filesetPath = filesetId
+				filesetId = filesetId[:6] if typeCode == "text" else filesetId
 				preValidate.validateLPTS(typeCode, bibleId, filesetId)
 				if not preValidate.hasErrors(filesetId):
-					InputFileset.validate.append(InputFileset(config, location, filesetId, stockNo, damId, typeCode, bibleId, index))
+					results.append(InputFileset(config, location, filesetId, filesetPath, stockNo, damId, typeCode, bibleId, index))
 		Log.addPreValidationErrors(preValidate.messages)
+		return results
 
 
-	def __init__(self, config, location, filesetId, stockNum, damId, typeCode, bibleId, index):
+	def __init__(self, config, location, filesetId, filesetPath, stockNum, damId, typeCode, bibleId, index):
 		if location.startswith("s3://"):
 			self.locationType = InputFileset.BUCKET
 			self.location = location[5:]
@@ -71,8 +79,9 @@ class InputFileset:
 			self.locationType = InputFileset.LOCAL
 			self.location = location
 		self.filesetId = filesetId
-		self.lptsDamId = damId
+		self.filesetPath = filesetPath
 		self.stockNum = stockNum
+		self.lptsDamId = damId
 		self.typeCode = typeCode
 		self.bibleId = bibleId
 		self.index = index
@@ -103,13 +112,15 @@ class InputFileset:
 		results = []
 		ignoreSet = {"Thumbs.db"}
 		if self.locationType == InputFileset.LOCAL:
-			pathname = self.location + self.filesetId
+			pathname = self.fullPath()
 			if os.path.isdir(pathname):
 				for filename in [f for f in os.listdir(pathname) if not f.startswith('.')]:
 					if filename not in ignoreSet and os.path.isfile(pathname + os.sep + filename):
-						fullpath = pathname + os.sep + filename
-						filesize = os.path.getsize(fullpath)
-						results.append(InputFile(filename, filesize))
+						filepath = pathname + os.sep + filename
+						filesize = os.path.getsize(filepath)
+						modifiedTS = os.path.getmtime(filepath)
+						lastModified = str(datetime.fromtimestamp(modifiedTS)).split(".")[0]
+						results.append(InputFile(filename, filesize, lastModified))
 			else:
 				Log.getLogger(self.filesetId).message(Log.EROR, "Invalid pathname %s" % (pathname))
 		else:
@@ -122,7 +133,9 @@ class InputFileset:
 					objKey = item.get('Key')
 					parts = objKey.split("/")
 					size = item.get('Size')
-					results.append(InputFile(parts[-1], size))
+					lastModified = str(item.get('LastModified'))
+					lastModified = lastModified.split("+")[0]
+					results.append(InputFile(parts[-1], size, lastModified))
 				hasMore = response['IsTruncated']
 				if hasMore:
 					request['ContinuationToken'] = response['NextContinuationToken']
@@ -130,14 +143,26 @@ class InputFileset:
 				Log.getLogger(self.filesetId).message(Log.EROR, "Invalid bucket %s or prefix %s" % (self.location, self.filesetPrefix))
 		return results
 
+
 	def fullPath(self):
-		return self.location + self.filesetId
+		if self.locationType == InputFileset.LOCAL:
+			return self.location + self.filesetPath
+		else:
+			return None #TBD
+
+
+	def filenamesTuple(self):
+		results = []
+		for file in self.files:
+			if not file.name.endswith(".xml"):
+				results.append(file.filenameTuple())
+		return results
 
 
 if (__name__ == '__main__'):
 	config = Config()
 	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
-	InputFileset.filesetCommandLineParser(config, lptsReader)
+	InputFileset.validate = InputFileset.filesetCommandLineParser(config, lptsReader)
 	for inp in InputFileset.validate:
 		print(inp.toString())
 	Log.writeLog(config)
