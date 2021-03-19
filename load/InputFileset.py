@@ -30,7 +30,7 @@ class InputFile:
 		results = []
 		results.append("name=" + self.name)
 		results.append("size=" + str(self.size))
-		results.append("modified=" + self.lastModified)
+		results.append("date=" + self.lastModified)
 		return " ".join(results)
 
 
@@ -61,17 +61,17 @@ class InputFileset:
 		for filesetId in filesetIds:
 			lptsData = preValidate.validateFilesetId(filesetId)
 			if lptsData != None:
-				(stockNo, damId, typeCode, bibleId, index) = lptsData
+				(lptsRecord, damId, typeCode, bibleId, index) = lptsData
 				filesetPath = filesetId
 				filesetId = filesetId[:6] if typeCode == "text" else filesetId
-				preValidate.validateLPTS(typeCode, bibleId, filesetId)
+				preValidate.validateLPTS(typeCode, filesetId, lptsRecord, index)
 				if not preValidate.hasErrors(filesetId):
-					results.append(InputFileset(config, location, filesetId, filesetPath, stockNo, damId, typeCode, bibleId, index))
+					results.append(InputFileset(config, location, filesetId, filesetPath, damId, typeCode, bibleId, index, lptsRecord))
 		Log.addPreValidationErrors(preValidate.messages)
 		return results
 
 
-	def __init__(self, config, location, filesetId, filesetPath, stockNum, damId, typeCode, bibleId, index):
+	def __init__(self, config, location, filesetId, filesetPath, damId, typeCode, bibleId, index, lptsRecord):
 		if location.startswith("s3://"):
 			self.locationType = InputFileset.BUCKET
 			self.location = location[5:]
@@ -80,14 +80,14 @@ class InputFileset:
 			self.location = location
 		self.filesetId = filesetId
 		self.filesetPath = filesetPath
-		self.stockNum = stockNum
 		self.lptsDamId = damId
 		self.typeCode = typeCode
 		self.bibleId = bibleId
 		self.index = index
+		self.lptsRecord = lptsRecord
 		self.filesetPrefix = "%s/%s/%s" % (self.typeCode, self.bibleId, self.filesetId)
 		self.csvFilename = "%s%s_%s_%s.csv" % (config.directory_accepted, self.typeCode, self.bibleId, self.filesetId)
-		self.database = "%s%s.db" % (config.directory_accepted, self.filesetId) if self.typeCode == "text" else None
+		self.databasePath = "%s%s.db" % (config.directory_accepted, self.filesetId) if self.typeCode == "text" else None
 		self.files = self._setFilenames(config)
 
 	def toString(self):
@@ -97,7 +97,7 @@ class InputFileset:
 		results.append("locationType=" + self.locationType)
 		results.append(" filesetId=" + self.filesetId)
 		results.append(" lptsDamId=" + self.lptsDamId)
-		results.append(" stockNum=" + self.stockNum)
+		results.append(" stockNum=" + self.stockNum())
 		results.append(" typeCode=" + self.typeCode)
 		results.append(" bibleId=" + self.bibleId)
 		results.append(" index=" + str(self.index) + "\n")
@@ -144,6 +144,10 @@ class InputFileset:
 		return results
 
 
+	def stockNum(self):
+		return self.lptsRecord.Reg_StockNumber()
+
+
 	def fullPath(self):
 		if self.locationType == InputFileset.LOCAL:
 			return self.location + self.filesetPath
@@ -151,11 +155,28 @@ class InputFileset:
 			return None #TBD
 
 
+	def filenames(self):
+		results = []
+		for file in self.files:
+			if not file.name.endswith(".xml"):
+				results.append(file.name)
+		return results
+
+
 	def filenamesTuple(self):
 		results = []
 		for file in self.files:
 			if not file.name.endswith(".xml"):
 				results.append(file.filenameTuple())
+		return results
+
+
+	def s3FileKeys(self):
+		results = []
+		for file in self.files:
+			if not file.name.endswith(".xml"):
+				objectKey = self.filesetPrefix + "/" + file.name
+				results.append(objectKey)
 		return results
 
 
