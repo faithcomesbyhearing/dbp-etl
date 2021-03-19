@@ -3,7 +3,7 @@
 # This program is used as an AWS lambda to verify filesets that are to be uploaded.
 # It is also called by the primary Validate.py program during the actual run.
 
-# This class expects an environment variable $LPTS_XML set to the full path to that XML file.
+# The main of this class expects an environment variable $LPTS_XML set to the full path to that XML file.
 
 import json
 from LPTSExtractReader import *
@@ -17,7 +17,7 @@ class PreValidate:
 		self.messages = {}
 
 
-    ## Validate filesetId and return (stockNum, damId, typeCode, bibleId, index)
+    ## Validate filesetId and return (lptsRecord, damId, typeCode, bibleId, index)
 	def validateFilesetId(self, filesetId):
 		self.filesetIds.append(filesetId)
 		results = self.lptsReader.getFilesetRecords10(filesetId) # This method expects 10 digit DamId's always
@@ -65,43 +65,33 @@ class PreValidate:
 				self.errorMessage(filesetId, "in %s has more than one DBP_Equivalent: %s" % (", ".join(stockNumSet), ", ".join(bibleIdSet)))
 
 			if len(mediaSet) > 0 and len(bibleIdSet) > 0:
-				return (list(stockNumSet)[0], damId, list(mediaSet)[0], list(bibleIdSet)[0], index)
+				return (lptsRecord, damId, list(mediaSet)[0], list(bibleIdSet)[0], index)
 			else:
 				return None
 
 
-	def validateLPTS(self, typeCode, bibleId, filesetId):
-		(lptsRecord, index) = self.lptsReader.getLPTSRecord(typeCode, bibleId, filesetId)
-		if lptsRecord == None:
-			self.errorMessage(filesetId, "filesetId is not in LPTS record.")
-			return None
-		else:
-			stockNo = lptsRecord.Reg_StockNumber()
-			bibleIdFound = lptsRecord.DBP_EquivalentByIndex(index)
-			if bibleIdFound == None:
-				self.requiredFields(filesetId, stockNo, "DBP_Equivalent (BibleId)")
-			elif bibleIdFound != bibleId:
-				self.errorMessage(filesetId, "BibleId given %s is not BibleId in LPTS %s" % (bibleId, bibleIdFound))
-			if lptsRecord.Copyrightc() == None:
-				self.requiredFields(filesetId, stockNo, "Copyrightc")
-			if typeCode in {"audio", "video"} and lptsRecord.Copyrightp() == None:
-				self.requiredFields(filesetId, stockNo, "Copyrightp")
-			if typeCode == "video" and lptsRecord.Copyright_Video() == None:
-				self.requiredFields(filesetId, stockNo, "Copyright_Video")
-			if lptsRecord.ISO() == None:
-				self.requiredFields(filesetId, stockNo, "ISO")
-			if lptsRecord.LangName() == None:
-				self.requiredFields(filesetId, stockNo, "LangName")
-			if lptsRecord.Licensor() == None:
-				self.requiredFields(filesetId, stockNo, "Licensor")
-			if lptsRecord.Reg_StockNumber() == None:
-				self.requiredFields(filesetId, stockNo, "Reg_StockNumber")
-			if lptsRecord.Volumne_Name() == None:
-				self.requiredFields(filesetId, stockNo, "Volumne_Name")
+	def validateLPTS(self, typeCode, filesetId, lptsRecord, index):
+		stockNo = lptsRecord.Reg_StockNumber()
+		if lptsRecord.Copyrightc() == None:
+			self.requiredFields(filesetId, stockNo, "Copyrightc")
+		if typeCode in {"audio", "video"} and lptsRecord.Copyrightp() == None:
+			self.requiredFields(filesetId, stockNo, "Copyrightp")
+		if typeCode == "video" and lptsRecord.Copyright_Video() == None:
+			self.requiredFields(filesetId, stockNo, "Copyright_Video")
+		if lptsRecord.ISO() == None:
+			self.requiredFields(filesetId, stockNo, "ISO")
+		if lptsRecord.LangName() == None:
+			self.requiredFields(filesetId, stockNo, "LangName")
+		if lptsRecord.Licensor() == None:
+			self.requiredFields(filesetId, stockNo, "Licensor")
+		if lptsRecord.Reg_StockNumber() == None:
+			self.requiredFields(filesetId, stockNo, "Reg_StockNumber")
+		if lptsRecord.Volumne_Name() == None:
+			self.requiredFields(filesetId, stockNo, "Volumne_Name")
 
-			if typeCode == "text" and lptsRecord.Orthography(index) == None:
-				fieldName = "_x003%d_Orthography" % (index)
-				self.requiredFields(filesetId, stockNo, fieldName)
+		if typeCode == "text" and lptsRecord.Orthography(index) == None:
+			fieldName = "_x003%d_Orthography" % (index)
+			self.requiredFields(filesetId, stockNo, fieldName)
 
 
 	def errorMessage(self, filesetId, message):
@@ -155,9 +145,11 @@ if (__name__ == '__main__'):
 		filesetId = item.get("prefix")
 		lptsData = validate.validateFilesetId(filesetId)
 		if lptsData != None:
-			(stockNum, damId, typeCode, bibleId, index) = lptsData
+			(lptsRecord, damId, typeCode, bibleId, index) = lptsData
 			if typeCode == "text":
 				filesetId = filesetId[:6]
-			validate.validateLPTS(typeCode, bibleId, filesetId)
+			validate.validateLPTS(typeCode, filesetId, lptsRecord, index)
 	validate.printLog()
+
+	
 
