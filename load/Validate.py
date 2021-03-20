@@ -8,7 +8,6 @@ from Config import *
 from Log import *
 from PreValidate import *
 from SQLUtility import *
-from InputReader import *
 from LPTSExtractReader import *
 from FilenameParser import *
 from FilenameReducer import *
@@ -17,69 +16,42 @@ from UpdateDBPTextFilesets import *
 
 class Validate:	
 
-	def __init__(self, runType, config, db, lptsReader):
+	def __init__(self, config, db, lptsReader):
 		self.config = config
 		self.db = db
-		self.runType = runType
 		self.lptsReader = lptsReader
 		self.scriptNameSet = db.selectSet("SELECT lpts_name FROM lpts_script_codes", ())
 		self.numeralsSet = db.selectSet("SELECT id FROM numeral_systems", ())
 
 
-	def process(self):
+	def process(self, filesets):
 		self.prepareDirectory(self.config.directory_accepted)
 		self.prepareDirectory(self.config.directory_quarantine)
 		self.prepareDirectory(self.config.directory_duplicate)
 		self.prepareDirectory(self.config.directory_errors)
 
-		## get filesets: a map typeCode/bibleId/filesetId: [(filename, fileSize, datetime)]
-		reader = InputReader(self.config)
-		if self.runType == "bucketlists":
-			filesets = reader.bucketListing(self.config.s3_bucket)
-			filesets = reader.bucketListing(self.config.s3_vid_bucket)
-
-		elif self.runType == "files":
-			filesets = reader.fileListing(self.config.directory_upload)
-			filesets = reader.fileListing(self.config.directory_database)
-
-		else:
-			print("ERROR: run_type must be files or bucketlists.")
-			sys.exit()
-
 		## Validate filetypes
-		for (filePrefix, filenames) in filesets.items():
-			(typeCode, bibleId, filesetId) = filePrefix.split("/")
-			logger = Log.getLogger(filesetId)
-			for (filename, filesize, lastmodified) in filenames:
-				ext = os.path.splitext(filename)[1]
-				if typeCode == "audio" and ext not in {".mp3", ".opus", ".webm", ".m4a"}:
-					logger.invalidFileExt(filename)
-				elif typeCode == "text" and not ext in {".html", ".usx"}:
-					logger.invalidFileExt(filename)
-				elif typeCode == "video" and ext != ".mp4":
-					logger.invalidFileExt(filename)
+		for inp in filesets:
+			logger = Log.getLogger(inp.filesetId)
+			for file in inp.files:
+				ext = os.path.splitext(file.name)[-1]
+				if inp.typeCode == "audio" and ext not in {".mp3", ".opus", ".webm", ".m4a", ".jpg", ".tif"}:
+					logger.invalidFileExt(file.name)
+				elif inp.typeCode == "text" and not ext in {".html", ".usx", ".xml"}:
+					logger.invalidFileExt(file.name)
+				elif inp.typeCode == "video" and ext != ".mp4":
+					logger.invalidFileExt(file.name)
 
 		## Validate Text Filesets
 		texts = UpdateDBPTextFilesets(self.config, self.db, None, self.lptsReader)
-		s3 = S3Utility(self.config)
-		for (filePrefix, filenames) in filesets.items():
-			if filePrefix.startswith("text"):
-				(typeCode, bibleId, filesetId) = filePrefix.split("/")
-				errorTuple = texts.validateFileset(bibleId, filesetId)
+		for inp in filesets:
+			if inp.typeCode == "text":
+				errorTuple = texts.validateFileset(inp.bibleId, inp.filesetId, inp.fullPath())
 				if errorTuple != None:
-					logger = Log.getLogger(filesetId)
-					logger.messageTuple(errorTuple)		
+					logger = Log.getLogger(inp.filesetId)
+					logger.messageTuple(errorTuple)	
 
-		## Reduce input files to typeCode/bibleId: [filesetId]
-		inputIdMap = {}
-		for filePrefix in filesets.keys():
-			(typeCode, bibleId, filesetId) = filePrefix.split("/")
-			key = typeCode + "/" + bibleId
-			filesetIdList = inputIdMap.get(key, [])
-			filesetIdList.append(filesetId)
-			inputIdMap[key] = filesetIdList
-
-		self.validateLPTS(inputIdMap)
+		self.validateLPTS(filesets)
 
 		FilenameReducer.openAcceptErrorSet(self.config)
 		parser = FilenameParser(self.config)
@@ -121,27 +93,19 @@ class Validate:
 		return None
 
 
-	def validateLPTS(self, inputIdMap):
-		validate = PreValidate(self.lptsReader)
-		for biblePrefix in sorted(inputIdMap.keys()):
-			(typeCode, bibleId) = biblePrefix.split("/")
-			filesetIds = inputIdMap[biblePrefix]
-			for filesetId in filesetIds:
-				logger = Log.getLogger(filesetId)
-				validate.validateLPTS(typeCode, bibleId, filesetId)
-				## These validations require MySQL and so are done here, not PreValidate
-				if typeCode == "text":
-					(lptsRecord, index) = self.lptsReader.getLPTSRecord(typeCode, bibleId, filesetId)
-					if lptsRecord != None:
+	## These validations require MySql and so are not done in PreValidate
+	def validateLPTS(self, filesets):
+		for inp in filesets:
+			logger = Log.getLogger(inp.filesetId)
+			if inp.typeCode == "text":
 
-						scriptName = lptsRecord.Orthography(index)
-						if scriptName != None and scriptName not in self.scriptNameSet:
-							logger.invalidValues(stockNo, "_x003n_Orthography", scriptName)
+				scriptName = inp.lptsRecord.Orthography(inp.index)
+				if scriptName != None and scriptName not in self.scriptNameSet:
+					logger.invalidValues(inp.stockNum(), "_x003n_Orthography", scriptName)
 
-						numeralsName = lptsRecord.Numerals()
-						if numeralsName != None and numeralsName not in self.numeralsSet:
-							logger.invalidValues(stockNo, "Numerals", numeralsName)
-		Log.addPreValidationErrors(validate.messages)
+				numeralsName = inp.lptsRecord.Numerals()
+				if numeralsName != None and numeralsName not in self.numeralsSet:
+					logger.invalidValues(inp.stockNum(), "Numerals", numeralsName)
 
 
 if (__name__ == '__main__'):
