@@ -54,11 +54,12 @@ class InputFileset:
 			sys.exit()
 
 		results = []
-		location = sys.argv[2]
+		location = sys.argv[2][:-1] if sys.argv[2].endswith("/") else sys.argv[2]
 		filesetPaths = sys.argv[3:]
 		preValidate = PreValidate(lptsReader)
 
 		for filesetPath in filesetPaths:
+			filesetPath = filesetPath[:-1] if filesetPath.endswith("/") else filesetPath
 			filesetId = filesetPath.split("/")[-1]
 			lptsData = preValidate.validateFilesetId(filesetId)
 			if lptsData != None:
@@ -149,7 +150,7 @@ class InputFileset:
 
 	def fullPath(self):
 		if self.locationType == InputFileset.LOCAL:
-			return self.location + self.filesetPath
+			return self.location + os.sep + self.filesetPath
 		else:
 			return None #TBD
 
