@@ -105,7 +105,7 @@ class InputFileset:
 		results.append("filesetPrefix=" + self.filesetPrefix + "\n")
 		results.append("csvFilename=" + self.csvFilename + "\n")
 		for file in self.files:
-			results.append(file.toString() + "  ")
+			results.append(file.toString() + "\n")
 		return " ".join(results)
 
 
@@ -131,11 +131,11 @@ class InputFileset:
 				response = config.s3_client.list_objects_v2(**request)
 				for item in response.get('Contents', []):
 					objKey = item.get('Key')
-					parts = objKey.split("/")
+					filename = objKey[len(self.filesetPath) + 1:]
 					size = item.get('Size')
 					lastModified = str(item.get('LastModified'))
 					lastModified = lastModified.split("+")[0]
-					results.append(InputFile(parts[-1], size, lastModified))
+					results.append(InputFile(filename, size, lastModified))
 				hasMore = response['IsTruncated']
 				if hasMore:
 					request['ContinuationToken'] = response['NextContinuationToken']
@@ -149,16 +149,14 @@ class InputFileset:
 
 
 	def fullPath(self):
-		if self.locationType == InputFileset.LOCAL:
-			return self.location + os.sep + self.filesetPath
-		else:
-			return None #TBD
+		return self.location + os.sep + self.filesetPath
 
 
 	def filenames(self):
 		results = []
 		for file in self.files:
-			if not file.name.endswith(".xml"):
+			ext = file.name.split(".")[-1]
+			if not ext in { "xml", "jpg", "tif" }:  ### Does this belong in _setFilenames
 				results.append(file.name)
 		return results
 
@@ -166,7 +164,8 @@ class InputFileset:
 	def filenamesTuple(self):
 		results = []
 		for file in self.files:
-			if not file.name.endswith(".xml"):
+			ext = file.name.split(".")[-1]
+			if not ext in { "xml", "jpg", "tif" }:
 				results.append(file.filenameTuple())
 		return results
 
