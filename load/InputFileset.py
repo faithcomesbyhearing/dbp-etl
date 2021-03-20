@@ -50,19 +50,19 @@ class InputFileset:
 	## parse command line, and return [InputFileset]
 	def filesetCommandLineParser(config, lptsReader):
 		if len(sys.argv) < 4:
-			print("FATAL command line parameters: config_profile  s3://bucket|localPath  filesetId_list ")
+			print("FATAL command line parameters: config_profile  s3://bucket|localPath  filesetPath_list ")
 			sys.exit()
 
 		results = []
 		location = sys.argv[2]
-		filesetIds = sys.argv[3:]
+		filesetPaths = sys.argv[3:]
 		preValidate = PreValidate(lptsReader)
 
-		for filesetId in filesetIds:
+		for filesetPath in filesetPaths:
+			filesetId = filesetPath.split("/")[-1]
 			lptsData = preValidate.validateFilesetId(filesetId)
 			if lptsData != None:
 				(lptsRecord, damId, typeCode, bibleId, index) = lptsData
-				filesetPath = filesetId
 				filesetId = filesetId[:6] if typeCode == "text" else filesetId
 				preValidate.validateLPTS(typeCode, filesetId, lptsRecord, index)
 				if not preValidate.hasErrors(filesetId):
@@ -124,8 +124,7 @@ class InputFileset:
 			else:
 				Log.getLogger(self.filesetId).message(Log.EROR, "Invalid pathname %s" % (pathname))
 		else:
-			print("search for ", self.filesetPrefix)
-			request = { 'Bucket': self.location, 'MaxKeys': 1000, 'Prefix': self.filesetPrefix }
+			request = { 'Bucket': self.location, 'MaxKeys': 1000, 'Prefix': self.filesetPath }
 			hasMore = True
 			while hasMore:
 				response = config.s3_client.list_objects_v2(**request)
