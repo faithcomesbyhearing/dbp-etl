@@ -125,7 +125,7 @@ class InputFileset:
 			else:
 				Log.getLogger(self.filesetId).message(Log.EROR, "Invalid pathname %s" % (pathname))
 		else:
-			request = { 'Bucket': self.location, 'MaxKeys': 1000, 'Prefix': self.filesetPath }
+			request = { 'Bucket': self.location, 'MaxKeys': 1000, 'Prefix': self.filesetPath + "/" }
 			hasMore = True
 			while hasMore:
 				response = config.s3_client.list_objects_v2(**request)
@@ -140,7 +140,7 @@ class InputFileset:
 				if hasMore:
 					request['ContinuationToken'] = response['NextContinuationToken']
 			if len(results) == 0:
-				Log.getLogger(self.filesetId).message(Log.EROR, "Invalid bucket %s or prefix %s" % (self.location, self.filesetPrefix))
+				Log.getLogger(self.filesetId).message(Log.EROR, "Invalid bucket %s or prefix %s" % (self.location, self.filesetPath))
 		return results
 
 
