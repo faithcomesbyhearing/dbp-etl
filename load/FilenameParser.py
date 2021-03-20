@@ -468,7 +468,7 @@ class FilenameParser:
 		)
 
 
-	def process3(self, filenamesMap, lptsReader):
+	def process3(self, filesets, lptsReader):
 		db = SQLUtility(self.config)
 		self.chapterMap = db.selectMap("SELECT id, chapters FROM books", None)
 		## I am not certain the LXX actually exists
@@ -487,49 +487,47 @@ class FilenameParser:
 		self.usfx2Map["J1"] = "1JN" ## fix incorrect entry in books table
 		db.close()
 
-		print("\nFound %s filesets to process" % (len(filenamesMap.keys())))
-		for prefix in filenamesMap.keys():
+		print("\nFound %s filesets to process" % (len(filesets)))
+		for inp in filesets:
+			prefix = inp.filesetPrefix
 			print(prefix)
-			(typeCode, bibleId, filesetId) = prefix.split("/")
-			logger = Log.getLogger(filesetId)
-			if typeCode == "audio":
+			logger = Log.getLogger(inp.filesetId)
+			if inp.typeCode == "audio":
 				templates = self.audioTemplates
-			elif typeCode == "text":
+			elif inp.typeCode == "text":
 				templates = self.textTemplates
-			elif typeCode == "video":
+			elif inp.typeCode == "video":
 				templates = self.videoTemplates
 			else:
-				print("ERROR: unknown type_code: %s" % (typeCode))
+				print("ERROR: unknown type_code: %s" % (inp.typeCode))
 				sys.exit()
 
-			if typeCode == "audio" or typeCode == "video":
+			if inp.typeCode == "audio" or inp.typeCode == "video":
 				## Validate filesetId
-				if not filesetId[6:7] in {"C","N","O","P","S"}:
+				if not inp.filesetId[6:7] in {"C","N","O","P","S"}:
 					logger.message(Log.EROR, "filesetId must be C,N,O,P, or S in 7th position.")
-				if not filesetId[7:8] in {"1", "2"}:
+				if not inp.filesetId[7:8] in {"1", "2"}:
 					logger.message(Log.EROR, "filesetId must be 1 or 2 in the 8th position.")
-				if not filesetId[8:10] in {"DA", "DV"}:
+				if not inp.filesetId[8:10] in {"DA", "DV"}:
 					logger.message(Log.EROR, "filesetId must be DA or DV.")
-				bitrateSuffix = filesetId[10:12]
+				bitrateSuffix = inp.filesetId[10:12]
 				if bitrateSuffix != '' and not bitrateSuffix.isdigit():
 					logger.message(Log.EROR, "filesetId positions 11,12 must be a bitrate number if present.")
 
-			(lptsRecord, index) = lptsReader.getLPTSRecord(typeCode, bibleId, filesetId)
-			self.otOrder = self.OTOrderTemp(filesetId, lptsRecord)
-			self.ntOrder = self.NTOrderTemp(filesetId, lptsRecord)
+			self.otOrder = self.OTOrderTemp(inp.filesetId, inp.lptsRecord)
+			self.ntOrder = self.NTOrderTemp(inp.filesetId, inp.lptsRecord)
 
-			filenamesTuple = filenamesMap[prefix]
-			(numErrors, files) = self.parseOneFileset3(templates, prefix, filenamesTuple)
+			(numErrors, files) = self.parseOneFileset3(templates, prefix, inp.filenamesTuple())
 			if numErrors == 0:
 				self.parsedList.append((prefix))
 			else:
 				self.unparsedList.append((numErrors, prefix))
 
-			if typeCode == "audio":
+			if inp.typeCode == "audio":
 				(extraChapters, missingChapters, missingVerses) = self.checkBookChapter(prefix, files)
-			elif typeCode == "video":
+			elif inp.typeCode == "video":
 				(extraChapters, missingChapters, missingVerses) = self.checkVideoBookChapterVerse(prefix, files)
-			elif typeCode == "text":
+			elif inp.typeCode == "text":
 				(extraChapters, missingChapters, missingVerses) = ([], [], [])
 			
 			reducer = FilenameReducer(self.config, prefix, files, extraChapters, missingChapters, missingVerses)
@@ -540,7 +538,6 @@ class FilenameParser:
 	def parseOneFileset3(self, templates, prefix, filenamesTuple):
 		numErrors = 0
 		files = []
-		#for (filename, length, datetime) in filenames:
 		for filenameTuple in filenamesTuple:
 			file = self.parseOneFilename3(templates, prefix, filenameTuple)
 			files.append(file)
