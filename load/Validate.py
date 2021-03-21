@@ -43,10 +43,14 @@ class Validate:
 					logger.invalidFileExt(file.name)
 
 		## Validate Text Filesets
-		texts = UpdateDBPTextFilesets(self.config, self.db, None, self.lptsReader)
+		texts = UpdateDBPTextFilesets(self.config, self.db, None)
 		for inp in filesets:
 			if inp.typeCode == "text":
-				errorTuple = texts.validateFileset(inp.bibleId, inp.filesetId, inp.fullPath())
+				if inp.locationType == InputFileset.BUCKET:
+					filePath = inp.downloadFiles()
+				else:
+					filePath = inp.fullPath()
+				errorTuple = texts.validateFileset(inp.bibleId, inp.filesetId, inp.lptsRecord, inp.index, filePath)
 				if errorTuple != None:
 					logger = Log.getLogger(inp.filesetId)
 					logger.messageTuple(errorTuple)	

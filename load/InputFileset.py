@@ -73,6 +73,7 @@ class InputFileset:
 
 
 	def __init__(self, config, location, filesetId, filesetPath, damId, typeCode, bibleId, index, lptsRecord):
+		self.config = config
 		if location.startswith("s3://"):
 			self.locationType = InputFileset.BUCKET
 			self.location = location[5:]
@@ -179,15 +180,40 @@ class InputFileset:
 		return results
 
 
+	def downloadFiles(self):
+		directory = self.config.directory_upload_aws + self.filesetPath
+		if not os.path.isdir(directory):
+			os.makedirs(directory)
+		else:
+			for f in os.listdir(directory):
+				os.remove(os.path.join(directory, f))
+		for file in self.files:
+			ext = file.name.split(".")[-1]
+			if not ext in { "jpg", "tif" }:  ## notice that I do pick up the xml file
+				objectKey = self.filesetPath + "/" + file.name
+				filepath = directory + os.sep + file.name
+				try:
+					print("Download s3://%s/%s to %s" % (self.location, objectKey, filepath))
+					self.config.s3_client.download_file(self.location, objectKey, filepath)
+				except Exception as err:
+					print("ERROR: Download s3://%s/%s failed with error %s" % (self.location, objectKey, err))
+		return directory
+
+
+
 if (__name__ == '__main__'):
 	config = Config()
 	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
 	InputFileset.validate = InputFileset.filesetCommandLineParser(config, lptsReader)
 	for inp in InputFileset.validate:
+		if inp.typeCode == "text" and inp.locationType == InputFileset.BUCKET:
+			inp.downloadFiles()
 		print(inp.toString())
 	Log.writeLog(config)
 
 # python3 load/InputFileset.py test /Volumes/FCBH/files/complete/audio/ENGESV/ ENGESVN2DA ENGESVN2DA16
 
 # python3 load/InputFileset.py newdata s3://dbp-prod ENGESVN2DA ENGESVN2DA16
+
+# time python3 load/InputFileset.py test s3://test-dbp-etl HYWWAVN2ET
 
