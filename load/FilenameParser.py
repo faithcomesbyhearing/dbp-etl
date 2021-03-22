@@ -468,7 +468,7 @@ class FilenameParser:
 		)
 
 
-	def process3(self, filesets, lptsReader):
+	def process3(self, filesets):
 		db = SQLUtility(self.config)
 		self.chapterMap = db.selectMap("SELECT id, chapters FROM books", None)
 		## I am not certain the LXX actually exists
