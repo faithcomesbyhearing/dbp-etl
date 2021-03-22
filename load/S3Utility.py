@@ -2,33 +2,6 @@
 #
 # This file performs the S3Upload operations
 #
-# Folder: audio
-#	Folder: BibleID
-#		Folder: FilesetID
-#			Files: .mp3 files
-#
-# Folder: Booknames
-#	Folder: BibleID
-#		File: Booknames.xml
-# Folder: Sql
-#	Folder: BibleID
-#		Folder: FilesetID
-#			File: Sql file for plain text
-# Folder: text
-#	Folder: BibleID
-#		Folder: filesetID
-#			Folder: FONTs
-#			Folder: index
-#			Folder: indexlemma
-#			Files: html txt files for formatted text
-#		File: about.html
-#		File: index.html
-#		File: title.json
-#
-# Folder: video
-#	Folder: BibleID
-#		Folder: FilesetID
-#			Files: .mp4 files
 #
 
 import boto3
@@ -36,6 +9,7 @@ import os
 import shutil
 import subprocess
 from Config import *
+from InputFileset import *
 from TranscodeVideo import *
 
 class S3Utility:
@@ -52,98 +26,59 @@ class S3Utility:
 		return content
 
 
-	def downloadFile(self, s3Bucket, s3Key, filename):
-		try:
-			print("Download %s, %s to %s" % (s3Bucket, s3Key, filename))
-			self.client.download_file(s3Bucket, s3Key, filename)
-			print("Done With Download")
-		except Exception as err:
-			print("ERROR: Download %s failed with error %s" % (s3Key, err))
-
-
-	def uploadFile(self, s3Bucket, s3Key, filename, contentType):
-		try:
-			self.client.upload_file(filename, s3Bucket, s3Key,
-				ExtraArgs={'ContentType': contentType, 'ACL': 'bucket-owner-full-control'})
-		except Exception as err:
-			print("ERROR: Upload %s failed  with error %s" % (s3Key, err))
-
-
 	def uploadAllFilesets(self, filesets):
-		for (typeCode, bibleId, filesetId, filesetPrefix, csvFilename) in filesets:
-			s3Bucket = self.config.s3_vid_bucket if typeCode == "video" else self.config.s3_bucket
-			if typeCode in {"audio", "video"}:
-				done = self.uploadFileset(s3Bucket, self.config.directory_upload, filesetPrefix)
+		for inp in filesets:
+			s3Bucket = self.config.s3_vid_bucket if inp.typeCode == "video" else self.config.s3_bucket
+			if inp.typeCode in {"audio", "video"}:
+				done = self.uploadFileset(s3Bucket, inp)
 				if done:
-					print("Upload %s succeeded." % (filesetPrefix,))
+					print("Upload %s succeeded." % (inp.filesetPrefix,))
 				else:
-					print("Upload %s FAILED." % (filesetPrefix,))
+					print("Upload %s FAILED." % (inp.filesetPrefix,))
 							
-			elif typeCode == "text":
-				self.promoteFileset(self.config.directory_upload, filesetPrefix)
+			elif inp.typeCode == "text":
+				InputFileset.database.append(inp)
 
 
-	def uploadFileset(self, s3Bucket, sourceDir, filesetPrefix):
-		print("uploading: ", filesetPrefix)
+	def uploadFileset(self, s3Bucket, inputFileset):
+		inp = inputFileset
 		if self.config.s3_aws_profile == None:
-			cmd = "aws s3 sync %s%s s3://%s/%s" % (sourceDir, filesetPrefix, s3Bucket, filesetPrefix)
+			profile = ""
 		else:
-			cmd = "aws --profile %s s3 sync %s%s s3://%s/%s" % (self.config.s3_aws_profile, sourceDir, filesetPrefix, s3Bucket, filesetPrefix)
+			profile = "--profile %s" % (self.config.s3_aws_profile)
+		if inp.locationType == InputFileset.LOCAL:
+			source = inp.fullPath()
+		else:
+			source = "s3://%s" % (inp.fullPath())
+		target = "s3://%s/%s" % (s3Bucket, inp.filesetPrefix)
+		cmd = "aws %s s3 sync %s %s" % (profile, source, target)
+		print("upload:", cmd)
 		response = subprocess.run(cmd, shell=True, stderr=subprocess.PIPE)
 		if response.returncode != 0:
-			print("ERROR: Upload of %s to %s failed. MESSAGE: %s" % (filesetPrefix, s3Bucket, response.stderr))
+			print("ERROR: Upload of %s to %s failed. MESSAGE: %s" % (inp.filesetPrefix, s3Bucket, response.stderr))
 			return False
 		else:
-			if filesetPrefix.startswith("video"):
-				TranscodeVideo.transcodeVideoFileset(self.config, filesetPrefix)
-			self.promoteFileset(sourceDir, filesetPrefix)
+			if inp.filesetPrefix.startswith("video"):
+				TranscodeVideo.transcodeVideoFileset(self.config, inp.filesetPrefix, inp.s3FileKeys())
+			InputFileset.database.append(inp)
 			return True
 
 
-	def promoteFileset(self, sourceDir, filesetPrefix):
-		folders = [self.config.directory_upload,
-				self.config.directory_database,
-				self.config.directory_complete]
-		if not sourceDir in folders:
-			print("FATAL: unknown directory %s in promote fileset" % (sourceDir))
-			sys.exit()
-		index = folders.index(sourceDir)
-		nextIndex = index + 1
-		if nextIndex >= len(folders):
-			print("FATAL: cannot promote beyond directory %s" % (sourceDir))
-			sys.exit()
-		targetDir = folders[nextIndex]
-		#print("move dir", sourceDir + filesetPrefix, "to dir", targetDir)
-		try:
-			shutil.move(sourceDir + filesetPrefix, targetDir + filesetPrefix)
-		except Exception as err:
-			print("ERROR: Directory move of %s failed: %s" % (filesetPrefix, err))
-		self._cleanupDirectory(sourceDir, filesetPrefix)
-
-
-	def _cleanupDirectory(self, directory, filesetPrefix):
-		prefix = filesetPrefix
-		while(len(prefix) > 10):
-			path = directory + prefix
-			if os.path.exists(path):
-				files = os.listdir(path)
-				if len(files) == 0:
-					try:
-						os.rmdir(path)
-					except Exception as err:
-						print("ERROR: Directory cleanup of %s failed:" % (prefix, err))
-					pos = prefix.rfind(os.sep)
-					prefix = prefix[:pos] if pos > 0 else ""
-				else:
-					prefix = ""
-			else:
-				pos = prefix.rfind(os.sep)
-				prefix = prefix[:pos] if pos > 0 else ""
-
-
 if (__name__ == '__main__'):
-	config = Config()
+	config = Config.shared()
+	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
+	filesets = InputFileset.filesetCommandLineParser(config, lptsReader)
 	s3 = S3Utility(config)
-	s3.uploadAllFilesets()
+	s3.uploadAllFilesets(filesets)
 
+# Successful tests with source on local drive
+# time python3 load/S3Utility.py test /Volumes/FCBH/all-dbp-etl-test/ ENGESVN2DA ENGESVN2DA16
+# time python3 load/S3Utility.py test /Volumes/FCBH/all-dbp-etl-test/ HYWWAVN2ET
+# time python3 load/S3Utility.py test-video /Volumes/FCBH/all-dbp-etl-test/ ENGESVP2DV
+
+# Successful tests with source on s3
+# time python3 load/S3Utility.py test s3://test-dbp-etl ENGESVN2DA
+# time python3 load/S3Utility.py test s3://test-dbp-etl text/ENGESV/ENGESVN2DA16
+# time python3 load/S3Utility.py test s3://test-dbp-etl HYWWAVN2ET
+# time python3 load/S3Utility.py test s3://test-dbp-etl ENGESVP2DV
 
