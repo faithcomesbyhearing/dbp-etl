@@ -6,9 +6,7 @@ import zipfile
 from datetime import datetime
 from Config import *
 from Log import *
-from PreValidate import *
 from SQLUtility import *
-from LPTSExtractReader import *
 from FilenameParser import *
 from FilenameReducer import *
 from UpdateDBPTextFilesets import *
@@ -16,10 +14,9 @@ from UpdateDBPTextFilesets import *
 
 class Validate:	
 
-	def __init__(self, config, db, lptsReader):
+	def __init__(self, config, db):
 		self.config = config
 		self.db = db
-		self.lptsReader = lptsReader
 		self.scriptNameSet = db.selectSet("SELECT lpts_name FROM lpts_script_codes", ())
 		self.numeralsSet = db.selectSet("SELECT id FROM numeral_systems", ())
 
@@ -59,7 +56,7 @@ class Validate:
 
 		FilenameReducer.openAcceptErrorSet(self.config)
 		parser = FilenameParser(self.config)
-		parser.process3(filesets, self.lptsReader)
+		parser.process3(filesets)
 
 		find = FindDuplicateFilesets(self.config)
 		duplicates = find.findDuplicates()
@@ -113,11 +110,19 @@ class Validate:
 
 
 if (__name__ == '__main__'):
-	config = Config()
+	from DBPLoadController import *
+	from LPTSExtractReader import *
+	config = Config.shared()
 	db = SQLUtility(config)
-	lptsReader = LPTSExtractReader(config)
-	validate = Validate("files", config, db, lptsReader)
-	validate.process()
-	validate.reportErrors()
+	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
+	filesets = InputFileset.filesetCommandLineParser(config, lptsReader)
+	ctrl = DBPLoadController(config, db, lptsReader)
+	ctrl.validate(filesets)
+
+# Successful tests with source on s3
+# time python3 load/Validate.py test s3://test-dbp-etl ENGESVN2DA
+# time python3 load/Validate.py test s3://test-dbp-etl text/ENGESV/ENGESVN2DA16
+# time python3 load/Validate.py test s3://test-dbp-etl HYWWAVN2ET
+# time python3 load/Validate.py test s3://test-dbp-etl ENGESVP2DV
 
 
