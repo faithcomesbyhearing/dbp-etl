@@ -303,18 +303,16 @@ class UpdateDBPBiblesTable:
 
 	def testBibleForeignKeys(self, bibleId):
 		hasErrors = False
-		hasErrors |= self.testDeleteInTable(bibleId, "user_bookmarks")
-		hasErrors |= self.testDeleteInTable(bibleId, "user_highlights")
-		hasErrors |= self.testDeleteInTable(bibleId, "user_notes")
-		hasErrors |= self.testDeleteInTable(bibleId, "user_settings")
+		hasErrors |= self.testDeleteInTable(bibleId, self.config.database_user_db_name, "user_bookmarks")
+		hasErrors |= self.testDeleteInTable(bibleId, self.config.database_user_db_name, "user_highlights")
+		hasErrors |= self.testDeleteInTable(bibleId, self.config.database_user_db_name, "user_notes")
+		hasErrors |= self.testDeleteInTable(bibleId, self.config.database_user_db_name, "user_settings")
+		hasErrors |= self.testDeleteInTable(bibleId, self.config.database_db_name, "bible_translations")
 		return hasErrors
 
 
-	def testDeleteInTable(self, bibleId, tableName):
-		sql = ("SELECT count(*) FROM " +
-				self.config.database_user_db_name +
-				"." + tableName +
-				" WHERE bible_id = %s")
+	def testDeleteInTable(self, bibleId, database, tableName):
+		sql = "SELECT count(*) FROM " + database + "." + tableName + " WHERE bible_id = %s"
 		count = self.db.selectScalar(sql, (bibleId,))
 		if count > 0:
 			print("ERROR_06: Unable to DELETE bible_id %s from bibles. It is used by table %s." % (bibleId, tableName))
