@@ -109,7 +109,7 @@ class UpdateDBPFilesetTables:
 	def processFileset(self, typeCode, bibleId, filesetId, filesetDir, csvFilename, databasePath):
 		print(typeCode, bibleId, filesetId)
 		bookIdSet = self.getBibleBooks(csvFilename)
-		hashId = self.insertBibleFileset(typeCode, filesetId, bookIdSet)
+		hashId = self.insertBibleFileset(typeCode, bibleId, filesetId, bookIdSet)
 		self.insertFilesetConnections(hashId, bibleId)
 		if typeCode in {"audio", "video"}:
 			self.insertBibleFiles(typeCode, hashId, csvFilename, filesetDir, bookIdSet)
@@ -130,15 +130,15 @@ class UpdateDBPFilesetTables:
 		return bookIdSet
 
 
-	def getSizeCode(self, hashId, bookIdSet):
-		existingBookIdSet = self.db.selectSet("SELECT book_id FROM bible_files WHERE hash_id = %s", (hashId,))
+	def getSizeCode(self, bibleId, bookIdSet):
+		existingBookIdSet = self.db.selectSet("SELECT book_id FROM bible_books WHERE bible_id = %s", (bibleId,))
 		fullBookIdSet = existingBookIdSet.union(bookIdSet)
-		otBooks = bookIdSet.intersection(self.OT)
-		ntBooks = bookIdSet.intersection(self.NT)
+		otBooks = fullBookIdSet.intersection(self.OT)
+		ntBooks = fullBookIdSet.intersection(self.NT)
 		return UpdateDBPFilesetTables.getSetSizeCode(ntBooks, otBooks)
 
 
-	def insertBibleFileset(self, typeCode, filesetId, bookIdSet):
+	def insertBibleFileset(self, typeCode, bibleId, filesetId, bookIdSet):
 		tableName = "bible_filesets"
 		pkeyNames = ("hash_id",)
 		attrNames = ("id", "asset_id", "set_type_code", "set_size_code")
@@ -146,7 +146,7 @@ class UpdateDBPFilesetTables:
 		bucket = self.config.s3_vid_bucket if typeCode == "video" else self.config.s3_bucket
 		setTypeCode = UpdateDBPFilesetTables.getSetTypeCode(typeCode, filesetId)
 		hashId = UpdateDBPFilesetTables.getHashId(bucket, filesetId, setTypeCode)
-		setSizeCode = self.getSizeCode(hashId, bookIdSet)
+		setSizeCode = self.getSizeCode(bibleId, bookIdSet)
 		row = self.db.selectRow("SELECT id, asset_id, set_type_code, set_size_code FROM bible_filesets WHERE hash_id=%s", (hashId,))
 		if row == None:
 			updateRows.append((filesetId, bucket, setTypeCode, setSizeCode, hashId))

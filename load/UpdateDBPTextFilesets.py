@@ -1,8 +1,5 @@
 # UpdateDBPTextFilesets.py
 
-# Processing data in the following format
-# text/{bibleId}/{filesetId}/options.xini
-# text/{bibleId}/{filesetId}/{book}.usx (all the usx files to process)
 
 import io
 import sys
@@ -19,16 +16,14 @@ from SqliteUtility import *
 
 class UpdateDBPTextFilesets:
 
-	def __init__(self, config, db, dbOut, lptsReader):
+	def __init__(self, config, db, dbOut):
 		self.config = config
 		self.db = db
 		self.dbOut = dbOut
-		self.lptsReader = lptsReader
 
 
 	## This is called one fileset at a time by Validate.process
-	def validateFileset(self, bibleId, filesetId):
-		(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecordLoose("text", bibleId, filesetId)
+	def validateFileset(self, bibleId, filesetId, lptsRecord, lptsIndex, fullFilesetPath):
 		if lptsRecord == None or lptsIndex == None:
 			return((Log.EROR, "has no LPTS record."))
 		iso3 = lptsRecord.ISO()
@@ -48,7 +43,7 @@ class UpdateDBPTextFilesets:
 			return((Log.EROR, "%s script has no direction in alphabets." % (scriptId,)))
 		cmd = [self.config.node_exe,
 			self.config.publisher_js,
-			self.config.directory_upload + "text/%s/%s/" % (bibleId, filesetId),
+			fullFilesetPath,
 			self.config.directory_accepted,
 			filesetId, iso3, iso1, direction]
 		response = subprocess.run(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=120)
@@ -59,7 +54,7 @@ class UpdateDBPTextFilesets:
 		return None
 
 
-	def updateFileset(self, bibleId, filesetId, hashId, bookIdSet):
+	def updateFileset(self, bibleId, filesetId, hashId, bookIdSet, databasePath):
 		insertRows = []
 		updateRows = []
 		deleteRows = []
@@ -70,7 +65,7 @@ class UpdateDBPTextFilesets:
 		for (dbpBookId, dbpChapter, dbpVerseStart, dbpVerseEnd, dbpVerseText) in resultSet:
 			dbpVerseMap[(dbpBookId, dbpChapter, dbpVerseStart)] = (dbpVerseEnd, dbpVerseText)
 		ssBookIdSet = set()
-		verseList = self.getBiblePublisherVerses(filesetId)
+		verseList = self.getBiblePublisherVerses(filesetId, databasePath)
 		for (ssBookId, ssChapter, ssVerseStart, ssVerseEnd, ssVerseText) in verseList:
 			ssBookIdSet.add((ssBookId, ssChapter, ssVerseStart))
 
@@ -114,12 +109,12 @@ class UpdateDBPTextFilesets:
 
 
 	# This method concatonates together those verses which have the same ending code.
-	def getBiblePublisherVerses(self, filesetId):
+	def getBiblePublisherVerses(self, filesetId, databasePath):
 		results = []
 		priorBookId = None
 		priorChapter = -1
 		priorVerseEnd = 0
-		bibleDB = SqliteUtility(self.config.directory_accepted + filesetId + ".db")		
+		bibleDB = SqliteUtility(databasePath)		
 		for (reference, verseText) in bibleDB.select("SELECT reference, html FROM verses", ()):
 			(bookId, chapter, verseNum) = reference.split(":")
 			chapterNum = int(chapter)
@@ -154,40 +149,33 @@ class UpdateDBPTextFilesets:
 
 
 if (__name__ == '__main__'):
-	config = Config()
-	db = SQLUtility(config)
-	dbOut = SQLBatchExec(config)
+	from LPTSExtractReader import *
+	from InputFileset import *
+	from DBPLoadController import *
+
+	config = Config.shared()
 	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
-	texts = UpdateDBPTextFilesets(config, db, dbOut, lptsReader)
-	from UpdateDBPFilesetTables import *
-	filesets = UpdateDBPFilesetTables(config, db, dbOut)
-	dirname = config.directory_database
-	for typeCode in os.listdir(dirname):
-		if typeCode == "text":
-			for bibleId in os.listdir(dirname + typeCode):
-				print("bibleId", bibleId)
-				for filesetId in os.listdir(dirname + typeCode + os.sep + bibleId):
-					print("filesetId", filesetId)
-					message = texts.validateFileset(bibleId, filesetId)
-					if message != None:
-						print(message)
-					else:
-						databasePath = config.directory_accepted + filesetId + ".db"
-						from SqliteUtility import *
-						sqlite = SqliteUtility(databasePath)
-						bookIdSet = sqlite.selectSet("SELECT code FROM tableContents", ()) 
-						print(bookIdSet)
+	filesets = InputFileset.filesetCommandLineParser(config, lptsReader)
+	db = SQLUtility(config)
+	ctrl = DBPLoadController(config, db, lptsReader)
+	ctrl.validate(filesets)
 
-						## These two lines should be commented out.
-						#for (reference, verseText) in sqlite.select("SELECT reference, html FROM verses", ()):
-						#	print(reference, verseText)
-
-						hashId = filesets.insertBibleFileset("text", filesetId, bookIdSet)
-						filesets.insertFilesetConnections(hashId, bibleId)
-						texts.updateFileset(bibleId, filesetId, hashId, bookIdSet)
+	dbOut = SQLBatchExec(config)
+	update = UpdateDBPFilesetTables(config, db, dbOut)
+	for inp in InputFileset.upload:
+		hashId = update.processFileset(inp.typeCode, inp.bibleId, inp.filesetId, inp.fullPath(), inp.csvFilename, inp.databasePath)
 
 	dbOut.displayStatements()
 	dbOut.displayCounts()
-	#dbOut.execute("verses-test")
+	dbOut.execute("test-" + inp.filesetId)
+
+# Successful tests with source on local drive
+# time python3 load/TestCleanup.py test HYWWAV
+# time python3 load/TestCleanup.py test GNWNTM
+
+# time python3 load/UpdateDBPTextFilesets.py test s3://test-dbp-etl HYWWAVN2ET
+# time python3 load/UpdateDBPTextFilesets.py test /Volumes/FCBH/all-dbp-etl-test/ GNWNTMN2ET
+# time python3 load/UpdateDBPTextFilesets.py test /Volumes/FCBH/all-dbp-etl-test/ text/GNWNTM/GNWNTMN2ET
+
 
 
