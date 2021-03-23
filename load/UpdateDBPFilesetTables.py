@@ -102,22 +102,21 @@ class UpdateDBPFilesetTables:
 		self.OT = self.db.selectSet("SELECT id FROM books WHERE book_testament = 'OT'", ())
 		self.NT = self.db.selectSet("SELECT id FROM books WHERE book_testament = 'NT'", ())
 		self.durationRegex = re.compile(r"duration=([0-9\.]+)", re.MULTILINE)
-		self.textUpdater = UpdateDBPTextFilesets(self.config, self.db, self.dbOut, None)
+		self.textUpdater = UpdateDBPTextFilesets(self.config, self.db, self.dbOut)
 		self.booksUpdater = UpdateDBPBooksTable(self.config, self.dbOut)
 
 
-	def processFileset(self, typeCode, bibleId, filesetId, csvFilename):
+	def processFileset(self, typeCode, bibleId, filesetId, filesetDir, csvFilename, databasePath):
 		print(typeCode, bibleId, filesetId)
 		bookIdSet = self.getBibleBooks(csvFilename)
 		hashId = self.insertBibleFileset(typeCode, filesetId, bookIdSet)
 		self.insertFilesetConnections(hashId, bibleId)
 		if typeCode in {"audio", "video"}:
-			filesetDir = "%s%s/%s/%s" % (self.config.directory_database, typeCode, bibleId, filesetId)
 			self.insertBibleFiles(typeCode, hashId, csvFilename, filesetDir, bookIdSet)
 		elif typeCode == "text":
-			self.textUpdater.updateFileset(bibleId, filesetId, hashId, bookIdSet)
+			self.textUpdater.updateFileset(bibleId, filesetId, hashId, bookIdSet, databasePath)
 
-		tocBooks = self.booksUpdater.getTableOfContents(typeCode, bibleId, filesetId)
+		tocBooks = self.booksUpdater.getTableOfContents(typeCode, bibleId, filesetId, csvFilename, databasePath)
 		self.booksUpdater.updateBibleBooks(typeCode, bibleId, tocBooks)
 		return hashId
 
@@ -259,15 +258,30 @@ class UpdateDBPFilesetTables:
 
 ## Unit Test
 if (__name__ == '__main__'):
-	config = Config()
+	from LPTSExtractReader import *
+	from InputFileset import *
+	from DBPLoadController import *
+
+	config = Config.shared()
+	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
+	filesets = InputFileset.filesetCommandLineParser(config, lptsReader)
 	db = SQLUtility(config)
+	ctrl = DBPLoadController(config, db, lptsReader)
+	ctrl.validate(filesets)
+
 	dbOut = SQLBatchExec(config)
 	update = UpdateDBPFilesetTables(config, db, dbOut)
-	completedMap = update.process()
+	for inp in InputFileset.upload:
+		hashId = update.processFileset(inp.typeCode, inp.bibleId, inp.filesetId, inp.fullPath(), inp.csvFilename, inp.databasePath)
 
 	dbOut.displayStatements()
 	dbOut.displayCounts()
-	dbOut.execute("test-filesets")
+	dbOut.execute("test-" + inp.filesetId)
 
+# Successful tests with source on local drive
+# time python3 load/TestCleanup.py test UNRWFWP1DA
+# time python3 load/TestCleanup.py test UNRWFWP1DA16
+# time python3 load/UpdateDBPFilesetTables.py test /Volumes/FCBH/all-dbp-etl-test/ audio/UNRWFW/UNRWFWP1DA
+# time python3 load/UpdateDBPFilesetTables.py test /Volumes/FCBH/all-dbp-etl-test/ audio/UNRWFW/UNRWFWP1DA16
 
 
