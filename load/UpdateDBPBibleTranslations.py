@@ -22,6 +22,7 @@ class UpdateDBPBibleTranslations:
 		deleteRows = []
 		engLanguageId = 6414
 
+		bibleIdSet = self.db.select("SELECT id FROM bibles", ())
 		dbpMap = {}
 		sql = "SELECT bible_id, name, vernacular FROM bible_translations WHERE language_id = %s"
 		resultSet = self.db.select(sql, (engLanguageId,))
@@ -39,7 +40,8 @@ class UpdateDBPBibleTranslations:
 			dbpNameCols = dbpMap.get(bibleId)
 
 			if dbpNameCols == None and volumeName != None:
-				insertRows.append((volumeName.replace("'", "\\'"), 0, bibleId, engLanguageId))
+				if bibleId in bibleIdSet:
+					insertRows.append((volumeName.replace("'", "\\'"), 0, bibleId, engLanguageId))
 			elif dbpNameCols != None and volumeName == None:
 				deleteRows.append((bibleId, engLanguageId))
 			elif dbpNameCols != None and volumeName != None:
