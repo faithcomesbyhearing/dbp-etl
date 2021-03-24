@@ -43,7 +43,6 @@ class UpdateDBPVideoTables:
 			else:
 				print("Update video %s FAILED." % (filesetPrefix))
 			self.computeDurations(hashId)
-			self.processDeletions()
 
 
 	def populateDBPMaps(self, hashId):
@@ -184,48 +183,6 @@ class UpdateDBPVideoTables:
 			" GROUP BY bf.id, bfvr.id) bfu"
 			" ON bf.id=bfu.ID SET bf.duration=bfu.Duration;")
 		self.dbOut.rawStatement(sql % (hashId,))
-
-
-	def processDeletions(self):
-		deleteRows = []
-		for dbpFilename in self.dbpTsFileMap.keys():
-			if dbpFilename not in self.dbpTsInsertUpdateSet:
-				deleteRows.append((dbpFilename,))
-		tableName = "bible_file_stream_ts"
-		pkeyNames = ("file_name",)
-		self.dbOut.delete(tableName, pkeyNames, deleteRows)
-
-		deleteRows = []		
-		for dbpFilename in self.dbpBandwidthMap.keys():
-			if dbpFilename not in self.dbpBandwidthInsertUpdateSet:
-				deleteRows.append((dbpFilename,))
-		tableName = "bible_file_stream_bandwidths"
-		pkeyNames = ("file_name",)
-		self.dbOut.delete(tableName, pkeyNames, deleteRows)
-
-
-	## This is here for development debugging only
-	def deleteVideoFiles(db, filesetId, deleteFileset=False):
-		sql = []
-		sql.append("DELETE bfss FROM bible_file_stream_ts AS bfss"
-			" JOIN bible_file_stream_bandwidths AS bfsb ON bfss.stream_bandwidth_id = bfsb.id"
-			" JOIN bible_files AS bf ON bfsb.bible_file_id = bf.id"
-			" WHERE bf.hash_id = %s")
-		sql.append("DELETE bfsb FROM bible_file_stream_bandwidths AS bfsb"
-			" JOIN bible_files AS bf ON bfsb.bible_file_id = bf.id"
-			" WHERE bf.hash_id = %s")
-		sql.append("DELETE bft FROM bible_file_tags AS bft"
-			" JOIN bible_files AS bf ON bft.file_id = bf.id"
-			" WHERE bf.hash_id = %s")
-		sql.append("DELETE FROM bible_files WHERE hash_id = %s")
-		if deleteFileset:
-			sql.append("DELETE FROM access_group_filesets WHERE hash_id = %s")
-			sql.append("DELETE FROM bible_fileset_connections WHERE hash_id = %s")
-			sql.append("DELETE FROM bible_fileset_tags WHERE hash_id = %s")
-			sql.append("DELETE FROM bible_filesets WHERE hash_id = %s")
-		hashId = db.selectScalar("SELECT hash_id FROM bible_filesets WHERE id=%s", (filesetId,)) ## This won't work
-		for stmt in sql:
-			db.execute(stmt, (hashId,))
 
 
 if (__name__ == '__main__'):
