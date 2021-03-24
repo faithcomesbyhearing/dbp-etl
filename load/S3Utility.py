@@ -82,3 +82,10 @@ if (__name__ == '__main__'):
 # time python3 load/S3Utility.py test s3://test-dbp-etl HYWWAVN2ET
 # time python3 load/S3Utility.py test s3://test-dbp-etl ENGESVP2DV
 
+# Some video uploads
+# time python3 load/S3Utility.py test-video /Volumes/FCBH/all-dbp-etl-test/ ENGESVP2DV
+# time python3 load/S3Utility.py test-video /Volumes/FCBH/all-dbp-etl-test/ video/ENGESV/ENGESVP2DV
+# time python3 load/S3Utility.py test-video /Volumes/FCBH/all-dbp-etl-test/ video/ENGESX/ENGESVP2DV
+
+
+
