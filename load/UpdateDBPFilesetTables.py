@@ -130,8 +130,11 @@ class UpdateDBPFilesetTables:
 		return bookIdSet
 
 
-	def getSizeCode(self, bibleId, bookIdSet):
-		existingBookIdSet = self.db.selectSet("SELECT book_id FROM bible_books WHERE bible_id = %s", (bibleId,))
+	def getSizeCode(self, typeCode, hashId, bookIdSet):
+		if typeCode == "text":
+			existingBookIdSet = self.db.selectSet("SELECT book_id FROM bible_verses WHERE hash_id = %s", (hashId,))
+		else:
+			existingBookIdSet = self.db.selectSet("SELECT book_id FROM bible_files WHERE hash_id = %s", (hashId,))			
 		fullBookIdSet = existingBookIdSet.union(bookIdSet)
 		otBooks = fullBookIdSet.intersection(self.OT)
 		ntBooks = fullBookIdSet.intersection(self.NT)
@@ -146,7 +149,7 @@ class UpdateDBPFilesetTables:
 		bucket = self.config.s3_vid_bucket if typeCode == "video" else self.config.s3_bucket
 		setTypeCode = UpdateDBPFilesetTables.getSetTypeCode(typeCode, filesetId)
 		hashId = UpdateDBPFilesetTables.getHashId(bucket, filesetId, setTypeCode)
-		setSizeCode = self.getSizeCode(bibleId, bookIdSet)
+		setSizeCode = self.getSizeCode(typeCode, hashId, bookIdSet)
 		row = self.db.selectRow("SELECT id, asset_id, set_type_code, set_size_code FROM bible_filesets WHERE hash_id=%s", (hashId,))
 		if row == None:
 			updateRows.append((filesetId, bucket, setTypeCode, setSizeCode, hashId))
