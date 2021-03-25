@@ -109,12 +109,18 @@ class CompleteCheck:
 if (__name__ == '__main__'):
 	print("WARNING: This program outputs to the console.  You may want to redirect to a file using > filename")
 	config = Config()
-	bucket = DownloadBucketList(config)
-	bucket.listBucket('dbp-prod')
-	bucket.listBucket('dbp-vid')
-	db = SQLUtility(config)
+	if len(sys.argv) > 2 and sys.argv[2].lower().startswith("re"):
+		retry = True
+	else:
+		retry = False
+	if not retry:
+		bucket = DownloadBucketList(config)
+		bucket.listBucket('dbp-prod')
+		bucket.listBucket('dbp-vid')
 	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
+	db = SQLUtility(config)
 	check = CompleteCheck(config, db, lptsReader)
 	check.bibleFilesToS3()
 	check.bibleFilesetsToLPTS()
+	db.close()
 
