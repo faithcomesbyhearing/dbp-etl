@@ -11,42 +11,47 @@ import sys
 import datetime
 from Config import *
 
-if len(sys.argv) < 3:
-	print("Usage: DownloadBucketList  config_name  bucket_name")
-	sys.exit()
+class DownloadBucketList:
 
-config = Config()
-BUCKET_NAME = sys.argv[2]
+	def __init__(self, config):
+		self.config = config
 
-pathname = config.directory_bucket_list + "new-%s.txt" % (BUCKET_NAME)
-out = io.open(pathname, mode="w", encoding="utf-8")
+	def listBucket(self, bucketName):
+		pathname = self.config.directory_bucket_list + "%s.txt" % (bucketName)
+		out = io.open(pathname, mode="w", encoding="utf-8")
 
-session = boto3.Session(profile_name=config.s3_aws_profile)
-client = session.client('s3')
+		session = boto3.Session(profile_name=self.config.s3_aws_profile)
+		client = session.client('s3')
 
-s3 = session.resource('s3')
-for bucket in s3.buckets.all():
-	print("available bucket", bucket.name)
+		request = { 'Bucket':bucketName, 'MaxKeys':1000 }
+		# Bucket, Delimiter, EncodingType, Market, MaxKeys, Prefix
 
-request = { 'Bucket':BUCKET_NAME, 'MaxKeys':1000 }
-# Bucket, Delimiter, EncodingType, Market, MaxKeys, Prefix
+		hasMore = True
+		while hasMore:
+			response = client.list_objects_v2(**request)
+			hasMore = response['IsTruncated']
+			contents = response['Contents']
+			for item in contents:
+				key = item['Key']
+				size = item['Size']
+				datetime = item['LastModified']
+				try:
+					#print(key, size, datetime)
+					out.write("%s\t%s\t%s\n" % (key, size, datetime))
+				except Exception as err:
+					print("Could not write key %s" % (err))
 
-hasMore = True
-while hasMore:
-	response = client.list_objects_v2(**request)
-	hasMore = response['IsTruncated']
-	contents = response['Contents']
-	for item in contents:
-		key = item['Key']
-		size = item['Size']
-		datetime = item['LastModified']
-		try:
-			#print(key, size, datetime)
-			out.write("%s\t%s\t%s\n" % (key, size, datetime))
-		except Exception as err:
-			print("Could not write key %s" % (err))
+			if hasMore:
+				request['ContinuationToken'] = response['NextContinuationToken']
 
-	if hasMore:
-		request['ContinuationToken'] = response['NextContinuationToken']
+		out.close()
 
-out.close()
+if __name__ == "__main__":
+	if len(sys.argv) < 3:
+		print("Usage: DownloadBucketList  config_name  bucket_name")
+		sys.exit()
+	BUCKET_NAME = sys.argv[2]
+	config = Config.shared()
+	download = DownloadBucketList(config)
+	download.listBucket(BUCKET_NAME)
+

@@ -9,6 +9,7 @@ import io
 from Config import *
 from SQLUtility import *
 from LPTSExtractReader import *
+from DownloadBucketList import *
 
 
 class CompleteCheck:
@@ -106,7 +107,11 @@ class CompleteCheck:
 
 
 if (__name__ == '__main__'):
+	print("WARNING: This program outputs to the console.  You may want to redirect to a file using > filename")
 	config = Config()
+	bucket = DownloadBucketList(config)
+	bucket.listBucket('dbp-prod')
+	bucket.listBucket('dbp-vid')
 	db = SQLUtility(config)
 	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
 	check = CompleteCheck(config, db, lptsReader)
