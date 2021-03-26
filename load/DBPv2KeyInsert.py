@@ -11,6 +11,14 @@ class DBPv2KeyInsert:
 		self.dbOut = dbOut
 		print("init DBPv2KeyInsert")
 
+	## should the input source also pick up
+	## password
+	## first_name
+	## last_name
+	## v2_id
+	## token -- what is source?
+	## In Notes add description like: inserted by DBPv2KeyInsert
+
 
 	def process(self, filename):
 		insertUsers = []
@@ -25,11 +33,11 @@ class DBPv2KeyInsert:
 				password = "unknown"
 				activated = 1  ## I assume this should be activate
 				token = "unknown"  ## I don't know what this is. there are 26 unique value in the users table
-				insertUsers.append((displayName, userEmail, password, activated, token))
+				insertUsers.append((displayName, userEmail, password, activated, token)) # create/update is automatic
 				userId = "@" + userEmail  # userEmail is unique in the users table.
-				insertKeys.append((userId, key, displayName))
+				insertKeys.append((userId, key, displayName)) # add created_at/updated_at
 				userKeyId = "@" + userId
-				insertGroups.append((121, userKeyId))
+				insertGroups.append((121, userKeyId)) # add created_at/updated_at, always null could change table
 				insertGroups.append((123, userKeyId))
 				insertGroups.append((125, userKeyId))
 
