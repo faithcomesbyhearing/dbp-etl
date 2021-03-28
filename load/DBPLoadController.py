@@ -10,15 +10,16 @@
 
 import os
 from Config import *
+from RunStatus import *
 from LPTSExtractReader import *
 from Log import *
+from PreValidate import *
 from Validate import *
 from S3Utility import *
 from SQLBatchExec import *
 from UpdateDBPFilesetTables import *
 from UpdateDBPBiblesTable import *
 from UpdateDBPLPTSTable import *
-from TranscodeVideo import *
 from UpdateDBPVideoTables import *
 
 
@@ -32,9 +33,33 @@ class DBPLoadController:
 		self.stockNumRegex = re.compile("__[A-Z0-9]{8}")
 
 
+	def preprocessUploadAWS(self):
+		RunStatus.setStatus(RunStatus.PREPROCESS)
+		validate = PreValidate(self.lptsReader)
+		for filesetId in [f for f in os.listdir(self.config.directory_upload_aws) if not f.startswith('.')]:
+			logger = Log.getLogger(filesetId)
+			results = validate.validateFilesetId(filesetId)
+			if results != None and Log.totalErrorCount() == 0:
+				(typeCode, bibleId) = results
+				directory = self.config.directory_upload + typeCode + os.sep
+				if not os.path.isdir(directory):
+					os.mkdir(directory)
+				directory += bibleId + os.sep
+				if not os.path.isdir(directory):
+					os.mkdir(directory)
+				dbpFilesetId = filesetId[:6] if typeCode == "text" else filesetId
+				sourceDir = self.config.directory_upload_aws + filesetId + os.sep
+				targetDir = directory + dbpFilesetId + os.sep
+				os.replace(sourceDir, targetDir)
+
+		if Log.totalErrorCount() > 0:
+			Log.addPreValidationErrors(validate.messages)
+			Log.writeLog(self.config)
+			sys.exit()
+
+
 	def cleanup(self):
-		print("********** CLEANUP **********", flush=True)
-		validateDir = self.config.directory_validate
+		validateDir = self.config.directory_upload
 		for typeCode in os.listdir(validateDir):
 			if typeCode in {"audio", "video", "text"}:
 				audioDir = validateDir + typeCode
@@ -78,7 +103,6 @@ class DBPLoadController:
 
 
 	def updateBibles(self):
-		print("********** UPDATING Bibles Table **********", flush=True)
 		dbOut = SQLBatchExec(self.config)
 		bibles = UpdateDBPBiblesTable(self.config, self.db, dbOut, self.lptsReader)
 		bibles.process()
@@ -89,34 +113,26 @@ class DBPLoadController:
 
 
 	def validate(self):
-		print("********** VALIDATING **********", flush=True)
+		RunStatus.setStatus(RunStatus.VALIDATE)
 		validate = Validate("files", self.config, self.db, self.lptsReader)
 		validate.process()
 		Log.writeLog(self.config)
 
-		filesets = os.listdir(self.config.directory_accepted)
-		for fileset in filesets:
-			if fileset.endswith(".csv"):
-				filename = fileset.split(".")[0]
-				filesetPrefix = filename.replace("_", "/")
-				self.s3Utility.promoteFileset(self.config.directory_validate, filesetPrefix)
-
 
 	def upload(self):
-		print("********** UPLOADING TO S3 **********", flush=True)
-		self.s3Utility.uploadAllFilesets()
-		TranscodeVideo.transcodeVideoFilesets(self.config)
+		RunStatus.setStatus(RunStatus.UPLOAD)
+		filesets = self._acceptedFilesets(self.config.directory_upload)
+		self.s3Utility.uploadAllFilesets(filesets)
 
 
 	def updateFilesetTables(self):
-		print("********** UPDATING Fileset Tables **********", flush=True)
+		RunStatus.setStatus(RunStatus.UPDATE)
 		dbOut = SQLBatchExec(self.config)
 		update = UpdateDBPFilesetTables(self.config, self.db, dbOut)
 		video = UpdateDBPVideoTables(self.config, self.db, dbOut)
-		filesets = update.process()
-		for (typeCode, bibleId, filesetId, cvsFilename) in filesets:
-			filesetPrefix = typeCode + "/" + bibleId + "/" + filesetId
-			hashId = update.processFileset(typeCode, bibleId, filesetId, cvsFilename)
+		filesets = self._acceptedFilesets(self.config.directory_database)
+		for (typeCode, bibleId, filesetId, filesetPrefix, csvFilename) in filesets:
+			hashId = update.processFileset(typeCode, bibleId, filesetId, csvFilename)
 			if typeCode == "video":
 				video.processFileset(filesetPrefix, hashId)
 			dbOut.displayCounts()
@@ -128,7 +144,6 @@ class DBPLoadController:
 
 
 	def updateLPTSTables(self):
-		print("********** UPDATING LPTS Tables **********", flush=True)
 		dbOut = SQLBatchExec(self.config)
 		lptsDBP = UpdateDBPLPTSTable(self.config, dbOut, self.lptsReader)
 		lptsDBP.process()
@@ -138,22 +153,47 @@ class DBPLoadController:
 		return success
 
 
+	def _acceptedFilesets(self, directory):
+		results = []
+		for typeCode in [f for f in os.listdir(directory) if not f.startswith('.')]:
+			for bibleId in [f for f in os.listdir(directory + typeCode) if not f.startswith('.')]:
+				for filesetId in [f for f in os.listdir(directory + typeCode + os.sep + bibleId) if not f.startswith('.')]:
+					filesetPrefix = typeCode + "/" + bibleId + "/" + filesetId + "/"
+					csvFilename = "%s%s_%s_%s.csv" % (self.config.directory_accepted, typeCode, bibleId, filesetId)
+					if os.path.exists(csvFilename):
+						results.append((typeCode, bibleId, filesetId, filesetPrefix, csvFilename))
+		return results
+
+
 if (__name__ == '__main__'):
-	config = Config()
+	config = Config.shared()
 	db = SQLUtility(config)
-	lptsReader = LPTSExtractReader(config)
+	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
 	ctrl = DBPLoadController(config, db, lptsReader)
+	ctrl.preprocessUploadAWS()
 	ctrl.cleanup()
 	ctrl.validate()
 	if ctrl.updateBibles():
 		ctrl.upload()
 		ctrl.updateFilesetTables()
 		if ctrl.updateLPTSTables():
-			print("********** COMPLETE **********")
+			if Log.totalErrorCount() == 0:
+				RunStatus.setStatus(RunStatus.SUCCESS)
+			else:
+				RunStatus.setStatus(RunStatus.FAILURE)
 		else:
+			RunStatus.setStatus(RunStatus.FAILURE)
 			print("********** LPTS Tables Update Failed **********")
 	else:
+		RunStatus.setStatus(RunStatus.FAILURE)
 		print("********** Bibles Table Update Failed **********")
 
-
-
+"""
+config = Config()
+db = SQLUtility(config)
+lptsReader = LPTSExtractReader(config)
+ctrl = DBPLoadController(config, db, lptsReader)
+filesets = ctrl._acceptedFilesets(config.directory_complete)
+for (typeCode, bibleId, filesetId, filesetPrefix, csvFilename) in filesets:
+	print(typeCode, bibleId, filesetId, filesetPrefix, csvFilename)
+"""

@@ -7,16 +7,16 @@ import io
 import sys
 import os
 from xml.dom import minidom
-from Config import *
-from Log import *
+
 
 class LPTSExtractReader:
 
-	def __init__(self, config):
+	def __init__(self, lptsExtractPath):
+		self.lptsExtractPath = lptsExtractPath
 		self.resultSet = []
 		dom = None
 		try:
-			doc = minidom.parse(config.filename_lpts_xml)
+			doc = minidom.parse(lptsExtractPath)
 		except Exception as err:
 			print("FATAL ERROR parsing LPTS extract", err)
 			sys.exit(1)
@@ -38,9 +38,27 @@ class LPTSExtractReader:
 								resultRow[fldNode.nodeName] = fldNode.firstChild.nodeValue
 
 						self.resultSet.append(LPTSRecord(resultRow))
+		self.checkRecordCount()
 		self.bibleIdMap = self.getBibleIdMap()
 		self.filesetIdMap = None
+		self.filesetIdMap10 = None
 		print("LPTS Extract with %d records and %d BibleIds is loaded." % (len(self.resultSet), len(self.bibleIdMap.keys())))
+
+
+	# Check the record count against prior run to make certain we have the entire file. And save new record count.
+	def checkRecordCount(self):
+		filename = os.path.expanduser("~") + "/dbp-etl-LPTS_count.txt"
+		nowCount = len(self.resultSet)
+		if os.path.isfile(filename):
+			with open(filename, "r") as cntIn:
+				priorCount = cntIn.read().strip()
+				if priorCount.isdigit():
+					if (int(priorCount) - nowCount) > 50:
+						print("FATAL: %s is too small. Prior run was %s records. Now it has %d records. This count is stored at %s" 
+							% (self.lptsExtractPath, priorCount, nowCount, filename))
+						sys.exit()
+		with open(filename, "w") as cntOut:
+			cntOut.write(str(nowCount))
 
 
     ## Generates Map bibleId: [(index, LPTSRecord)], called by class init
@@ -63,6 +81,21 @@ class LPTSExtractReader:
 				records.append((3, rec))
 				bibleIdMap[bibleId] = records
 		return bibleIdMap
+
+
+	## Generates a Map Records where stock number is the Key {stockNum: LPTSRecord}
+	def getStockNumberMap(self):
+		stockNumMap = {}
+		for rec in self.resultSet:
+			stockNum = rec.Reg_StockNumber()
+			if stockNum != None:
+				if stockNumMap.get(stockNum) == None:
+					stockNumMap[stockNum] = rec
+				else:
+					print("ERROR: Duplicate Stock Num", stockNum);
+			else:
+				print("ERROR: Record has no stock number")
+		return stockNumMap
 
 
 	## Returns one (record, index) for typeCode, bibleId, filesetId
@@ -140,6 +173,36 @@ class LPTSExtractReader:
 					statuses.append((status, lptsRecord))
 					self.filesetIdMap[damId] = statuses
 		return self.filesetIdMap.get(filesetId[:10], None)
+
+
+	## This method is different than getFilesetRecords in that it expects an entire 10 digit text filesetId
+	## It also removes excess characters for filesets and corrects for SA types.
+	## This method does not return the 1, 2, 3 index
+	## It returns an array of statuses and records, i.e. Set((lptsRecord, status, fieldName))
+	def getFilesetRecords10(self, filesetId):	
+		if self.filesetIdMap10 == None:
+			self.filesetIdMap10 = {}
+			damIdDict = {**LPTSRecord.audio1DamIdDict,
+						**LPTSRecord.audio2DamIdDict,
+						**LPTSRecord.audio3DamIdDict,
+						**LPTSRecord.text1DamIdDict,
+						**LPTSRecord.text2DamIdDict,
+						**LPTSRecord.text3DamIdDict,
+						**LPTSRecord.videoDamIdDict}
+			for lptsRecord in self.resultSet:
+				record = lptsRecord.record
+				hasKeys = set(damIdDict.keys()).intersection(set(record.keys()))
+				for key in hasKeys:
+					statusKey = damIdDict[key]
+					damId = record[key]
+					status = record.get(statusKey)
+					statuses = self.filesetIdMap10.get(damId, set())
+					statuses.add((lptsRecord, status, key))
+					self.filesetIdMap10[damId] = statuses
+		damId = filesetId[:10]
+		if len(damId) == 10 and damId[-2:] == "SA":
+			damId = damId[:8] + "DA";	
+		return self.filesetIdMap10.get(damId, None)
 
 
 	## This method returns a list of field names for development the purposes.
@@ -247,7 +310,7 @@ class LPTSRecord:
 				results.add(damId)
 		return results
 
-	## Return a map of damId: status of the damIds in a record
+	## Return a map of {damId: status} of the damIds in a record
 	def DamIdMap(self, typeCode, index):
 		if not typeCode in {"audio", "text", "video"}:
 			print("ERROR: Unknown typeCode '%s', audio, text, or video is expected." % (typeCode))
@@ -282,6 +345,26 @@ class LPTSRecord:
 			status = self.record.get(statusKey)
 			if results.get(damId) == None or status in {"Live", "live"}:
 				results[damId] = status
+		return results
+
+	## This is for text only, and is identical to DamIdMap, except it returns 10 characters
+	def TextDamIdMap(self, index):
+		if not index in {1, 2, 3}:
+			print("ERROR: Unknown DamId index '%s', 1,2, or 3 expected." % (index))
+			sys.exit()
+		if index == 1:
+			damIdDict = LPTSRecord.text1DamIdDict
+		elif index == 2:
+			damIdDict = LPTSRecord.text2DamIdDict
+		elif index == 3:
+			damIdDict = LPTSRecord.text3DamIdDict
+		hasKeys = set(damIdDict.keys()).intersection(set(self.record.keys()))
+		results = {}
+		for key in hasKeys:
+			statusKey = damIdDict[key]
+			damId = self.record[key]
+			status = self.record.get(statusKey)
+			results[damId] = status
 		return results
 
 	def AltName(self):
@@ -460,6 +543,9 @@ class LPTSRecord:
 	def MobileText(self):
 		return self.record.get("MobileText")
 
+	def MobileVideo(self):
+		return self.record.get("MobileVideo")
+
 	def ND_DBL_Load_Notes(self):
 		return self.record.get("ND_DBL_Load_Notes")
 
@@ -500,7 +586,8 @@ class LPTSRecord:
 		elif index == 3:
 			return self.record.get("_x0033_Orthography")
 		else:
-			Log.fatalError("Orthography index must be 1, 2, or 3, but was %s" % str(index,))
+			print("ERROR: Orthography index must be 1, 2, or 3, but was %s" % str(index,))
+			sys.exit()
 
 	def OTOrder(self):
 		result = self.record.get("OTOrder")
@@ -577,11 +664,45 @@ class LPTSRecord:
 		return self.record.get("WebHubVideo")
 
 
+# Get listing of damIds, per stock no
+if __name__ == '__main__':
+	config = Config.shared()
+	reader = LPTSExtractReader(config.filename_lpts_xml)
+	for lptsRecord in reader.resultSet:
+		stockNo = lptsRecord.Reg_StockNumber()
+		for typeCode in ["audio", "text", "video"]:
+			mediaDamIds = []
+			indexes = [1] if typeCode == "video" else [1,2,3]
+			for index in indexes:
+				damIds = lptsRecord.DamIdMap(typeCode, index)
+				if len(damIds) > 0:
+					print(stockNo, typeCode, index, damIds.keys())
+
+
+"""
+# Get alphabetic list distinct field names
+if (__name__ == '__main__'):
+	fieldCount = {}
+	config = Config()
+	reader = LPTSExtractReader(config)
+	for lptsRecord in reader.resultSet:
+		record = lptsRecord.record
+		for fieldName in record.keys():
+			#print(fieldName)
+			count = fieldCount.get(fieldName, 0)
+			count += 1
+			fieldCount[fieldName] = count
+	for fieldName in sorted(fieldCount.keys()):
+		count = fieldCount[fieldName]
+		print("%s,%s" % (fieldName, count))
+"""
+
+"""
 if (__name__ == '__main__'):
 	config = Config()
 	reader = LPTSExtractReader(config)
 	reader.getFieldNames()
-
+"""
 """
 if (__name__ == '__main__'):
 	config = Config()
@@ -599,4 +720,31 @@ if (__name__ == '__main__'):
 						#	prefixSet.add(damid[:6])
 			#if len(prefixSet) > 1:
 			#	print("ERROR: More than one DamId prefix in set %s" % (",".join(prefixSet)))
+"""
+"""
+# Find bible_ids that exist in multiple stock numbers
+# Find stock numbers that contain multiple bible_ids
+if (__name__ == '__main__'):
+	bibleIdMap = {}
+	config = Config()
+	reader = LPTSExtractReader(config)
+	for rec in reader.resultSet:
+		#print(rec.Reg_StockNumber(), rec.DBP_Equivalent(), rec.DBP_Equivalent2())
+		#if len(rec.Reg_StockNumber()) != 9:
+		#	print("Different Stocknumber", rec.Reg_StockNumber())
+		stockNo = rec.Reg_StockNumber()
+		bibleId1 = rec.DBP_Equivalent()
+		bibleId2 = rec.DBP_Equivalent2()
+		#if bibleId2 != None:
+		#	print("StockNo:", stockNo, "BibleId 1:", bibleId1, "BibleId 2:", bibleId2)
+		#if bibleId1 in bibleIdMap.keys():
+		#	priorStockNum = bibleIdMap[bibleId1]
+		#	print("StockNo:", stockNo, "StockNo:", priorStockNum, "BibleId1:", bibleId1)
+		if bibleId2 in bibleIdMap.keys():
+			priorStockNum = bibleIdMap[bibleId2]
+			print("StockNo:", stockNo, "StockNo:", priorStockNum, "BibleId2:", bibleId2)
+		if bibleId1 != None:
+			bibleIdMap[bibleId1] = stockNo
+		if bibleId2 != None:
+			bibleIdMap[bibleId2] = stockNo
 """

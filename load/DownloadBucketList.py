@@ -9,47 +9,49 @@ import io
 import os
 import sys
 import datetime
+from Config import *
 
-if len(sys.argv) < 2:
-	print("Usage: DownloadBucketList  bucket_name")
-	sys.exit()
+class DownloadBucketList:
 
-BUCKET_NAME = sys.argv[1]
+	def __init__(self, config):
+		self.config = config
 
-filename = "new-%s.txt" % (BUCKET_NAME)
-#pathname = "%s/FCBH/bucket_data/%s" % (os.environ['HOME'], filename)
-pathname = "/Volumes/FCBH/bucket_data/%s" % (filename,)
-print(pathname)
+	def listBucket(self, bucketName):
+		pathname = self.config.directory_bucket_list + "%s.txt" % (bucketName)
+		out = io.open(pathname, mode="w", encoding="utf-8")
 
-out = io.open(pathname, mode="w", encoding="utf-8")
+		session = boto3.Session(profile_name=self.config.s3_aws_profile)
+		client = session.client('s3')
 
-session = boto3.Session(profile_name='FCBH_Gary')
-#session = boto3.Session(profile_name='FCBH_DBS')
-client = session.client('s3')
+		request = { 'Bucket':bucketName, 'MaxKeys':1000 }
+		# Bucket, Delimiter, EncodingType, Market, MaxKeys, Prefix
 
-s3 = session.resource('s3')
-for bucket in s3.buckets.all():
-	print("available bucket", bucket.name)
+		hasMore = True
+		while hasMore:
+			response = client.list_objects_v2(**request)
+			hasMore = response['IsTruncated']
+			contents = response['Contents']
+			for item in contents:
+				key = item['Key']
+				size = item['Size']
+				datetime = item['LastModified']
+				try:
+					#print(key, size, datetime)
+					out.write("%s\t%s\t%s\n" % (key, size, datetime))
+				except Exception as err:
+					print("Could not write key %s" % (err))
 
-request = { 'Bucket':BUCKET_NAME, 'MaxKeys':1000 }
-# Bucket, Delimiter, EncodingType, Market, MaxKeys, Prefix
+			if hasMore:
+				request['ContinuationToken'] = response['NextContinuationToken']
 
-hasMore = True
-while hasMore:
-	response = client.list_objects_v2(**request)
-	hasMore = response['IsTruncated']
-	contents = response['Contents']
-	for item in contents:
-		key = item['Key']
-		size = item['Size']
-		datetime = item['LastModified']
-		try:
-			#print(key, size, datetime)
-			out.write("%s\t%s\t%s\n" % (key, size, datetime))
-		except Exception as err:
-			print("Could not write key %s" % (err))
+		out.close()
 
-	if hasMore:
-		request['ContinuationToken'] = response['NextContinuationToken']
+if __name__ == "__main__":
+	if len(sys.argv) < 3:
+		print("Usage: DownloadBucketList  config_name  bucket_name")
+		sys.exit()
+	BUCKET_NAME = sys.argv[2]
+	config = Config.shared()
+	download = DownloadBucketList(config)
+	download.listBucket(BUCKET_NAME)
 
-out.close()

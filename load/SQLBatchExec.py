@@ -10,6 +10,7 @@ import time
 from datetime import datetime
 import subprocess
 from Config import *
+from DBPRunFilesS3 import *
 
 
 class SQLBatchExec:
@@ -98,7 +99,7 @@ class SQLBatchExec:
 			self.counts.append(("delete", tableName, len(pkeyValues)))
 
 
-	def rawStatment(self, stmt):
+	def rawStatement(self, stmt):
 		self.statements.append(stmt)
 
 
@@ -131,20 +132,22 @@ class SQLBatchExec:
 		else:
 			pattern = self.config.filename_datetime 
 			tranDir = "./" ## we need a config parameter
-			path = tranDir + "Trans-" + datetime.today().strftime(pattern) + "-" + batchName + ".sql"
+			path = tranDir + "Trans-" + batchName + ".sql"
 			print("Transactions", path)
-			tranFile = open(path, "w")
+			tranFile = open(path, "w", encoding="utf-8")
+			tranFile.write("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;\n")
 			tranFile.write("START TRANSACTION;\n")
 			for statement in self.statements:
 				tranFile.write(statement + "\n")
 			tranFile.write("COMMIT;\n")
 			tranFile.write("EXIT\n")
 			tranFile.close()
+			DBPRunFilesS3.uploadFile(self.config, path)
 			startTime = time.perf_counter()
 			if self.config.database_tunnel != None:
 				results1 = os.popen(self.config.database_tunnel).read()
 				print("tunnel opened:", results1)
-			with open(path, "r") as sql:
+			with open(path, "r", encoding="utf-8") as sql:
 				cmd = [self.config.mysql_exe, "-h", self.config.database_host, 
 						"-P", str(self.config.database_port),
 						"-u", self.config.database_user,

@@ -36,7 +36,8 @@ class UpdateDBPBiblesTable:
 		self.scriptNameMap = self.db.selectMap("SELECT lpts_name, script_id FROM lpts_script_codes", ())
 		self.numeralIdSet = self.db.selectSet("SELECT id FROM numeral_systems", ())
 		self.sizeCodeMap = self.db.selectMapList("SELECT id, set_size_code FROM bible_filesets", ())	
-		resultSet = self.db.select("SELECT lower(l.iso), lower(t.name), l.id FROM languages l,language_translations t WHERE l.id=t.language_source_id ORDER BY l.id desc", ())
+		resultSet = self.db.select("SELECT lower(l.iso), lower(t.name), l.id FROM languages l,language_translations t"
+			" WHERE l.id=t.language_source_id AND priority = 9 ORDER BY l.id desc", ())
 		self.languageMap1 = {}
 		for (iso, name, langId) in resultSet:
 			self.languageMap1[(iso, name)] = langId
@@ -91,7 +92,7 @@ class UpdateDBPBiblesTable:
 					insertRows.append((languageId, "protestant", numerals, date, scope, script, copyright, bibleId))
 			else:
 				(dbpLanguageId, dbpVersification, dbpNumerals, dbpDate, dbpScope, dbpScript, dbpCopyright) = dbpBibleMap[bibleId]
-				if languageId != dbpLanguageId:
+				if languageId != dbpLanguageId and languageId != None:
 					updateRows.append(("language_id", languageId, dbpLanguageId, bibleId))
 				if numerals != dbpNumerals:
 					updateRows.append(("numeral_system_id", numerals, dbpNumerals, bibleId))
@@ -123,6 +124,7 @@ class UpdateDBPBiblesTable:
 			langName = lptsRecord.LangName()
 			langName = langName.lower() if langName != None else None
 			result = self.languageMap1.get((iso, langName))
+			#print("languageMap1", bibleId, iso, langName, result)
 			if result != None:
 				final.add(result)
 		if len(final) == 0:
@@ -132,6 +134,7 @@ class UpdateDBPBiblesTable:
 				langName = lptsRecord.LangName()
 				langName = langName.lower() if langName != None else None
 				result = self.languageMap2.get((iso, langName))
+				#print("languageMap2", bibleId, iso, langName, result)
 				if result != None:
 					final.add(result)
 		if len(final) == 0:
@@ -139,6 +142,7 @@ class UpdateDBPBiblesTable:
 				iso = lptsRecord.ISO()
 				iso = iso.lower() if iso != None else None
 				result = self.languageMap3.get(iso)
+				#print("languageMap3", bibleId, iso, result)
 				if result != None:
 					final.add(result)
 		if len(final) == 0:
@@ -191,7 +195,7 @@ class UpdateDBPBiblesTable:
 				elif numerals == "arabic-/-khmer":
 					numerals = "khmer"
 				if numerals not in self.numeralIdSet:
-					print("ERROR_03 Unknown Numeral System '%s'" % numerals)
+					print("ERROR_03 Unknown Numeral System '%s' for %s" % (numerals, lptsRecord.Reg_StockNumber()))
 				final.add(numerals)
 		if len(final) == 0:
 			return None
@@ -299,18 +303,16 @@ class UpdateDBPBiblesTable:
 
 	def testBibleForeignKeys(self, bibleId):
 		hasErrors = False
-		hasErrors |= self.testDeleteInTable(bibleId, "user_bookmarks")
-		hasErrors |= self.testDeleteInTable(bibleId, "user_highlights")
-		hasErrors |= self.testDeleteInTable(bibleId, "user_notes")
-		hasErrors |= self.testDeleteInTable(bibleId, "user_settings")
+		hasErrors |= self.testDeleteInTable(bibleId, self.config.database_user_db_name, "user_bookmarks")
+		hasErrors |= self.testDeleteInTable(bibleId, self.config.database_user_db_name, "user_highlights")
+		hasErrors |= self.testDeleteInTable(bibleId, self.config.database_user_db_name, "user_notes")
+		hasErrors |= self.testDeleteInTable(bibleId, self.config.database_user_db_name, "user_settings")
+		hasErrors |= self.testDeleteInTable(bibleId, self.config.database_db_name, "bible_translations")
 		return hasErrors
 
 
-	def testDeleteInTable(self, bibleId, tableName):
-		sql = ("SELECT count(*) FROM " +
-				self.config.database_user_db_name +
-				"." + tableName +
-				" WHERE bible_id = %s")
+	def testDeleteInTable(self, bibleId, database, tableName):
+		sql = "SELECT count(*) FROM " + database + "." + tableName + " WHERE bible_id = %s"
 		count = self.db.selectScalar(sql, (bibleId,))
 		if count > 0:
 			print("ERROR_06: Unable to DELETE bible_id %s from bibles. It is used by table %s." % (bibleId, tableName))

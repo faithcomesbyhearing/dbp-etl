@@ -48,27 +48,27 @@ class UpdateDBPTextFilesets:
 			return((Log.EROR, "%s script has no direction in alphabets." % (scriptId,)))
 		cmd = [self.config.node_exe,
 			self.config.publisher_js,
-			self.config.directory_validate + "text/%s/%s/" % (bibleId, filesetId),
+			self.config.directory_upload + "text/%s/%s/" % (bibleId, filesetId),
 			self.config.directory_accepted,
 			filesetId, iso3, iso1, direction]
 		response = subprocess.run(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=120)
 		if response == None or response.returncode != 0:
 			return((Log.EROR, "BiblePublisher: " + str(response.stderr.decode("utf-8"))))
 		#print("text/%s/%s %s\tINFO" % (bibleId, filesetId, str(response.stdout.decode("utf-8"))))
-		print("OUTPUT", str(response.stdout.decode("utf-8")))	
+		print("BiblePublisher:", str(response.stdout.decode("utf-8")))	
 		return None
 
 
-	def updateFileset(self, bibleId, filesetId, hashId):
+	def updateFileset(self, bibleId, filesetId, hashId, bookIdSet):
 		insertRows = []
 		updateRows = []
 		deleteRows = []
-		sql = "SELECT book_id, chapter, verse_start, verse_end, verse_text FROM bible_verses WHERE hash_id = %s"
-		resultSet = self.db.select(sql, (hashId,))
+		sql = ("SELECT book_id, chapter, verse_start, verse_end, verse_text FROM bible_verses"
+			" WHERE hash_id = %s AND book_id IN ('") + "','".join(bookIdSet) + "')"
+		resultSet = self.db.select(sql, (hashId))
 		dbpVerseMap = {}
 		for (dbpBookId, dbpChapter, dbpVerseStart, dbpVerseEnd, dbpVerseText) in resultSet:
 			dbpVerseMap[(dbpBookId, dbpChapter, dbpVerseStart)] = (dbpVerseEnd, dbpVerseText)
-
 		ssBookIdSet = set()
 		verseList = self.getBiblePublisherVerses(filesetId)
 		for (ssBookId, ssChapter, ssVerseStart, ssVerseEnd, ssVerseText) in verseList:
@@ -96,6 +96,21 @@ class UpdateDBPTextFilesets:
 		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
 		self.dbOut.updateCol(tableName, pkeyNames, updateRows)
 		self.dbOut.delete(tableName, pkeyNames, deleteRows)
+		self.tempDeleteTextFormat(filesetId) ## Remove when we start adding text_format with load
+
+
+	def tempDeleteTextFormat(self, filesetId):
+		sql = "SELECT hash_id FROM bible_filesets WHERE set_type_code = 'text_format' AND id=%s"
+		hashId = self.db.selectScalar(sql, (filesetId,))
+		if hashId != None:
+			self.dbOut.rawStatement("DELETE FROM bible_files WHERE hash_id = '%s';" % (hashId,))
+			self.dbOut.rawStatement("DELETE FROM bible_verses WHERE hash_id = '%s';" % (hashId,))
+			self.dbOut.rawStatement("DELETE FROM access_group_filesets WHERE hash_id = '%s';" % (hashId,))
+			self.dbOut.rawStatement("DELETE FROM bible_fileset_tags WHERE hash_id = '%s';" % (hashId,))
+			self.dbOut.rawStatement("DELETE FROM bible_fileset_copyright_organizations WHERE hash_id = '%s';" % (hashId,))
+			self.dbOut.rawStatement("DELETE FROM bible_fileset_copyrights WHERE hash_id = '%s';" % (hashId,))
+			self.dbOut.rawStatement("DELETE FROM bible_fileset_connections WHERE hash_id = '%s';" % (hashId,))
+			self.dbOut.rawStatement("DELETE FROM bible_filesets WHERE hash_id = '%s';" % (hashId,))	
 
 
 	# This method concatonates together those verses which have the same ending code.
@@ -138,52 +153,11 @@ class UpdateDBPTextFilesets:
 			return int(verse[0:-1])
 
 
-"""
-if (__name__ == '__main__'):
-	from DBPLoadController import *
-	config = Config()
-	db = SQLUtility(config)
-	dbOut = SQLBatchExec(config)
-	lptsReader = LPTSExtractReader(config)
-
-	main = DBPLoadController(config, db, lptsReader)
-	main.cleanup() # Only part of controller used here
-
-	texts = UpdateDBPTextFilesets(config, db, dbOut, lptsReader)
-	s3 = S3Utility(config)
-	dirname = config.directory_validate
-	for typeCode in os.listdir(dirname):
-		if typeCode == "text":
-			for bibleId in os.listdir(dirname + typeCode):
-				for filesetId in os.listdir(dirname + typeCode + os.sep + bibleId):
-					error = texts.validateFileset(bibleId, filesetId)
-					if error == None:
-						s3.promoteFileset(config.directory_validate, "text/%s/%s" % (bibleId, filesetId))
-						s3.promoteFileset(config.directory_upload, "text/%s/%s" % (bibleId, filesetId))
-						#texts.uploadFileset(bibleId, filesetId)
-					else:
-						print(error)
-
-	filesets = UpdateDBPFilesetTables(config, db, dbOut)
-	dirname = config.directory_database
-	for typeCode in os.listdir(dirname):
-		if typeCode == "text":
-			for bibleId in os.listdir(dirname + typeCode):
-				for filesetId in os.listdir(dirname + typeCode + os.sep + bibleId):
-					databasePath = config.directory_accepted + filesetId + ".db"
-					hashId = filesets.insertBibleFileset("verses", filesetId, databasePath)
-					filesets.insertFilesetConnections(hashId, bibleId)
-					texts.updateFileset(bibleId, filesetId, hashId)
-
-	dbOut.displayStatements()
-	dbOut.displayCounts()
-	#dbOut.execute("verses-test")
-"""
 if (__name__ == '__main__'):
 	config = Config()
 	db = SQLUtility(config)
 	dbOut = SQLBatchExec(config)
-	lptsReader = LPTSExtractReader(config)
+	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
 	texts = UpdateDBPTextFilesets(config, db, dbOut, lptsReader)
 	from UpdateDBPFilesetTables import *
 	filesets = UpdateDBPFilesetTables(config, db, dbOut)
@@ -191,15 +165,29 @@ if (__name__ == '__main__'):
 	for typeCode in os.listdir(dirname):
 		if typeCode == "text":
 			for bibleId in os.listdir(dirname + typeCode):
+				print("bibleId", bibleId)
 				for filesetId in os.listdir(dirname + typeCode + os.sep + bibleId):
-					databasePath = config.directory_accepted + filesetId + ".db"
-					hashId = filesets.insertBibleFileset("verses", filesetId, databasePath)
-					filesets.insertFilesetConnections(hashId, bibleId)
-					texts.updateFileset(bibleId, filesetId, hashId)
+					print("filesetId", filesetId)
+					message = texts.validateFileset(bibleId, filesetId)
+					if message != None:
+						print(message)
+					else:
+						databasePath = config.directory_accepted + filesetId + ".db"
+						from SqliteUtility import *
+						sqlite = SqliteUtility(databasePath)
+						bookIdSet = sqlite.selectSet("SELECT code FROM tableContents", ()) 
+						print(bookIdSet)
+
+						## These two lines should be commented out.
+						#for (reference, verseText) in sqlite.select("SELECT reference, html FROM verses", ()):
+						#	print(reference, verseText)
+
+						hashId = filesets.insertBibleFileset("text", filesetId, bookIdSet)
+						filesets.insertFilesetConnections(hashId, bibleId)
+						texts.updateFileset(bibleId, filesetId, hashId, bookIdSet)
 
 	dbOut.displayStatements()
 	dbOut.displayCounts()
 	#dbOut.execute("verses-test")
-
 
 

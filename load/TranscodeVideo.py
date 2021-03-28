@@ -4,28 +4,26 @@ import time
 import csv
 import boto3
 from S3Utility import *
+from RunStatus import *
 
 
 class TranscodeVideo:
 
-	def transcodeVideoFilesets(config):
-		directory = config.directory_database
-		for typeCode in os.listdir(directory):
-			if typeCode == "video":
-				for bibleId in [f for f in os.listdir(directory + typeCode) if not f.startswith('.')]:
-					for filesetId in [f for f in os.listdir(directory + typeCode + os.sep + bibleId) if not f.startswith('.')]:
-						filesetPrefix = typeCode + "/" + bibleId + "/" + filesetId + "/"
-						transcoder = TranscodeVideo(config, filesetPrefix)
-						for filename in [f for f in os.listdir(directory + filesetPrefix) if not f.startswith('.')]:
-							transcoder.createJob(filesetPrefix + filename)
-						done = transcoder.completeJobs()
-						if done:
-							print("Transcode %s succeeded." % (filesetPrefix))
-						else:
-							print("Transcode %s FAILED." % (filesetPrefix))
+	def transcodeVideoFileset(config, filesetPrefix):
+		transcoder = TranscodeVideo(config, filesetPrefix)
+		RunStatus.printDuration("BEGIN SUBMIT TRANSCODE")
+		for filename in [f for f in os.listdir(config.directory_upload + filesetPrefix) if not f.startswith('.')]:
+			transcoder.createJob(filesetPrefix + filename)
+		RunStatus.printDuration("BEGIN CHECK TRANSCODE")
+		done = transcoder.completeJobs()
+		if done:
+			print("Transcode %s succeeded." % (filesetPrefix))
+		else:
+			print("Transcode %s FAILED." % (filesetPrefix))
+		RunStatus.printDuration("TRANSCODE DONE")
 
 
-	## Consumed by UpdateDBPVideoTable
+	## Used by UpdateDBPVideoTable
 	def getHLSTypes():
 		return ["_stream", "_av720p", "_av480p", "_av360p"]
 

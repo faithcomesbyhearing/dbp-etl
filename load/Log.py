@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from Config import *
+from DBPRunFilesS3 import *
 
 class Log:
 
@@ -11,16 +12,12 @@ class Log:
 	INFO = 3
 	loggers = {}
 
-	def getLogger(filesetPrefix):
-		logger = Log.loggers.get(filesetPrefix)
+	def getLogger(filesetId):
+		logger = Log.loggers.get(filesetId)
 		if logger == None:
-			logger = Log(filesetPrefix)
-			Log.loggers[filesetPrefix] = logger
+			logger = Log(filesetId)
+			Log.loggers[filesetId] = logger
 		return logger
-
-	def getLogger3(typeCode, bibleId, filesetId):
-		filesetPrefix = "%s/%s/%s" % (typeCode, bibleId, filesetId)
-		return Log.getLogger(filesetPrefix)
 
 	def fatalError(message):
 		logger = Log.getLogger("~")
@@ -28,6 +25,12 @@ class Log:
 		config = Config()
 		Log.writeLog(config)
 		sys.exit()
+
+	def totalErrorCount():
+		count = 0
+		for logger in Log.loggers.values():
+			count += logger.errorCount()
+		return count
 
 	def writeLog(config):
 		errors = []
@@ -39,18 +42,26 @@ class Log:
 		if len(errors) > 0:
 			errorDir = config.directory_errors
 			pattern = config.filename_datetime 
-			path = errorDir + "Errors-" + datetime.today().strftime(pattern) + ".out"
+			path = errorDir + "Errors.out"
 			print("openErrorReport", path)
-			errorFile = open(path, "w")
+			errorFile = open(path, "w", encoding="utf-8")
 			for message in errors:
 				errorFile.write(message + '\n')
 				print(message, end='\n')
 			errorFile.close()
-		print("Num Errors ", len(errors))		
+			DBPRunFilesS3.uploadFile(config, path)
+		print("Num Errors ", len(errors))
 
 
-	def __init__(self, filesetPrefix):
-		self.filesetPrefix = filesetPrefix
+	def addPreValidationErrors(messages):
+		for (filesetId, errors) in messages.items():
+			logger = Log.getLogger(filesetId)
+			for error in errors:
+				logger.messages.append((Log.EROR, error))	
+
+
+	def __init__(self, filesetId):
+		self.filesetId = filesetId
 		self.messages = []
 
 #	def hasMessages(self):
@@ -59,7 +70,7 @@ class Log:
 	def errorCount(self):
 		count = 0;
 		for msg in self.messages:
-			if msg[0] == Log.EROR:
+			if msg[0] == Log.EROR or msg[0] == Log.FATAL:
 				count += 1
 		return count
 
@@ -93,21 +104,20 @@ class Log:
 	def fileErrors(self, fileList):
 		for file in fileList:
 			if len(file.errors) > 0:
-				self.messages.append((Log.EROR, "%s/%s %s." % (self.filesetPrefix, file.file, ", ".join(file.errors))))
+				self.messages.append((Log.EROR, "%s/%s %s." % (self.filesetId, file.file, ", ".join(file.errors))))
 
 	def format(self):
 		levelMap = { Log.FATAL: "FATAL", Log.EROR: "EROR", Log.WARN: "WARN", Log.INFO: "INFO"}
 		output = []
 		for (level, msg) in self.messages:
 			levelMsg = levelMap.get(level)
-			output.append("%s %s %s" % (levelMsg, self.filesetPrefix, msg))
+			output.append("%s %s %s" % (levelMsg, self.filesetId, msg))
 		return output
 
 
 if (__name__ == '__main__'):
 	config = Config()
-	#error = Log.factory("text/ENGESV/ENGESVN2DA")
-	error = Log.getLogger("text/ENGESV/ENGESVN2DA")
+	error = Log.getLogger("ENGESVN2DA")
 	error.message(Log.INFO, "First message")
 	error.messageTuple((Log.WARN, "Second message"))
 	error.invalidFileExt("MyFilename")

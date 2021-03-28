@@ -6,6 +6,7 @@ import zipfile
 from datetime import datetime
 from Config import *
 from Log import *
+from PreValidate import *
 from SQLUtility import *
 from InputReader import *
 from LPTSExtractReader import *
@@ -14,24 +15,7 @@ from FilenameReducer import *
 from UpdateDBPTextFilesets import *
 
 
-class Validate:
-
-	def parseCommandLine():
-		if len(sys.argv) != 3:
-			print("Usage: python3 py/Validate.py  config_profile  run_type")
-			print("\tconfig_profile: e.g. dev, test, stage, prod")
-			print("\trun_type: files, bucketlists")
-			sys.exit()
-		elif not sys.argv[2] in {"files", "bucketlists"}:
-			print("2nd parameter must be files or bucketlists")
-			sys.exit()
-		elif not sys.argv[1] in {"dev", "test", "stage", "prod"}:
-			print("1st parameter is expected to be dev, test, stage, prod")
-		results = {}
-		results["config"] = sys.argv[1]
-		results["run"] = sys.argv[2]
-		return results
-			
+class Validate:	
 
 	def __init__(self, runType, config, db, lptsReader):
 		self.config = config
@@ -55,7 +39,8 @@ class Validate:
 			filesets = reader.bucketListing(self.config.s3_vid_bucket)
 
 		elif self.runType == "files":
-			filesets = reader.fileListing(self.config.directory_validate)
+			filesets = reader.fileListing(self.config.directory_upload)
+			filesets = reader.fileListing(self.config.directory_database)
 
 		else:
 			print("ERROR: run_type must be files or bucketlists.")
@@ -63,11 +48,11 @@ class Validate:
 
 		## Validate filetypes
 		for (filePrefix, filenames) in filesets.items():
-			logger = Log.getLogger(filePrefix)
 			(typeCode, bibleId, filesetId) = filePrefix.split("/")
+			logger = Log.getLogger(filesetId)
 			for (filename, filesize, lastmodified) in filenames:
 				ext = os.path.splitext(filename)[1]
-				if typeCode == "audio" and ext not in {".mp3"}:
+				if typeCode == "audio" and ext not in {".mp3", ".opus", ".webm", ".m4a"}:
 					logger.invalidFileExt(filename)
 				elif typeCode == "text" and not ext in {".html", ".usx"}:
 					logger.invalidFileExt(filename)
@@ -82,7 +67,7 @@ class Validate:
 				(typeCode, bibleId, filesetId) = filePrefix.split("/")
 				errorTuple = texts.validateFileset(bibleId, filesetId)
 				if errorTuple != None:
-					logger = Log.getLogger(filePrefix)
+					logger = Log.getLogger(filesetId)
 					logger.messageTuple(errorTuple)		
 
 		## Reduce input files to typeCode/bibleId: [filesetId]
@@ -137,49 +122,18 @@ class Validate:
 
 
 	def validateLPTS(self, inputIdMap):
+		validate = PreValidate(self.lptsReader)
 		for biblePrefix in sorted(inputIdMap.keys()):
 			(typeCode, bibleId) = biblePrefix.split("/")
-
-			## Validate bibleId agains LPTS
-			lptsRecords = self.lptsReader.bibleIdMap.get(bibleId)
-			if lptsRecords == None:
-				logger = Log.getLogger(biblePrefix)
-				logger.missingBibleIds()
-			else:
-
-				## Validate filesetIds against LPTS
-				filesetIds = inputIdMap[biblePrefix]
-				for filesetId in filesetIds:
-					logger = Log.getLogger3(typeCode, bibleId, filesetId)
+			filesetIds = inputIdMap[biblePrefix]
+			for filesetId in filesetIds:
+				logger = Log.getLogger(filesetId)
+				validate.validateLPTS(typeCode, bibleId, filesetId)
+				## These validations require MySQL and so are done here, not PreValidate
+				if typeCode == "text":
 					(lptsRecord, index) = self.lptsReader.getLPTSRecord(typeCode, bibleId, filesetId)
-					if lptsRecord == None:
-						logger.missingFilesetIds()
-					else:
+					if lptsRecord != None:
 
-						stockNo = lptsRecord.Reg_StockNumber()
-						## Validate Required fields are present
-						if lptsRecord.Copyrightc() == None:
-							logger.requiredFields(stockNo, "Copyrightc")
-						if lptsRecord.Copyrightp() == None:
-							logger.requiredFields(stockNo, "Copyrightp")
-						if lptsRecord.Copyright_Video() == None:
-							logger.requiredFields(stockNo, "Copyright_Video")
-						if lptsRecord.ISO() == None:
-							logger.requiredFields(stockNo, "ISO")
-						if lptsRecord.LangName() == None:
-							logger.requiredFields(stockNo, "LangName")
-						if lptsRecord.Licensor() == None:
-							logger.requiredFields(stockNo, "Licensor")
-						if lptsRecord.Reg_StockNumber() == None:
-							logger.requiredFields(stockNo, "Reg_StockNumber")
-						if lptsRecord.Volumne_Name() == None:
-							logger.requiredFields(stockNo, "Volumne_Name")
-
-						if typeCode == "text":
-							if lptsRecord.Orthography(index) == None:
-								fieldName = "_x003%d_Orthography" % (index)
-								logger.requiredFields(stockNo, fieldName)
-						
 						scriptName = lptsRecord.Orthography(index)
 						if scriptName != None and scriptName not in self.scriptNameSet:
 							logger.invalidValues(stockNo, "_x003n_Orthography", scriptName)
@@ -187,14 +141,14 @@ class Validate:
 						numeralsName = lptsRecord.Numerals()
 						if numeralsName != None and numeralsName not in self.numeralsSet:
 							logger.invalidValues(stockNo, "Numerals", numeralsName)
+		Log.addPreValidationErrors(validate.messages)
 
 
 if (__name__ == '__main__'):
-	args = Validate.parseCommandLine()
 	config = Config()
 	db = SQLUtility(config)
 	lptsReader = LPTSExtractReader(config)
-	validate = Validate(args["run"], config, db, lptsReader)
+	validate = Validate("files", config, db, lptsReader)
 	validate.process()
 	validate.reportErrors()
 

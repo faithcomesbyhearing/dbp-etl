@@ -50,6 +50,7 @@ class UpdateDBPBooksTable:
 	def __init__(self, config, dbOut):
 		self.config = config
 		self.dbOut = dbOut
+		self.bookNamesEnglish = None
 		self.extraBooks = {
 			"FRT": "001", # Front Matter
 			"INT": "002", # Introductions
@@ -189,8 +190,17 @@ class UpdateDBPBooksTable:
 			extraBook = True
 			priorBookSeq = None
 			bibleDB = SqliteUtility(self.config.directory_accepted + filesetId + ".db")
-			resultSet = bibleDB.select("SELECT code, title, name, chapters FROM tableContents ORDER BY rowId", ())
-			for (bookId, title, name, chapters) in resultSet:
+			resultSet = bibleDB.select("SELECT code, heading, title, name, chapters FROM tableContents ORDER BY rowId", ())
+			for (bookId, heading, title, name, chapters) in resultSet:
+				if name == None and heading != None:
+					name = heading
+				if title == None and name != None:
+					title = name
+				elif name == None and title != None:
+					name = title
+				elif name == None and title == None:
+					name = self.getBookNameEnglish(bookId)
+					title = name
 				if firstOTBook and bookId in self.otBooks.keys():
 					firstOTBook = False
 					bookSeq = self.otBooks[bookId]
@@ -214,7 +224,7 @@ class UpdateDBPBooksTable:
 			priorBookId = None
 			priorChapter = None
 			csvFilename = self.config.directory_accepted + "%s_%s_%s.csv" % (typeCode, bibleId, filesetId)
-			with open(csvFilename, newline='\n') as csvfile:
+			with open(csvFilename, encoding="utf-8", newline='\n') as csvfile:
 				reader = csv.DictReader(csvfile)
 				for row in reader:
 					bookId = row["book_id"]
@@ -247,6 +257,15 @@ class UpdateDBPBooksTable:
 		return tocBooks
 
 
+	def getBookNameEnglish(self, bookId):
+		if self.bookNamesEnglish == None:
+			db = SQLUtility(self.config)		
+			sql = ("SELECT book_id, name FROM book_translations WHERE language_id IN"
+				" (SELECT id FROM languages WHERE iso=%s)")
+			self.bookNamesEnglish = db.selectMap(sql, ("eng"))
+		return self.bookNamesEnglish.get(bookId, "Unknown")
+
+
 	## extract sequence of the current bible books table, and merge to tocBooks
 	def updateBibleBooks(self, typeCode, bibleId, tocBooks):
 		db = SQLUtility(self.config)
@@ -274,11 +293,15 @@ class UpdateDBPBooksTable:
 				if toc.nameShort != dbpNameShort:
 					nameShort = toc.nameShort.replace("'", "\\'")
 					updateRows.append(("name_short", nameShort, dbpNameShort, bibleId, toc.bookId))
+				if len(toc.chapters) >= len(dbpChapters):
+					updateRows.append(("chapters", toc.chapters, dbpChapters, bibleId, toc.bookId))
 
 			elif typeCode == "audio":
 				(dbpBookId, dbpBookSeq, dbpName, dbpNameShort, dbpChapters) = bibleBookMap[toc.bookId]	
 				if toc.bookSeq != dbpBookSeq:
 					updateRows.append(("book_seq", toc.bookSeq, dbpBookSeq, bibleId, toc.bookId))
+				if len(toc.chapters) >= len(dbpChapters):
+					updateRows.append(("chapters", toc.chapters, dbpChapters, bibleId, toc.bookId))
 
 		sql = ("SELECT distinct book_id FROM bible_files bf"
 			" JOIN bible_fileset_connections bfc ON bf.hash_id = bfc.hash_id"

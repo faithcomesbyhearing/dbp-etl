@@ -1,5 +1,4 @@
 
-
 ALTER TABLE access_group_filesets DROP FOREIGN KEY FK_access_groups_access_group_filesets;
 ALTER TABLE access_group_filesets ADD CONSTRAINT FK_access_groups_access_group_filesets FOREIGN KEY (access_group_id) REFERENCES access_groups (id) ON DELETE RESTRICT ON UPDATE RESTRICT;
 ALTER TABLE access_group_filesets DROP FOREIGN KEY FK_bible_filesets_access_group_filesets;
@@ -27,6 +26,7 @@ ALTER TABLE alphabet_numeral_systems ADD CONSTRAINT FK_alphabets_alphabet_numera
 ALTER TABLE assets DROP FOREIGN KEY FK_organizations_assets;
 ALTER TABLE assets ADD CONSTRAINT FK_organizations_assets FOREIGN KEY (organization_id) REFERENCES organizations (id) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
+UPDATE bible_books SET created_at = NULL WHERE CAST(created_at AS CHAR(20)) = '0000-00-00 00:00:00';
 ALTER TABLE bible_books DROP FOREIGN KEY FK_bibles_bible_books;
 ALTER TABLE bible_books ADD CONSTRAINT FK_bibles_bible_books FOREIGN KEY (bible_id) REFERENCES bibles (id) ON DELETE RESTRICT ON UPDATE RESTRICT;
 ALTER TABLE bible_books DROP FOREIGN KEY FK_books_bible_books;
@@ -48,12 +48,21 @@ ALTER TABLE bible_file_titles ADD CONSTRAINT FK_bible_files_bible_file_titles FO
 ALTER TABLE bible_file_titles DROP FOREIGN KEY FK_languages_bible_file_titles;
 ALTER TABLE bible_file_titles ADD CONSTRAINT FK_languages_bible_file_titles FOREIGN KEY (iso) REFERENCES languages (iso) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
-ALTER TABLE bible_file_video_resolutions DROP FOREIGN KEY FK_bible_files_bible_file_video_resolutions;
-ALTER TABLE bible_file_video_resolutions ADD CONSTRAINT FK_bible_files_bible_file_video_resolutions FOREIGN KEY (bible_file_id) REFERENCES bible_files (id) ON DELETE RESTRICT ON UPDATE RESTRICT;
+-- ALTER TABLE bible_file_video_resolutions DROP FOREIGN KEY FK_bible_files_bible_file_video_resolutions;
+-- ALTER TABLE bible_file_video_resolutions ADD CONSTRAINT FK_bible_files_bible_file_video_resolutions FOREIGN KEY (bible_file_id) REFERENCES bible_files (id) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE bible_file_stream_ts DROP FOREIGN KEY FK_stream_bandwidths_stream_ts;
+-- ALTER TABLE bible_file_stream_ts ADD CONSTRAINT FK_stream_bandwidths_stream_ts FOREIGN KEY (stream_bandwidth_id) REFERENCES bible_file_stream_bandwidths (id) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE bible_file_stream_ts ADD CONSTRAINT FK_stream_bandwidths_stream_ts FOREIGN KEY (stream_bandwidth_id) REFERENCES bible_file_stream_bandwidths (id) ON DELETE CASCADE ON UPDATE CASCADE;
 
-ALTER TABLE bible_file_video_transport_stream DROP FOREIGN KEY FK_bible_file_video_resolutions_bible_file_video_transport_strea;
-ALTER TABLE bible_file_video_transport_stream ADD CONSTRAINT FK_bible_file_video_resolutions_bible_file_video_transport_strea FOREIGN KEY (video_resolution_id) REFERENCES bible_file_video_resolutions (id) ON DELETE RESTRICT ON UPDATE RESTRICT;
+-- ALTER TABLE bible_file_video_transport_stream DROP FOREIGN KEY FK_bible_file_video_resolutions_bible_file_video_transport_strea;
+-- ALTER TABLE bible_file_video_transport_stream ADD CONSTRAINT FK_bible_file_video_resolutions_bible_file_video_transport_strea FOREIGN KEY (video_resolution_id) REFERENCES bible_file_video_resolutions (id) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE bible_file_stream_bytes DROP FOREIGN KEY FK_bible_file_bandwidth_stream_bytes;
+-- ALTER TABLE bible_file_stream_bytes ADD CONSTRAINT FK_bible_file_bandwidth_stream_bytes FOREIGN KEY (stream_bandwidth_id) REFERENCES bible_file_stream_bandwidths (id) ON DELETE RESTRICT ON UPDATE RESTRICT;
+ALTER TABLE bible_file_stream_bytes ADD CONSTRAINT FK_bible_file_bandwidth_stream_bytes FOREIGN KEY (stream_bandwidth_id) REFERENCES bible_file_stream_bandwidths (id) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE bible_file_stream_bytes DROP FOREIGN KEY FK_bible_file_timestamp_stream_bytes;
+ALTER TABLE bible_file_stream_bytes ADD CONSTRAINT FK_bible_file_timestamp_stream_bytes FOREIGN KEY (timestamp_id) REFERENCES bible_file_timestamps (id) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
+UPDATE bible_files SET created_at = NULL WHERE CAST(created_at AS CHAR(20)) = '0000-00-00 00:00:00';
 ALTER TABLE bible_files DROP FOREIGN KEY FK_bible_filesets_bible_files;
 ALTER TABLE bible_files ADD CONSTRAINT FK_bible_filesets_bible_files FOREIGN KEY (hash_id) REFERENCES bible_filesets (hash_id) ON DELETE RESTRICT ON UPDATE RESTRICT;
 ALTER TABLE bible_files DROP FOREIGN KEY FK_books_bible_files;
@@ -71,6 +80,7 @@ ALTER TABLE bible_fileset_copyright_organizations ADD CONSTRAINT FK_bible_filese
 ALTER TABLE bible_fileset_copyright_organizations DROP FOREIGN KEY FK_organizations_bible_fileset_copyright_organizations;
 ALTER TABLE bible_fileset_copyright_organizations ADD CONSTRAINT FK_organizations_bible_fileset_copyright_organizations FOREIGN KEY (organization_id) REFERENCES organizations (id) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
+UPDATE bible_fileset_copyrights SET created_at = NULL WHERE CAST(created_at AS CHAR(20)) = '0000-00-00 00:00:00';
 ALTER TABLE bible_fileset_copyrights DROP FOREIGN KEY FK_bible_filesets_bible_fileset_copyrights;
 ALTER TABLE bible_fileset_copyrights ADD CONSTRAINT FK_bible_filesets_bible_fileset_copyrights FOREIGN KEY (hash_id) REFERENCES bible_filesets (hash_id) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
@@ -221,6 +231,7 @@ ALTER TABLE language_codes ADD CONSTRAINT FK_languages_language_codes FOREIGN KE
 ALTER TABLE language_dialects DROP FOREIGN KEY FK_languages_language_dialects;
 ALTER TABLE language_dialects ADD CONSTRAINT FK_languages_language_dialects FOREIGN KEY (language_id) REFERENCES languages (id) ON DELETE RESTRICT ON UPDATE RESTRICT;
 
+UPDATE language_translations SET created_at = NULL WHERE CAST(created_at AS CHAR(20)) = '0000-00-00 00:00:00';
 ALTER TABLE language_translations DROP FOREIGN KEY FK_languages_language_translations_language_source_id;
 ALTER TABLE language_translations ADD CONSTRAINT FK_languages_language_translations_language_source_id FOREIGN KEY (language_source_id) REFERENCES languages (id) ON DELETE RESTRICT ON UPDATE RESTRICT;
 ALTER TABLE language_translations DROP FOREIGN KEY FK_languages_language_translations_language_tranlation_id;

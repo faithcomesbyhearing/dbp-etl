@@ -62,8 +62,7 @@ class FindDuplicateFilesets:
 			for index in range(len(resultFilenames)):
 				if index != indexOfAccepted:
 					#print("Move %s %sfile to duplicate" % (filesetId, resultFilenames[index]))
-					filesetPrefix = resultFilenames[index][0].replace("_", "/")
-					logger = Log.getLogger(filesetPrefix)
+					logger = Log.getLogger(filesetId)
 					logger.message(Log.INFO, "Entire Fileset moved to duplicate, %s accepted." % (acceptedPrefix,))
 					filename = resultFilenames[index][0] + ".csv"
 					source = self.acceptedDir + os.sep + filename

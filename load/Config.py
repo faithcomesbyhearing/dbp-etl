@@ -11,19 +11,27 @@
 import os
 import sys
 import re
+import boto3
 import configparser
 
 class Config:
 
+	_instance = None
+	def shared():
+		if Config._instance == None:
+			Config._instance = Config()
+		return Config._instance
+
+
 	def __init__(self):
-		home = os.environ.get('HOME') # unix
-		if home == None:
-			home = os.environ.get('HOMEPATH') # windows
-		if home == None:
+		self.home = os.environ.get('HOME') # unix
+		if self.home == None:
+			self.home = os.environ.get('HOMEPATH') # windows
+		if self.home == None:
 			print("ERROR: Environment variable HOME or HOMEPATH must be set to a directory.")
 			sys.exit()
 
-		configFile = os.path.join(home, "dbp-etl.cfg")
+		configFile = os.path.join(self.home, "dbp-etl.cfg")
 		if not os.path.exists(configFile):
 			print("ERROR: Config file '%s' does not exist." % (configFile))
 			sys.exit()
@@ -64,10 +72,13 @@ class Config:
 
 		self.s3_bucket = self._get("s3.bucket")
 		self.s3_vid_bucket = self._get("s3.vid_bucket")
-		self.s3_aws_profile = self._get("s3.aws_profile")
+		self.s3_artifacts_bucket = self._get("s3.artifacts_bucket")
+		self.s3_aws_profile = self._getOptional("s3.aws_profile")
+		session = boto3.Session(profile_name=self.s3_aws_profile)
+		self.s3_client = session.client('s3')
 
 		if programRunning in {"AudioHLS.py"}:
-			self.directory_audio_hls = self._getPath("directory.audio_hls") #"%s/FCBH/files/tmp" % (os.environ["HOME"])
+			self.directory_audio_hls = self._getPath("directory.audio_hls") #"%s/FCBH/files/tmp" % (self.home)
 			self.audio_hls_duration_limit = self._getInt("audio.hls.duration.limit") #10  #### Must become command line param
 
 		else:
@@ -82,7 +93,7 @@ class Config:
 			self.directory_bucket_list = self._getPath("directory.bucket_list")
 			self.filename_lpts_xml = self._getPath("filename.lpts_xml")
 
-			self.directory_validate	= self._getPath("directory.validate")
+			self.directory_upload_aws = self._getPath("directory.upload_aws")
 			self.directory_upload = self._getPath("directory.upload")
 			self.directory_database	= self._getPath("directory.database")
 			self.directory_complete	= self._getPath("directory.complete")
@@ -92,7 +103,7 @@ class Config:
 			self.directory_accepted = self._getPath("directory.accepted")
 
 			self.directory_errors = self._getPath("directory.errors")
-			self.error_limit_pct = self._getFloat("error.limit.pct")
+			#self.error_limit_pct = self._getFloat("error.limit.pct")
 			self.filename_accept_errors = self._getPath("filename.accept.errors")
 
 			self.filename_datetime = self._get("filename.datetime")
@@ -111,7 +122,7 @@ class Config:
 		value = self._get(name)
 		path = value.replace("/", os.path.sep)
 		if path.startswith("~"):
-			path = path.replace("~", os.environ["HOME"])
+			path = path.replace("~", self.home)
 		if not os.path.exists(path):
 			print("ERROR: path %s for %s does not exist" % (path, name))
 			sys.exit()

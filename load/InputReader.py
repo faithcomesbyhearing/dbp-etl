@@ -117,7 +117,6 @@ class InputReader:
 	## input: audio, text, and video files in a directory tree
 	## output: map: typeCode/bibleId/filesetId: [(filename, fileSize, datetime)]
 	def fileListing(self, directory):
-		result = {}
 		lenDirectory = len(directory)
 		for root, dirs, files in os.walk(directory):
 			relDirName = root[lenDirectory:]
@@ -127,14 +126,14 @@ class InputReader:
 					resultFileList = []
 					for file in files:
 						if not file.startswith("."):
-							if file not in {"about.html", "index.html", "info.json", "title.json"}:
+							if file not in {"about.html", "index.html", "info.json", "title.json", "metadata.xml"}:
 								filePath = root + os.sep + file
 								filesize = os.path.getsize(filePath)
 								modifiedTS = os.path.getmtime(filePath)
 								lastModified = datetime.fromtimestamp(modifiedTS)
 								resultFileList.append((file, filesize, lastModified))
-					result[normDirName] = sorted(resultFileList)
-		return result
+					self.results[normDirName] = sorted(resultFileList)
+		return self.results
 
 
 	def countSummary(self):
