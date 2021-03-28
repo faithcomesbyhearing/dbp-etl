@@ -11,14 +11,6 @@ class DBPv2KeyInsert:
 		self.dbOut = dbOut
 		print("init DBPv2KeyInsert")
 
-	## should the input source also pick up
-	## password
-	## first_name
-	## last_name
-	## v2_id
-	## token -- what is source?
-	## In Notes add description like: inserted by DBPv2KeyInsert
-
 
 	def process(self, filename):
 		insertUsers = []
@@ -30,10 +22,13 @@ class DBPv2KeyInsert:
 				key = row["key"]
 				userEmail = row["user_email"]
 				displayName = row["display_name"]
-				password = "unknown"
+				firstName = row["first_name"]
+				lastName = row["last_name"]
+				password = "api developer"
 				activated = 1  ## I assume this should be activate
-				token = "unknown"  ## I don't know what this is. there are 26 unique value in the users table
-				insertUsers.append((displayName, userEmail, password, activated, token)) # create/update is automatic
+				token = "api developer"
+				notes = "inserted by DBPv2KeyInsert.py"
+				insertUsers.append((displayName, userEmail, firstName, lastName, password, activated, token, notes)) # create/update is automatic
 				userId = "@" + userEmail  # userEmail is unique in the users table.
 				insertKeys.append((userId, key, displayName)) # add created_at/updated_at
 				userKeyId = "@" + userId
@@ -41,7 +36,7 @@ class DBPv2KeyInsert:
 				insertGroups.append((123, userKeyId))
 				insertGroups.append((125, userKeyId))
 
-		self.dbOut.insert("users", [], ["name", "email", "password", "activated", "token"], insertUsers, 1)
+		self.dbOut.insert("users", [], ["name", "email", "first_name", "last_name", "password", "activated", "token", "notes"], insertUsers, 1)
 		self.dbOut.insert("user_keys", [], ["user_id", "key", "name"], insertKeys, 0)
 		self.dbOut.insert("access_group_api_keys", [], ["access_group_id", "key_id"], insertGroups)
 
