@@ -39,20 +39,20 @@ class DBPv2KeyInsert:
 				userId = "@" + userEmail.replace("@", "").replace(".", "")  # userEmail is unique in the users table.
 				keyId = "@" + key
 				if userEmail.lower() in self.emailSet:
-					print("Did not update ", userEmail)
-					## need to get userId and set it
+					print("Did not update user ", userEmail)
+					dbOut.rawStatement("SELECT id INTO %s FROM dbp_users.users WHERE `email` = '%s';" % (userId, userEmail))
 				else:
 					sql = ("INSERT INTO dbp_users.users (email, v2_id, name, first_name, last_name, password, activated, token, notes)"
 							" VALUES ('%s', 0, '%s', '%s', '%s', '%s', %s, '%s', '%s');" % (userEmail, displayName, firstName, lastName, password, activated, token, notes))
 					dbOut.rawStatement(sql)
 					dbOut.rawStatement("SET %s = LAST_INSERT_ID();" % (userId))
 				if key in self.keySet:
-					dbOut.rawStatement("SELECT id INTO %s FROM dbp_users.user_keys WHERE `key` = '%s';" % (keyId, key,))
+					print("did not update key ", key)
+					dbOut.rawStatement("SELECT id INTO %s FROM dbp_users.user_keys WHERE `key` = '%s';" % (keyId, key))
 				else:
 					sql = "INSERT INTO dbp_users.user_keys (`user_id`, `key`, `name`) VALUES (%s, '%s', '%s');" % (userId, key, displayName)
 					dbOut.rawStatement(sql)
 					dbOut.rawStatement("SET %s = LAST_INSERT_ID();" % (keyId))
-				#dbOut.rawStatement("SELECT %s;" % (keyId))
 				for priv in [121, 123, 125]:
 					sql = "INSERT INTO dbp_users.access_group_api_keys (`access_group_id`, `key_id`) VALUES (%s, %s);" % (priv, keyId)
 					dbOut.rawStatement(sql)
