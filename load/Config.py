@@ -82,6 +82,11 @@ class Config:
 			self.audio_hls_duration_limit = self._getInt("audio.hls.duration.limit") #10  #### Must become command line param
 
 		else:
+			self.audio_transcoder_url = self._get("audio.transcoder.url")
+			self.audio_transcoder_key = self._get("audio.transcoder.key")
+			self.audio_transcoder_sleep_sec = self._getInt("audio.transcoder.sleep.sec")
+			self.audio_transcoder_input = self._get("audio.transcoder.input")
+
 			self.video_transcoder_region = self._get("video.transcoder.region")
 			self.video_transcoder_pipeline = self._get("video.transcoder.pipeline")
 			self.video_preset_hls_1080p = self._get("video.preset.hls.1080p")
@@ -134,6 +139,9 @@ class Config:
 		return float(self._get(name))
 
 	def _getOptional(self, name):
+		return self.hashMap.get(name)
+
+	def getOptional(self, name):
 		return self.hashMap.get(name)
 
 
