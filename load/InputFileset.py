@@ -22,6 +22,7 @@ class InputFile:
 		self.name = name
 		self.size = size
 		self.lastModified = lastModified
+		self.duration = None
 
 	def filenameTuple(self):
 		return (self.name, self.size, self.lastModified)
