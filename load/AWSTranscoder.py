@@ -7,10 +7,12 @@ import json
 import os
 from Config import *
 from LPTSExtractReader import *
+from InputFileset import *
 
 
 class AWSTranscoder:
 
+	## Debug response result
 	result = ("{"
 "'executionArn': 'arn:aws:states:us-west-2:078432969830:execution:transcode-w9gxhplj7q9mju3h:b17f2615-6480-4693-a05b-db1845bed004', "
 "'files': ["
@@ -32,18 +34,18 @@ class AWSTranscoder:
 		self.config = config
 
 
-	def transcodeAudio(self, bucket, filesetId, filesetPath):
+	def transcodeAudio(self, inputFileset): 
 		url = self.config.audio_transcoder_url
 		key = self.config.audio_transcoder_key
 		inp = '"input": ' + self.config.audio_transcoder_input
-		inp = inp.replace("$bucket", bucket)
-		inp = inp.replace("$prefix", filesetPath)
+		inp = inp.replace("$bucket", inputFileset.location)
+		inp = inp.replace("$prefix", inpFileset.filesetPath)
 		outputs = []
 		for num in ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]:
 			configKey = "audio.transcoder.output." + num
 			out = self.config.getOptional(configKey)
 			if out != None:
-				out = out.replace("$prefix", filesetPath)
+				out = out.replace("$prefix", inpFileset.filesetPath)
 				outputs.append(out)
 		outputStr = '"output": [' + ", ".join(outputs) + ']'
 		request = '{' + inp + ", " + outputStr + '}'
@@ -53,7 +55,8 @@ class AWSTranscoder:
 			print("json error in request:" + request)
 			return None
 		result = self.transcode(url, key, request)
-		return result
+		outFilesets = transcoder.parseAudioResponse(inputFileset, result)
+		return outFilesets
 
 
 	def transcodeVideo(self):
@@ -100,29 +103,22 @@ class AWSTranscoder:
 		return json.loads(result)
 
 
-	def parseResponse(self, inpFileset, response):
+	def parseAudioResponse(self, inpFileset, response):
 		outFilesets = {}
 
-		outputs = msg.get("output", [])
-		print("output", outputs)
+		outputs = response.get("output", [])
 		for output in outputs:
-			print("output", output)
 			bucket = "s3://" + output.get("bucket")
-			print("bucket", bucket)
-			container = output.get("container")
-			print("container", container)
-			codec = output.get("codec")
-			print("codec", codec)
-			bitrate = output.get("bitrate")
-			print("bitrate", bitrate)
 			filesetPath = output.get("key")
-			print("filesetPath", filesetPath)
 			filesetId = os.path.basename(filesetPath)
-			print("filesetId", filesetId)
 			damId = filesetId[:10]
+			container = output.get("container")
+			codec = output.get("codec")
+			bitrate = output.get("bitrate")
 
 			outFileset = InputFileset(self.config, bucket, filesetId, filesetPath, damId, "audio", 
 				inpFileset.bibleId, inpFileset.index, inpFileset.lptsRecord)
+			outFileset.files = [] # Erase files, because they will be overwritten by transcoding
 			outFileset.setAudio(container, codec, bitrate)
 			outFilesets[filesetPath] = outFileset
 
@@ -130,32 +126,28 @@ class AWSTranscoder:
 		for inpFile in inpFileset.files:
 			inpFiles[inpFile.name] = inpFile
 
-		files = msg.get("files", [])
+		files = response.get("files", [])
 		for file in files:
-			inpFile = file.get("input")
-			inpDuration = inpFile.get("duration")
-			print("inputDuration", inpDuration)
-			inpKey = inpFile.get("key")
-			inpFilesetPath = os.path.dirname(inpKey)
-			print("inputFilesetPath", inpFilesetPath)
+			inpJson = file.get("input")
+			inpDuration = inpJson.get("duration")
+			inpKey = inpJson.get("key")
 			inpFilename = os.path.basename(inpKey)
-			print("inputFilename", inpFilename)
-			outFile = file.get("output")
-			outDuration = outFile.get("duration")
-			print("outputDuration", outDuration)
-			outKey = outFile.get("key")
-			outFilesetPath = os.path.dirname(outKey)
-			outFilename = os.path.basename(outKey)
-			outFilesize = 0
-			outLastModified = datetime.today().strftime("%Y-%m-%d %H:%M:%S")
 
 			inpFile = inpFiles.get(inpFilename)
 			inpFile.duration = inpDuration
 
+			outJson = file.get("output")
+			outDuration = outJson.get("duration")
+			outKey = outJson.get("key")
+			outFilesetPath = os.path.dirname(outKey)
+			outFilename = os.path.basename(outKey)
+			outFileSize = 0
+			outLastModified = datetime.today().strftime("%Y-%m-%d %H:%M:%S")
+
 			outFile = InputFile(outFilename, outFileSize, outLastModified)
 			outFile.duration = outDuration
-			outFileset = outFilesets.get("outputFilesetPath")
-			outFileset.files.append(outfile)
+			outFileset = outFilesets.get(outFilesetPath)
+			outFileset.files.append(outFile)
 
 		return outFilesets.values()
 
@@ -164,14 +156,22 @@ if (__name__ == '__main__'):
 	config = Config.shared()
 	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
 	inpFilesets = InputFileset.filesetCommandLineParser(config, lptsReader)
-	transcoder = AWSTranscoder(config)
-	#result = transcoder.transcodeAudio("dbp-staging", "UNRWFWP1DA", "UNRWFWP1DA")
-	#print(result)
-
 	inpFileset = inpFilesets[0]
-	output = AWSTranscoder.result.replace("'", '"')
-	msg = json.loads(output)
-	trancoder.parseResponse(config, inpFileset, msg)
+	transcoder = AWSTranscoder(config)
+	outFilesets = transcoder.transcodeAudio(inpFileset)
+
+	#output = AWSTranscoder.result.replace("'", '"')
+	#msg = json.loads(output)
+	#outFilesets = transcoder.parseAudioResponse(inpFileset, msg)
+	#print("INPUT:")
+	#print(inpFileset.toString())
+	#print("OUTPUT:")
+	for outFileset in outFilesets:
+		print(outFileset.toString())
+
+
+
+# time python3 load/AWSTranscoder.py test-video s3://dbp-staging UNRWFWP1DA
 
 
 

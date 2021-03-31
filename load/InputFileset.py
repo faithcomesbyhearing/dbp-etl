@@ -29,9 +29,11 @@ class InputFile:
 
 	def toString(self):
 		results = []
-		results.append("name=" + self.name)
-		results.append("size=" + str(self.size))
-		results.append("date=" + self.lastModified)
+		results.append("name=%s" % (self.name,))
+		results.append("size=%d" % (self.size,))
+		results.append("date=%s" % (self.lastModified))
+		if self.duration != None:
+			results.append("duration={:.{}f}".format(self.duration, 3))
 		return " ".join(results)
 
 
@@ -92,6 +94,10 @@ class InputFileset:
 		self.csvFilename = "%s%s_%s_%s.csv" % (config.directory_accepted, self.typeCode, self.bibleId, self.filesetId)
 		self.databasePath = "%s%s.db" % (config.directory_accepted, self.filesetId) if self.typeCode == "text" else None
 		self.files = self._setFilenames(config)
+		self.mediaContainer = None
+		self.mediaCodec = None
+		self.mediaBitrate = None
+
 
 	def toString(self):
 		results = []
@@ -144,6 +150,12 @@ class InputFileset:
 			if len(results) == 0:
 				Log.getLogger(self.filesetId).message(Log.EROR, "Invalid bucket %s or prefix %s" % (self.location, self.filesetPath))
 		return results
+
+
+	def setAudio(self, container, codec, bitrate):
+		self.mediaContainer = container
+		self.mediaCodec = codec
+		self.mediaBitrate = bitrate
 
 
 	def stockNum(self):
