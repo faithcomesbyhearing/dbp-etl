@@ -82,6 +82,11 @@ class Config:
 			self.audio_hls_duration_limit = self._getInt("audio.hls.duration.limit") #10  #### Must become command line param
 
 		else:
+			self.audio_transcoder_url = self._get("audio.transcoder.url")
+			self.audio_transcoder_key = self._get("audio.transcoder.key")
+			self.audio_transcoder_sleep_sec = self._getInt("audio.transcoder.sleep.sec")
+			self.audio_transcoder_input = self._get("audio.transcoder.input")
+
 			self.video_transcoder_region = self._get("video.transcoder.region")
 			self.video_transcoder_pipeline = self._get("video.transcoder.pipeline")
 			self.video_preset_hls_1080p = self._get("video.preset.hls.1080p")
@@ -94,16 +99,15 @@ class Config:
 			self.filename_lpts_xml = self._getPath("filename.lpts_xml")
 
 			self.directory_upload_aws = self._getPath("directory.upload_aws")
-			self.directory_upload = self._getPath("directory.upload")
-			self.directory_database	= self._getPath("directory.database")
-			self.directory_complete	= self._getPath("directory.complete")
+			#self.directory_upload = self._getPath("directory.upload")
+			#self.directory_database	= self._getPath("directory.database")
+			#self.directory_complete	= self._getPath("directory.complete")
 
 			self.directory_quarantine = self._getPath("directory.quarantine")
 			self.directory_duplicate = self._getPath("directory.duplicate")
 			self.directory_accepted = self._getPath("directory.accepted")
 
 			self.directory_errors = self._getPath("directory.errors")
-			#self.error_limit_pct = self._getFloat("error.limit.pct")
 			self.filename_accept_errors = self._getPath("filename.accept.errors")
 
 			self.filename_datetime = self._get("filename.datetime")
@@ -135,6 +139,9 @@ class Config:
 		return float(self._get(name))
 
 	def _getOptional(self, name):
+		return self.hashMap.get(name)
+
+	def getOptional(self, name):
 		return self.hashMap.get(name)
 
 

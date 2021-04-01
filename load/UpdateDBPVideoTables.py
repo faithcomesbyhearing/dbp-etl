@@ -34,10 +34,10 @@ class UpdateDBPVideoTables:
 		self.dbpTsInsertUpdateSet = set()
 
 
-	def processFileset(self, filesetPrefix, hashId):
+	def processFileset(self, filesetPrefix, filenames, hashId):
 		if hashId != None:
 			self.populateDBPMaps(hashId)
-			done = self.updateVideoFileset(self.config.directory_database, filesetPrefix)
+			done = self.updateVideoFileset(filesetPrefix, filenames)
 			if done:
 				print("Update video %s succeeded." % (filesetPrefix))
 			else:
@@ -69,9 +69,9 @@ class UpdateDBPVideoTables:
 		self.dbpTsInsertUpdateSet = set()
 
 
-	def updateVideoFileset(self, directory, filesetPrefix):
+	def updateVideoFileset(self, filesetPrefix, filenames):
 		errorCount = 0
-		for filename in [f for f in os.listdir(directory + filesetPrefix) if not f.startswith('.')]:
+		for filename in filenames:
 			m3u8Files = self.downloadM3U8(filesetPrefix, filename)
 			for (m3u8Filename, m3u8Content) in m3u8Files.items():
 				if m3u8Filename.endswith("_stream.m3u8"):
@@ -87,7 +87,7 @@ class UpdateDBPVideoTables:
 		name = filename.split(".")[0]
 		for suffix in suffixes:
 			m3u8Filename =  name + suffix + ".m3u8"
-			s3Key = filesetPrefix + m3u8Filename
+			s3Key = filesetPrefix + "/" + m3u8Filename
 			content = self.s3Utility.getAsciiObject(self.config.s3_vid_bucket, s3Key)
 			m3u8Files[m3u8Filename] = content
 		return m3u8Files
@@ -96,7 +96,6 @@ class UpdateDBPVideoTables:
 	def processStreamM3U8(self, m3u8Filename, m3u8Content):
 		insertRows = []
 		updateRows = []
-		#deleteRows = []
 
 		fileId = self.fileIdMap.get(m3u8Filename)
 		if fileId == None:
@@ -140,7 +139,6 @@ class UpdateDBPVideoTables:
 	def processTSM3U8(self, m3u8Filename, m3u8Content):
 		insertRows = []
 		updateRows = []
-		#deleteRows = []
 
 		bandwidthId = self.dbpBandwidthIdMap.get(m3u8Filename)
 		if bandwidthId == None:
@@ -186,18 +184,51 @@ class UpdateDBPVideoTables:
 
 
 if (__name__ == '__main__'):
-	config = Config()
+	from LPTSExtractReader import *
+	from InputFileset import *
+	from DBPLoadController import *
+
+	config = Config.shared()
+	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
+	filesets = InputFileset.filesetCommandLineParser(config, lptsReader)
 	db = SQLUtility(config)
-	#UpdateDBPVideoTables.deleteVideoFiles(db, "ENGESVP2DV", True)
-	#sys.exit()
+	ctrl = DBPLoadController(config, db, lptsReader)
+	ctrl.validate(filesets)
+
 	dbOut = SQLBatchExec(config)
 	update = UpdateDBPFilesetTables(config, db, dbOut)
-	completed = update.process()
-	video = UpdateDBPVideoTables(config, db, dbOut)
-	video.process(completed)
+	for inp in InputFileset.upload:
+		hashId = update.processFileset(inp.typeCode, inp.bibleId, inp.filesetId, inp.fullPath(), inp.csvFilename, inp.databasePath)
+		if inp.typeCode == "video":
+			video = UpdateDBPVideoTables(config, db, dbOut)
+			video.processFileset(inp.filesetPrefix, inp.filenames(), hashId)
+
 	dbOut.displayStatements()
 	dbOut.displayCounts()
-	dbOut.execute("video")
+	dbOut.execute("test-" + inp.filesetId)
+
+# For these video tests to work, the filesets must have been uploaded by some other test, such as S3Utility.
+
+# time python3 load/TestCleanup.py test-video ENGESVP2DV
+
+# This should load 2 files of Mark chapter 1
+# time python3 load/UpdateDBPVideoTables.py test-video /Volumes/FCBH/all-dbp-etl-test/ ENGESVP2DV
+
+# This should load 2 files of Matt chapter 2, Mark must be intact after load
+# time python3 load/UpdateDBPVideoTables.py test-video /Volumes/FCBH/all-dbp-etl-test/ video/ENGESV/ENGESVP2DV
+
+# This should load 2 files of Mark chapter 3, Other Mark files and bandwidths must be gone, but not Matt
+# time python3 load/UpdateDBPVideoTables.py test-video /Volumes/FCBH/all-dbp-etl-test/ video/ENGESX/ENGESVP2DV
+
+# select * from bible_filesets where id='ENGESVP2DV'
+# select * from bible_files where hash_id in (select hash_id from bible_filesets where id='ENGESVP2DV');
+# select * from bible_file_stream_bandwidths where bible_file_id in (select id from bible_files where hash_id in (select hash_id from bible_filesets where id='ENGESVP2DV'));
+# select * from bible_file_stream_ts where stream_bandwidth_id in (select id from bible_file_stream_bandwidths where bible_file_id in (select id from bible_files where hash_id in (select hash_id from bible_filesets where id='ENGESVP2DV')));
+
+
+
+
+
 
 
 
