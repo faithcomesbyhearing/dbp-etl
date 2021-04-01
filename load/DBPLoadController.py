@@ -102,26 +102,31 @@ if (__name__ == '__main__'):
 	config = Config.shared()
 	db = SQLUtility(config)
 	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
-	InputFileset.validate = InputFileset.filesetCommandLineParser(config, lptsReader)
 	ctrl = DBPLoadController(config, db, lptsReader)
-	ctrl.repairAudioFileNames(InputFileset.validate)
-	ctrl.validate(InputFileset.validate)
-	if ctrl.updateBibles():
-		ctrl.upload(InputFileset.upload)
-		ctrl.updateFilesetTables(InputFileset.database)
-		if ctrl.updateLPTSTables():
-			if Log.totalErrorCount() == 0:
-				RunStatus.setStatus(RunStatus.SUCCESS)
+	if len(sys.argv) != 2:
+		InputFileset.validate = InputFileset.filesetCommandLineParser(config, lptsReader)
+		ctrl.repairAudioFileNames(InputFileset.validate)
+		ctrl.validate(InputFileset.validate)
+		if ctrl.updateBibles():
+			ctrl.upload(InputFileset.upload)
+			ctrl.updateFilesetTables(InputFileset.database)
+			if ctrl.updateLPTSTables():
+				if Log.totalErrorCount() == 0:
+					RunStatus.setStatus(RunStatus.SUCCESS)
+				else:
+					RunStatus.setStatus(RunStatus.FAILURE)
 			else:
 				RunStatus.setStatus(RunStatus.FAILURE)
+				print("********** LPTS Tables Update Failed **********")
 		else:
 			RunStatus.setStatus(RunStatus.FAILURE)
-			print("********** LPTS Tables Update Failed **********")
+			print("********** Bibles Table Update Failed **********")
+		for inputFileset in InputFileset.complete:
+			print("Completed: ", inputFileset.filesetId)
 	else:
-		RunStatus.setStatus(RunStatus.FAILURE)
-		print("********** Bibles Table Update Failed **********")
-	for inputFileset in InputFileset.complete:
-		print("Completed: ", inputFileset.filesetId)
+		ctrl.updateBibles()
+		ctrl.updateLPTSTables()
+
 
 # Prepare by getting some local data into a test bucket
 # aws s3 --profile Gary sync /Volumes/FCBH/all-dbp-etl-test/ENGESVN2DA s3://test-dbp-etl/ENGESVN2DA
