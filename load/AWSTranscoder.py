@@ -39,23 +39,23 @@ class AWSTranscoder:
 		key = self.config.audio_transcoder_key
 		inp = '"input": ' + self.config.audio_transcoder_input
 		inp = inp.replace("$bucket", inputFileset.location)
-		inp = inp.replace("$prefix", inpFileset.filesetPath)
+		inp = inp.replace("$prefix", inputFileset.filesetPath)
 		outputs = []
 		for num in ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]:
 			configKey = "audio.transcoder.output." + num
 			out = self.config.getOptional(configKey)
 			if out != None:
-				out = out.replace("$prefix", inpFileset.filesetPath)
+				out = out.replace("$prefix", inputFileset.filesetPath)
 				outputs.append(out)
 		outputStr = '"output": [' + ", ".join(outputs) + ']'
 		request = '{' + inp + ", " + outputStr + '}'
 		try:
 			test = json.loads(request)
 		except Exception as err:
-			print("json error in request:" + request)
-			return None
+			print("ERROR: json error in request:" + request)
+			return []
 		result = self.transcode(url, key, request)
-		outFilesets = transcoder.parseAudioResponse(inputFileset, result)
+		outFilesets = self.parseAudioResponse(inputFileset, result)
 		return outFilesets
 
 
@@ -65,19 +65,20 @@ class AWSTranscoder:
 
 	def transcode(self, url, key, data):
 		result = self.httpPost(url, key, data)
-		print(result)
+		#print(result)
 		if result == None:
-			print("handle error?")
+			print("ERROR: No response from transcode job request", data)
 			return None
 		else:
 			sleepSec = self.config.audio_transcoder_sleep_sec
 			jobId = result.get("id")
-			print("jobId", jobId)
+			print("AWSTranscoder jobId %s for %s" % (jobId, data))
 			status = result.get("status")
 			url = url + "/" + jobId
 			while status not in {"SUCCESS", "FAILED"}:
 				time.sleep(10)
 				result = self.httpGet(url, key)
+				#print(result)
 				status = result.get("status")
 			return result
 
@@ -122,10 +123,6 @@ class AWSTranscoder:
 			outFileset.setAudio(container, codec, bitrate)
 			outFilesets[filesetPath] = outFileset
 
-		inpFiles = {}
-		for inpFile in inpFileset.files:
-			inpFiles[inpFile.name] = inpFile
-
 		files = response.get("files", [])
 		for file in files:
 			inpJson = file.get("input")
@@ -133,7 +130,7 @@ class AWSTranscoder:
 			inpKey = inpJson.get("key")
 			inpFilename = os.path.basename(inpKey)
 
-			inpFile = inpFiles.get(inpFilename)
+			inpFile = inpFileset.getInputFile(inpFilename)
 			inpFile.duration = inpDuration
 
 			outJson = file.get("output")

@@ -77,7 +77,7 @@ class DBPLoadController:
 		update = UpdateDBPFilesetTables(self.config, self.db, dbOut)
 		video = UpdateDBPVideoTables(self.config, self.db, dbOut)
 		for inp in inputFilesets:
-			hashId = update.processFileset(inp.typeCode, inp.bibleId, inp.filesetId, inp.fullPath(), inp.csvFilename, inp.databasePath)
+			hashId = update.processFileset(inp)
 			if inp.typeCode == "video":
 				video.processFileset(inp.filesetPrefix, inp.filenames(), hashId)
 			dbOut.displayCounts()
@@ -130,11 +130,11 @@ if (__name__ == '__main__'):
 # aws s3 --profile Gary sync /Volumes/FCBH/all-dbp-etl-test/ENGESVP2DV s3://test-dbp-etl/ENGESVP2DV
 
 # Successful tests with source on local drive
-# time python3 load/TestCleanup.py test ENGESVN2DA
-# time python3 load/TestCleanup.py test ENGESVN2DA16
+# XXXXXtime python3 load/TestCleanup.py test ENGESVN2DA
+# XXXXXtime python3 load/TestCleanup.py test ENGESVN2DA16
 # time python3 load/TestCleanup.py test HYWWAV
 # time python3 load/TestCleanup.py test ENGESVP2DV
-# time python3 load/DBPLoadController.py test /Volumes/FCBH/all-dbp-etl-test/ ENGESVN2DA ENGESVN2DA16
+# XXXXXtime python3 load/DBPLoadController.py test /Volumes/FCBH/all-dbp-etl-test/ ENGESVN2DA ENGESVN2DA16
 # time python3 load/DBPLoadController.py test /Volumes/FCBH/all-dbp-etl-test/ HYWWAVN2ET
 # time python3 load/DBPLoadController.py test-video /Volumes/FCBH/all-dbp-etl-test/ ENGESVP2DV
 
@@ -165,6 +165,9 @@ if (__name__ == '__main__'):
 # time python3 load/DBPLoadController.py test s3://test-dbp-etl HYWWAVN2ET
 # time python3 load/DBPLoadController.py test /Volumes/FCBH/all-dbp-etl-test/ GNWNTMN2ET
 # time python3 load/DBPLoadController.py test /Volumes/FCBH/all-dbp-etl-test/ text/GNWNTM/GNWNTMN2ET
+
+# Audio Transcoder Test
+# time python3 load/DBPLoadController.py test-video s3://dbp-staging UNRWFWP1DA
 
 
 

@@ -8,9 +8,12 @@ import boto3
 import os
 import shutil
 import subprocess
+from Log import *
 from Config import *
 from InputFileset import *
 from TranscodeVideo import *
+from FilenameParser import *
+from AWSTranscoder import *
 
 class S3Utility:
 
@@ -29,13 +32,23 @@ class S3Utility:
 	def uploadAllFilesets(self, filesets):
 		for inp in filesets:
 			s3Bucket = self.config.s3_vid_bucket if inp.typeCode == "video" else self.config.s3_bucket
-			if inp.typeCode in {"audio", "video"}:
+			if inp.typeCode == "video":
 				done = self.uploadFileset(s3Bucket, inp)
 				if done:
 					print("Upload %s succeeded." % (inp.filesetPrefix,))
 				else:
 					print("Upload %s FAILED." % (inp.filesetPrefix,))
-							
+
+			elif inp.typeCode == "audio":
+				transcoder = AWSTranscoder(self.config)
+				outFilesets = transcoder.transcodeAudio(inp)
+				parser = FilenameParser(self.config)
+				parser.process3(outFilesets) # create accepted.csv
+				for outFileset in outFilesets:
+					if os.path.isfile(outFileset.csvFilename): # test if it was accepted
+						InputFileset.database.append(outFileset)
+					else:
+						Log.writeLog(self.config)				 		
 			elif inp.typeCode == "text":
 				InputFileset.database.append(inp)
 

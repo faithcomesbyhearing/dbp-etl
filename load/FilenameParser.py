@@ -510,9 +510,10 @@ class FilenameParser:
 					logger.message(Log.EROR, "filesetId must be 1 or 2 in the 8th position.")
 				if not inp.filesetId[8:10] in {"DA", "DV"}:
 					logger.message(Log.EROR, "filesetId must be DA or DV.")
-				bitrateSuffix = inp.filesetId[10:12]
-				if bitrateSuffix != '' and not bitrateSuffix.isdigit():
-					logger.message(Log.EROR, "filesetId positions 11,12 must be a bitrate number if present.")
+				if len(inp.filesetId) > 10 and inp.filesetId[10] != "-":
+					bitrateSuffix = inp.filesetId[10:12]
+					if bitrateSuffix != '' and not bitrateSuffix.isdigit():
+						logger.message(Log.EROR, "filesetId positions 11,12 must be a bitrate number if present.")
 
 			self.otOrder = self.OTOrderTemp(inp.filesetId, inp.lptsRecord)
 			self.ntOrder = self.NTOrderTemp(inp.filesetId, inp.lptsRecord)

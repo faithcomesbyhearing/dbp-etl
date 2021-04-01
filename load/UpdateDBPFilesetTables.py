@@ -106,18 +106,19 @@ class UpdateDBPFilesetTables:
 		self.booksUpdater = UpdateDBPBooksTable(self.config, self.dbOut)
 
 
-	def processFileset(self, typeCode, bibleId, filesetId, filesetDir, csvFilename, databasePath):
-		print(typeCode, bibleId, filesetId)
-		bookIdSet = self.getBibleBooks(csvFilename)
-		hashId = self.insertBibleFileset(typeCode, bibleId, filesetId, bookIdSet)
-		self.insertFilesetConnections(hashId, bibleId)
-		if typeCode in {"audio", "video"}:
-			self.insertBibleFiles(typeCode, hashId, csvFilename, filesetDir, bookIdSet)
-		elif typeCode == "text":
-			self.textUpdater.updateFileset(bibleId, filesetId, hashId, bookIdSet, databasePath)
+	def processFileset(self, inputFileset):
+		inp = inputFileset
+		print(inp.typeCode, inp.bibleId, inp.filesetId)
+		bookIdSet = self.getBibleBooks(inp.csvFilename)
+		hashId = self.insertBibleFileset(inp.typeCode, inp.bibleId, inp.filesetId, bookIdSet)
+		self.insertFilesetConnections(hashId, inp.bibleId)
+		if inp.typeCode in {"audio", "video"}:
+			self.insertBibleFiles(hashId, inputFileset, bookIdSet)
+		elif inp.typeCode == "text":
+			self.textUpdater.updateFileset(inp.bibleId, inp.filesetId, hashId, bookIdSet, inp.databasePath)
 
-		tocBooks = self.booksUpdater.getTableOfContents(typeCode, bibleId, filesetId, csvFilename, databasePath)
-		self.booksUpdater.updateBibleBooks(typeCode, bibleId, tocBooks)
+		tocBooks = self.booksUpdater.getTableOfContents(inp.typeCode, inp.bibleId, inp.filesetId, inp.csvFilename, inp.databasePath)
+		self.booksUpdater.updateBibleBooks(inp.typeCode, inp.bibleId, tocBooks)
 		return hashId
 
 
@@ -176,7 +177,8 @@ class UpdateDBPFilesetTables:
 			self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
 
 
-	def insertBibleFiles(self, typeCode, hashId, csvFilename, filesetDir, bookIdSet):
+	def insertBibleFiles(self, hashId, inputFileset, bookIdSet):
+		inp = inputFileset
 		insertRows = []
 		updateRows = []
 		deleteRows = []
@@ -189,7 +191,7 @@ class UpdateDBPFilesetTables:
 			key = (dbpBookId, dbpChapterStart, dbpVerseStart)
 			value = (dbpChapterEnd, dbpVerseEnd, dbpFileName, dbpFileSize, dbpDuration)
 			dbpMap[key] = value
-		with open(csvFilename, newline='\n') as csvfile:
+		with open(inp.csvFilename, newline='\n') as csvfile:
 			reader = csv.DictReader(csvfile)
 			for row in reader:
 				bookId = row["book_id"]
@@ -201,10 +203,13 @@ class UpdateDBPFilesetTables:
 					verseEnd = int(row["verse_end"]) if row["verse_end"] != "" else None
 				chapterEnd = int(row["chapter_end"]) if row["chapter_end"] != "" else None
 				fileName = row["file_name"]
-				if typeCode == "video":
+				if inp.typeCode == "video":
 					fileName = fileName.split(".")[0] + "_stream.m3u8"
 				fileSize = int(row["file_size"]) if row["file_size"] != "" else None
-				duration = self.getDuration(filesetDir + os.sep + fileName) if typeCode == "audio" else None
+				inputFile = inp.getInputFile(fileName)
+				duration = inputFile.duration
+				if inp.typeCode == "audio" and inp.locationType == InputFileset.LOCAL:
+					duration = self.getDuration(inp.fullPath() + os.sep + fileName)
 				key = (bookId, chapterStart, verseStart)
 				dbpValue = dbpMap.get(key)
 				if dbpValue == None:
@@ -221,7 +226,7 @@ class UpdateDBPFilesetTables:
 						updateRows.append((chapterEnd, verseEnd, fileName, fileSize, duration,
 						hashId, bookId, chapterStart, verseStart))
 
-		if typeCode == "video":
+		if inp.typeCode == "video":
 			for (dbpBookId, dbpChapterStart, dbpVerseStart) in dbpMap.keys():
 				deleteRows.append((hashId, dbpBookId, dbpChapterStart, dbpVerseStart))
 

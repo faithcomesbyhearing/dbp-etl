@@ -94,6 +94,7 @@ class InputFileset:
 		self.csvFilename = "%s%s_%s_%s.csv" % (config.directory_accepted, self.typeCode, self.bibleId, self.filesetId)
 		self.databasePath = "%s%s.db" % (config.directory_accepted, self.filesetId) if self.typeCode == "text" else None
 		self.files = self._setFilenames(config)
+		self.filesMap = None
 		self.mediaContainer = None
 		self.mediaCodec = None
 		self.mediaBitrate = None
@@ -150,6 +151,14 @@ class InputFileset:
 			if len(results) == 0:
 				Log.getLogger(self.filesetId).message(Log.EROR, "Invalid bucket %s or prefix %s" % (self.location, self.filesetPath))
 		return results
+
+
+	def getInputFile(self, name):
+		if self.filesMap == None:
+			self.filesMap = {}
+			for file in self.files:
+				self.filesMap[file.name] = file
+		return self.filesMap.get(name)
 
 
 	def setAudio(self, container, codec, bitrate):
