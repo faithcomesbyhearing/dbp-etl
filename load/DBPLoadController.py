@@ -46,13 +46,14 @@ class DBPLoadController:
 
 
 	def validate(self, inputFilesets):
-		RunStatus.setStatus(RunStatus.VALIDATE)
 		validate = Validate(self.config, self.db)
 		validate.process(inputFilesets)
 		Log.writeLog(self.config)
 		for inp in inputFilesets:
 			if os.path.isfile(inp.csvFilename):
 				InputFileset.upload.append(inp)
+			else:
+				RunStatus.set(inp.filesetId, False)
 
 
 	def updateBibles(self):
@@ -62,16 +63,15 @@ class DBPLoadController:
 		#dbOut.displayStatements()
 		dbOut.displayCounts()
 		success = dbOut.execute("bibles")
+		RunStatus.set(RunStatus.BIBLE, success)
 		return success		
 
 
 	def upload(self, inputFilesets):
-		RunStatus.setStatus(RunStatus.UPLOAD)
 		self.s3Utility.uploadAllFilesets(inputFilesets)
 
 
 	def updateFilesetTables(self, inputFilesets):
-		RunStatus.setStatus(RunStatus.UPDATE)
 		inp = inputFilesets
 		dbOut = SQLBatchExec(self.config)
 		update = UpdateDBPFilesetTables(self.config, self.db, dbOut)
@@ -82,6 +82,7 @@ class DBPLoadController:
 				video.processFileset(inp.filesetPrefix, inp.filenames(), hashId)
 			dbOut.displayCounts()
 			success = dbOut.execute(inp.filesetId)
+			RunStatus.set(inp.filesetId, success)
 			if success:
 				InputFileset.complete.append(inp)
 			else:
@@ -95,6 +96,7 @@ class DBPLoadController:
 		#dbOut.displayStatements()
 		dbOut.displayCounts()
 		success = dbOut.execute("lpts")
+		RunStatus.set(RunStatus.LPTS, success)
 		return success
 
 
@@ -105,25 +107,17 @@ if (__name__ == '__main__'):
 	ctrl = DBPLoadController(config, db, lptsReader)
 	if len(sys.argv) != 2:
 		InputFileset.validate = InputFileset.filesetCommandLineParser(config, lptsReader)
+		RunStatus.init(InputFileset.validate)
 		ctrl.repairAudioFileNames(InputFileset.validate)
 		ctrl.validate(InputFileset.validate)
 		if ctrl.updateBibles():
 			ctrl.upload(InputFileset.upload)
 			ctrl.updateFilesetTables(InputFileset.database)
-			if ctrl.updateLPTSTables():
-				if Log.totalErrorCount() == 0:
-					RunStatus.setStatus(RunStatus.SUCCESS)
-				else:
-					RunStatus.setStatus(RunStatus.FAILURE)
-			else:
-				RunStatus.setStatus(RunStatus.FAILURE)
-				print("********** LPTS Tables Update Failed **********")
-		else:
-			RunStatus.setStatus(RunStatus.FAILURE)
-			print("********** Bibles Table Update Failed **********")
+			ctrl.updateLPTSTables()
 		for inputFileset in InputFileset.complete:
 			print("Completed: ", inputFileset.filesetId)
 	else:
+		RunStatus.init([])
 		ctrl.updateBibles()
 		ctrl.updateLPTSTables()
 
@@ -173,6 +167,9 @@ if (__name__ == '__main__'):
 
 # Audio Transcoder Test
 # time python3 load/DBPLoadController.py test-video s3://dbp-staging UNRWFWP1DA
+
+# No parameter
+# time python3 load/DBPLoadController.py test
 
 
 

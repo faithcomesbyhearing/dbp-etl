@@ -36,7 +36,7 @@ class RunStatus:
 	def store():
 		results = []
 		for name in RunStatus.statusList:
-			status = RunStatus.statusMap.get(name, "not_done")
+			status = RunStatus.statusMap.get(name, "pending")
 			results.append(name + ": " + status)
 		statusMsg = ", ".join(results)
 		client = Config.shared().s3_client
@@ -52,7 +52,7 @@ class RunStatus:
 			print("RunStatus Metadata Download error", err)
 		try:
 			metadata["status"] = statusMsg
-			print("WRITE", metadata.get("status"))
+			#print("WRITE", metadata.get("status"))
 			client.put_object(Bucket=bucket, Key=key, Metadata=metadata, ACL='bucket-owner-full-control')
 		except Exception as err:
 			print("RunStatus Metadata Upload error", err)
