@@ -56,6 +56,8 @@ class AWSTranscoder:
 			return []
 		result = self.transcode(url, key, request)
 		outFilesets = self.parseAudioResponse(inputFileset, result)
+		for fileset in outFilesets:
+			fileset.setFileSizes()
 		return outFilesets
 
 

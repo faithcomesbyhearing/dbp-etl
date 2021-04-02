@@ -93,7 +93,7 @@ class InputFileset:
 		self.filesetPrefix = "%s/%s/%s" % (self.typeCode, self.bibleId, self.filesetId)
 		self.csvFilename = "%s%s_%s_%s.csv" % (config.directory_accepted, self.typeCode, self.bibleId, self.filesetId)
 		self.databasePath = "%s%s.db" % (config.directory_accepted, self.filesetId) if self.typeCode == "text" else None
-		self.files = self._setFilenames(config)
+		self.files = self._setFilenames()
 		self.filesMap = None
 		self.mediaContainer = None
 		self.mediaCodec = None
@@ -118,7 +118,7 @@ class InputFileset:
 		return " ".join(results)
 
 
-	def _setFilenames(self, config):
+	def _setFilenames(self):
 		results = []
 		ignoreSet = {"Thumbs.db"}
 		if self.locationType == InputFileset.LOCAL:
@@ -137,7 +137,7 @@ class InputFileset:
 			request = { 'Bucket': self.location, 'MaxKeys': 1000, 'Prefix': self.filesetPath + "/" }
 			hasMore = True
 			while hasMore:
-				response = config.s3_client.list_objects_v2(**request)
+				response = self.config.s3_client.list_objects_v2(**request)
 				for item in response.get('Contents', []):
 					objKey = item.get('Key')
 					filename = objKey[len(self.filesetPath) + 1:]
@@ -151,6 +151,18 @@ class InputFileset:
 			if len(results) == 0:
 				Log.getLogger(self.filesetId).message(Log.EROR, "Invalid bucket %s or prefix %s" % (self.location, self.filesetPath))
 		return results
+
+
+	def setFileSizes(self):
+		request = { 'Bucket': self.location, 'MaxKeys': 1000, 'Prefix': self.filesetPrefix + "/" }
+		response = self.config.s3_client.list_objects_v2(**request)
+		contents = response['Contents']
+		for item in contents:
+			key = item['Key']
+			filename = os.path.basename(key)
+			file = self.getInputFile(filename)
+			if file != None:
+				file.size = item['Size']
 
 
 	def getInputFile(self, name):
