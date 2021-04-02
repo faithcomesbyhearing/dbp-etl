@@ -15,6 +15,10 @@ import csv
 from datetime import datetime
 from Config import *
 
+# deprecated
+# This class is no longer used, but it is kept here because it could be repurposed
+# to generate an array of InputFileset items by reading a bucket.
+
 
 class InputReader:
 
@@ -112,28 +116,6 @@ class InputReader:
 			writer.writerow(("typeCode", "bible_id", "fileset_id", "file_name", "datetime", "error"))
 			for row in ignoredFiles:
 				writer.writerow(row)
-
-
-	## input: audio, text, and video files in a directory tree
-	## output: map: typeCode/bibleId/filesetId: [(filename, fileSize, datetime)]
-	def fileListing(self, directory):
-		lenDirectory = len(directory)
-		for root, dirs, files in os.walk(directory):
-			relDirName = root[lenDirectory:]
-			if relDirName.count("/") == 2 or relDirName.count("\\") == 2:
-				if relDirName[:4] in {"audi", "text", "vide"}:
-					normDirName = relDirName.replace("\\", "/")
-					resultFileList = []
-					for file in files:
-						if not file.startswith("."):
-							if file not in {"about.html", "index.html", "info.json", "title.json", "metadata.xml"}:
-								filePath = root + os.sep + file
-								filesize = os.path.getsize(filePath)
-								modifiedTS = os.path.getmtime(filePath)
-								lastModified = datetime.fromtimestamp(modifiedTS)
-								resultFileList.append((file, filesize, lastModified))
-					self.results[normDirName] = sorted(resultFileList)
-		return self.results
 
 
 	def countSummary(self):

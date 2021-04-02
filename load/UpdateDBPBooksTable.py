@@ -172,24 +172,16 @@ class UpdateDBPBooksTable:
 			"REV": "B27"} # Revelation
 
 
-	## temporary method to add the book_seq column to the bible_books table
-	def alterBibleBooksTable(self):
-		sql = ("SELECT count(*) FROM information_schema.columns"
-		" WHERE table_name = 'bible_books' AND table_schema = %s AND column_name = 'book_seq'")
-		count = self.db.selectScalar(sql, (self.config.database_db_name,))
-		if count == 0:
-			self.db.execute("ALTER TABLE bible_books ADD COLUMN book_seq char(4) NULL", ())
-
-
 	## extract a book level table of contents for this fileset we are updating in DBP
-	def getTableOfContents(self, typeCode, bibleId, filesetId):
+	def getTableOfContents(self, typeCode, bibleId, filesetId, csvFilename, databasePath):
 		tocBooks = []
 		if typeCode == "text":
 			firstOTBook = True
 			firstNTBook = True
 			extraBook = True
 			priorBookSeq = None
-			bibleDB = SqliteUtility(self.config.directory_accepted + filesetId + ".db")
+			#bibleDB = SqliteUtility(self.config.directory_accepted + filesetId + ".db")
+			bibleDB = SqliteUtility(databasePath)
 			resultSet = bibleDB.select("SELECT code, heading, title, name, chapters FROM tableContents ORDER BY rowId", ())
 			for (bookId, heading, title, name, chapters) in resultSet:
 				if name == None and heading != None:
@@ -223,7 +215,7 @@ class UpdateDBPBooksTable:
 			bookChapterMap = {}
 			priorBookId = None
 			priorChapter = None
-			csvFilename = self.config.directory_accepted + "%s_%s_%s.csv" % (typeCode, bibleId, filesetId)
+			#csvFilename = self.config.directory_accepted + "%s_%s_%s.csv" % (typeCode, bibleId, filesetId)
 			with open(csvFilename, encoding="utf-8", newline='\n') as csvfile:
 				reader = csv.DictReader(csvfile)
 				for row in reader:
@@ -293,14 +285,14 @@ class UpdateDBPBooksTable:
 				if toc.nameShort != dbpNameShort:
 					nameShort = toc.nameShort.replace("'", "\\'")
 					updateRows.append(("name_short", nameShort, dbpNameShort, bibleId, toc.bookId))
-				if len(toc.chapters) >= len(dbpChapters):
+				if len(toc.chapters) > len(dbpChapters):
 					updateRows.append(("chapters", toc.chapters, dbpChapters, bibleId, toc.bookId))
 
 			elif typeCode == "audio":
 				(dbpBookId, dbpBookSeq, dbpName, dbpNameShort, dbpChapters) = bibleBookMap[toc.bookId]	
 				if toc.bookSeq != dbpBookSeq:
 					updateRows.append(("book_seq", toc.bookSeq, dbpBookSeq, bibleId, toc.bookId))
-				if len(toc.chapters) >= len(dbpChapters):
+				if len(toc.chapters) > len(dbpChapters):
 					updateRows.append(("chapters", toc.chapters, dbpChapters, bibleId, toc.bookId))
 
 		sql = ("SELECT distinct book_id FROM bible_files bf"
@@ -343,24 +335,30 @@ class UpdateDBPBooksTable:
 
 ## Unit Test
 if (__name__ == '__main__'):
-	config = Config()
+	from LPTSExtractReader import *
+	from InputFileset import *
+	from DBPLoadController import *
+
+	config = Config.shared()
+	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
+	filesets = InputFileset.filesetCommandLineParser(config, lptsReader)
 	db = SQLUtility(config)
+	ctrl = DBPLoadController(config, db, lptsReader)
+	ctrl.validate(filesets)
+
 	dbOut = SQLBatchExec(config)
-	update = UpdateDBPBooksTable(config, db, dbOut)
-	testCases = [("text", "AA1WBT", "AA1WBT"),
-				#("text", "ENGWEBT", "ENGWEBT"),
-				("text", "PESNMV", "PESNMV")]
-	#testCases = [("audio", "ENGESV", "ENGESVN1DA"),
-	#			("audio", "ENGESV", "ENGESVN2DA"),
-	#			("audio", "ENGESV", "ENGESVP1DA")]
-	#testCases = [("video", "ENGESV", "ENGESVP2DV")]
-	for (typeCode, bibleId, filesetId) in testCases:
-		update.alterBibleBooksTable()
-		tocBooks = update.getTableOfContents(typeCode, bibleId, filesetId)
-		update.updateBibleBooks(typeCode, bibleId, tocBooks)
+	update = UpdateDBPBooksTable(config, dbOut)
+	for inp in InputFileset.upload:
+		tocBooks = update.getTableOfContents(inp.typeCode, inp.bibleId, inp.filesetId, inp.csvFilename, inp.databasePath)
+		update.updateBibleBooks(inp.typeCode, inp.bibleId, tocBooks)
 
 	dbOut.displayStatements()
 	dbOut.displayCounts()
-	dbOut.execute("test-books")
+	#dbOut.execute("test-books")
+
+# Successful tests with source on local drive
+# time python3 load/UpdateDBPBooksTable.py test /Volumes/FCBH/all-dbp-etl-test/ ENGESVN2DA ENGESVN2DA16
+# time python3 load/UpdateDBPBooksTable.py test /Volumes/FCBH/all-dbp-etl-test/ HYWWAVN2ET
+# time python3 load/UpdateDBPBooksTable.py test-video /Volumes/FCBH/all-dbp-etl-test/ ENGESVP2DV
 
 

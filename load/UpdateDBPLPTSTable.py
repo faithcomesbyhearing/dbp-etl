@@ -29,6 +29,7 @@ class UpdateDBPLPTSTable:
 		self.updateCounts = {}
 		self.hashIdMap = None
 		self.sqlLog = []
+		self.audioRegex = re.compile("([A-Z0-9]+)-([a-z]+)([0-9]+)")
 
 
 	def process(self):
@@ -69,12 +70,38 @@ class UpdateDBPLPTSTable:
 		for (bibleId, filesetId, setTypeCode, setSizeCode, assetId, hashId) in filesetList:
 			typeCode = setTypeCode.split("_")[0]
 			if typeCode != "app":
+				#if filesetId[8:10] == "SA":
+				#	dbpFilesetId = filesetId[:8] + "DA" + filesetId[10:]
+				#	tagNameList = ["sku", "stock_no", "volume"]
+				#else:
+				#	dbpFilesetId = filesetId
+				#	tagNameList = ["bitrate", "sku", "stock_no", "volume"]
 				if filesetId[8:10] == "SA":
 					dbpFilesetId = filesetId[:8] + "DA" + filesetId[10:]
-					tagNameList = ["sku", "stock_no", "volume"]
 				else:
 					dbpFilesetId = filesetId
-					tagNameList = ["bitrate", "sku", "stock_no", "volume"]
+
+				codec = None
+				bitrate = None
+				if typeCode == "audio":
+					if filesetId[8:10] == "SA":
+						tagNameList = ["stock_no", "volume"]
+						#tagNameList = ["container", "codec", "stock_no", "volume"]
+						codec = "mp3"
+					elif len(filesetId) > 10 and filesetId[10] == "-":
+						tagNameList = ["container", "codec", "bitrate", "stock_no", "volume"]
+						match = self.audioRegex.match(filesetId)
+						if match != None:
+							codec = match.group(2)
+							bitrate = match.group(3) + "kbps"
+					else:
+						#tagNameList = ["container", "codec", "bitrate", "stock_no", "volume"]
+						tagNameList = ["bitrate", "stock_no", "volume"]
+						bitrate = filesetId[10:12] if len(filesetId) > 10 else "64"
+						bitrate += "kbps"
+						codec = "mp3"
+				else:
+					tagNameList = ["stock_no", "volume"]
 
 				(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecordLoose(typeCode, bibleId, dbpFilesetId)
 
@@ -82,36 +109,42 @@ class UpdateDBPLPTSTable:
 				for name in tagNameList:
 					oldDescription = tagMap.get(name)
 
-					if typeCode == "audio" or name != "bitrate": # do not do bitrate for non-audio
-
-						if lptsRecord != None:
-							if name == "bitrate":
-								bitrate = filesetId[10:12] if len(filesetId) > 10 else "64"
-								description = bitrate + "kbps"
-							elif name == "stock_no":
-								description = lptsRecord.Reg_StockNumber()
-							elif name == "sku":
-								description = None # intended to remove all sku
-							elif name == "volume":
-								description = lptsRecord.Volumne_Name()
+					if lptsRecord != None:
+						if name == "container":
+							if codec == "aac":
+								description = "m4a"
+							elif codec == "opus":
+								description = "webm"
+							elif codec == "mp3":
+								description = "mp3"
 							else:
-								print("ERROR: unknown bible_fileset_tags name %s" % (name))
-								sys.exit()
+								description = None
+						elif name == "codec":
+							description = codec
+						elif name == "bitrate":
+							description = bitrate
+						elif name == "stock_no":
+							description = lptsRecord.Reg_StockNumber()
+						elif name == "volume":
+							description = lptsRecord.Volumne_Name()
 						else:
-							description = None
+							print("ERROR: unknown bible_fileset_tags name %s" % (name))
+							sys.exit()
+					else:
+						description = None
 
-						if oldDescription != None and description == None:
-							deleteRows.append((hashId, name, languageId))
-							#print("DELETE: %s %s %s" % (filesetId, name, oldDescription))
+					if oldDescription != None and description == None:
+						deleteRows.append((hashId, name, languageId))
+						#print("DELETE: %s %s %s" % (filesetId, name, oldDescription))
 
-						elif description != None and oldDescription == None:
-							description = description.replace("'", "\\'")
-							insertRows.append((description, adminOnly, notes, iso, hashId, name, languageId))
+					elif description != None and oldDescription == None:
+						description = description.replace("'", "\\'")
+						insertRows.append((description, adminOnly, notes, iso, hashId, name, languageId))
 
-						elif (oldDescription != description):
-							description = description.replace("'", "\\'")
-							updateRows.append((description, adminOnly, notes, iso, hashId, name, languageId))
-							#print("UPDATE: %s %s: OLD %s  NEW: %s" % (filesetId, name, oldDescription, description))
+					elif (oldDescription != description):
+						description = description.replace("'", "\\'")
+						updateRows.append((description, adminOnly, notes, iso, hashId, name, languageId))
+						#print("UPDATE: %s %s: OLD %s  NEW: %s" % (filesetId, name, oldDescription, description))
 
 		tableName = "bible_fileset_tags"
 		pkeyNames = ("hash_id", "name", "language_id")
@@ -303,15 +336,16 @@ class UpdateDBPLPTSTable:
 
 if (__name__ == '__main__'):
 	config = Config()
-	lptsReader = LPTSExtractReader(config)
-	db = SQLUtility(config)
+	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
 	dbOut = SQLBatchExec(config)
-	filesets = UpdateDBPLPTSTable(config, db, dbOut, lptsReader)
+	filesets = UpdateDBPLPTSTable(config, dbOut, lptsReader)
 	filesets.process()
-	db.close()
 	dbOut.displayStatements()
 	dbOut.displayCounts()
 	#dbOut.execute("test-lpts")
+
+
+# python3 load/UpdateDBPLPTSTable.py test
 
 """
 truncate table access_group_filesets;

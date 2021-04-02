@@ -3,51 +3,60 @@
 # This onetime program is used to load keys from DBPv2 over to DBPv4.
 
 import csv
+from SQLUtility import *
 from SQLBatchExec import *
 
 class DBPv2KeyInsert:
 
-	def __init__(self, dbOut):
+	def __init__(self, config, dbOut):
 		self.dbOut = dbOut
-		print("init DBPv2KeyInsert")
-
-	## should the input source also pick up
-	## password
-	## first_name
-	## last_name
-	## v2_id
-	## token -- what is source?
-	## In Notes add description like: inserted by DBPv2KeyInsert
+		db = SQLUtility(config)
+		resultSet = db.select("SELECT email from dbp_users.users WHERE email is not NULL", ())
+		self.emailSet = set()
+		for item in resultSet:
+			self.emailSet.add(item[0].lower())
+		self.keySet = db.selectSet("SELECT `key` from dbp_users.user_keys WHERE `key` is not NULL", ())
+		db.close()
 
 
 	def process(self, filename):
 		insertUsers = []
+		updateUsers = []
 		insertKeys = []
 		insertGroups = []
 		with open(filename, encoding="utf-8", newline='\n') as csvfile:
 			reader = csv.DictReader(csvfile)
 			for row in reader:
-				key = row["key"]
+				key = row["user_key"]
 				userEmail = row["user_email"]
 				displayName = row["display_name"]
-				password = "unknown"
+				firstName = row["first_name"]
+				lastName = row["last_name"]
+				password = "api developer"
 				activated = 1  ## I assume this should be activate
-				token = "unknown"  ## I don't know what this is. there are 26 unique value in the users table
-				insertUsers.append((displayName, userEmail, password, activated, token)) # create/update is automatic
-				userId = "@" + userEmail  # userEmail is unique in the users table.
-				insertKeys.append((userId, key, displayName)) # add created_at/updated_at
-				userKeyId = "@" + userId
-				insertGroups.append((121, userKeyId)) # add created_at/updated_at, always null could change table
-				insertGroups.append((123, userKeyId))
-				insertGroups.append((125, userKeyId))
+				token = "api developer"
+				notes = "inserted by DBPv2KeyInsert.py"
+				userId = "@" + userEmail.replace("@", "").replace(".", "")  # userEmail is unique in the users table.
+				keyId = "@" + key
+				if userEmail.lower() in self.emailSet:
+					print("Did not update user ", userEmail)
+					dbOut.rawStatement("SELECT id INTO %s FROM dbp_users.users WHERE `email` = '%s';" % (userId, userEmail))
+				else:
+					sql = ("INSERT INTO dbp_users.users (email, v2_id, name, first_name, last_name, password, activated, token, notes)"
+							" VALUES ('%s', 0, '%s', '%s', '%s', '%s', %s, '%s', '%s');" % (userEmail, displayName, firstName, lastName, password, activated, token, notes))
+					dbOut.rawStatement(sql)
+					dbOut.rawStatement("SET %s = LAST_INSERT_ID();" % (userId))
+				if key in self.keySet:
+					print("did not update key ", key)
+					dbOut.rawStatement("SELECT id INTO %s FROM dbp_users.user_keys WHERE `key` = '%s';" % (keyId, key))
+				else:
+					sql = "INSERT INTO dbp_users.user_keys (`user_id`, `key`, `name`) VALUES (%s, '%s', '%s');" % (userId, key, displayName)
+					dbOut.rawStatement(sql)
+					dbOut.rawStatement("SET %s = LAST_INSERT_ID();" % (keyId))
+				for priv in [121, 123, 125]:
+					sql = "INSERT INTO dbp_users.access_group_api_keys (`access_group_id`, `key_id`) VALUES (%s, %s);" % (priv, keyId)
+					dbOut.rawStatement(sql)
 
-		self.dbOut.insert("users", [], ["name", "email", "password", "activated", "token"], insertUsers, 1)
-		self.dbOut.insert("user_keys", [], ["user_id", "key", "name"], insertKeys, 0)
-		self.dbOut.insert("access_group_api_keys", [], ["access_group_id", "key_id"], insertGroups)
-
-		## Is there really correspondance between users and user_keys over the id
-		## The following query makes it seem that this correspndance does not exist
-		## select u.id, u.v2_id, u.name, uk.name from users u, user_keys uk where u.id=uk.user_id
 
 if (__name__ == '__main__'):
 	if len(sys.argv) != 3:
@@ -56,13 +65,58 @@ if (__name__ == '__main__'):
 	csvFilename = sys.argv[2]
 	config = Config()
 	dbOut = SQLBatchExec(config)
-	keys = DBPv2KeyInsert(dbOut)
+	keys = DBPv2KeyInsert(config, dbOut)
 	keys.process(csvFilename)
 	dbOut.displayCounts()
 	dbOut.displayStatements()
-	#dbOut.execute("userkeys")
+	dbOut.execute("userkeys")
 
+"""
+## Creating CSV file to load into this program
 
+#create temporary table the_key_rows
+#select * from wp_usermeta where meta_key = 'dbt_acct_key' and meta_value in
+#('d848a9ba40ae43a05b768670c41c8e3f',
+#'6ce262a6e6312e0175d20279f1ad3010', 
+#'809db3bd83c66f3bc41be0cbd6bd1e3f', 
+#'b56b3f1db611383681cf4e8018bacbc3', 
+#'3e0eed1a69fc6e012fef51b8a28cc6ff', 
+#'53355c32fca5f3cac4d7a670d2df2e09', 
+#'e4a78850aaa914bea244b6482d6a0cc2', 
+#'fc34da4152d8e26ac14450eb16728e33', 
+#'2318647b4eb05214c60b616b54b13e6d', 
+#'8d7dd2ba4835d5e0be95b2c88c0b41f7', 
+#'c0ffa1c4578fe8463ef380b009754462', 
+#'cbf509eda05af795148b17d959710e94', 
+#'00ace9b063e81fd15035683e33d34a2f', 
+#'79b63bfcda6671ecd7a6659087952b78', 
+#'c9c1b6a538a418d983827560d8858c8c', 
+#'c6493269b12694dd833b6bb2b7a3bb48', 
+#'d3c2b792c987627250d1eb3655aec4b3');
 
+create temporary table the_key_rows
+select * from wp_usermeta where meta_key = 'dbt_acct_key' and meta_value in
+('1cceebc9e9babcfdca12ddd2388ec35a',
+'e094324a8e5d592f8b68c0e767cd88ce',
+'ec9e8df857b349e8c5130c353af62f5d',
+'aa129d3e47ddf57e8ffcc5b90a5abac6',
+'88f2ec888286012bd016dfbb6b191bce',
+'4e36f9bd5338ec10d7519bdf328551b7',
+'68f0e1f583e0546c352b571c0478eddd');
 
+select * from the_key_rows;
+
+select k.user_id, k.meta_value, u.user_email, u.display_name
+from the_key_rows k
+join wp_users u on u.id = k.user_id
+
+select k.user_id, k.meta_value as user_key, u.user_email, u.display_name, fn.meta_value as first_name, ln.meta_value as last_name
+from the_key_rows k
+join wp_users u on u.id = k.user_id
+left outer join wp_usermeta fn on u.id = fn.user_id
+left outer join wp_usermeta ln on u.id = ln.user_id
+where fn.meta_key = 'first_name'
+and ln.meta_key = 'last_name'
+
+"""
 

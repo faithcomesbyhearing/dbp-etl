@@ -9,11 +9,12 @@ from RunStatus import *
 
 class TranscodeVideo:
 
-	def transcodeVideoFileset(config, filesetPrefix):
+
+	def transcodeVideoFileset(config, filesetPrefix, s3FileKeys):
 		transcoder = TranscodeVideo(config, filesetPrefix)
 		RunStatus.printDuration("BEGIN SUBMIT TRANSCODE")
-		for filename in [f for f in os.listdir(config.directory_upload + filesetPrefix) if not f.startswith('.')]:
-			transcoder.createJob(filesetPrefix + filename)
+		for s3FileKey in s3FileKeys:
+			transcoder.createJob(s3FileKey)
 		RunStatus.printDuration("BEGIN CHECK TRANSCODE")
 		done = transcoder.completeJobs()
 		if done:
@@ -103,7 +104,6 @@ class TranscodeVideo:
 				response = self.client.read_job(Id=jobId).get("Job")
 				inputObj = response["Input"]["Key"]
 				status = response.get("Status")
-				#print("check Job", status, inputObj)
 				if status == "Complete":
 					print("Job Complete", inputObj)
 
@@ -126,17 +126,17 @@ class TranscodeVideo:
 
 
 if (__name__ == '__main__'):
-	config = Config()
-	testFileset = "video/ENGESV/ENGESVP2DV"
-	transcoder = TranscodeVideo(config, testFileset)
-	csvFilename = config.directory_accepted + "/" + testFileset.replace("/", "_") + ".csv"
-	with open(csvFilename, newline='\n') as csvfile:
-		reader = csv.DictReader(csvfile)
-		count = 0
-		for row in reader:
-			if count < 1:
-				transcoder.createJob(testFileset + "/" + row["file_name"])
-				count += 1
-	transcoder.completeJobs()
+	config = Config.shared()
+	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
+	filesets = InputFileset.filesetCommandLineParser(config, lptsReader)
+	for inp in filesets:
+		if inp.typeCode == "video":
+			TranscodeVideo.transcodeVideoFileset(config, inp.filesetPrefix, inp.s3FileKeys())
+
+# Successful tests with source on local drive
+# time python3 load/S3Utility.py test-video /Volumes/FCBH/all-dbp-etl-test/ ENGESVP2DV
+
+# Successful tests with source on s3
+
 
 

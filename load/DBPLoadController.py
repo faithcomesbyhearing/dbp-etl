@@ -13,7 +13,7 @@ from Config import *
 from RunStatus import *
 from LPTSExtractReader import *
 from Log import *
-from PreValidate import *
+from InputFileset import *
 from Validate import *
 from S3Utility import *
 from SQLBatchExec import *
@@ -33,73 +33,27 @@ class DBPLoadController:
 		self.stockNumRegex = re.compile("__[A-Z0-9]{8}")
 
 
-	def preprocessUploadAWS(self):
-		RunStatus.setStatus(RunStatus.PREPROCESS)
-		validate = PreValidate(self.lptsReader)
-		for filesetId in [f for f in os.listdir(self.config.directory_upload_aws) if not f.startswith('.')]:
-			logger = Log.getLogger(filesetId)
-			results = validate.validateFilesetId(filesetId)
-			if results != None and Log.totalErrorCount() == 0:
-				(typeCode, bibleId) = results
-				directory = self.config.directory_upload + typeCode + os.sep
-				if not os.path.isdir(directory):
-					os.mkdir(directory)
-				directory += bibleId + os.sep
-				if not os.path.isdir(directory):
-					os.mkdir(directory)
-				dbpFilesetId = filesetId[:6] if typeCode == "text" else filesetId
-				sourceDir = self.config.directory_upload_aws + filesetId + os.sep
-				targetDir = directory + dbpFilesetId + os.sep
-				os.replace(sourceDir, targetDir)
-
-		if Log.totalErrorCount() > 0:
-			Log.addPreValidationErrors(validate.messages)
-			Log.writeLog(self.config)
-			sys.exit()
-
-
-	def cleanup(self):
-		validateDir = self.config.directory_upload
-		for typeCode in os.listdir(validateDir):
-			if typeCode in {"audio", "video", "text"}:
-				audioDir = validateDir + typeCode
-				for bibleId in os.listdir(audioDir):
-					bibleDir = audioDir + os.sep + bibleId
-					for filesetId in os.listdir(bibleDir):
-						filesetDir = bibleDir + os.sep + filesetId
-						self._cleanupHiddenFiles(filesetDir)
-						if typeCode == "audio":
-							self._repairFileNames(filesetDir, filesetId)
-
-
-
 	## This corrects filesets that have stock number instead of damId in the filename.
-	def _repairFileNames(self, filesetDir, filesetId):
-		for fileName in os.listdir(filesetDir):
-			if fileName.endswith(".mp3"):
-				namePart = fileName.split(".")[0]
-				damId = namePart[-10:]
-				if self.stockNumRegex.match(damId):
-					newFileName = namePart[:-10] + filesetId + ".mp3"
-					os.rename(filesetDir + os.sep + fileName, filesetDir + os.sep + newFileName)
+	def repairAudioFileNames(self, inputFilesets):
+		for inp in inputFilesets:
+			for index in range(len(inp.files)):
+				file = inp.files[index]
+				if file.name.endswith(".mp3"):
+					namePart = file.name.split(".")[0]
+					damId = namePart[-10:]
+					if self.stockNumRegex.match(damId):
+						inp.files[index].name = namePart[:-10] + inp.filesetId[:10] + ".mp3"
 
 
-	## This method remove hidden files include .* and Thumb.db
-	def _cleanupHiddenFiles(self, directory):
-		toDelete = []
-		self._cleanupHiddenFilesRecurse(toDelete, directory)
-		for path in toDelete:
-			os.remove(path)
-
-
-	def _cleanupHiddenFilesRecurse(self, toDelete, directory):
-		if os.path.isdir(directory):
-			for pathName in os.listdir(directory):
-				fullName = directory + os.sep + pathName
-				if pathName.startswith(".") or pathName == "Thumbs.db":
-					toDelete.append(fullName)
-				if os.path.isdir(fullName):
-					self._cleanupHiddenFilesRecurse(toDelete, fullName)
+	def validate(self, inputFilesets):
+		validate = Validate(self.config, self.db)
+		validate.process(inputFilesets)
+		Log.writeLog(self.config)
+		for inp in inputFilesets:
+			if os.path.isfile(inp.csvFilename):
+				InputFileset.upload.append(inp)
+			else:
+				RunStatus.set(inp.filesetId, False)
 
 
 	def updateBibles(self):
@@ -109,38 +63,30 @@ class DBPLoadController:
 		#dbOut.displayStatements()
 		dbOut.displayCounts()
 		success = dbOut.execute("bibles")
+		RunStatus.set(RunStatus.BIBLE, success)
 		return success		
 
 
-	def validate(self):
-		RunStatus.setStatus(RunStatus.VALIDATE)
-		validate = Validate("files", self.config, self.db, self.lptsReader)
-		validate.process()
-		Log.writeLog(self.config)
+	def upload(self, inputFilesets):
+		self.s3Utility.uploadAllFilesets(inputFilesets)
 
 
-	def upload(self):
-		RunStatus.setStatus(RunStatus.UPLOAD)
-		filesets = self._acceptedFilesets(self.config.directory_upload)
-		self.s3Utility.uploadAllFilesets(filesets)
-
-
-	def updateFilesetTables(self):
-		RunStatus.setStatus(RunStatus.UPDATE)
+	def updateFilesetTables(self, inputFilesets):
+		inp = inputFilesets
 		dbOut = SQLBatchExec(self.config)
 		update = UpdateDBPFilesetTables(self.config, self.db, dbOut)
 		video = UpdateDBPVideoTables(self.config, self.db, dbOut)
-		filesets = self._acceptedFilesets(self.config.directory_database)
-		for (typeCode, bibleId, filesetId, filesetPrefix, csvFilename) in filesets:
-			hashId = update.processFileset(typeCode, bibleId, filesetId, csvFilename)
-			if typeCode == "video":
-				video.processFileset(filesetPrefix, hashId)
+		for inp in inputFilesets:
+			hashId = update.processFileset(inp)
+			if inp.typeCode == "video":
+				video.processFileset(inp.filesetPrefix, inp.filenames(), hashId)
 			dbOut.displayCounts()
-			success = dbOut.execute(filesetId)
+			success = dbOut.execute(inp.filesetId)
+			RunStatus.set(inp.filesetId, success)
 			if success:
-				self.s3Utility.promoteFileset(self.config.directory_database, filesetPrefix)
+				InputFileset.complete.append(inp)
 			else:
-				print("********** Fileset Table %s Update Failed **********" % (filesetId))
+				print("********** Fileset Table %s Update Failed **********" % (inp.filesetId))
 
 
 	def updateLPTSTables(self):
@@ -150,19 +96,8 @@ class DBPLoadController:
 		#dbOut.displayStatements()
 		dbOut.displayCounts()
 		success = dbOut.execute("lpts")
+		RunStatus.set(RunStatus.LPTS, success)
 		return success
-
-
-	def _acceptedFilesets(self, directory):
-		results = []
-		for typeCode in [f for f in os.listdir(directory) if not f.startswith('.')]:
-			for bibleId in [f for f in os.listdir(directory + typeCode) if not f.startswith('.')]:
-				for filesetId in [f for f in os.listdir(directory + typeCode + os.sep + bibleId) if not f.startswith('.')]:
-					filesetPrefix = typeCode + "/" + bibleId + "/" + filesetId + "/"
-					csvFilename = "%s%s_%s_%s.csv" % (self.config.directory_accepted, typeCode, bibleId, filesetId)
-					if os.path.exists(csvFilename):
-						results.append((typeCode, bibleId, filesetId, filesetPrefix, csvFilename))
-		return results
 
 
 if (__name__ == '__main__'):
@@ -170,30 +105,72 @@ if (__name__ == '__main__'):
 	db = SQLUtility(config)
 	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
 	ctrl = DBPLoadController(config, db, lptsReader)
-	ctrl.preprocessUploadAWS()
-	ctrl.cleanup()
-	ctrl.validate()
-	if ctrl.updateBibles():
-		ctrl.upload()
-		ctrl.updateFilesetTables()
-		if ctrl.updateLPTSTables():
-			if Log.totalErrorCount() == 0:
-				RunStatus.setStatus(RunStatus.SUCCESS)
-			else:
-				RunStatus.setStatus(RunStatus.FAILURE)
-		else:
-			RunStatus.setStatus(RunStatus.FAILURE)
-			print("********** LPTS Tables Update Failed **********")
+	if len(sys.argv) != 2:
+		InputFileset.validate = InputFileset.filesetCommandLineParser(config, lptsReader)
+		RunStatus.init(InputFileset.validate)
+		ctrl.repairAudioFileNames(InputFileset.validate)
+		ctrl.validate(InputFileset.validate)
+		if ctrl.updateBibles():
+			ctrl.upload(InputFileset.upload)
+			ctrl.updateFilesetTables(InputFileset.database)
+			ctrl.updateLPTSTables()
+		for inputFileset in InputFileset.complete:
+			print("Completed: ", inputFileset.filesetId)
 	else:
-		RunStatus.setStatus(RunStatus.FAILURE)
-		print("********** Bibles Table Update Failed **********")
+		RunStatus.init([])
+		ctrl.updateBibles()
+		ctrl.updateLPTSTables()
 
-"""
-config = Config()
-db = SQLUtility(config)
-lptsReader = LPTSExtractReader(config)
-ctrl = DBPLoadController(config, db, lptsReader)
-filesets = ctrl._acceptedFilesets(config.directory_complete)
-for (typeCode, bibleId, filesetId, filesetPrefix, csvFilename) in filesets:
-	print(typeCode, bibleId, filesetId, filesetPrefix, csvFilename)
-"""
+
+# Prepare by getting some local data into a test bucket
+# aws s3 --profile Gary sync /Volumes/FCBH/all-dbp-etl-test/ENGESVN2DA s3://test-dbp-etl/ENGESVN2DA
+# aws s3 --profile Gary sync /Volumes/FCBH/all-dbp-etl-test/ENGESVN2DA16 s3://test-dbp-etl/audio/ENGESV/ENGESVN2DA16
+# aws s3 --profile Gary sync /Volumes/FCBH/all-dbp-etl-test/HYWWAVN2ET s3://test-dbp-etl/HYWWAVN2ET
+# aws s3 --profile Gary sync /Volumes/FCBH/all-dbp-etl-test/ENGESVP2DV s3://test-dbp-etl/ENGESVP2DV
+
+# Successful tests with source on local drive
+# XXXXXtime python3 load/TestCleanup.py test ENGESVN2DA
+# XXXXXtime python3 load/TestCleanup.py test ENGESVN2DA16
+# time python3 load/TestCleanup.py test HYWWAV
+# time python3 load/TestCleanup.py test ENGESVP2DV
+# XXXXXtime python3 load/DBPLoadController.py test /Volumes/FCBH/all-dbp-etl-test/ ENGESVN2DA ENGESVN2DA16
+# time python3 load/DBPLoadController.py test /Volumes/FCBH/all-dbp-etl-test/ HYWWAVN2ET
+# time python3 load/DBPLoadController.py test-video /Volumes/FCBH/all-dbp-etl-test/ ENGESVP2DV
+
+# Successful tests with source on s3
+# time python3 load/TestCleanup.py test ENGESVN2DA
+# time python3 load/TestCleanup.py test ENGESVN2DA16
+# time python3 load/TestCleanup.py test HYWWAV
+# time python3 load/TestCleanup.py test ENGESVP2DV
+# time python3 load/DBPLoadController.py test s3://test-dbp-etl ENGESVN2DA
+# time python3 load/DBPLoadController.py test s3://test-dbp-etl text/ENGESV/ENGESVN2DA16
+# time python3 load/DBPLoadController.py test s3://test-dbp-etl HYWWAVN2ET
+# time python3 load/DBPLoadController.py test s3://test-dbp-etl ENGESVP2DV
+
+# time python3 load/TestCleanup.py test UNRWFWP1DA
+# time python3 load/TestCleanup.py test UNRWFWP1DA16
+# time python3 load/DBPLoadController.py test /Volumes/FCBH/all-dbp-etl-test/ audio/UNRWFW/UNRWFWP1DA
+# time python3 load/DBPLoadController.py test /Volumes/FCBH/all-dbp-etl-test/ audio/UNRWFW/UNRWFWP1DA16
+
+# Some video uploads
+# time python3 load/TestCleanup.py test ENGESVP2DV
+# time python3 load/DBPLoadController.py test-video /Volumes/FCBH/all-dbp-etl-test/ ENGESVP2DV
+# time python3 load/DBPLoadController.py test-video /Volumes/FCBH/all-dbp-etl-test/ video/ENGESV/ENGESVP2DV
+# time python3 load/DBPLoadController.py test-video /Volumes/FCBH/all-dbp-etl-test/ video/ENGESX/ENGESVP2DV
+
+# Successful tests with source on local drive
+# time python3 load/TestCleanup.py test HYWWAV
+# time python3 load/TestCleanup.py test GNWNTM
+# time python3 load/DBPLoadController.py test s3://test-dbp-etl HYWWAVN2ET
+# time python3 load/DBPLoadController.py test /Volumes/FCBH/all-dbp-etl-test/ GNWNTMN2ET
+# time python3 load/DBPLoadController.py test /Volumes/FCBH/all-dbp-etl-test/ text/GNWNTM/GNWNTMN2ET
+
+# Audio Transcoder Test
+# time python3 load/DBPLoadController.py test-video s3://dbp-staging UNRWFWP1DA
+
+# No parameter
+# time python3 load/DBPLoadController.py test
+
+
+
+
