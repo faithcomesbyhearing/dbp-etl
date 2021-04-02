@@ -37,8 +37,7 @@ class DBPv2KeyInsert:
 				activated = 1  ## I assume this should be activate
 				token = "api developer"
 				notes = "inserted by DBPv2KeyInsert.py"
-				userId = "@" + re.sub(r'[@\.\-]', '', userEmail)
-				print("userEmail->userId", userEmail, userId) # userEmail is unique in the users table.
+				userId = "@" + re.sub(r'[@\.\-]', '', userEmail) # userEmail is unique in the users table.
 				keyId = "@" + key
 				if userEmail.lower() in self.emailSet:
 					print("Did not update user ", userEmail)
@@ -49,8 +48,7 @@ class DBPv2KeyInsert:
 					dbOut.rawStatement(sql)
 					dbOut.rawStatement("SET %s = LAST_INSERT_ID();" % (userId))
 				if key in self.keySet:
-					print("did not update key ", key)
-					dbOut.rawStatement("SELECT id INTO %s FROM dbp_users.user_keys WHERE `key` = '%s';" % (keyId, key))
+					print("ERROR Duplicate key ", key, "Cannot add key for", userEmail)
 				else:
 					sql = "INSERT INTO dbp_users.user_keys (`user_id`, `key`, `name`) VALUES (%s, '%s', '%s');" % (userId, key, displayName)
 					dbOut.rawStatement(sql)
@@ -71,13 +69,17 @@ if (__name__ == '__main__'):
 	keys.process(csvFilename)
 	dbOut.displayCounts()
 	dbOut.displayStatements()
-	dbOut.execute("userkeys")
+	#dbOut.execute("userkeys")
 
 # python3 load/DBPv2KeyInsert.py test $HOME/Desktop/query_result.csv
 
 # ALTER TABLE dbp_users.access_group_api_keys DROP FOREIGN KEY access_group_api_keys_ibfk_1;
 # ALTER TABLE dbp_users.access_group_api_keys ADD CONSTRAINT `access_group_api_keys_ibfk_1` FOREIGN KEY (`access_group_id`) REFERENCES `dbp`.`access_groups` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
+
+# delete from access_group_api_keys where key_id in (select id from user_keys where user_id in (select id from users where notes = 'inserted by DBPv2KeyInsert.py'))
+# delete from user_keys where user_id in (select id from users where notes = 'inserted by DBPv2KeyInsert.py')
+# delete from users where notes = 'inserted by DBPv2KeyInsert.py'
 """
 ## Creating CSV file to load into this program
 
