@@ -45,7 +45,7 @@ class AWSTranscoder:
 			configKey = "audio.transcoder.output." + num
 			out = self.config.getOptional(configKey)
 			if out != None:
-				out = out.replace("$prefix", inputFileset.filesetPath)
+				out = out.replace("$prefix", inputFileset.filesetPrefix)
 				outputs.append(out)
 		outputStr = '"output": [' + ", ".join(outputs) + ']'
 		request = '{' + inp + ", " + outputStr + '}'
