@@ -2,6 +2,7 @@
 
 # This onetime program is used to load keys from DBPv2 over to DBPv4.
 
+import re
 import csv
 from SQLUtility import *
 from SQLBatchExec import *
@@ -36,7 +37,8 @@ class DBPv2KeyInsert:
 				activated = 1  ## I assume this should be activate
 				token = "api developer"
 				notes = "inserted by DBPv2KeyInsert.py"
-				userId = "@" + userEmail.replace("@", "").replace(".", "")  # userEmail is unique in the users table.
+				userId = "@" + re.sub(r'[@\.\-]', '', userEmail)
+				print("userEmail->userId", userEmail, userId) # userEmail is unique in the users table.
 				keyId = "@" + key
 				if userEmail.lower() in self.emailSet:
 					print("Did not update user ", userEmail)
@@ -70,6 +72,11 @@ if (__name__ == '__main__'):
 	dbOut.displayCounts()
 	dbOut.displayStatements()
 	dbOut.execute("userkeys")
+
+# python3 load/DBPv2KeyInsert.py test $HOME/Desktop/query_result.csv
+
+# ALTER TABLE dbp_users.access_group_api_keys DROP FOREIGN KEY access_group_api_keys_ibfk_1;
+# ALTER TABLE dbp_users.access_group_api_keys ADD CONSTRAINT `access_group_api_keys_ibfk_1` FOREIGN KEY (`access_group_id`) REFERENCES `dbp`.`access_groups` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 """
 ## Creating CSV file to load into this program
@@ -119,4 +126,6 @@ where fn.meta_key = 'first_name'
 and ln.meta_key = 'last_name'
 
 """
+
+
 
