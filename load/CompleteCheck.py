@@ -159,3 +159,6 @@ if (__name__ == '__main__'):
 	check.checkForMissingBibleVerses()
 	db.close()
 
+# python3 load/CompleteCheck.py test retry
+# python3 load/CompleteCheck.py newdata > complete.out
+
