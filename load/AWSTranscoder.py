@@ -77,11 +77,13 @@ class AWSTranscoder:
 			print("AWSTranscoder jobId %s for %s" % (jobId, data))
 			status = result.get("status")
 			url = url + "/" + jobId
-			while status not in {"SUCCESS", "FAILED"}:
+			while status == "PENDING":
 				time.sleep(10)
 				result = self.httpGet(url, key)
 				#print(result)
 				status = result.get("status")
+				if status == "FAILED":
+					raise Exception("Transcoding Job Failed: %s" %(result))
 			return result
 
 
