@@ -70,12 +70,6 @@ class UpdateDBPLPTSTable:
 		for (bibleId, filesetId, setTypeCode, setSizeCode, assetId, hashId) in filesetList:
 			typeCode = setTypeCode.split("_")[0]
 			if typeCode != "app":
-				#if filesetId[8:10] == "SA":
-				#	dbpFilesetId = filesetId[:8] + "DA" + filesetId[10:]
-				#	tagNameList = ["sku", "stock_no", "volume"]
-				#else:
-				#	dbpFilesetId = filesetId
-				#	tagNameList = ["bitrate", "sku", "stock_no", "volume"]
 				if filesetId[8:10] == "SA":
 					dbpFilesetId = filesetId[:8] + "DA" + filesetId[10:]
 				else:
@@ -228,7 +222,6 @@ class UpdateDBPLPTSTable:
 
 	def updateBibleFilesetCopyrightOrganizations(self, filesetList):
 		orgs = LoadOrganizations(self.config, self.db, self.dbOut, self.lptsReader)
-#		orgs.changeCopyrightOrganizationsPrimaryKey()
 		# These methods should be called by Validate
 		#unknownLicensors = orgs.validateLicensors()
 		#unknownCopyrights = orgs.validateCopyrights()
@@ -237,15 +230,15 @@ class UpdateDBPLPTSTable:
 
 
 	## This is not currently used.
-	def prepareLog(self, tranType, tableName, attrNames, pkeyNames, values):
-		if tableName == "bibles":
-			self.prepareBiblesLog(tranType, tableName, attrNames, pkeyNames, values)
-		else:
-			self.prepareFilesetsLog(tranType, tableName, attrNames, pkeyNames, values)
-
-
-	def prepareBiblesLog(self, tranType, tableName, attrNames, pkeyNames, values):
-		#if self.hashIdMap == None:
+#	def prepareLog(self, tranType, tableName, attrNames, pkeyNames, values):
+#		if tableName == "bibles":
+#			self.prepareBiblesLog(tranType, tableName, attrNames, pkeyNames, values)
+#		else:
+#			self.prepareFilesetsLog(tranType, tableName, attrNames, pkeyNames, values)
+#
+#
+#	def prepareBiblesLog(self, tranType, tableName, attrNames, pkeyNames, values):
+#		#if self.hashIdMap == None:
 		#	self.hashIdMap = {}
 		#	sql = ("SELECT bf.hash_id, bfc.bible_id, bf.id, bf.set_type_code, bf.set_size_code"
 		#		" FROM bible_filesets bf, bible_fileset_connections bfc"
@@ -253,79 +246,79 @@ class UpdateDBPLPTSTable:
 		#	resultSet = self.db.select(sql, ())
 		#	for (hashId, bibleId, filesetId, setTypeCode, setSizeCode) in resultSet:
 		#		self.hashIdMap[hashId] = (bibleId, filesetId, setTypeCode, setSizeCode)
-		typeMsg = "%s-%s " % (tableName, tranType)
-		numAttr = len(attrNames)
-		#hashIdPos = pkeyNames.index("hash_id") + numAttr
-		for value in values:
-			idMsg = ""
-			keyMsg = []
-			attrMsg = []
-			for index in range(len(value)):
-				#if index == hashIdPos:
+#		typeMsg = "%s-%s " % (tableName, tranType)
+#		numAttr = len(attrNames)
+#		#hashIdPos = pkeyNames.index("hash_id") + numAttr
+#		for value in values:
+#			idMsg = ""
+#			keyMsg = []
+#			attrMsg = []
+#			for index in range(len(value)):
+#				#if index == hashIdPos:
 				#	hashId = value[index]
 				#	idMsg = "%s/%s/%s/%s " % self.hashIdMap[hashId]
 				#elif index < numAttr:
-				if index < numAttr:
-					attrMsg.append("%s=%s" % (attrNames[index], str(value[index])))
-				else:
-					keyMsg.append("%s=%s" % (pkeyNames[index - numAttr], str(value[index])))
-			msg = idMsg + typeMsg
-			if len(keyMsg) > 0:
-				msg += "PKEY: " + ", ".join(keyMsg)
-			if len(attrMsg) > 0:
-				msg += "  COLS: " + ", ".join(attrMsg)
-			self.sqlLog.append(msg)
+#				if index < numAttr:
+#					attrMsg.append("%s=%s" % (attrNames[index], str(value[index])))
+#				else:
+#					keyMsg.append("%s=%s" % (pkeyNames[index - numAttr], str(value[index])))
+#			msg = idMsg + typeMsg
+#			if len(keyMsg) > 0:
+#				msg += "PKEY: " + ", ".join(keyMsg)
+#			if len(attrMsg) > 0:
+#				msg += "  COLS: " + ", ".join(attrMsg)
+#			self.sqlLog.append(msg)
 
 
-	def prepareFilesetsLog(self, tranType, tableName, attrNames, pkeyNames, values):
-		if self.hashIdMap == None:
-			self.hashIdMap = {}
-			sql = ("SELECT bf.hash_id, bfc.bible_id, bf.id, bf.set_type_code, bf.set_size_code"
-				" FROM bible_filesets bf, bible_fileset_connections bfc"
-				" WHERE bf.hash_id = bfc.hash_id")
-			resultSet = self.db.select(sql, ())
-			for (hashId, bibleId, filesetId, setTypeCode, setSizeCode) in resultSet:
-				self.hashIdMap[hashId] = (bibleId, filesetId, setTypeCode, setSizeCode)
-		typeMsg = "%s-%s " % (tableName, tranType)
-		numAttr = len(attrNames)
-		hashIdPos = pkeyNames.index("hash_id") + numAttr
-		for value in values:
-			idMsg = ""
-			keyMsg = []
-			attrMsg = []
-			for index in range(len(value)):
-				if index == hashIdPos:
-					hashId = value[index]
-					idMsg = "%s/%s/%s/%s " % self.hashIdMap[hashId]
-				elif index < numAttr:
-					attrMsg.append("%s=%s" % (attrNames[index], str(value[index])))
-				else:
-					keyMsg.append("%s=%s" % (pkeyNames[index - numAttr], str(value[index])))
-			msg = idMsg + typeMsg
-			if len(keyMsg) > 0:
-				msg += "PKEY: " + ", ".join(keyMsg)
-			if len(attrMsg) > 0:
-				msg += "  COLS: " + ", ".join(attrMsg)
-			self.sqlLog.append(msg)
+#	def prepareFilesetsLog(self, tranType, tableName, attrNames, pkeyNames, values):
+#		if self.hashIdMap == None:
+#			self.hashIdMap = {}
+#			sql = ("SELECT bf.hash_id, bfc.bible_id, bf.id, bf.set_type_code, bf.set_size_code"
+#				" FROM bible_filesets bf, bible_fileset_connections bfc"
+#				" WHERE bf.hash_id = bfc.hash_id")
+#			resultSet = self.db.select(sql, ())
+#			for (hashId, bibleId, filesetId, setTypeCode, setSizeCode) in resultSet:
+#				self.hashIdMap[hashId] = (bibleId, filesetId, setTypeCode, setSizeCode)
+#		typeMsg = "%s-%s " % (tableName, tranType)
+#		numAttr = len(attrNames)
+#		hashIdPos = pkeyNames.index("hash_id") + numAttr
+#		for value in values:
+#			idMsg = ""
+#			keyMsg = []
+#			attrMsg = []
+#			for index in range(len(value)):
+#				if index == hashIdPos:
+#					hashId = value[index]
+#					idMsg = "%s/%s/%s/%s " % self.hashIdMap[hashId]
+#				elif index < numAttr:
+#					attrMsg.append("%s=%s" % (attrNames[index], str(value[index])))
+#				else:
+#					keyMsg.append("%s=%s" % (pkeyNames[index - numAttr], str(value[index])))
+#			msg = idMsg + typeMsg
+#			if len(keyMsg) > 0:
+#				msg += "PKEY: " + ", ".join(keyMsg)
+#			if len(attrMsg) > 0:
+#				msg += "  COLS: " + ", ".join(attrMsg)
+#			self.sqlLog.append(msg)
 
 
-	def displayLog(self):
-		errorDir = self.config.directory_errors
-		pattern = self.config.filename_datetime 
-		path = errorDir + "LPTS-Update-" + datetime.today().strftime(pattern) + ".out"
-		logFile = open(path, "w")
-		for message in sorted(self.sqlLog):
-			logFile.write(message + "\n")
-		for countKey in sorted(self.updateCounts.keys()):
-			message = "%s = %d\n" % (countKey, self.updateCounts[countKey])
-			logFile.write(message)
-		logFile.write("%s\n" % path)
-		logFile.close()
-
-		logFile = open(path, "r")
-		for line in logFile:
-			print(line)
-		logFile.close()
+#	def displayLog(self):
+#		errorDir = self.config.directory_errors
+#		pattern = self.config.filename_datetime 
+#		path = errorDir + "LPTS-Update-" + datetime.today().strftime(pattern) + ".out"
+#		logFile = open(path, "w")
+#		for message in sorted(self.sqlLog):
+#			logFile.write(message + "\n")
+#		for countKey in sorted(self.updateCounts.keys()):
+#			message = "%s = %d\n" % (countKey, self.updateCounts[countKey])
+#			logFile.write(message)
+#		logFile.write("%s\n" % path)
+#		logFile.close()
+#
+#		logFile = open(path, "r")
+#		for line in logFile:
+#			print(line)
+#		logFile.close()
 
 
 	def escapeChars(self, value):

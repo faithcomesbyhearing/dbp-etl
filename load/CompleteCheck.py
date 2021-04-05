@@ -106,6 +106,37 @@ class CompleteCheck:
 			print(missed)
 
 
+	def checkForMissingTS(self):
+		missing = self.db.selectList('SELECT id FROM bible_filesets WHERE set_type_code="video_stream" AND hash_id IN'
+		 						' (SELECT hash_id FROM bible_files WHERE id IN'
+		 						' (SELECT bible_file_id FROM bible_file_stream_bandwidths WHERE id NOT IN'
+		 						' (SELECT stream_bandwidth_id FROM bible_file_stream_ts)))', ())
+		for missed in sorted(missing):
+			print("%s Has some or all bible_file_stream_ts records missing" % (missed,))
+
+
+	def checkForMissingBandwidth(self):
+		missing = self.db.selectList('SELECT id FROM bible_filesets WHERE set_type_code="video_stream" AND hash_id IN'
+								' (SELECT hash_id FROM bible_files WHERE id NOT IN'
+								' (SELECT bible_file_id FROM bible_file_stream_bandwidths))', ())
+		for missed in sorted(missing):
+			print("%s Has some or all bible_file_stream_bandwidths records missing" % (missed,))
+
+
+	def checkForMissingBibleFiles(self):
+		missing = self.db.selectList('SELECT id FROM bible_filesets WHERE set_type_code NOT IN'
+								' ("text_plain") AND hash_id NOT IN (SELECT hash_id FROM bible_files)', ())
+		for missed in sorted(missing):
+			print("%s Has some or all bible_files records missing" % (missed,))
+
+
+	def checkForMissingBibleVerses(self):
+		missing = self.db.selectList('SELECT id FROM bible_filesets WHERE set_type_code IN ("text_plain")'
+							' AND hash_id NOT IN (SELECT hash_id FROM bible_verses)', ())
+		for missed in sorted(missing):
+			print("%s Has some or all bible_verses records missing" % (missed,))
+
+
 if (__name__ == '__main__'):
 	print("WARNING: This program outputs to the console.  You may want to redirect to a file using > filename")
 	config = Config()
@@ -122,5 +153,9 @@ if (__name__ == '__main__'):
 	check = CompleteCheck(config, db, lptsReader)
 	check.bibleFilesToS3()
 	check.bibleFilesetsToLPTS()
+	check.checkForMissingTS()
+	check.checkForMissingBandwidth()
+	check.checkForMissingBibleFiles()
+	check.checkForMissingBibleVerses()
 	db.close()
 

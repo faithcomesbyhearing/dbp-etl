@@ -36,7 +36,7 @@ class RunStatus:
 	def store():
 		results = []
 		for name in RunStatus.statusList:
-			status = RunStatus.statusMap.get(name, "pending")
+			status = RunStatus.statusMap.get(name, "not done")
 			results.append(name + ": " + status)
 		statusMsg = ", ".join(results)
 		client = Config.shared().s3_client
