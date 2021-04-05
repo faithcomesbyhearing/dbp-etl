@@ -94,6 +94,7 @@ class Config:
 			self.video_preset_hls_480p = self._get("video.preset.hls.480p")
 			self.video_preset_hls_360p = self._get("video.preset.hls.360p")
 			self.video_preset_web = self._get("video.preset.web")
+			self.video_aws_profile = self._getOptional("video.aws_profile")
 
 			self.directory_bucket_list = self._getPath("directory.bucket_list")
 			self.filename_lpts_xml = self._getPath("filename.lpts_xml")

@@ -32,7 +32,7 @@ class TranscodeVideo:
 	def __init__(self, config, filesetPrefix):
 		self.config = config
 		self.filesetPrefix = filesetPrefix
-		session = boto3.Session(profile_name=config.s3_aws_profile)
+		session = boto3.Session(profile_name=config.video_aws_profile)
 		self.client = session.client('elastictranscoder', region_name=config.video_transcoder_region)
 		self.videoPipeline = config.video_transcoder_pipeline
 		self.hls_audio_video_1080p = config.video_preset_hls_1080p
