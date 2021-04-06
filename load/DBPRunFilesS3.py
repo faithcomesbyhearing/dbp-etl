@@ -7,7 +7,7 @@ from Config import *
 
 class DBPRunFilesS3:
 
-	s3KeyPrefix = os.getenv('S3_KEY_PREFIX') or datetime.today().strftime("%Y-%m-%d-%H-%M-%S")
+	s3KeyPrefix = os.getenv('S3_KEY_PREFIX') or datetime.utcnow().strftime("%Y-%m-%d-%H-%M-%S")
 
 
 	def uploadFile(config, filepath):
