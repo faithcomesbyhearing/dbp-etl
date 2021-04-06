@@ -106,7 +106,7 @@ class UpdateDBPLPTSTable:
 					if lptsRecord != None:
 						if name == "container":
 							if codec == "aac":
-								description = "m4a"
+								description = "mp4"
 							elif codec == "opus":
 								description = "webm"
 							elif codec == "mp3":

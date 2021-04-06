@@ -69,9 +69,9 @@ if (__name__ == '__main__'):
 	keys.process(csvFilename)
 	dbOut.displayCounts()
 	dbOut.displayStatements()
-	#dbOut.execute("userkeys")
+	dbOut.execute("userkeys")
 
-# python3 load/DBPv2KeyInsert.py test $HOME/Desktop/query_result.csv
+# python3 load/DBPv2KeyInsert.py newdata $HOME/Desktop/query_result.csv
 
 # ALTER TABLE dbp_users.access_group_api_keys DROP FOREIGN KEY access_group_api_keys_ibfk_1;
 # ALTER TABLE dbp_users.access_group_api_keys ADD CONSTRAINT `access_group_api_keys_ibfk_1` FOREIGN KEY (`access_group_id`) REFERENCES `dbp`.`access_groups` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
