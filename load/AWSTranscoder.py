@@ -78,7 +78,7 @@ class AWSTranscoder:
 			status = result.get("status")
 			url = url + "/" + jobId
 			while status == "PENDING":
-				time.sleep(10)
+				time.sleep(30)
 				result = self.httpGet(url, key)
 				#print(result)
 				status = result.get("status")
@@ -102,10 +102,16 @@ class AWSTranscoder:
 		req = urllib.request.Request(url)
 		req.add_header("Content-Type", "application/json")
 		req.add_header("X-API-Key", key)
-		resp = urllib.request.urlopen(req)
-		out = resp.read()
-		result = out.decode('utf-8')
-		return json.loads(result)
+		for i in range(5):
+			try:
+				resp = urllib.request.urlopen(req)
+				out = resp.read()
+				result = out.decode('utf-8')
+				return json.loads(result)
+			except urllib.error.HTTPError as e:
+				if i >= 4:
+					raise
+				time.sleep(10)
 
 
 	def parseAudioResponse(self, inpFileset, response):
