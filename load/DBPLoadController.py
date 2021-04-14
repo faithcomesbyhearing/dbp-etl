@@ -120,6 +120,7 @@ if (__name__ == '__main__'):
 		RunStatus.init([])
 		ctrl.updateBibles()
 		ctrl.updateLPTSTables()
+	RunStatus.exit()
 
 
 # Prepare by getting some local data into a test bucket

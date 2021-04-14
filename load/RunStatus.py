@@ -1,6 +1,7 @@
 # RunStatus.py
 
 
+import sys
 import boto3
 import time
 from Config import *
@@ -32,6 +33,15 @@ class RunStatus:
 		RunStatus.statusMap[name] = msg
 		print("********** %s Tables Update %s **********" % (name, msg,))
 		RunStatus.store()
+
+
+	def exit():
+		if all(msg == "ok" for msg in RunStatus.statusMap.values()):
+			print("All Success in RunStatus")
+			sys.exit()
+		else:
+			print("Error in RunStatus %s" % (RunStatus.statusMap))
+			sys.exit(1)
 
 
 	def store():
