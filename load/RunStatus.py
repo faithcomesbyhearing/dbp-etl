@@ -28,6 +28,7 @@ class RunStatus:
 
 	def set(name, status):
 		msg = "ok" if status else "failed"
+		name = next(iter([x for x in RunStatus.statusList if x in name]), name)
 		RunStatus.statusMap[name] = msg
 		print("********** %s Tables Update %s **********" % (name, msg,))
 		RunStatus.store()
