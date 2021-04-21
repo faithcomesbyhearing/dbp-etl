@@ -33,13 +33,14 @@ class S3Utility:
 		for inp in filesets:
 			s3Bucket = self.config.s3_vid_bucket if inp.typeCode == "video" else self.config.s3_bucket
 			if inp.typeCode == "video":
-				done = self.uploadFileset(s3Bucket, inp)
-				if done:
-					print("Upload %s succeeded." % (inp.filesetPrefix,))
-				else:
-					print("Upload %s FAILED." % (inp.filesetPrefix,))
+				self.uploadFileset(s3Bucket, inp)
+				#if done:
+				#	print("Upload %s succeeded." % (inp.filesetPrefix,))
+				#else:
+				#	print("Upload %s FAILED." % (inp.filesetPrefix,))
 
 			elif inp.typeCode == "audio":
+				self.uploadFileset(s3Bucket, inp)
 				transcoder = AWSTranscoder(self.config)
 				outFilesets = transcoder.transcodeAudio(inp)
 				parser = FilenameParser(self.config)

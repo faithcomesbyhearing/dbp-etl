@@ -180,7 +180,6 @@ class UpdateDBPBooksTable:
 			firstNTBook = True
 			extraBook = True
 			priorBookSeq = None
-			#bibleDB = SqliteUtility(self.config.directory_accepted + filesetId + ".db")
 			bibleDB = SqliteUtility(databasePath)
 			resultSet = bibleDB.select("SELECT code, heading, title, name, chapters FROM tableContents ORDER BY rowId", ())
 			for (bookId, heading, title, name, chapters) in resultSet:
@@ -215,7 +214,6 @@ class UpdateDBPBooksTable:
 			bookChapterMap = {}
 			priorBookId = None
 			priorChapter = None
-			#csvFilename = self.config.directory_accepted + "%s_%s_%s.csv" % (typeCode, bibleId, filesetId)
 			with open(csvFilename, encoding="utf-8", newline='\n') as csvfile:
 				reader = csv.DictReader(csvfile)
 				for row in reader:
