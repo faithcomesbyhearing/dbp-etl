@@ -107,7 +107,6 @@ if (__name__ == '__main__'):
 	ctrl = DBPLoadController(config, db, lptsReader)
 	if len(sys.argv) != 2:
 		InputFileset.validate = InputFileset.filesetCommandLineParser(config, lptsReader)
-		RunStatus.init(InputFileset.validate)
 		ctrl.repairAudioFileNames(InputFileset.validate)
 		ctrl.validate(InputFileset.validate)
 		if ctrl.updateBibles():
@@ -117,7 +116,6 @@ if (__name__ == '__main__'):
 		for inputFileset in InputFileset.complete:
 			print("Completed: ", inputFileset.filesetId)
 	else:
-		RunStatus.init([])
 		ctrl.updateBibles()
 		ctrl.updateLPTSTables()
 	RunStatus.exit()
