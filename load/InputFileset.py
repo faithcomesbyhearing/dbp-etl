@@ -15,6 +15,7 @@ from Log import *
 from Config import *
 from RunStatus import *
 from LPTSExtractReader import *
+from SqliteUtility import *
 from PreValidate import *
 
 class InputFile:
@@ -274,8 +275,6 @@ class InputFileset:
 
 
 if (__name__ == '__main__'):
-	from SqliteUtility import *
-
 	config = Config()
 	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
 	InputFileset.validate = InputFileset.filesetCommandLineParser(config, lptsReader)
