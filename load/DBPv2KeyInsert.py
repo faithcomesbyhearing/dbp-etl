@@ -2,25 +2,38 @@
 
 # This onetime program is used to load keys from DBPv2 over to DBPv4.
 
+import os
+import sys
 import re
+import time
 import csv
+import pymysql
 
+# DEBUG
+#DB_HOST = "localhost"
+#DB_USER = "root"
+#DB_NAME = "dbp"
+#DB_PORT = 3306
+# PROD
+DB_HOST = "127.0.0.1"
+DB_USER = "sa"
+DB_NAME = "dbp_NEWDATA"
+DB_PORT = 3310
+MYSQL_EXE = "/usr/local/mysql/bin/mysql"
 
-DB_HOST = "localhost"
-DB_USER = "root"
-DB_NAME = "dbp"
-DB_PORT = 3306
 
 class DBPv2KeyInsert:
 
-	def __init__(self, config, dbOut):
-		self.dbOut = dbOut
+	def __init__(self):
 		db = self.sqlOpen()
 		resultSet = self.sqlSelect(db, "SELECT email from dbp_users.users WHERE email is not NULL", ())
 		self.emailSet = set()
 		for item in resultSet:
 			self.emailSet.add(item[0].lower())
-		self.keySet = db.selectSet("SELECT `key` from dbp_users.user_keys WHERE `key` is not NULL", ())
+		resultSet = self.sqlSelect(db, "SELECT `key` from dbp_users.user_keys WHERE `key` is not NULL", ())
+		self.keySet = set()
+		for item in resultSet:
+			self.keySet.add(item[0])
 		self.sqlClose(db)
 		self.statements = []
 
@@ -66,11 +79,11 @@ class DBPv2KeyInsert:
 		#if config.database_tunnel != None:
 		#	results1 = os.popen(config.database_tunnel).read()
 		#	print("tunnel opened:", results1)
-		conn = pymysql.connect(host = DB_HOST, #config.database_host,
-                             		user = DB_USER, #config.database_user,
-                             		password = os.env['MYSQL_PASSWD'],#DB_PASS, #config.database_passwd,
-                             		db = DB_NAME, #config.database_db_name,
-                             		port = DB_PORT, #config.database_port,
+		conn = pymysql.connect(host = DB_HOST,
+                             		user = DB_USER,
+                             		password = os.environ['MYSQL_PASSWD'],
+                             		db = DB_NAME,
+                             		port = DB_PORT,
                              		charset = 'utf8mb4',
                              		cursorclass = pymysql.cursors.Cursor)
 		print("Database '%s' is opened." % (DB_NAME))
@@ -85,14 +98,13 @@ class DBPv2KeyInsert:
 			cursor.close()
 			return resultSet
 		except Exception as err:
-			#self.error(cursor, statement, err)
 			cursor.close()	
 			print("ERROR executing SQL %s on '%s'" % (error, stmt))
 			conn.rollback()
 			sys.exit()
 
 
-	def sqlClose(conn):
+	def sqlClose(self, conn):
 		if conn != None:
 			conn.close()
 			conn = None
@@ -103,7 +115,6 @@ class DBPv2KeyInsert:
 			print("NO INSERT, UPDATE, or DELETE Transactions to process")
 			return True
 		else:
-			#pattern = self.config.filename_datetime 
 			pattern = "%y-%m-%d-%H-%M-%S"
 			tranDir = "./" ## we need a config parameter
 			path = tranDir + "Trans-" + batchName + ".sql"
@@ -121,12 +132,12 @@ class DBPv2KeyInsert:
 			#	results1 = os.popen(self.config.database_tunnel).read()
 			#	print("tunnel opened:", results1)
 			with open(path, "r", encoding="utf-8") as sql:
-				cmd = [self.config.mysql_exe, 
+				cmd = [MYSQL_EXE, #self.config.mysql_exe, 
 						"-h", DB_HOST, #self.config.database_host, 
 						"-P", str(DB_PORT), #str(self.config.database_port),
 						"-u", DB_USER, #self.config.database_user,
-						"-p" + os.env['MYSQL_PASSWD'], #self.config.database_passwd,
-						self.config.database_db_name]
+						"-p" + os.environ['MYSQL_PASSWD'], #self.config.database_passwd,
+						DB_NAME] #self.config.database_db_name]
 				#response = subprocess.run(cmd, shell=False, stdin=sql, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=2400)
 				response = None
 				success = response.returncode == 0
@@ -139,10 +150,10 @@ class DBPv2KeyInsert:
 
 
 if (__name__ == '__main__'):
-	if len(sys.argv) != 3:
-		print("Usage: load/DBPv2KeyInsert.py  config_profile  filename.csv")
+	if len(sys.argv) != 2:
+		print("Usage: load/DBPv2KeyInsert.py  filename.csv")
 		sys.exit()
-	csvFilename = sys.argv[2]
+	csvFilename = sys.argv[1]
 	#config = Config()
 	#dbOut = SQLBatchExec(config)
 	#keys = DBPv2KeyInsert(config, dbOut)
@@ -163,6 +174,7 @@ if (__name__ == '__main__'):
 # delete from users where notes = 'inserted by DBPv2KeyInsert.py'
 """
 ## Creating CSV file to load into this program
+## Extract data from digitalbibleproject_prod
 
 #create temporary table the_key_rows
 #select * from wp_usermeta where meta_key = 'dbt_acct_key' and meta_value in
