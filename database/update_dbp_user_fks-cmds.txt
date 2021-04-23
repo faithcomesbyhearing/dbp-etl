@@ -1,0 +1,44 @@
+# execute from shell before using this file (after changing the dbp references)
+#sed -i 's/dbp_201027/dbp_201014/g' update_fk.txt
+
+SET FOREIGN_KEY_CHECKS=0;
+DELIMITER %
+
+ALTER TABLE access_group_api_keys DROP FOREIGN KEY FK_access_group_id%
+ALTER TABLE access_group_api_keys ADD CONSTRAINT FK_access_group_id FOREIGN KEY (access_group_id) REFERENCES dbp_201014.access_groups (id) ON UPDATE CASCADE%
+
+ALTER TABLE plans DROP FOREIGN KEY FK_languages_plans%
+ALTER TABLE plans ADD CONSTRAINT FK_languages_plans FOREIGN KEY (language_id) REFERENCES dbp_201014.languages (id) ON UPDATE CASCADE%
+
+ALTER TABLE playlist_items DROP FOREIGN KEY FK_books_playlist_items%
+ALTER TABLE playlist_items ADD CONSTRAINT FK_books_playlist_items FOREIGN KEY (book_id) REFERENCES dbp_201014.books (id) ON UPDATE CASCADE%
+ALTER TABLE playlist_items DROP FOREIGN KEY FK_filesets_playlist_items%
+ALTER TABLE playlist_items ADD CONSTRAINT FK_filesets_playlist_items FOREIGN KEY (fileset_id) REFERENCES dbp_201014.bible_filesets (id) ON UPDATE CASCADE%
+
+ALTER TABLE user_bookmarks DROP FOREIGN KEY FK_bibles_user_bookmarks%
+ALTER TABLE user_bookmarks ADD CONSTRAINT FK_bibles_user_bookmarks FOREIGN KEY (bible_id) REFERENCES dbp_201014.bibles (id) ON UPDATE CASCADE%
+ALTER TABLE user_bookmarks DROP FOREIGN KEY FK_books_user_bookmarks%
+ALTER TABLE user_bookmarks ADD CONSTRAINT FK_books_user_bookmarks FOREIGN KEY (book_id) REFERENCES dbp_201014.books (id) ON UPDATE CASCADE%
+
+ALTER TABLE user_downloads DROP FOREIGN KEY FK_bible_filesets_user_downloads%
+ALTER TABLE user_downloads ADD CONSTRAINT FK_bible_filesets_user_downloads FOREIGN KEY (fileset_id) REFERENCES dbp_201014.bible_filesets (id) ON UPDATE CASCADE%
+
+ALTER TABLE user_highlights DROP FOREIGN KEY FK_bibles_user_highlights%
+ALTER TABLE user_highlights ADD CONSTRAINT FK_bibles_user_highlights FOREIGN KEY (bible_id) REFERENCES dbp_201014.bibles (id) ON UPDATE CASCADE%
+ALTER TABLE user_highlights DROP FOREIGN KEY FK_books_user_highlights%
+ALTER TABLE user_highlights ADD CONSTRAINT FK_books_user_highlights FOREIGN KEY (book_id) REFERENCES dbp_201014.books (id) ON UPDATE CASCADE%
+
+ALTER TABLE user_notes DROP FOREIGN KEY FK_bibles_user_notes%
+ALTER TABLE user_notes ADD CONSTRAINT FK_bibles_user_notes FOREIGN KEY (bible_id) REFERENCES dbp_201014.bibles (id) ON UPDATE CASCADE%
+ALTER TABLE user_notes DROP FOREIGN KEY FK_books_user_notes%
+ALTER TABLE user_notes ADD CONSTRAINT FK_books_user_notes FOREIGN KEY (book_id) REFERENCES dbp_201014.books (id) ON UPDATE CASCADE%
+
+ALTER TABLE user_playlists DROP FOREIGN KEY FK_languages_playlists%
+ALTER TABLE user_playlists ADD CONSTRAINT FK_languages_playlists FOREIGN KEY (language_id) REFERENCES dbp_201014.languages (id) ON UPDATE CASCADE%
+
+DELIMITER ;
+SET FOREIGN_KEY_CHECKS=1;
+
+
+SHOW WARNINGS;
+SHOW COUNT(*) WARNINGS;
