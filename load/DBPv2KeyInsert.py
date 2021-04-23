@@ -138,8 +138,8 @@ class DBPv2KeyInsert:
 						"-u", DB_USER, #self.config.database_user,
 						"-p" + os.environ['MYSQL_PASSWD'], #self.config.database_passwd,
 						DB_NAME] #self.config.database_db_name]
-				#response = subprocess.run(cmd, shell=False, stdin=sql, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=2400)
-				response = None
+				response = subprocess.run(cmd, shell=False, stdin=sql, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=2400)
+				#response = None
 				success = response.returncode == 0
 				print("SQLBATCH:", str(response.stderr.decode('utf-8')))
 				duration = (time.perf_counter() - startTime)
