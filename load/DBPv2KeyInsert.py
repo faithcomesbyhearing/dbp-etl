@@ -4,20 +4,25 @@
 
 import re
 import csv
-from SQLUtility import *
-from SQLBatchExec import *
+
+
+DB_HOST = "localhost"
+DB_USER = "root"
+DB_NAME = "dbp"
+DB_PORT = 3306
 
 class DBPv2KeyInsert:
 
 	def __init__(self, config, dbOut):
 		self.dbOut = dbOut
-		db = SQLUtility(config)
-		resultSet = db.select("SELECT email from dbp_users.users WHERE email is not NULL", ())
+		db = self.sqlOpen()
+		resultSet = self.sqlSelect(db, "SELECT email from dbp_users.users WHERE email is not NULL", ())
 		self.emailSet = set()
 		for item in resultSet:
 			self.emailSet.add(item[0].lower())
 		self.keySet = db.selectSet("SELECT `key` from dbp_users.user_keys WHERE `key` is not NULL", ())
-		db.close()
+		self.sqlClose(db)
+		self.statements = []
 
 
 	def process(self, filename):
@@ -41,21 +46,96 @@ class DBPv2KeyInsert:
 				keyId = "@" + key
 				if userEmail.lower() in self.emailSet:
 					print("Did not update user ", userEmail)
-					dbOut.rawStatement("SELECT id INTO %s FROM dbp_users.users WHERE `email` = '%s';" % (userId, userEmail))
+					self.statements.append("SELECT id INTO %s FROM dbp_users.users WHERE `email` = '%s';" % (userId, userEmail))
 				else:
 					sql = ("INSERT INTO dbp_users.users (email, v2_id, name, first_name, last_name, password, activated, token, notes)"
 							" VALUES ('%s', 0, '%s', '%s', '%s', '%s', %s, '%s', '%s');" % (userEmail, displayName, firstName, lastName, password, activated, token, notes))
-					dbOut.rawStatement(sql)
-					dbOut.rawStatement("SET %s = LAST_INSERT_ID();" % (userId))
+					self.statements.append(sql)
+					self.statements.append("SET %s = LAST_INSERT_ID();" % (userId))
 				if key in self.keySet:
 					print("ERROR Duplicate key ", key, "Cannot add key for", userEmail)
 				else:
 					sql = "INSERT INTO dbp_users.user_keys (`user_id`, `key`, `name`) VALUES (%s, '%s', '%s');" % (userId, key, displayName)
-					dbOut.rawStatement(sql)
-					dbOut.rawStatement("SET %s = LAST_INSERT_ID();" % (keyId))
+					self.statements.append(sql)
+					self.statements.append("SET %s = LAST_INSERT_ID();" % (keyId))
 				for priv in [121, 123, 125]:
 					sql = "INSERT INTO dbp_users.access_group_api_keys (`access_group_id`, `key_id`) VALUES (%s, %s);" % (priv, keyId)
-					dbOut.rawStatement(sql)
+					self.statements.append(sql)
+
+	def sqlOpen(self):
+		#if config.database_tunnel != None:
+		#	results1 = os.popen(config.database_tunnel).read()
+		#	print("tunnel opened:", results1)
+		conn = pymysql.connect(host = DB_HOST, #config.database_host,
+                             		user = DB_USER, #config.database_user,
+                             		password = os.env['MYSQL_PASSWD'],#DB_PASS, #config.database_passwd,
+                             		db = DB_NAME, #config.database_db_name,
+                             		port = DB_PORT, #config.database_port,
+                             		charset = 'utf8mb4',
+                             		cursorclass = pymysql.cursors.Cursor)
+		print("Database '%s' is opened." % (DB_NAME))
+		return conn
+
+
+	def sqlSelect(self, conn, statement, values):
+		cursor = conn.cursor()
+		try:
+			cursor.execute(statement, values)
+			resultSet = cursor.fetchall()
+			cursor.close()
+			return resultSet
+		except Exception as err:
+			#self.error(cursor, statement, err)
+			cursor.close()	
+			print("ERROR executing SQL %s on '%s'" % (error, stmt))
+			conn.rollback()
+			sys.exit()
+
+
+	def sqlClose(conn):
+		if conn != None:
+			conn.close()
+			conn = None
+
+
+	def execute(self, batchName):
+		if len(self.statements) == 0:
+			print("NO INSERT, UPDATE, or DELETE Transactions to process")
+			return True
+		else:
+			#pattern = self.config.filename_datetime 
+			pattern = "%y-%m-%d-%H-%M-%S"
+			tranDir = "./" ## we need a config parameter
+			path = tranDir + "Trans-" + batchName + ".sql"
+			print("Transactions", path)
+			tranFile = open(path, "w", encoding="utf-8")
+			tranFile.write("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;\n")
+			tranFile.write("START TRANSACTION;\n")
+			for statement in self.statements:
+				tranFile.write(statement + "\n")
+			tranFile.write("COMMIT;\n")
+			tranFile.write("EXIT\n")
+			tranFile.close()
+			startTime = time.perf_counter()
+			#if self.config.database_tunnel != None:
+			#	results1 = os.popen(self.config.database_tunnel).read()
+			#	print("tunnel opened:", results1)
+			with open(path, "r", encoding="utf-8") as sql:
+				cmd = [self.config.mysql_exe, 
+						"-h", DB_HOST, #self.config.database_host, 
+						"-P", str(DB_PORT), #str(self.config.database_port),
+						"-u", DB_USER, #self.config.database_user,
+						"-p" + os.env['MYSQL_PASSWD'], #self.config.database_passwd,
+						self.config.database_db_name]
+				#response = subprocess.run(cmd, shell=False, stdin=sql, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=2400)
+				response = None
+				success = response.returncode == 0
+				print("SQLBATCH:", str(response.stderr.decode('utf-8')))
+				duration = (time.perf_counter() - startTime)
+				print("SQLBATCH execution time", round(duration, 2), "sec for", batchName)
+			self.statements = []
+			self.counts = []
+			return success
 
 
 if (__name__ == '__main__'):
@@ -63,13 +143,14 @@ if (__name__ == '__main__'):
 		print("Usage: load/DBPv2KeyInsert.py  config_profile  filename.csv")
 		sys.exit()
 	csvFilename = sys.argv[2]
-	config = Config()
-	dbOut = SQLBatchExec(config)
-	keys = DBPv2KeyInsert(config, dbOut)
+	#config = Config()
+	#dbOut = SQLBatchExec(config)
+	#keys = DBPv2KeyInsert(config, dbOut)
+	keys = DBPv2KeyInsert()
 	keys.process(csvFilename)
-	dbOut.displayCounts()
-	dbOut.displayStatements()
-	dbOut.execute("userkeys")
+	#dbOut.displayCounts()
+	#dbOut.displayStatements()
+	keys.execute("userkeys")
 
 # python3 load/DBPv2KeyInsert.py newdata $HOME/Desktop/query_result.csv
 
@@ -103,15 +184,25 @@ if (__name__ == '__main__'):
 #'c6493269b12694dd833b6bb2b7a3bb48', 
 #'d3c2b792c987627250d1eb3655aec4b3');
 
+#create temporary table the_key_rows
+#select * from wp_usermeta where meta_key = 'dbt_acct_key' and meta_value in
+#('1cceebc9e9babcfdca12ddd2388ec35a',
+#'e094324a8e5d592f8b68c0e767cd88ce',
+#'ec9e8df857b349e8c5130c353af62f5d',
+#'aa129d3e47ddf57e8ffcc5b90a5abac6',
+#'88f2ec888286012bd016dfbb6b191bce',
+#'4e36f9bd5338ec10d7519bdf328551b7',
+#'68f0e1f583e0546c352b571c0478eddd');
+
 create temporary table the_key_rows
 select * from wp_usermeta where meta_key = 'dbt_acct_key' and meta_value in
-('1cceebc9e9babcfdca12ddd2388ec35a',
-'e094324a8e5d592f8b68c0e767cd88ce',
+('6ce262a6e6312e0175d20279f1ad3010',
+'1cceebc9e9babcfdca12ddd2388ec35a',
 'ec9e8df857b349e8c5130c353af62f5d',
 'aa129d3e47ddf57e8ffcc5b90a5abac6',
 '88f2ec888286012bd016dfbb6b191bce',
 '4e36f9bd5338ec10d7519bdf328551b7',
-'68f0e1f583e0546c352b571c0478eddd');
+'e4a78850aaa914bea244b6482d6a0cc2');
 
 select * from the_key_rows;
 
