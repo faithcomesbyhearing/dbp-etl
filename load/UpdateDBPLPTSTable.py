@@ -89,8 +89,7 @@ class UpdateDBPLPTSTable:
 							codec = match.group(2)
 							bitrate = match.group(3) + "kbps"
 					else:
-						#tagNameList = ["container", "codec", "bitrate", "stock_no", "volume"]
-						tagNameList = ["bitrate", "stock_no", "volume"]
+						tagNameList = ["container", "codec", "bitrate", "stock_no", "volume"]
 						bitrate = filesetId[10:12] if len(filesetId) > 10 else "64"
 						bitrate += "kbps"
 						codec = "mp3"
@@ -106,7 +105,7 @@ class UpdateDBPLPTSTable:
 					if lptsRecord != None:
 						if name == "container":
 							if codec == "aac":
-								description = "m4a"
+								description = "mp4"
 							elif codec == "opus":
 								description = "webm"
 							elif codec == "mp3":

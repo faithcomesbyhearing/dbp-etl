@@ -184,7 +184,10 @@ class InputFileset:
 
 
 	def fullPath(self):
-		return self.location + os.sep + self.filesetPath
+		if self.locationType == InputFileset.LOCAL:
+			return self.location + os.sep + self.filesetPath
+		else:
+			return self.location + "/" + self.filesetPath
 
 
 	def filenames(self):

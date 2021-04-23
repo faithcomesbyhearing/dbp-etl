@@ -663,7 +663,7 @@ class LPTSRecord:
 	def WebHubVideo(self):
 		return self.record.get("WebHubVideo")
 
-
+"""
 # Get listing of damIds, per stock no
 if __name__ == '__main__':
 	config = Config.shared()
@@ -677,7 +677,7 @@ if __name__ == '__main__':
 				damIds = lptsRecord.DamIdMap(typeCode, index)
 				if len(damIds) > 0:
 					print(stockNo, typeCode, index, damIds.keys())
-
+"""
 
 """
 # Get alphabetic list distinct field names
@@ -748,3 +748,27 @@ if (__name__ == '__main__'):
 		if bibleId2 != None:
 			bibleIdMap[bibleId2] = stockNo
 """
+
+# Look for duplicate text DamId's when a 7 char id is used.
+if (__name__ == '__main__'):
+	from Config import *
+	result = {}
+	config = Config()
+	reader = LPTSExtractReader(config.filename_lpts_xml)
+	for rec in reader.resultSet:
+		for index in [1, 2, 3]:
+			textDamIds = rec.TextDamIdMap(index).keys()
+			#if len(textDamIds) > 1:
+			#	print(rec.Reg_StockNumber(), index, textDamIds)
+			#	for textDamId in textDamIds:
+			#		shorter = textDamId[:7]
+			#		#print(shorter)
+			#elif len(textDamIds) == 1:
+			#	print(rec.Reg_StockNumber(), index, textDamIds)
+			for textDamId in textDamIds:
+				shorter = textDamId[:7]
+				existStockNum = result.get(shorter)
+				if existStockNum != None and existStockNum != rec.Reg_StockNumber():
+					print(existStockNum, rec.Reg_StockNumber(), textDamId)
+				result[shorter] = rec.Reg_StockNumber()
+

@@ -33,13 +33,14 @@ class S3Utility:
 		for inp in filesets:
 			s3Bucket = self.config.s3_vid_bucket if inp.typeCode == "video" else self.config.s3_bucket
 			if inp.typeCode == "video":
-				done = self.uploadFileset(s3Bucket, inp)
-				if done:
-					print("Upload %s succeeded." % (inp.filesetPrefix,))
-				else:
-					print("Upload %s FAILED." % (inp.filesetPrefix,))
+				self.uploadFileset(s3Bucket, inp)
+				#if done:
+				#	print("Upload %s succeeded." % (inp.filesetPrefix,))
+				#else:
+				#	print("Upload %s FAILED." % (inp.filesetPrefix,))
 
 			elif inp.typeCode == "audio":
+				self.uploadFileset(s3Bucket, inp)
 				transcoder = AWSTranscoder(self.config)
 				outFilesets = transcoder.transcodeAudio(inp)
 				parser = FilenameParser(self.config)
@@ -64,7 +65,7 @@ class S3Utility:
 		else:
 			source = "s3://%s" % (inp.fullPath())
 		target = "s3://%s/%s" % (s3Bucket, inp.filesetPrefix)
-		cmd = "aws %s s3 sync %s %s" % (profile, source, target)
+		cmd = "aws %s s3 sync --acl bucket-owner-full-control %s %s" % (profile, source, target)
 		print("upload:", cmd)
 		response = subprocess.run(cmd, shell=True, stderr=subprocess.PIPE)
 		if response.returncode != 0:

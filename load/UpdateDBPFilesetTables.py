@@ -207,7 +207,7 @@ class UpdateDBPFilesetTables:
 					fileName = fileName.split(".")[0] + "_stream.m3u8"
 				fileSize = int(row["file_size"]) if row["file_size"] != "" else None
 				inputFile = inp.getInputFile(fileName)
-				duration = inputFile.duration
+				duration = inputFile.duration if inputFile != None else None
 				if inp.typeCode == "audio" and inp.locationType == InputFileset.LOCAL:
 					duration = self.getDuration(inp.fullPath() + os.sep + fileName)
 				key = (bookId, chapterStart, verseStart)
