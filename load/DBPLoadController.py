@@ -131,6 +131,7 @@ if (__name__ == '__main__'):
 # XXXXXtime python3 load/TestCleanup.py test ENGESVN2DA
 # XXXXXtime python3 load/TestCleanup.py test ENGESVN2DA16
 # time python3 load/TestCleanup.py test HYWWAV
+# time python3 load/TestCleanup.py test HYWWAVN_ET-usx
 # time python3 load/TestCleanup.py test ENGESVP2DV
 # XXXXXtime python3 load/DBPLoadController.py test /Volumes/FCBH/all-dbp-etl-test/ ENGESVN2DA ENGESVN2DA16
 # time python3 load/DBPLoadController.py test /Volumes/FCBH/all-dbp-etl-test/ HYWWAVN2ET

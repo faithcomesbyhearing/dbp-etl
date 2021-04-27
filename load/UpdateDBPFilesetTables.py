@@ -18,7 +18,6 @@ import math
 import subprocess
 from Config import *
 from SQLUtility import *
-from SqliteUtility import *
 from SQLBatchExec import *
 from UpdateDBPTextFilesets import *
 from UpdateDBPBooksTable import *
@@ -36,9 +35,7 @@ class UpdateDBPFilesetTables:
 
 
 	def getSetTypeCode(typeCode, filesetId):
-		if typeCode == "text":
-			return "text_plain"
-		elif typeCode == "video":
+		if typeCode == "video":
 			return "video_stream"
 		elif typeCode == "audio":
 			code = filesetId[7:9]
@@ -110,15 +107,28 @@ class UpdateDBPFilesetTables:
 		inp = inputFileset
 		print(inp.typeCode, inp.bibleId, inp.filesetId)
 		bookIdSet = self.getBibleBooks(inp.csvFilename)
-		hashId = self.insertBibleFileset(inp.typeCode, inp.bibleId, inp.filesetId, bookIdSet)
-		self.insertFilesetConnections(hashId, inp.bibleId)
 		if inp.typeCode in {"audio", "video"}:
+			setTypeCode = UpdateDBPFilesetTables.getSetTypeCode(inp.typeCode, inp.filesetId)
+			hashId = self.insertBibleFileset(inp.typeCode, setTypeCode, inp.bibleId, inp.filesetId, bookIdSet)
+			self.insertFilesetConnections(hashId, inp.bibleId)
 			self.insertBibleFiles(hashId, inputFileset, bookIdSet)
 		elif inp.typeCode == "text":
-			self.textUpdater.updateFileset(inp.bibleId, inp.filesetId, hashId, bookIdSet, inp.databasePath)
+			if inp.subTypeCode() == "text_usx":
+				hashId = self.insertBibleFileset(inp.typeCode, "text_usx", inp.bibleId, inp.filesetId, bookIdSet)
+				self.insertFilesetConnections(hashId, inp.bibleId)
+				self.insertBibleFiles(hashId, inputFileset, bookIdSet)
+			elif inp.subTypeCode() == "text_format":
+				hashId = self.insertBibleFileset(inp.typeCode, "text_plain", inp.bibleId, inp.filesetId, bookIdSet)
+				self.insertFilesetConnections(hashId, inp.bibleId)
+				self.textUpdater.updateFileset(inp.bibleId, inp.filesetId, hashId, bookIdSet, inp.databasePath)
+				## Future code for text_html
+				#hashId = self.insertBibleFileset(inp.typeCode, "text_format", inp.bibleId, inp.filesetId, bookIdSet)
+				#self.insertFilesetConnections(hashId, inp.bibleId)
+				#self.textUpdater.updateFileset(inp.bibleId, inp.filesetId, hashId, bookIdSet, inp.databasePath)
 
-		tocBooks = self.booksUpdater.getTableOfContents(inp.typeCode, inp.bibleId, inp.filesetId, inp.csvFilename, inp.databasePath)
-		self.booksUpdater.updateBibleBooks(inp.typeCode, inp.bibleId, tocBooks)
+		if inp.subTypeCode() != "text_usx":
+			tocBooks = self.booksUpdater.getTableOfContents(inp.typeCode, inp.bibleId, inp.filesetId, inp.csvFilename, inp.databasePath)
+			self.booksUpdater.updateBibleBooks(inp.typeCode, inp.bibleId, tocBooks)
 		return hashId
 
 
@@ -142,13 +152,12 @@ class UpdateDBPFilesetTables:
 		return UpdateDBPFilesetTables.getSetSizeCode(ntBooks, otBooks)
 
 
-	def insertBibleFileset(self, typeCode, bibleId, filesetId, bookIdSet):
+	def insertBibleFileset(self, typeCode, setTypeCode, bibleId, filesetId, bookIdSet):
 		tableName = "bible_filesets"
 		pkeyNames = ("hash_id",)
 		attrNames = ("id", "asset_id", "set_type_code", "set_size_code")
 		updateRows = []
 		bucket = self.config.s3_vid_bucket if typeCode == "video" else self.config.s3_bucket
-		setTypeCode = UpdateDBPFilesetTables.getSetTypeCode(typeCode, filesetId)
 		hashId = UpdateDBPFilesetTables.getHashId(bucket, filesetId, setTypeCode)
 		setSizeCode = self.getSizeCode(typeCode, hashId, bookIdSet)
 		row = self.db.selectRow("SELECT id, asset_id, set_type_code, set_size_code FROM bible_filesets WHERE hash_id=%s", (hashId,))
@@ -291,5 +300,6 @@ if (__name__ == '__main__'):
 # time python3 load/TestCleanup.py test UNRWFWP1DA16
 # time python3 load/UpdateDBPFilesetTables.py test /Volumes/FCBH/all-dbp-etl-test/ audio/UNRWFW/UNRWFWP1DA
 # time python3 load/UpdateDBPFilesetTables.py test /Volumes/FCBH/all-dbp-etl-test/ audio/UNRWFW/UNRWFWP1DA16
+# time python3 load/UpdateDBPFilesetTables.py
 
 
