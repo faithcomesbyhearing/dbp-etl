@@ -50,7 +50,11 @@ class S3Utility:
 					else:
 						Log.writeLog(self.config)				 		
 			elif inp.typeCode == "text":
-				InputFileset.database.append(inp)
+				subTypeCode = inp.subTypeCode()
+				if inp.subTypeCode() == "text_format":
+					InputFileset.database.append(inp) ## Temp until text_format is ready
+				else:
+					done = self.uploadFileset(s3Bucket, inp)
 
 
 	def uploadFileset(self, s3Bucket, inputFileset):
@@ -78,11 +82,32 @@ class S3Utility:
 
 
 if (__name__ == '__main__'):
+	from SQLUtility import *
+	from UpdateDBPTextFilesets import *
+
 	config = Config.shared()
 	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
 	filesets = InputFileset.filesetCommandLineParser(config, lptsReader)
 	s3 = S3Utility(config)
-	s3.uploadAllFilesets(filesets)
+
+	db = SQLUtility(config)
+	texts = UpdateDBPTextFilesets(config, db, None)
+	results = []
+	for inp in filesets:
+		if inp.typeCode == "text":
+			if inp.locationType == InputFileset.BUCKET:
+				filePath = inp.downloadFiles()
+			else:
+				filePath = inp.fullPath()
+			errorTuple = texts.validateFileset("text_format", inp.bibleId, inp.filesetId, inp.lptsRecord, inp.index, filePath)
+			if errorTuple != None:
+				logger = Log.getLogger(inp.filesetId)
+				logger.messageTuple(errorTuple)
+			else:
+				htmlFormatFileset = texts.createTextFileset(inp)
+				results.append(htmlFormatFileset)
+
+	s3.uploadAllFilesets(filesets + results)
 
 # Successful tests with source on local drive
 # time python3 load/S3Utility.py test /Volumes/FCBH/all-dbp-etl-test/ ENGESVN2DA ENGESVN2DA16
