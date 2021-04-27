@@ -254,7 +254,10 @@ class InputFileset:
 
 	def numberUSXFileset(self, databasePath):
 		if len(self.files[0].name) < 9:
-			directory = self.config.directory_upload_aws + self.filesetPath + os.sep
+			if self.locationType == InputFileset.LOCAL:
+				directory = self.fullPath() + os.sep
+			else:
+				directory = self.config.directory_upload_aws + self.filesetPath + os.sep # download path
 			bibleDB = SqliteUtility(databasePath)
 			resultList = bibleDB.selectList("SELECT code FROM tableContents ORDER BY rowId", ())
 			for index in range(0, len(resultList)):
@@ -268,10 +271,10 @@ class InputFileset:
 				filename = resultList[index] + ".usx"
 				newFilename = pos + filename
 				os.rename(directory + filename, directory + newFilename)
-			self.locationType = InputFileset.LOCAL
-			self.location = self.config.directory_upload_aws
+			if self.locationType == InputFileset.BUCKET:
+				self.locationType = InputFileset.LOCAL
+				self.location = self.config.directory_upload_aws
 			self.files = self._setFilenames() # reload files after renaming
-
 
 
 if (__name__ == '__main__'):
