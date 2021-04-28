@@ -6,23 +6,29 @@
 import os
 import sys
 import pymysql
+from Config import *
+
 
 class SQLUtility:
 
-	def __init__(self, host, port, user, db_name, cursor = 'list'):
+	def __init__(self, config, cursor = 'list'):
 		if cursor == 'dict':
 			pycursor = pymysql.cursors.DictCursor
 		else:
 			pycursor = pymysql.cursors.Cursor
-					
-		self.conn = pymysql.connect(host = host,
-                             		user = user,
-                             		password = os.environ['MYSQL_PASSWD'],
-                             		db = db_name,
-                             		port = port,
+
+		if config.database_tunnel != None:
+			results1 = os.popen(config.database_tunnel).read()
+			print("tunnel opened:", results1)
+
+		self.conn = pymysql.connect(host = config.database_host,
+                             		user = config.database_user,
+                             		password = config.database_passwd,
+                             		db = config.database_db_name,
+                             		port = config.database_port,
                              		charset = 'utf8mb4',
                              		cursorclass = pycursor)
-
+		print("Database '%s' is opened." % (config.database_db_name))
 
 	def close(self):
 		if self.conn != None:
@@ -38,6 +44,19 @@ class SQLUtility:
 			cursor.close()
 		except Exception as err:
 			self.error(cursor, statement, err)
+
+
+	def executeInsert(self, statement, values):
+		cursor = self.conn.cursor()
+		try :
+			cursor.execute(statement, values)
+			self.conn.commit()
+			lastRow = cursor.lastrowid
+			cursor.close()
+			return lastRow
+		except Exception as err:
+			self.error(cursor, statement, err)
+			return None
 
 
 	def executeBatch(self, statement, valuesList):
@@ -59,6 +78,12 @@ class SQLUtility:
 			cursor.close()
 		except Exception as err:
 			self.error(cursor, statement, err)
+
+
+	def displayTransaction(self, statements):
+		for statement in statements:
+			for values in statement[1][:100]: # do first 100 only
+				print(statement[0] % values)
 
 
 	def select(self, statement, values):
@@ -124,6 +149,16 @@ class SQLUtility:
 		return results
 
 
+	def selectMapSet(self, statement, values):
+		resultSet = self.select(statement, values)
+		results = {}
+		for row in resultSet:
+			values = results.get(row[0], set())
+			values.add(row[1])
+			results[row[0]] = values
+		return results		
+
+
 	def error(self, cursor, stmt, error):
 		cursor.close()	
 		print("ERROR executing SQL %s on '%s'" % (error, stmt))
@@ -131,16 +166,10 @@ class SQLUtility:
 		sys.exit()
 
 
-"""
-## Unit Test
-sql = SQLUtility(config)
-count = sql.selectScalar("select count(*) from language_status", None)
-print(count)
-lista = sql.selectList("select title from language_status", None)
-print(lista)
-mapa = sql.selectMap("select id, title from language_status", None)
-print(mapa)
-mapb = sql.selectMapList("select id, title from language_status", None)
-print(mapb)
-sql.close()
-"""
+if (__name__ == '__main__'):
+	config = Config()
+	sql = SQLUtility(config)
+	resultSet = sql.select("SELECT * FROM bibles", ())
+	for row in resultSet:
+		print(row)
+	sql.close()
