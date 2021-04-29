@@ -20,10 +20,11 @@ class UpdateDBPTextFilesets:
 		self.config = config
 		self.db = db
 		self.dbOut = dbOut
+		self.newFilesetId = None
 
 
 	## This is called one fileset at a time by Validate.process
-	def validateFileset(self, bibleId, filesetId, lptsRecord, lptsIndex, fullFilesetPath):
+	def validateFileset(self, subTypeCode, bibleId, filesetId, lptsRecord, lptsIndex, fullFilesetPath):
 		if lptsRecord == None or lptsIndex == None:
 			return((Log.EROR, "has no LPTS record."))
 		iso3 = lptsRecord.ISO()
@@ -41,17 +42,27 @@ class UpdateDBPTextFilesets:
 		direction = self.db.selectScalar("SELECT direction FROM alphabets WHERE script = %s", (scriptId,))
 		if direction not in {"ltr", "rtl"}:
 			return((Log.EROR, "%s script has no direction in alphabets." % (scriptId,)))
+		if subTypeCode == "text_format":
+			self.newFilesetId = filesetId[:6]
+		elif subTypeCode == "text_html":
+			self.newFilesetId = filesetId.split("-")[0] + "-html"
 		cmd = [self.config.node_exe,
 			self.config.publisher_js,
 			fullFilesetPath,
 			self.config.directory_accepted,
-			filesetId, iso3, iso1, direction]
+			self.newFilesetId, iso3, iso1, direction]
 		response = subprocess.run(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=120)
 		if response == None or response.returncode != 0:
 			return((Log.EROR, "BiblePublisher: " + str(response.stderr.decode("utf-8"))))
-		#print("text/%s/%s %s\tINFO" % (bibleId, filesetId, str(response.stdout.decode("utf-8"))))
 		print("BiblePublisher:", str(response.stdout.decode("utf-8")))	
 		return None
+
+
+	def createTextFileset(self, inputFileset):
+		inp = inputFileset
+		textFileset = InputFileset(self.config, inp.location, self.newFilesetId, inp.filesetPath, inp.lptsDamId, inp.typeCode, inp.bibleId, inp.index, inp.lptsRecord)
+		inp.numberUSXFileset(textFileset.databasePath) 
+		return textFileset
 
 
 	def updateFileset(self, bibleId, filesetId, hashId, bookIdSet, databasePath):

@@ -172,6 +172,12 @@ class LPTSExtractReader:
 					statuses = self.filesetIdMap.get(damId, [])
 					statuses.append((status, lptsRecord))
 					self.filesetIdMap[damId] = statuses
+					if "Text" in key: # Put in second key for Text filesets with underscore
+						damId = record[key]
+						damId = damId[:7] + "_" + damId[8:]
+						statuses = self.filesetIdMap.get(damId, [])
+						statuses.append((status, lptsRecord))
+						self.filesetIdMap[damId] = statuses
 		return self.filesetIdMap.get(filesetId[:10], None)
 
 
@@ -345,6 +351,10 @@ class LPTSRecord:
 			status = self.record.get(statusKey)
 			if results.get(damId) == None or status in {"Live", "live"}:
 				results[damId] = status
+				if typeCode == "text":
+					damId = self.record[key]
+					damId = damId[:7] + "_" + damId[8:10]
+					results[damId] = status
 		return results
 
 	## This is for text only, and is identical to DamIdMap, except it returns 10 characters

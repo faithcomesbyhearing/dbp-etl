@@ -107,7 +107,6 @@ if (__name__ == '__main__'):
 	ctrl = DBPLoadController(config, db, lptsReader)
 	if len(sys.argv) != 2:
 		InputFileset.validate = InputFileset.filesetCommandLineParser(config, lptsReader)
-		RunStatus.init(InputFileset.validate)
 		ctrl.repairAudioFileNames(InputFileset.validate)
 		ctrl.validate(InputFileset.validate)
 		if ctrl.updateBibles():
@@ -117,7 +116,6 @@ if (__name__ == '__main__'):
 		for inputFileset in InputFileset.complete:
 			print("Completed: ", inputFileset.filesetId)
 	else:
-		RunStatus.init([])
 		ctrl.updateBibles()
 		ctrl.updateLPTSTables()
 	RunStatus.exit()
@@ -133,6 +131,7 @@ if (__name__ == '__main__'):
 # XXXXXtime python3 load/TestCleanup.py test ENGESVN2DA
 # XXXXXtime python3 load/TestCleanup.py test ENGESVN2DA16
 # time python3 load/TestCleanup.py test HYWWAV
+# time python3 load/TestCleanup.py test HYWWAVN_ET-usx
 # time python3 load/TestCleanup.py test ENGESVP2DV
 # XXXXXtime python3 load/DBPLoadController.py test /Volumes/FCBH/all-dbp-etl-test/ ENGESVN2DA ENGESVN2DA16
 # time python3 load/DBPLoadController.py test /Volumes/FCBH/all-dbp-etl-test/ HYWWAVN2ET

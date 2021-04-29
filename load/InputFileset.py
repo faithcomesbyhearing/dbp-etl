@@ -13,7 +13,9 @@ import json
 from datetime import datetime
 from Log import *
 from Config import *
+from RunStatus import *
 from LPTSExtractReader import *
+from SqliteUtility import *
 from PreValidate import *
 
 class InputFile:
@@ -67,7 +69,7 @@ class InputFileset:
 			lptsData = preValidate.validateFilesetId(filesetId)
 			if lptsData != None:
 				(lptsRecord, damId, typeCode, bibleId, index) = lptsData
-				filesetId = filesetId[:6] if typeCode == "text" else filesetId
+				filesetId = filesetId[:7] + "_" + filesetId[8:] + "-usx" if typeCode == "text" else filesetId
 				preValidate.validateLPTS(typeCode, filesetId, lptsRecord, index)
 				if not preValidate.hasErrors(filesetId):
 					results.append(InputFileset(config, location, filesetId, filesetPath, damId, typeCode, bibleId, index, lptsRecord))
@@ -98,6 +100,7 @@ class InputFileset:
 		self.mediaContainer = None
 		self.mediaCodec = None
 		self.mediaBitrate = None
+		RunStatus.add(filesetId)
 
 
 	def toString(self):
@@ -121,6 +124,9 @@ class InputFileset:
 	def _setFilenames(self):
 		results = []
 		ignoreSet = {"Thumbs.db"}
+		### Future NOTE: If typeCode == text and subTypeCode in {text_html, text_format}
+		### Get the filenames by a select from self.databasePath
+		### This must be coded when we generate text_html or text_format filesets
 		if self.locationType == InputFileset.LOCAL:
 			pathname = self.fullPath()
 			if os.path.isdir(pathname):
@@ -190,6 +196,18 @@ class InputFileset:
 			return self.location + "/" + self.filesetPath
 
 
+	def subTypeCode(self):
+		if self.typeCode == "text":
+			if self.filesetId.endswith("-usx"):
+				return "text_usx"
+			elif self.filesetId.endswith("-html"):
+				return "text_html"
+			else:
+				return "text_format"
+		else:
+			return None
+
+
 	def filenames(self):
 		results = []
 		for file in self.files:
@@ -237,6 +255,30 @@ class InputFileset:
 		return directory
 
 
+	def numberUSXFileset(self, databasePath):
+		if len(self.files[0].name) < 9:
+			if self.locationType == InputFileset.LOCAL:
+				directory = self.fullPath() + os.sep
+			else:
+				directory = self.config.directory_upload_aws + self.filesetPath + os.sep # download path
+			bibleDB = SqliteUtility(databasePath)
+			resultList = bibleDB.selectList("SELECT code FROM tableContents ORDER BY rowId", ())
+			for index in range(0, len(resultList)):
+				num = index + 1
+				if num < 10:
+					pos = "00" + str(num)
+				elif num < 100:
+					pos = "0" + str(num)
+				else:
+					pos = str(num)
+				filename = resultList[index] + ".usx"
+				newFilename = pos + filename
+				os.rename(directory + filename, directory + newFilename)
+			if self.locationType == InputFileset.BUCKET:
+				self.locationType = InputFileset.LOCAL
+				self.location = self.config.directory_upload_aws
+			self.files = self._setFilenames() # reload files after renaming
+
 
 if (__name__ == '__main__'):
 	config = Config()
@@ -245,7 +287,17 @@ if (__name__ == '__main__'):
 	for inp in InputFileset.validate:
 		if inp.typeCode == "text" and inp.locationType == InputFileset.BUCKET:
 			inp.downloadFiles()
+
+			os.remove(inp.databasePath)
+			bibleDB = SqliteUtility(inp.databasePath)
+			print("DatabasePath", inp.databasePath)
+			bibleDB.execute("CREATE TABLE tableContents (code text not null)", ())
+			for file in inp.files:
+				if file.name.endswith(".usx"):
+					bibleDB.execute("INSERT INTO tableContents (code) VALUES (?)", (file.name.split(".")[0],))
+			inp.numberUSXFileset(inp.databasePath)
 		print(inp.toString())
+		print("subtype", inp.subTypeCode())
 	Log.writeLog(config)
 
 # python3 load/InputFileset.py test /Volumes/FCBH/files/complete/audio/ENGESV/ ENGESVN2DA ENGESVN2DA16

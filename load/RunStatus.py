@@ -14,22 +14,16 @@ class RunStatus:
 
 	start = time.time()
 	statusMap = {}
-	statusList = []
+	statusList = [BIBLE, LPTS]
 
 
-	def init(filesets):
-		results = []
-		results.append(RunStatus.BIBLE)
-		for inp in filesets:
-			results.append(inp.filesetId)
-		results.append(RunStatus.LPTS)
-		RunStatus.statusList = results
-		RunStatus.store()		
+	def add(filesetId):
+		RunStatus.statusList.append(filesetId)
 
 
 	def set(name, status):
 		msg = "ok" if status else "failed"
-		name = next(iter([x for x in RunStatus.statusList if x in name]), name)
+		#name = next(iter([x for x in RunStatus.statusList if x in name]), name)
 		RunStatus.statusMap[name] = msg
 		print("********** %s Tables Update %s **********" % (name, msg,))
 		RunStatus.store()
@@ -83,12 +77,11 @@ if __name__ == "__main__":
 	config = Config.shared()
 	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
 	filesets = InputFileset.filesetCommandLineParser(config, lptsReader)
-	RunStatus.init(filesets)
 	time.sleep(1)
-	RunStatus.set(RunStatus.BIBLE, True)
+	RunStatus.set(RunStatus.BIBLE, False)
 	time.sleep(2)
 	for fileset in filesets:
-		RunStatus.set(fileset.filesetId, False)
+		RunStatus.set(fileset.filesetId, True)
 		time.sleep(2)
 	RunStatus.set(RunStatus.LPTS, False)
 

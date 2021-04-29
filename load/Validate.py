@@ -41,17 +41,22 @@ class Validate:
 
 		## Validate Text Filesets
 		texts = UpdateDBPTextFilesets(self.config, self.db, None)
+		results = []
 		for inp in filesets:
 			if inp.typeCode == "text":
 				if inp.locationType == InputFileset.BUCKET:
 					filePath = inp.downloadFiles()
 				else:
 					filePath = inp.fullPath()
-				errorTuple = texts.validateFileset(inp.bibleId, inp.filesetId, inp.lptsRecord, inp.index, filePath)
+				errorTuple = texts.validateFileset("text_format", inp.bibleId, inp.filesetId, inp.lptsRecord, inp.index, filePath)
 				if errorTuple != None:
 					logger = Log.getLogger(inp.filesetId)
-					logger.messageTuple(errorTuple)	
+					logger.messageTuple(errorTuple)
+				else:
+					htmlFormatFileset = texts.createTextFileset(inp)
+					results.append(htmlFormatFileset)
 
+		filesets += results
 		self.validateLPTS(filesets)
 
 		FilenameReducer.openAcceptErrorSet(self.config)
