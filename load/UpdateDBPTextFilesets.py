@@ -61,7 +61,7 @@ class UpdateDBPTextFilesets:
 	def createTextFileset(self, inputFileset):
 		inp = inputFileset
 		textFileset = InputFileset(self.config, inp.location, self.newFilesetId, inp.filesetPath, inp.lptsDamId, inp.typeCode, inp.bibleId, inp.index, inp.lptsRecord)
-		inp.numberUSXFileset(textFileset.databasePath) 
+		inp.numberUSXFileset(textFileset) 
 		return textFileset
 
 

@@ -143,7 +143,7 @@ if (__name__ == '__main__'):
 # time python3 load/TestCleanup.py test HYWWAV
 # time python3 load/TestCleanup.py test ENGESVP2DV
 # time python3 load/DBPLoadController.py test s3://test-dbp-etl ENGESVN2DA
-# time python3 load/DBPLoadController.py test s3://test-dbp-etl text/ENGESV/ENGESVN2DA16
+# time python3 load/DBPLoadController.py test s3://test-dbp-etl ENGESVN2DA16
 # time python3 load/DBPLoadController.py test s3://test-dbp-etl HYWWAVN2ET
 # time python3 load/DBPLoadController.py test s3://test-dbp-etl ENGESVP2DV
 

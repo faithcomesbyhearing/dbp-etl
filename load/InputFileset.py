@@ -252,16 +252,18 @@ class InputFileset:
 					self.config.s3_client.download_file(self.location, objectKey, filepath)
 				except Exception as err:
 					print("ERROR: Download s3://%s/%s failed with error %s" % (self.location, objectKey, err))
+		self.locationType = InputFileset.LOCAL
+		self.location = self.config.directory_upload_aws		
 		return directory
 
 
-	def numberUSXFileset(self, databasePath):
+	def numberUSXFileset(self, processedFileset):
 		if len(self.files[0].name) < 9:
 			if self.locationType == InputFileset.LOCAL:
 				directory = self.fullPath() + os.sep
 			else:
 				directory = self.config.directory_upload_aws + self.filesetPath + os.sep # download path
-			bibleDB = SqliteUtility(databasePath)
+			bibleDB = SqliteUtility(processedFileset.databasePath)
 			resultList = bibleDB.selectList("SELECT code FROM tableContents ORDER BY rowId", ())
 			for index in range(0, len(resultList)):
 				num = index + 1
@@ -274,9 +276,6 @@ class InputFileset:
 				filename = resultList[index] + ".usx"
 				newFilename = pos + filename
 				os.rename(directory + filename, directory + newFilename)
-			if self.locationType == InputFileset.BUCKET:
-				self.locationType = InputFileset.LOCAL
-				self.location = self.config.directory_upload_aws
 			self.files = self._setFilenames() # reload files after renaming
 
 
@@ -295,7 +294,7 @@ if (__name__ == '__main__'):
 			for file in inp.files:
 				if file.name.endswith(".usx"):
 					bibleDB.execute("INSERT INTO tableContents (code) VALUES (?)", (file.name.split(".")[0],))
-			inp.numberUSXFileset(inp.databasePath)
+			inp.numberUSXFileset(inp)
 		print(inp.toString())
 		print("subtype", inp.subTypeCode())
 	Log.writeLog(config)
