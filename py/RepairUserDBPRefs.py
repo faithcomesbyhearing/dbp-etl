@@ -6,6 +6,7 @@ class RepairUserDBPRefs:
 
 	def __init__(self, db):
 		self.db = db
+		self.notFound = set()
 		self.updateRows = []
 
 
@@ -15,29 +16,26 @@ class RepairUserDBPRefs:
 				" WHERE bs.set_type_code IN ('audio', 'audio_drama')"
 				" AND length(bs.id) <= 12" % (dbpName, dbpName))
 		resultSet = self.db.select(sql, ())
-		print("num audio filesets and books", len(resultSet))
+		print("-- num audio filesets and books", len(resultSet))
 
 		filesetMap = {}
 		for (filesetId, bookId) in resultSet:
 			bookSet = filesetMap.get(filesetId, set())
 			bookSet.add(bookId)
 			filesetMap[filesetId] = bookSet
-		print("num audio fileset", len(filesetMap.keys()))
+		print("-- num audio fileset", len(filesetMap.keys()))
 
 		sql = ("SELECT id, playlist_id, fileset_id, book_id FROM %s.playlist_items WHERE fileset_id NOT IN"
 				" (SELECT id FROM %s.bible_filesets) ORDER BY fileset_id, book_id") % (dbpUserName, dbpName)
 		resultSet = self.db.select(sql, ())
 		for (playlistItemId, playlistId, filesetId, bookId) in resultSet:
-			#print(playlistItemId, playlistId, filesetId, bookId)
 			checkFilesetId = filesetId[:6] + "O" + filesetId[7:]
-			#print(checkFilesetId)
 			found = self._checkPlaylists(filesetMap, checkFilesetId, bookId, playlistItemId)
 			if not found:
 				checkFilesetId = filesetId[:6] + "N" + filesetId[7:]
-				#print(checkFilesetId)
 				found = self._checkPlaylists(filesetMap, checkFilesetId, bookId, playlistItemId)
 				if not found:
-					print("Not Found", filesetId, bookId, playlistId, playlistItemId)
+					self.notFound.add((filesetId, bookId))
 		self._generateUpdate(dbpUserName)
 
 
@@ -52,8 +50,10 @@ class RepairUserDBPRefs:
 
 
 	def _generateUpdate(self, dbpUserName):
+		for (filesetId, bookId) in sorted(list(self.notFound)):
+			print("-- NOT FOUND", filesetId, bookId)
 		for (filesetId, playlistItemId) in self.updateRows:
-			sql = "UPDATE %s.playlist_items SET filesetId = '%s' WHERE id = '%s';" % (dbpUserName, filesetId, playlistItemId)
+			sql = "UPDATE %s.playlist_items SET fileset_id = '%s' WHERE id = %s;" % (dbpUserName, filesetId, playlistItemId)
 			print(sql)
 
 
