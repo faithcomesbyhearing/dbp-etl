@@ -7,35 +7,24 @@ import sys
 import re
 import time
 import csv
+from Config import *
+from SQLUtility import *
+from SQLBatchExec import *
 import pymysql
-
-# DEBUG
-#DB_HOST = "localhost"
-#DB_USER = "root"
-#DB_NAME = "dbp"
-#DB_PORT = 3306
-# PROD
-DB_HOST = "127.0.0.1"
-DB_USER = "sa"
-DB_NAME = "dbp_NEWDATA"
-DB_PORT = 3310
-MYSQL_EXE = "/usr/local/mysql/bin/mysql"
 
 
 class DBPv2KeyInsert:
 
-	def __init__(self):
-		db = self.sqlOpen()
-		resultSet = self.sqlSelect(db, "SELECT email from dbp_users.users WHERE email is not NULL", ())
+	def __init__(self, db, dbOut):
+		self.dbOut = dbOut
+		resultSet = db.select("SELECT email from dbp_users.users WHERE email is not NULL", ())
 		self.emailSet = set()
 		for item in resultSet:
 			self.emailSet.add(item[0].lower())
-		resultSet = self.sqlSelect(db, "SELECT `key` from dbp_users.user_keys WHERE `key` is not NULL", ())
+		resultSet = db.select("SELECT `key` from dbp_users.user_keys WHERE `key` is not NULL", ())
 		self.keySet = set()
 		for item in resultSet:
 			self.keySet.add(item[0])
-		self.sqlClose(db)
-		self.statements = []
 
 
 	def process(self, filename):
@@ -59,109 +48,37 @@ class DBPv2KeyInsert:
 				keyId = "@" + key
 				if userEmail.lower() in self.emailSet:
 					print("Did not update user ", userEmail)
-					self.statements.append("SELECT id INTO %s FROM dbp_users.users WHERE `email` = '%s';" % (userId, userEmail))
+					self.dbOut.rawStatement("SELECT id INTO %s FROM dbp_users.users WHERE `email` = '%s';" % (userId, userEmail))
 				else:
 					sql = ("INSERT INTO dbp_users.users (email, v2_id, name, first_name, last_name, password, activated, token, notes)"
 							" VALUES ('%s', 0, '%s', '%s', '%s', '%s', %s, '%s', '%s');" % (userEmail, displayName, firstName, lastName, password, activated, token, notes))
-					self.statements.append(sql)
-					self.statements.append("SET %s = LAST_INSERT_ID();" % (userId))
+					self.dbOut.rawStatement(sql)
+					self.dbOut.rawStatement("SET %s = LAST_INSERT_ID();" % (userId))
 				if key in self.keySet:
 					print("ERROR Duplicate key ", key, "Cannot add key for", userEmail)
 				else:
 					sql = "INSERT INTO dbp_users.user_keys (`user_id`, `key`, `name`) VALUES (%s, '%s', '%s');" % (userId, key, displayName)
-					self.statements.append(sql)
-					self.statements.append("SET %s = LAST_INSERT_ID();" % (keyId))
+					self.dbOut.rawStatement(sql)
+					self.dbOut.rawStatement("SET %s = LAST_INSERT_ID();" % (keyId))
 				for priv in [121, 123, 125]:
 					sql = "INSERT INTO dbp_users.access_group_api_keys (`access_group_id`, `key_id`) VALUES (%s, %s);" % (priv, keyId)
-					self.statements.append(sql)
-
-	def sqlOpen(self):
-		#if config.database_tunnel != None:
-		#	results1 = os.popen(config.database_tunnel).read()
-		#	print("tunnel opened:", results1)
-		conn = pymysql.connect(host = DB_HOST,
-                             		user = DB_USER,
-                             		password = os.environ['MYSQL_PASSWD'],
-                             		db = DB_NAME,
-                             		port = DB_PORT,
-                             		charset = 'utf8mb4',
-                             		cursorclass = pymysql.cursors.Cursor)
-		print("Database '%s' is opened." % (DB_NAME))
-		return conn
-
-
-	def sqlSelect(self, conn, statement, values):
-		cursor = conn.cursor()
-		try:
-			cursor.execute(statement, values)
-			resultSet = cursor.fetchall()
-			cursor.close()
-			return resultSet
-		except Exception as err:
-			cursor.close()	
-			print("ERROR executing SQL %s on '%s'" % (error, stmt))
-			conn.rollback()
-			sys.exit()
-
-
-	def sqlClose(self, conn):
-		if conn != None:
-			conn.close()
-			conn = None
-
-
-	def execute(self, batchName):
-		if len(self.statements) == 0:
-			print("NO INSERT, UPDATE, or DELETE Transactions to process")
-			return True
-		else:
-			pattern = "%y-%m-%d-%H-%M-%S"
-			tranDir = "./" ## we need a config parameter
-			path = tranDir + "Trans-" + batchName + ".sql"
-			print("Transactions", path)
-			tranFile = open(path, "w", encoding="utf-8")
-			tranFile.write("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;\n")
-			tranFile.write("START TRANSACTION;\n")
-			for statement in self.statements:
-				tranFile.write(statement + "\n")
-			tranFile.write("COMMIT;\n")
-			tranFile.write("EXIT\n")
-			tranFile.close()
-			startTime = time.perf_counter()
-			#if self.config.database_tunnel != None:
-			#	results1 = os.popen(self.config.database_tunnel).read()
-			#	print("tunnel opened:", results1)
-			with open(path, "r", encoding="utf-8") as sql:
-				cmd = [MYSQL_EXE, #self.config.mysql_exe, 
-						"-h", DB_HOST, #self.config.database_host, 
-						"-P", str(DB_PORT), #str(self.config.database_port),
-						"-u", DB_USER, #self.config.database_user,
-						"-p" + os.environ['MYSQL_PASSWD'], #self.config.database_passwd,
-						DB_NAME] #self.config.database_db_name]
-				response = subprocess.run(cmd, shell=False, stdin=sql, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=2400)
-				#response = None
-				success = response.returncode == 0
-				print("SQLBATCH:", str(response.stderr.decode('utf-8')))
-				duration = (time.perf_counter() - startTime)
-				print("SQLBATCH execution time", round(duration, 2), "sec for", batchName)
-			self.statements = []
-			self.counts = []
-			return success
+					self.dbOut.rawStatement(sql)
 
 
 if (__name__ == '__main__'):
-	if len(sys.argv) != 2:
-		print("Usage: load/DBPv2KeyInsert.py  filename.csv")
+	if len(sys.argv) != 3:
+		print("Usage: load/DBPv2KeyInsert.py  config_profile  filename.csv")
 		sys.exit()
-	csvFilename = sys.argv[1]
-	#config = Config()
-	#dbOut = SQLBatchExec(config)
-	#keys = DBPv2KeyInsert(config, dbOut)
-	keys = DBPv2KeyInsert()
+	csvFilename = sys.argv[2]
+	config = Config()
+	db = SQLUtility(config)
+	dbOut = SQLBatchExec(config)
+	keys = DBPv2KeyInsert(db, dbOut)
 	keys.process(csvFilename)
-	#dbOut.displayCounts()
-	#dbOut.displayStatements()
-	keys.execute("userkeys")
+	db.close()
+	dbOut.displayCounts()
+	dbOut.displayStatements()
+	#dbOut.execute("userkeys")
 
 # python3 load/DBPv2KeyInsert.py newdata $HOME/Desktop/query_result.csv
 
@@ -220,7 +137,7 @@ select * from the_key_rows;
 
 select k.user_id, k.meta_value, u.user_email, u.display_name
 from the_key_rows k
-join wp_users u on u.id = k.user_id
+join wp_users u on u.id = k.user_id;
 
 select k.user_id, k.meta_value as user_key, u.user_email, u.display_name, fn.meta_value as first_name, ln.meta_value as last_name
 from the_key_rows k
