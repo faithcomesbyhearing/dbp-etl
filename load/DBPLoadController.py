@@ -153,7 +153,7 @@ if (__name__ == '__main__'):
 # time python3 load/DBPLoadController.py test /Volumes/FCBH/all-dbp-etl-test/ audio/UNRWFW/UNRWFWP1DA16
 
 # Some video uploads
-# time python3 load/TestCleanup.py test ENGESVP2DV
+# time python3 load/TestCleanup.py test-video ENGESVP2DV
 # time python3 load/DBPLoadController.py test-video /Volumes/FCBH/all-dbp-etl-test/ ENGESVP2DV
 # time python3 load/DBPLoadController.py test-video /Volumes/FCBH/all-dbp-etl-test/ video/ENGESV/ENGESVP2DV
 # time python3 load/DBPLoadController.py test-video /Volumes/FCBH/all-dbp-etl-test/ video/ENGESX/ENGESVP2DV
