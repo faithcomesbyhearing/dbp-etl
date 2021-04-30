@@ -11,14 +11,17 @@ from DBPRunFilesS3 import *
 class RunStatus:
 	BIBLE = "BIBLE"
 	LPTS = "LPTS"
+	NOT_DONE = "not done"
 
 	start = time.time()
-	statusMap = {}
-	statusList = [BIBLE, LPTS]
+	#statusMap = {}
+	#statusList = [BIBLE, LPTS]
+	statusMap = { BIBLE: NOT_DONE, LPTS: NOT_DONE }
 
 
 	def add(filesetId):
-		RunStatus.statusList.append(filesetId)
+		#RunStatus.statusList.append(filesetId)
+		RunStatus.statusMap[filesetId] = RunStatus.NOT_DONE
 
 
 	def set(name, status):
@@ -39,11 +42,12 @@ class RunStatus:
 
 
 	def store():
-		results = []
-		for name in RunStatus.statusList:
-			status = RunStatus.statusMap.get(name, "not done")
-			results.append(name + ": " + status)
-		statusMsg = ", ".join(results)
+		#results = []
+		#for name in RunStatus.statusList:
+		#	status = RunStatus.statusMap.get(name, "not done")
+		#	results.append(name + ": " + status)
+		#statusMsg = ", ".join(results)
+		statusMsg = ", ".join(RunStatus.statusMap)
 		client = Config.shared().s3_client
 		bucket = Config.shared().s3_artifacts_bucket
 		key = DBPRunFilesS3.s3KeyPrefix + "/metadata"
@@ -57,7 +61,7 @@ class RunStatus:
 			print("RunStatus Metadata Download error", err)
 		try:
 			metadata["status"] = statusMsg
-			#print("WRITE", metadata.get("status"))
+			print("WRITE", metadata.get("status"))
 			client.put_object(Bucket=bucket, Key=key, Metadata=metadata, ACL='bucket-owner-full-control')
 		except Exception as err:
 			print("RunStatus Metadata Upload error", err)
