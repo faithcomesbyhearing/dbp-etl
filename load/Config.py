@@ -153,6 +153,3 @@ if (__name__ == '__main__'):
 	print("User", config.database_user)
 	print("DB", config.database_db_name)
 	print("Publisher", config.publisher_js)
-
-
-
