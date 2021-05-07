@@ -24,17 +24,12 @@ s3.vid_bucket	= dbp-vid
 s3.aws_profile	= FCBH_DBP_DEV
 
 ## directories for staging files being processed
-directory.validate	= /????/files/validate/
-directory.uploading = /????/files/uploading/
-directory.uploaded	= /????/files/uploaded/
-directory.database	= /????/files/database/
-directory.complete	= /????/files/complete/
+directory.upload_aws = /????/files/upload_aws/
 
 ## directories for storing in-process files
 directory.quarantine = /????/files/active/quarantine/
 directory.duplicate = /????/files/active/duplicate/
 directory.accepted = /????/files/active/accepted/
-directory.transcoded = /????/files/active/transcoded/
 
 ## audio transcoder settings
 audio.transcoder.region	= us-east-1
