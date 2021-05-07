@@ -15,6 +15,7 @@ from Log import *
 from Config import *
 from LPTSExtractReader import *
 from PreValidate import *
+from AWSSession import *
 
 class InputFile:
 
@@ -137,7 +138,7 @@ class InputFileset:
 			request = { 'Bucket': self.location, 'MaxKeys': 1000, 'Prefix': self.filesetPath + "/" }
 			hasMore = True
 			while hasMore:
-				response = self.config.s3_client.list_objects_v2(**request)
+				response = AWSSession.shared().s3Client.list_objects_v2(**request)
 				for item in response.get('Contents', []):
 					objKey = item.get('Key')
 					filename = objKey[len(self.filesetPath) + 1:]
@@ -155,7 +156,7 @@ class InputFileset:
 
 	def setFileSizes(self):
 		request = { 'Bucket': self.location, 'MaxKeys': 1000, 'Prefix': self.filesetPrefix + "/" }
-		response = self.config.s3_client.list_objects_v2(**request)
+		response = AWSSession.shared().s3Client.list_objects_v2(**request)
 		contents = response['Contents']
 		for item in contents:
 			key = item['Key']
@@ -231,7 +232,7 @@ class InputFileset:
 				filepath = directory + os.sep + file.name
 				try:
 					print("Download s3://%s/%s to %s" % (self.location, objectKey, filepath))
-					self.config.s3_client.download_file(self.location, objectKey, filepath)
+					AWSSession.shared().s3Client.download_file(self.location, objectKey, filepath)
 				except Exception as err:
 					print("ERROR: Download s3://%s/%s failed with error %s" % (self.location, objectKey, err))
 		return directory
