@@ -5,7 +5,7 @@ import csv
 import boto3
 from S3Utility import *
 from RunStatus import *
-
+from AWSSession import *
 
 class TranscodeVideo:
 
@@ -32,21 +32,13 @@ class TranscodeVideo:
 	def __init__(self, config, filesetPrefix):
 		self.config = config
 		self.filesetPrefix = filesetPrefix
-		session = boto3.Session(profile_name=config.video_aws_profile)
-		self.client = session.client('elastictranscoder', region_name=config.video_transcoder_region)
+		self.client = AWSSession.shared().elasticTranscoder()
 		self.videoPipeline = config.video_transcoder_pipeline
 		self.hls_audio_video_1080p = config.video_preset_hls_1080p
 		self.hls_audio_video_720p = config.video_preset_hls_720p
 		self.hls_audio_video_480p = config.video_preset_hls_480p
 		self.hls_audio_video_360p = config.video_preset_hls_360p
 		self.web_audio_video = config.video_preset_web
-		## production values
-		#self.video_pipeline = '1537458645466-6z62tx'
-		#self.hls_audio_video_1080p = '1556116949562-tml3vh'
-		#self.hls_audio_video_720p = '1538163744878-tcmmai'
-		#self.hls_audio_video_480p = '1538165037865-dri6c1'
-		#self.hls_audio_video_360p = '1556118465775-ps3fba'
-		#self.web_audio_video = '1351620000001-100070'
 		self.openJobs = []
 
 

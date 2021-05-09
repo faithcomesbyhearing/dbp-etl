@@ -74,9 +74,16 @@ class Config:
 		self.s3_vid_bucket = self._get("s3.vid_bucket")
 		self.s3_artifacts_bucket = self._get("s3.artifacts_bucket")
 		self.s3_aws_profile = self._getOptional("s3.aws_profile")
-		session = boto3.Session(profile_name=self.s3_aws_profile)
-		self.s3_client = session.client('s3')
+		session = boto3.Session(profile_name=self.s3_aws_profile)  ## deprecated, should be AWSSession, remove
+		self.s3_client = session.client('s3')  ## deprecated, should be AWSSession, remove from here
 		self.s3_aws_role = self._getOptional("s3.aws_role")
+		self.s3_aws_role_profile = self._getOptional("s3.aws_role_profile")
+		if self.s3_aws_role == None and self.s3_aws_role_profile != None:
+			print("ERROR: s3.aws_role_profile is present, but s3.aws_role is absent.")
+			sys.exit()
+		if self.s3_aws_role != None and self.s3_aws_role_profile == None:
+			print("ERROR: s3.aws_role is present, but s3.aws_role_profile is absent.")
+			sys.exit()
 
 		if programRunning in {"AudioHLS.py"}:
 			self.directory_audio_hls = self._getPath("directory.audio_hls") #"%s/FCBH/files/tmp" % (self.home)
@@ -95,16 +102,11 @@ class Config:
 			self.video_preset_hls_480p = self._get("video.preset.hls.480p")
 			self.video_preset_hls_360p = self._get("video.preset.hls.360p")
 			self.video_preset_web = self._get("video.preset.web")
-			self.video_aws_profile = self._getOptional("video.aws_profile")
 
 			self.directory_bucket_list = self._getPath("directory.bucket_list")
 			self.filename_lpts_xml = self._getPath("filename.lpts_xml")
 
 			self.directory_upload_aws = self._getPath("directory.upload_aws")
-			#self.directory_upload = self._getPath("directory.upload")
-			#self.directory_database	= self._getPath("directory.database")
-			#self.directory_complete	= self._getPath("directory.complete")
-
 			self.directory_quarantine = self._getPath("directory.quarantine")
 			self.directory_duplicate = self._getPath("directory.duplicate")
 			self.directory_accepted = self._getPath("directory.accepted")

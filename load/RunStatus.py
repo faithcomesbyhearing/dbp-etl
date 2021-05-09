@@ -6,6 +6,7 @@ import boto3
 import time
 from Config import *
 from DBPRunFilesS3 import *
+from AWSSession import *
 
 
 class RunStatus:
@@ -39,7 +40,8 @@ class RunStatus:
 
 	def store():
 		statusMsg = ", ".join(RunStatus.statusMap)
-		client = Config.shared().s3_client
+		client = Config.shared().s3_client  ## DEPRECATED
+		#client = AWSSession.shared().s3Client
 		bucket = Config.shared().s3_artifacts_bucket
 		key = DBPRunFilesS3.s3KeyPrefix + "/metadata"
 		metadata = {}

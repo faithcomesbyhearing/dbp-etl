@@ -10,6 +10,7 @@ import shutil
 import subprocess
 from Log import *
 from Config import *
+from AWSSession import *
 from InputFileset import *
 from TranscodeVideo import *
 from FilenameParser import *
@@ -19,12 +20,11 @@ class S3Utility:
 
 	def __init__(self, config):
 		self.config = config
-		session = boto3.Session(profile_name=config.s3_aws_profile)
-		self.client = session.client('s3')
+		AWSSession.shared() # ensure init
 
 
 	def getAsciiObject(self, s3Bucket, s3Key):
-		obj = self.client.get_object(Bucket=s3Bucket, Key=s3Key)
+		obj = AWSSession.shared().s3Client.get_object(Bucket=s3Bucket, Key=s3Key)
 		content = obj['Body'].read().decode('ascii')
 		return content
 
@@ -34,11 +34,6 @@ class S3Utility:
 			s3Bucket = self.config.s3_vid_bucket if inp.typeCode == "video" else self.config.s3_bucket
 			if inp.typeCode == "video":
 				self.uploadFileset(s3Bucket, inp)
-				#if done:
-				#	print("Upload %s succeeded." % (inp.filesetPrefix,))
-				#else:
-				#	print("Upload %s FAILED." % (inp.filesetPrefix,))
-
 			elif inp.typeCode == "audio":
 				self.uploadFileset(s3Bucket, inp)
 				transcoder = AWSTranscoder(self.config)
@@ -60,10 +55,7 @@ class S3Utility:
 
 	def uploadFileset(self, s3Bucket, inputFileset):
 		inp = inputFileset
-		if self.config.s3_aws_profile == None:
-			profile = ""
-		else:
-			profile = "--profile %s" % (self.config.s3_aws_profile)
+		profile = AWSSession.shared().profile()
 		if inp.locationType == InputFileset.LOCAL:
 			source = inp.fullPath()
 		else:

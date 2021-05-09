@@ -101,7 +101,8 @@ class DBPLoadController:
 
 
 if (__name__ == '__main__'):
-	config = Config.shared()
+	config = Config()
+	AWSSession.shared() # ensure AWSSession init
 	db = SQLUtility(config)
 	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
 	ctrl = DBPLoadController(config, db, lptsReader)
@@ -127,6 +128,11 @@ if (__name__ == '__main__'):
 # aws s3 --profile Gary sync /Volumes/FCBH/all-dbp-etl-test/HYWWAVN2ET s3://test-dbp-etl/HYWWAVN2ET
 # aws s3 --profile Gary sync /Volumes/FCBH/all-dbp-etl-test/ENGESVP2DV s3://test-dbp-etl/ENGESVP2DV
 
+# aws s3 --profile dbp-etl-dev sync /Volumes/FCBH/all-dbp-etl-test/ENGESVN2DA s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr/ENGESVN2DA
+# aws s3 --profile dbp-etl-dev sync /Volumes/FCBH/all-dbp-etl-test/ENGESVN2DA16 s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr/audio/ENGESV/ENGESVN2DA16
+# aws s3 --profile dbp-etl-dev sync /Volumes/FCBH/all-dbp-etl-test/HYWWAVN2ET s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr/HYWWAVN2ET
+# aws s3 --profile dbp-etl-dev sync /Volumes/FCBH/all-dbp-etl-test/ENGESVP2DV s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr/ENGESVP2DV
+
 # Successful tests with source on local drive
 # XXXXXtime python3 load/TestCleanup.py test ENGESVN2DA
 # XXXXXtime python3 load/TestCleanup.py test ENGESVN2DA16
@@ -134,8 +140,11 @@ if (__name__ == '__main__'):
 # time python3 load/TestCleanup.py test HYWWAVN_ET-usx
 # time python3 load/TestCleanup.py test ENGESVP2DV
 # XXXXXtime python3 load/DBPLoadController.py test /Volumes/FCBH/all-dbp-etl-test/ ENGESVN2DA ENGESVN2DA16
+# time python3 load/DBPLoadController.py test /Volumes/FCBH/all-dbp-etl-test/ ENGESVN2DA16
 # time python3 load/DBPLoadController.py test /Volumes/FCBH/all-dbp-etl-test/ HYWWAVN2ET
 # time python3 load/DBPLoadController.py test-video /Volumes/FCBH/all-dbp-etl-test/ ENGESVP2DV
+
+# time python3 load/DBPLoadController.py test-video s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr HYWWAVN2ET
 
 # Successful tests with source on s3
 # time python3 load/TestCleanup.py test ENGESVN2DA
@@ -170,6 +179,9 @@ if (__name__ == '__main__'):
 
 # No parameter
 # time python3 load/DBPLoadController.py test
+
+
+# dbp-etl-upload-dev-zrg0q2rhv7shv7hr
 
 
 

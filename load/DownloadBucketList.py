@@ -10,6 +10,8 @@ import os
 import sys
 import datetime
 from Config import *
+from AWSSession import *
+
 
 class DownloadBucketList:
 
@@ -20,8 +22,7 @@ class DownloadBucketList:
 		pathname = self.config.directory_bucket_list + "%s.txt" % (bucketName)
 		out = io.open(pathname, mode="w", encoding="utf-8")
 
-		session = boto3.Session(profile_name=self.config.s3_aws_profile)
-		client = session.client('s3')
+		client = AWSSession.shared().s3Client
 
 		request = { 'Bucket':bucketName, 'MaxKeys':1000 }
 		# Bucket, Delimiter, EncodingType, Market, MaxKeys, Prefix

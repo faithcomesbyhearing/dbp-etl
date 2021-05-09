@@ -13,9 +13,9 @@ class AWSSession:
 
 
 	def __init__(self):
-		config = Config.shared()
-		session = boto3.Session(profile_name=config.s3_aws_profile)
-		if config.s3_aws_role == None:
+		self.config = Config.shared()
+		session = boto3.Session(profile_name=self.config.s3_aws_profile)
+		if self.config.s3_aws_role == None:
 			self.s3Client = session.client('s3')
 		else:
 			# The calls to AWS STS AssumeRole must be signed with the access key ID
@@ -35,7 +35,7 @@ class AWSSession:
 			# Call the assume_role method of the STSConnection object and pass the role
 			# ARN and a role session name.
 			assumedRoleObject = stsClient.assume_role(
-				RoleArn = config.s3_aws_role,
+				RoleArn = self.config.s3_aws_role,
 			    RoleSessionName = "AssumeRoleSession1"
 			)
 			#print("role", assumedRoleObject)
@@ -54,7 +54,34 @@ class AWSSession:
 			    aws_secret_access_key = credentials['SecretAccessKey'],
 			    aws_session_token = credentials['SessionToken'],
 			)
+			print("Created role based session on role", self.config.s3_aws_role)
 
+
+	def elasticTranscoder(self):
+		session = boto3.Session(profile_name=self.config.s3_aws_profile)
+		stsClient = session.client('sts')
+		assumedRoleObject = stsClient.assume_role(
+			RoleArn = self.config.s3_aws_role,
+		    RoleSessionName = "AssumeRoleSession2"
+		)
+		credentials = assumedRoleObject['Credentials']
+		transcoderClient = boto3.client(
+		    'elastictranscoder',
+		    aws_access_key_id = credentials['AccessKeyId'],
+		    aws_secret_access_key = credentials['SecretAccessKey'],
+		    aws_session_token = credentials['SessionToken'],
+		    region_name = self.config.video_transcoder_region
+		)
+		return transcoderClient
+
+
+	def profile(self):
+		if self.config.s3_aws_role_profile != None:
+			return "--profile %s" % (self.config.s3_aws_role_profile)
+		elif self.config.s3_aws_profile != None:
+			return "--profile %s" % (self.config.s3_aws_profile)
+		else:
+			return ""		
 
 
 # Unit Test
@@ -63,7 +90,6 @@ if (__name__ == '__main__'):
 	#for bucket in session.s3Client.buckets.all():
 	response = session.s3Client.list_buckets()
 	for bucket in response['Buckets']:
-    	#buckets += {bucket["Name"]}
 		print(bucket['Name'])
 	
 
