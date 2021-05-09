@@ -40,8 +40,7 @@ class RunStatus:
 
 	def store():
 		statusMsg = ", ".join(RunStatus.statusMap)
-		client = Config.shared().s3_client  ## DEPRECATED
-		#client = AWSSession.shared().s3Client
+		client = AWSSession.shared().s3Client
 		bucket = Config.shared().s3_artifacts_bucket
 		key = DBPRunFilesS3.s3KeyPrefix + "/metadata"
 		metadata = {}
@@ -82,5 +81,5 @@ if __name__ == "__main__":
 		time.sleep(2)
 	RunStatus.set(RunStatus.LPTS, False)
 
-# python3 load/RunStatus.py test s3://test-dbp audio/ENGESV/ENGESVN2DA  audio/ENGESV/ENGESVN2DA16
+# python3 load/RunStatus.py test s3://test-dbp audio/ENGESV/ENGESVN2DA
 

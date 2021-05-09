@@ -74,8 +74,8 @@ class Config:
 		self.s3_vid_bucket = self._get("s3.vid_bucket")
 		self.s3_artifacts_bucket = self._get("s3.artifacts_bucket")
 		self.s3_aws_profile = self._getOptional("s3.aws_profile")
-		session = boto3.Session(profile_name=self.s3_aws_profile)  ## deprecated, should be AWSSession, remove
-		self.s3_client = session.client('s3')  ## deprecated, should be AWSSession, remove from here
+		#session = boto3.Session(profile_name=self.s3_aws_profile)  ## deprecated, should be AWSSession, remove
+		#self.s3_client = session.client('s3')  ## deprecated, should be AWSSession, remove from here
 		self.s3_aws_role = self._getOptional("s3.aws_role")
 		self.s3_aws_role_profile = self._getOptional("s3.aws_role_profile")
 		if self.s3_aws_role == None and self.s3_aws_role_profile != None:

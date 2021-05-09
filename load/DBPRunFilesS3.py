@@ -4,6 +4,8 @@ import os
 from datetime import datetime
 import boto3
 from Config import *
+from AWSSession import *
+
 
 class DBPRunFilesS3:
 
@@ -26,8 +28,7 @@ class DBPRunFilesS3:
 
 	def uploadObject(config, key, filepath, contentType):
 		s3Key = DBPRunFilesS3.s3KeyPrefix + "/" + key
-		session = boto3.Session(profile_name=config.s3_aws_profile)
-		client = session.client('s3')
+		client = AWSSession.shared().s3Client
 		bucket = config.s3_artifacts_bucket
 		#print(s3Key, filepath)
 		try:
@@ -37,8 +38,7 @@ class DBPRunFilesS3:
 
 
 	def __init__(self, config):
-		session = boto3.Session(profile_name=config.s3_aws_profile)
-		self.client = session.client('s3')
+		self.client = AWSSession.shared().s3Client
 		self.bucket = config.s3_artifacts_bucket
 
 
