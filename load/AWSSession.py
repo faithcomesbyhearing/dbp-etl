@@ -59,19 +59,22 @@ class AWSSession:
 
 	def elasticTranscoder(self):
 		session = boto3.Session(profile_name=self.config.s3_aws_profile)
-		stsClient = session.client('sts')
-		assumedRoleObject = stsClient.assume_role(
-			RoleArn = self.config.s3_aws_role,
-		    RoleSessionName = "AssumeRoleSession2"
-		)
-		credentials = assumedRoleObject['Credentials']
-		transcoderClient = boto3.client(
-		    'elastictranscoder',
-		    aws_access_key_id = credentials['AccessKeyId'],
-		    aws_secret_access_key = credentials['SecretAccessKey'],
-		    aws_session_token = credentials['SessionToken'],
-		    region_name = self.config.video_transcoder_region
-		)
+		if self.config.s3_aws_role == None:
+			transcoderClient = session.client('elastictranscoder', region_name=config.video_transcoder_region)
+		else:
+			stsClient = session.client('sts')
+			assumedRoleObject = stsClient.assume_role(
+				RoleArn = self.config.s3_aws_role,
+			    RoleSessionName = "AssumeRoleSession2"
+			)
+			credentials = assumedRoleObject['Credentials']
+			transcoderClient = boto3.client(
+			    'elastictranscoder',
+			    aws_access_key_id = credentials['AccessKeyId'],
+			    aws_secret_access_key = credentials['SecretAccessKey'],
+			    aws_session_token = credentials['SessionToken'],
+			    region_name = self.config.video_transcoder_region
+			)
 		return transcoderClient
 
 
