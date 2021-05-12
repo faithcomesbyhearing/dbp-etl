@@ -124,9 +124,9 @@ if (__name__ == '__main__'):
 # Clean up filesets in dbp-stating and dbp-vid-staging
 
 # Prepare by getting some local data into a test bucket
-# aws s3 --profile dbp-etl-dev sync /Volumes/FCBH/all-dbp-etl-test/audio/UNRWFW/UNRWFWP1DA s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr/UNRWFWP1DA
-# aws s3 --profile dbp-etl-dev sync /Volumes/FCBH/all-dbp-etl-test/HYWWAVN2ET s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr/HYWWAVN2ET
-# aws s3 --profile dbp-etl-dev sync /Volumes/FCBH/all-dbp-etl-test/ENGESVP2DV s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr/ENGESVP2DV
+# aws s3 --profile dbp-etl-dev sync --acl bucket-owner-full-control /Volumes/FCBH/all-dbp-etl-test/audio/UNRWFW/UNRWFWP1DA s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr/UNRWFWP1DA
+# aws s3 --profile dbp-etl-dev sync --acl bucket-owner-full-control /Volumes/FCBH/all-dbp-etl-test/HYWWAVN2ET s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr/HYWWAVN2ET
+# aws s3 --profile dbp-etl-dev sync --acl bucket-owner-full-control /Volumes/FCBH/all-dbp-etl-test/ENGESVP2DV s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr/ENGESVP2DV
 
 # Successful tests with source on local drive
 # time python3 load/TestCleanup.py test HYWWAV
@@ -137,6 +137,7 @@ if (__name__ == '__main__'):
 
 # Successful tests with source on s3
 # time python3 load/TestCleanup.py test UNRWFWP1DA
+# time python3 load/TestCleanup.py test UNRWFWP1DA-opus16
 # time python3 load/TestCleanup.py test HYWWAV
 # time python3 load/TestCleanup.py test HYWWAVN_ET-usx
 # time python3 load/TestCleanup.py test ENGESVP2DV
@@ -144,7 +145,11 @@ if (__name__ == '__main__'):
 # time python3 load/DBPLoadController.py test s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr HYWWAVN2ET
 # time python3 load/DBPLoadController.py test s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr ENGESVP2DV
 
-### Additional Tests
+# Combined test of two dissimilar filesets on s3
+# time python3 load/TestCleanup.py test UNRWFWP1DA
+# time python3 load/TestCleanup.py test HYWWAV
+# time python3 load/TestCleanup.py test HYWWAVN_ET-usx
+# time python3 load/DBPLoadController.py test s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr UNRWFWP1DA HYWWAVN2ET
 
 # Some video uploads
 # time python3 load/TestCleanup.py test-video ENGESVP2DV
@@ -152,15 +157,13 @@ if (__name__ == '__main__'):
 # time python3 load/DBPLoadController.py test /Volumes/FCBH/all-dbp-etl-test/ video/ENGESV/ENGESVP2DV
 # time python3 load/DBPLoadController.py test /Volumes/FCBH/all-dbp-etl-test/ video/ENGESX/ENGESVP2DV
 
-# Successful tests with source on local drive
-# time python3 load/TestCleanup.py test HYWWAV
+# Successful tests with source on local drive and full path
 # time python3 load/TestCleanup.py test GNWNTM
-# time python3 load/DBPLoadController.py test s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr HYWWAVN2ET
+# time python3 load/TestCleanup.py test GNWNTMN_ET-usx
 # time python3 load/DBPLoadController.py test /Volumes/FCBH/all-dbp-etl-test/ GNWNTMN2ET
+# time python3 load/TestCleanup.py test GNWNTM
+# time python3 load/TestCleanup.py test GNWNTMN_ET-usx
 # time python3 load/DBPLoadController.py test /Volumes/FCBH/all-dbp-etl-test/ text/GNWNTM/GNWNTMN2ET
-
-# Audio Transcoder Test
-# time python3 load/DBPLoadController.py test s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr UNRWFWP1DA
 
 # No parameter
 # time python3 load/DBPLoadController.py test
