@@ -227,7 +227,7 @@ class UpdateDBPBooksTable:
 						tocBook = TOCBook(bookId, bookSeq, bookName, bookName, None)
 						tocBooks.append(tocBook)
 						bookChapterMap[bookId] = [chapter]
-					elif chapter != priorChapter:
+					elif chapter != priorChapter and chapter.isdigit():
 						chapters = bookChapterMap[bookId]
 						chapters.append(chapter)
 						bookChapterMap[bookId] = chapters
