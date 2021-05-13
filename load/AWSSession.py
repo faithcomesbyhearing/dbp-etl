@@ -60,7 +60,7 @@ class AWSSession:
 	def elasticTranscoder(self):
 		session = boto3.Session(profile_name=self.config.s3_aws_profile)
 		if self.config.s3_aws_role == None:
-			transcoderClient = session.client('elastictranscoder', region_name=config.video_transcoder_region)
+			transcoderClient = session.client('elastictranscoder', region_name=self.config.video_transcoder_region)
 		else:
 			stsClient = session.client('sts')
 			assumedRoleObject = stsClient.assume_role(
