@@ -60,7 +60,7 @@ class DBPv2KeyInsert:
 					sql = "INSERT INTO dbp_users.user_keys (`user_id`, `key`, `name`) VALUES (%s, '%s', '%s');" % (userId, key, displayName)
 					self.dbOut.rawStatement(sql)
 					self.dbOut.rawStatement("SET %s = LAST_INSERT_ID();" % (keyId))
-				for priv in [121, 123, 125]:
+				for priv in [121, 123, 125, 191, 193]:
 					sql = "INSERT INTO dbp_users.access_group_api_keys (`access_group_id`, `key_id`) VALUES (%s, %s);" % (priv, keyId)
 					self.dbOut.rawStatement(sql)
 
