@@ -39,7 +39,10 @@ class RunStatus:
 
 
 	def store():
-		statusMsg = ", ".join(RunStatus.statusMap)
+		result = []
+		for (name, value) in RunStatus.statusMap.items():
+			result.append("%s=%s" % (name, value))
+		statusMsg = ", ".join(result)
 		client = AWSSession.shared().s3Client
 		bucket = Config.shared().s3_artifacts_bucket
 		key = DBPRunFilesS3.s3KeyPrefix + "/metadata"
@@ -81,5 +84,5 @@ if __name__ == "__main__":
 		time.sleep(2)
 	RunStatus.set(RunStatus.LPTS, False)
 
-# python3 load/RunStatus.py test s3://test-dbp audio/ENGESV/ENGESVN2DA
+# python3 load/RunStatus.py test s3://dbp-etl-artifacts-dev audio/ENGESV/ENGESVN2DA
 
