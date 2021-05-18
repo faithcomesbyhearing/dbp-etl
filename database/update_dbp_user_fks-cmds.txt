@@ -35,6 +35,9 @@ ALTER TABLE user_notes ADD CONSTRAINT FK_books_user_notes FOREIGN KEY (book_id) 
 
 ALTER TABLE user_playlists DROP FOREIGN KEY FK_languages_playlists%
 ALTER TABLE user_playlists ADD CONSTRAINT FK_languages_playlists FOREIGN KEY (language_id) REFERENCES dbp_201014.languages (id) ON UPDATE CASCADE%
+#ALTER TABLE user_playlists DROP FOREIGN KEY FK_filesets_playlists%
+#ALTER TABLE user_playlists ADD CONSTRAINT FK_filesets_playlists FOREIGN KEY (fileset_id) REFERENCES dbp_201014.bible_filesets (id) ON UPDATE CASCADE%
+
 
 DELIMITER ;
 SET FOREIGN_KEY_CHECKS=1;
