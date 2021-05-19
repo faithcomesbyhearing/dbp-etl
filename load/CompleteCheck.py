@@ -98,10 +98,11 @@ class CompleteCheck:
 					for index in indexes:
 						damIdMap = rec.DamIdMap(typeCode, index)
 						for (damId, status) in damIdMap.items():
-							if status in {"Live", "live"}:
-								if damId not in filesetIds:
-									missing.append("%s %s %d %s Has no bible_filesets record." % (damId, typeCode, index, rec.Reg_StockNumber()))
-									#print(rec.Reg_StockNumber(), typeCode, index, damId, "Has no bible_filesets record.")
+							if damId[-3:] != "_ET":
+								if status in {"Live", "live"}:
+									if damId not in filesetIds:
+										missing.append("%s %s %d %s Has no bible_filesets record." % (damId, typeCode, index, rec.Reg_StockNumber()))
+										#print(rec.Reg_StockNumber(), typeCode, index, damId, "Has no bible_filesets record.")
 		for missed in sorted(missing):
 			print(missed)
 
