@@ -42,6 +42,7 @@ class LPTSExtractReader:
 		self.bibleIdMap = self.getBibleIdMap()
 		self.filesetIdMap = None
 		self.filesetIdMap10 = None
+		self.stockNumMap = None
 		print("LPTS Extract with %d records and %d BibleIds is loaded." % (len(self.resultSet), len(self.bibleIdMap.keys())))
 
 
@@ -83,19 +84,20 @@ class LPTSExtractReader:
 		return bibleIdMap
 
 
-	## Generates a Map Records where stock number is the Key {stockNum: LPTSRecord}
-	def getStockNumberMap(self):
-		stockNumMap = {}
-		for rec in self.resultSet:
-			stockNum = rec.Reg_StockNumber()
-			if stockNum != None:
-				if stockNumMap.get(stockNum) == None:
-					stockNumMap[stockNum] = rec
+	## Returns the LPTS Record for a stockNumber
+	def getByStockNumber(self, stockNumber):
+		if self.stockNumMap == None:
+			self.stockNumMap = {}
+			for rec in self.resultSet:
+				stockNum = rec.Reg_StockNumber()
+				if stockNum != None:
+					if self.stockNumMap.get(stockNum) == None:
+						self.stockNumMap[stockNum] = rec
+					else:
+						print("ERROR: Duplicate Stock Num", stockNum);
 				else:
-					print("ERROR: Duplicate Stock Num", stockNum);
-			else:
-				print("ERROR: Record has no stock number")
-		return stockNumMap
+					print("ERROR: Record has no stock number")
+		return self.stockNumMap.get(stockNumber)
 
 
 	## Returns one (record, index) for typeCode, bibleId, filesetId
@@ -357,25 +359,48 @@ class LPTSRecord:
 					results[damId] = status
 		return results
 
-	## This is for text only, and is identical to DamIdMap, except it returns 10 characters
-	def TextDamIdMap(self, index):
-		if not index in {1, 2, 3}:
-			print("ERROR: Unknown DamId index '%s', 1,2, or 3 expected." % (index))
-			sys.exit()
-		if index == 1:
-			damIdDict = LPTSRecord.text1DamIdDict
-		elif index == 2:
-			damIdDict = LPTSRecord.text2DamIdDict
-		elif index == 3:
-			damIdDict = LPTSRecord.text3DamIdDict
+
+	## This method is used to discover DamIds in a record when it is the stockNo that is known
+	## It returns a list of tuples (DamId, index, status, fieldName)
+	def DamIdList(self, typeCode):
+		if not typeCode in {"audio", "text", "video"}:
+			print("ERROR: Unknown typeCode '%s', audio, text, or video is expected." % (typeCode))
+		if typeCode == "audio":
+			damIdDict = {**LPTSRecord.audio1DamIdDict,
+						**LPTSRecord.audio2DamIdDict,
+						**LPTSRecord.audio3DamIdDict}
+		elif typeCode == "text":
+			damIdDict = {**LPTSRecord.text1DamIdDict,
+						**LPTSRecord.text2DamIdDict,
+						**LPTSRecord.text3DamIdDict}
+		elif typeCode == "video":
+			damIdDict = LPTSRecord.videoDamIdDict
+		else:
+			damIdDict = {}
 		hasKeys = set(damIdDict.keys()).intersection(set(self.record.keys()))
-		results = {}
+		results = []
 		for key in hasKeys:
 			statusKey = damIdDict[key]
 			damId = self.record[key]
 			status = self.record.get(statusKey)
-			results[damId] = status
+			if "3" in key:
+				index = 3
+			elif "2" in key:
+				index = 2
+			else:
+				index = 1
+			results.append((damId, index, status, key))
 		return results
+
+
+	## This method reduces text fileset tuples that are produced by DamIdList by removing the 8th char
+	def ReduceTextList(self, damIdList):
+		damIdSet = set()
+		for (damId, index, status, fieldName) in damIdList:
+			damIdOut = damId[:7] + "_" + damId[8:]
+			damIdSet.add((damIdOut, index, status))
+		return damIdSet
+
 
 	def AltName(self):
 		result = self.record.get("AltName")
@@ -674,6 +699,12 @@ class LPTSRecord:
 		return self.record.get("WebHubVideo")
 
 """
+*********************************************************
+*** Everything below here is intended for unit test only.
+*********************************************************
+"""
+
+"""
 # Get listing of damIds, per stock no
 if __name__ == '__main__':
 	config = Config.shared()
@@ -759,26 +790,18 @@ if (__name__ == '__main__'):
 			bibleIdMap[bibleId2] = stockNo
 """
 
-# Look for duplicate text DamId's when a 7 char id is used.
+
 if (__name__ == '__main__'):
 	from Config import *
 	result = {}
 	config = Config()
 	reader = LPTSExtractReader(config.filename_lpts_xml)
 	for rec in reader.resultSet:
-		for index in [1, 2, 3]:
-			textDamIds = rec.TextDamIdMap(index).keys()
-			#if len(textDamIds) > 1:
-			#	print(rec.Reg_StockNumber(), index, textDamIds)
-			#	for textDamId in textDamIds:
-			#		shorter = textDamId[:7]
-			#		#print(shorter)
-			#elif len(textDamIds) == 1:
-			#	print(rec.Reg_StockNumber(), index, textDamIds)
-			for textDamId in textDamIds:
-				shorter = textDamId[:7]
-				existStockNum = result.get(shorter)
-				if existStockNum != None and existStockNum != rec.Reg_StockNumber():
-					print(existStockNum, rec.Reg_StockNumber(), textDamId)
-				result[shorter] = rec.Reg_StockNumber()
+		textDamIds = rec.DamIdList("text")
+		textDamIds = rec.ReduceTextList(textDamIds)
+		if len(textDamIds) > 1:
+			print(textDamIds)
+
+
+
 

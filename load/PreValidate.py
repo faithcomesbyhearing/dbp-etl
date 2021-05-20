@@ -15,6 +15,25 @@ class PreValidate:
 		self.lptsReader = lptsReader
 		self.filesetIds = []
 		self.messages = {}
+		self.OT = { "GEN", "EXO", "LEV", "NUM", "DEU", "JOS", "JDG", "RUT", "1SA", "2SA", "1KI", "2KI", "1CH", "2CH", 
+					"EZR", "NEH", "EST", "JOB", "PSA", "PRO", "ECC", "SNG", "ISA", "JER", "LAM", "EZK", "DAN", "HOS", 
+					"JOL", "AMO", "OBA", "JON", "MIC", "NAM", "HAB", "ZEP", "HAG", "ZEC", "MAL" }
+		self.NT = { "MAT", "MRK", "LUK", "JHN", "ACT", "ROM", "1CO", "2CO", "GAL", "EPH", "PHP", "COL", "1TH", "2TH", 
+					"1TI", "2TI", "TIT", "PHM", "HEB", "JAS", "1PE", "2PE", "1JN", "2JN", "3JN", "JUD", "REV" }
+
+
+    ## Validate input and return (lptsRecord, filesetId, damId, typeCode, bibleId, index)
+	def validate(self, directory, filenames):
+		parts = directory.split("_")
+		if len(parts) > 2:
+			stockNo = parts[-2]
+			if len(stockNo) > 5:
+				stockNumber = stockNo[:-3] + "/" + stockNo[-3:]
+				return self.validateUSXStockNo(stockNumber, filenames)
+			else:
+				self.errorMessage(directory, "Could not find a stock no.")
+		else:
+			return self.validateFilesetId(directory)
 
 
     ## Validate filesetId and return (lptsRecord, damId, typeCode, bibleId, index)
@@ -68,6 +87,52 @@ class PreValidate:
 				return (lptsRecord, damId, list(mediaSet)[0], list(bibleIdSet)[0], index)
 			else:
 				return None
+
+
+	## Validate filesetId and return (lptsRecord, damId, typeCode, bibleId, index)
+	def validateUSXStockNo(self, stockNo, filenames):
+		self.filesetIds.append(stockNo)
+		typeCode = "text"
+		lptsRecord = self.lptsReader.getByStockNumber(stockNo)
+		if lptsRecord == None:
+			self.errorMessage(stockNo, "is not in LPTS")
+			return None
+		else:
+			results = []
+			expectedScope = self._getExpectedScope(filenames)
+			print("expect scope", expectedScope)
+			textDamIds = lptsRecord.DamIdList(typeCode)
+			textDamIds = lptsRecord.ReduceTextList(textDamIds)
+			print("damIds", textDamIds)
+			for (damId, index, status) in textDamIds:
+				print("looking for", damId[6])
+				if damId[6] == expectedScope:
+					results.append((damId, index, status))
+
+			if len(results) == 0:
+				self.errorMessage(stockNo, "Has no filesets of scope %s" % (expectedScope,))
+				return None
+			(damId0, index0, status0) = results[0]
+			bibleId = lptsRecord.DBP_EquivalentByIndex(index0)
+			return (lptsRecord, damId0, typeCode, bibleId, index0) # There can be multiple
+
+
+	def _getExpectedScope(self, filenames):
+		bookIdSet = set()
+		for filename in filenames:
+			name = filename.split(".")[0]
+			bookId = name[-3:]
+			bookIdSet.add(bookId)
+		otBooks = bookIdSet.intersection(self.OT)
+		ntBooks = bookIdSet.intersection(self.NT)
+		if len(otBooks) >= 39 and len(ntBooks) > 27:
+			return "C"
+		elif len(ntBooks) >= 27:
+			return "N"
+		elif len(otBooks) >= 39:
+			return "O"
+		else:
+			return "P"
 
 
 	def validateLPTS(self, typeCode, filesetId, lptsRecord, index):
@@ -130,26 +195,37 @@ class PreValidate:
 
 
 if (__name__ == '__main__'):
+	oldT = { "prefix": "$", "files": [ "GEN.usx", "EXO.usx", "LEV.usx", "NUM.usx", "DEU.usx", "JOS.usx", "JDG.usx", 
+										"RUT.usx", "1SA.usx", "2SA.usx", "1KI.usx", "2KI.usx", "1CH.usx", "2CH.usx", 
+										"EZR.usx", "NEH.usx", "EST.usx", "JOB.usx", "PSA.usx", "PRO.usx", "ECC.usx", 
+										"SNG.usx", "ISA.usx", "JER.usx", "LAM.usx", "EZK.usx", "DAN.usx", "HOS.usx", 
+										"JOL.usx", "AMO.usx", "OBA.usx", "JON.usx", "MIC.usx", "NAM.usx", "HAB.usx", 
+										"ZEP.usx", "HAG.usx", "ZEC.usx", "MAL.usx" ] }
+	newT = { "prefix": "$", "files": [ "040MAT.usx", "041MRK.usx", "042LUK.usx", "043JHN.usx", "044ACT.usx", 
+									"045ROM.usx", "0461CO.usx", "0472CO.usx", "048GAL.usx", "049EPH.usx", 
+									"050PHP.usx", "051COL.usx", "0521TH.usx", "0532TH.usx", "0541TI.usx", 
+									"0552TI.usx", "056TIT.usx", "057PHM.usx", "058HEB.usx", "059JAS.usx", 
+									"0601PE.usx", "0612PE.usx", "0621JN.usx", "0632JN.usx", "0643JN.usx", 
+									"065JUD.usx", "066REV.usx"] }
+	partT = { "prefix": "$", "files": [ "040MAT.usx", "041MRK.usx", "042LUK.usx", "043JHN.usx" ] }
 	lptsReader = LPTSExtractReader(os.environ["LPTS_XML"])
-	validate = PreValidate(lptsReader)
-	data = None
-	try:
-		data = json.load(sys.stdin)
-	except Exception as err:
-		errors = []
-		errors.append("Error parsing JSON input")
-		validate.messages["UNKNOWN"] = errors
-		print(json.dumps(validate.messages))
-		sys.exit()
-	for item in data:
-		filesetId = item.get("prefix")
-		lptsData = validate.validateFilesetId(filesetId)
-		if lptsData != None:
-			(lptsRecord, damId, typeCode, bibleId, index) = lptsData
-			if typeCode == "text":
-				filesetId = filesetId[:6]
-			validate.validateLPTS(typeCode, filesetId, lptsRecord, index)
-	validate.printLog()
+	for rec in lptsReader.resultSet:
+		directory = rec.LangName() + "_" + rec.Reg_StockNumber().replace("/", "") + "_USX"
+		for message in [ oldT, newT, partT ]:
+			message["prefix"] = directory
+			preValidate = PreValidate(lptsReader)
+			directory = message.get("prefix")
+			filenames = message.get("files")
+			lptsData = preValidate.validate(directory, filenames)
+			if lptsData != None:
+				(lptsRecord, damId, typeCode, bibleId, index) = lptsData
+				print("found", damId, bibleId, index)
+				preValidate.validateLPTS(typeCode, damId, lptsRecord, index)
+			preValidate.printLog()
+			print("*********")
+
+
+
 
 	
 
