@@ -799,9 +799,10 @@ if (__name__ == '__main__'):
 	for rec in reader.resultSet:
 		textDamIds = rec.DamIdList("text")
 		textDamIds = rec.ReduceTextList(textDamIds)
-		if len(textDamIds) > 1:
-			print(textDamIds)
-
-
+		#if len(textDamIds) > 1:
+		#	print(textDamIds)
+		listDamIds = list(textDamIds)
+		if len(listDamIds) > 1 and listDamIds[0][0][:6] != listDamIds[1][0][:6]:
+			print(rec.Reg_StockNumber(), listDamIds)
 
 

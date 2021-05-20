@@ -184,13 +184,19 @@ class PreValidate:
 				errors.append("INFO %s PreValidation OK" % (filesetId,))
 				self.messages[filesetId] = errors
 		result = json.dumps(self.messages)
-		print(result)	
+		#self.notification(result)
+		print(result)
+
+
+	#def notification(self, message):
+	#	## set up aws notification
+
 
 
 	def hasErrors(self, filesetId):
 		has = self.messages.get(filesetId)
-		if has == None and filesetId.endswith("ET"):
-			has = self.messages.get(filesetId[:6])
+		#if has == None and filesetId.endswith("ET"):
+		#	has = self.messages.get(filesetId[:6])
 		return has != None
 
 
@@ -222,6 +228,7 @@ if (__name__ == '__main__'):
 				print("found", damId, bibleId, index)
 				preValidate.validateLPTS(typeCode, damId, lptsRecord, index)
 			preValidate.printLog()
+			#preValidate.notification()
 			print("*********")
 
 

@@ -24,9 +24,9 @@ class UpdateDBPAccessTable:
 		insertRows = []
 		deleteRows = []
 		dbpAccessMapSet = self.db.selectMapSet("SELECT hash_id, access_group_id FROM access_group_filesets", ())
-		audioAccessTypes = self.db.select("SELECT id, name, description FROM access_groups WHERE name like %s", ("%audio%",))
-		textAccessTypes = self.db.select("SELECT id, name, description FROM access_groups WHERE name like %s", ("%text%",))
-		videoAccessTypes = self.db.select("SELECT id, name, description FROM access_groups WHERE name like %s", ("%video%",))
+		audioAccessTypes = self.db.select("SELECT id, name, lpts_fieldname FROM access_groups WHERE name like %s", ("%audio%",))
+		textAccessTypes = self.db.select("SELECT id, name, lpts_fieldname FROM access_groups WHERE name like %s", ("%text%",))
+		videoAccessTypes = self.db.select("SELECT id, name, lpts_fieldname FROM access_groups WHERE name like %s", ("%video%",))
 		for (bibleId, filesetId, setTypeCode, setSizeCode, assetId, hashId) in filesetList:
 			#print(bibleId, filesetId, setTypeCode, setSizeCode, assetId, hashId)
 			typeCode = setTypeCode.split("_")[0]
@@ -58,16 +58,6 @@ class UpdateDBPAccessTable:
 					accessIdInLPTS = lpts.get(accessDesc) == "-1" and "NT" in setSizeCode
 				elif accessId == 102: # allow_text_OT_DBP
 					accessIdInLPTS = lpts.get(accessDesc) == "-1" and "OT" in setSizeCode
-				elif accessId == 141: # allow_text_GBA
-					accessIdInLPTS = lpts.get("APIDevText") == "-1"
-					if lptsRecord != None and lptsRecord.Gideon_Text_Excluded() == "1":
-						accessIdInLPTS = False
-				elif accessId == 143: # allow_audio_GBA
-					accessIdInLPTS = lpts.get("APIDevAudio") == "-1"
-					if lptsRecord != None and lptsRecord.Gideon_Audio_Excluded() == "1":
-						accessIdInLPTS = False
-				elif accessId == 145: # allow_video_GBA
-					accessIdInLPTS = lpts.get("APIDevVideo") == "-1"
 				elif accessId == 181: # allow_text_DOWNLOAD
 					accessIdInLPTS = self._isPublicDomain(lptsRecord)
 				elif accessId in {191, 193}: # allow_text_APP_OFFLINE and allow_audio_APP_OFFLINE
