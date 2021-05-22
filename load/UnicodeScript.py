@@ -77,6 +77,7 @@ class UnicodeScript:
 if (__name__ == '__main__'):
 	import time
 	import boto3
+	import csv
 	from AWSSession import *
 	from SQLUtility import *
 
@@ -84,13 +85,16 @@ if (__name__ == '__main__'):
 	s3Client = AWSSession.shared().s3Client
 	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
 	db = SQLUtility(config)
-	sql = ("SELECT distinct c.bible_id, f.id, t.description AS stock_no"
+	setTypeCode = 'text_plain'
+	sql = ("SELECT distinct c.bible_id, f.id, t.description AS stock_no, f.hash_id"
 		" FROM bible_filesets f, bible_fileset_connections c, bible_fileset_tags t"
 		" WHERE c.hash_id = f.hash_id AND c.hash_id = t.hash_id"
-		" AND f.set_type_code IN ('text_plain', 'text_format') AND t.name = 'stock_no'")
-	dbpFilesetList = db.select(sql, ())
+		" AND f.set_type_code = %s AND t.name = 'stock_no' ORDER BY c.bible_id, f.id")
+
+	dbpFilesetList = db.select(sql, (setTypeCode,))
+	print("DBP filesets to process", len(dbpFilesetList))
 	unicodeScript = UnicodeScript()
-	for (bibleId, filesetId, stockNo) in dbpFilesetList:
+	for (bibleId, filesetId, stockNo, hashId) in dbpFilesetList:
 		print(bibleId, filesetId, stockNo)
 		lptsRecord = lptsReader.getByStockNumber(stockNo)
 		textDamIds = lptsRecord.DamIdList("text")
@@ -106,27 +110,38 @@ if (__name__ == '__main__'):
 				trySet.add(index)
 				print(" ", damId, index, status)
 		
-				objKey = "text/%s/%s" % (bibleId, filesetId[:6])
-				print("prefix", objKey)
-				fileKeys = []
-				request = { 'Bucket': 'dbp-prod', 'MaxKeys':10, 'Prefix': objKey }
-				response = s3Client.list_objects_v2(**request)
-				for item in response.get('Contents', []):
-					filename = item.get('Key')
-					if filename.endswith(".html") and not filename.endswith("about.html") and not filename.endswith("index.html"):
-						fileKeys.append(filename)
-				if len(fileKeys) == 0:
-					print(objKey, "has no files?")
-				if bibleId == "AMPWBT":
-					print("files", fileKeys)
+				if setTypeCode == "text_format":
+					objKey = "text/%s/%s" % (bibleId, filesetId[:6])
+					print("prefix", objKey)
+					fileKeys = []
+					request = { 'Bucket': 'dbp-prod', 'MaxKeys':10, 'Prefix': objKey }
+					response = s3Client.list_objects_v2(**request)
+					for item in response.get('Contents', []):
+						filename = item.get('Key')
+						if filename.endswith(".html") and not filename.endswith("about.html") and not filename.endswith("index.html"):
+							fileKeys.append(filename)
+					if len(fileKeys) == 0:
+						print(objKey, "has no files?")
+					if bibleId == "AMPWBT":
+						print("files", fileKeys)
 
-				pos = 0
-				text = []
-				while len(text) < 200 and len(fileKeys) > pos:
-					s3Client.download_file("dbp-prod", fileKeys[pos], "./sample.html")
-					text += unicodeScript.readFile("./sample.html")
-					pos += 1
+					pos = 0
+					text = []
+					while len(text) < 200 and len(fileKeys) > pos:
+						s3Client.download_file("dbp-prod", fileKeys[pos], "./sample.html")
+						text += unicodeScript.readFile("./sample.html")
+						pos += 1
+
+				elif setTypeCode == "text_plain":
+					dbpText = db.selectList("SELECT verse_text FROM bible_verses WHERE hash_id = %s limit 10", (hashId,))
+					#print(dbpText)
+					text = []
+					for dbpVerse in dbpText:
+						for char in dbpVerse:
+							text.append(char)
+
 				print("text", "".join(text[:60]))
+
 				fileScript = unicodeScript.findScript(text)
 				print("fileScript", fileScript)
 				lptsScript = lptsRecord.Orthography(index)
