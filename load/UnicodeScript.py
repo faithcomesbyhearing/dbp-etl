@@ -9,12 +9,6 @@ from LPTSExtractReader import *
 
 class UnicodeScript:
 
-	def findScriptName(self, filePath):
-		text = self.readFile(filePath)
-		#print("final", text)
-		script = self.findScript(text)
-		return(script)
-
 
 	def readFile(self, filePath):
 		text = []
@@ -24,19 +18,24 @@ class UnicodeScript:
 			#print("discard", discard)
 		for line in fp:
 			#print("read", line)
-			if ">" in line:
-				pos = line.index(">") + 1
-				if len(line) > (pos + 100):
+			pos = 0
+			while ">" in line[pos:]:
+				pos = line.index(">", pos) + 1
+				if len(line) > (pos + 20):
 					#print("pos", pos)
 					c = line[pos]
 					while c != "<":
 						if c.isalpha():
 							text.append(c)
 						pos += 1
-						c = line[pos]
-						#print(text)
-				if len(text) > 100:
+						if pos >= len(line):
+							c = "<"
+						else:
+							c = line[pos]
+					#print("now", "".join(text))
+				if len(text) > 1000:
 					fp.close
+					#print("Found", "".join(text))
 					return text
 		fp.close
 		return text
@@ -45,13 +44,15 @@ class UnicodeScript:
 	def findScript(self, text):
 		scriptSet = {}
 		for c in text:
-			if unicodedata.category(c) in {"Lu", "Ll"}:
+			#print(c, unicodedata.category(c))
+			if unicodedata.category(c) in {"Lu", "Ll", "Lo"}:
 				name = unicodedata.name(c)
 				#print("name", name)
 				scriptName = name.split(" ")[0]
 				count = scriptSet.get(scriptName, 0)
 				count += 1
 				scriptSet[scriptName] = count
+		#print(scriptSet)
 		mostCount = 0
 		mostScript = None
 		for (script, count) in scriptSet.items():
@@ -62,134 +63,80 @@ class UnicodeScript:
 		return mostScript
 
 
-	def getLPTSScripts(self, filesetId):
-		#print("search", filesetId)
-		results = []
-		lptsRecords = lptsReader.getFilesetRecords10(filesetId)
-		if lptsRecords != None:
-		#	print("record for %s is not found" % (filesetId))
-		#	sys.exit()
-		#else:
-			for (lptsRecord, status, fieldName) in lptsRecords:
-				#print("found1", status, fieldName)
-				if "3" in fieldName:
-					bibleId = lptsRecord.DBP_Equivalent3()
-					scriptName = lptsRecord.Orthography(3)
-				elif "2" in fieldName:
-					bibleId = lptsRecord.DBP_Equivalent2()
-					scriptName = lptsRecord.Orthography(2)
-				else:
-					bibleId = lptsRecord.DBP_Equivalent()
-					scriptName = lptsRecord.Orthography(1)
-				if scriptName != None:
-					scriptName = scriptName.upper()
-				#print("found2", scriptName, bibleId)
-				results.append((scriptName, bibleId))
-		return results
-
-
-	def matchScripts(self, fileScript, lptsScripts):
-		#print("match fileScript", fileScript)
-		for (scriptName, bibleId) in lptsScripts:
-			#print("match2", fileScript, scriptName)
-			if fileScript == scriptName:
-				return bibleId
-		return None
-
-
-#MAIN
-# write a method that skips through dbp-prod, reading lines.
-# it stops at every 100th line
-# it downloads the file
-
-#METHOD
-# it opens the file and reads the first 100 characters
-# for every Lu Ll character it puts it in a map with count
-# we get the character name with the largest count
-# we compare that to each script code, in lpts for the 
-
-"""
-u = chr(233) + chr(0x0bf2) + chr(3972) + chr(6000) + chr(13231)
-
-for i, c in enumerate(u):
-    print(i, '%04x' % ord(c), unicodedata.category(c), end=" ")
-    print(unicodedata.name(c))
-
-# Get numeric value of second character
-print(unicodedata.numeric(u[1]))
-
-"""
-
-#u = chr(233) + chr(0x0bf2) + chr(3972) + chr(6000) + chr(13231)
-"""
-nameSet = set()
-for i in range(41, 1114112):
-	c = chr(i)
-	
-	try:
-		category = unicodedata.category(c)
-		if category == 'Lu' or category == 'Ll':
-			print(c, hex(ord(c)), unicodedata.category(c))
-			name = unicodedata.name(c)
-			scripts = name.split(" ")
-			script = scripts[0] + " " + scripts[1] if scripts[0] == "OLD" else scripts[0]
-			print(name)
-			nameSet.add(script)
-	except:
-		print("no name")
-
-for name in nameSet:
-	print(name)
-"""
-#for i, c in enumerate(u):
-#    print(i, '%04x' % ord(c), unicodedata.category(c), end=" ")
-#    print(unicodedata.name(c))
-
-# Get numeric value of second character
-#print(unicodedata.numeric(u[1]))
+	def matchScripts(self, fileScript, lptsScript):
+		if fileScript == None:
+			return False
+		if lptsScript != None:
+			lptsScript = lptsScript.upper()
+			lptsScript = lptsScript.split(" ")[0]
+		if fileScript == lptsScript:
+			return True
+		return False
 
 
 if (__name__ == '__main__'):
+	import time
 	import boto3
 	from AWSSession import *
+	from SQLUtility import *
 
 	config = Config.shared()
+	s3Client = AWSSession.shared().s3Client
 	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
+	db = SQLUtility(config)
+	sql = ("SELECT distinct c.bible_id, f.id, t.description AS stock_no"
+		" FROM bible_filesets f, bible_fileset_connections c, bible_fileset_tags t"
+		" WHERE c.hash_id = f.hash_id AND c.hash_id = t.hash_id"
+		" AND f.set_type_code IN ('text_plain', 'text_format') AND t.name = 'stock_no'")
+	dbpFilesetList = db.select(sql, ())
 	unicodeScript = UnicodeScript()
-	count = 0
-	dbpProd = io.open(config.directory_bucket_list + "dbp-prod.txt", mode="r", encoding="utf-8")
-	for line in dbpProd:
-		objKey = line.split("\t")[0]
-		count += 1
-		if math.remainder(count, 100) == 0:
-			if objKey.startswith("text") and objKey.endswith(".html"):
-				print(count, objKey)
+	for (bibleId, filesetId, stockNo) in dbpFilesetList:
+		print(bibleId, filesetId, stockNo)
+		lptsRecord = lptsReader.getByStockNumber(stockNo)
+		textDamIds = lptsRecord.DamIdList("text")
+		textDamIds = lptsRecord.ReduceTextList(textDamIds)
 
-				parts = objKey.split("/")
-				filesetId = parts[2]
-				allLptsScripts = []
-				allLptsScripts += unicodeScript.getLPTSScripts(filesetId + "N1ET")
-				allLptsScripts += unicodeScript.getLPTSScripts(filesetId + "N2ET")
-				allLptsScripts += unicodeScript.getLPTSScripts(filesetId + "O1ET")
-				allLptsScripts += unicodeScript.getLPTSScripts(filesetId + "O2ET")
-				#print("allScript", allLptsScripts)
+		#bibleId = 'ARBBIB'  
+		#filesetId = 'ARBBIB'
+		#stockNo = 'N1ARB/BIB'
+		#textDamIds = [('ARBBIBN_ET', 1, 'Live')]
+		trySet = set()
+		for (damId, index, status) in textDamIds:
+			if not index in trySet:
+				trySet.add(index)
+				print(" ", damId, index, status)
+		
+				objKey = "text/%s/%s" % (bibleId, filesetId[:6])
+				print("prefix", objKey)
+				fileKeys = []
+				request = { 'Bucket': 'dbp-prod', 'MaxKeys':10, 'Prefix': objKey }
+				response = s3Client.list_objects_v2(**request)
+				for item in response.get('Contents', []):
+					filename = item.get('Key')
+					if filename.endswith(".html") and not filename.endswith("about.html") and not filename.endswith("index.html"):
+						fileKeys.append(filename)
+				if len(fileKeys) == 0:
+					print(objKey, "has no files?")
+				if bibleId == "AMPWBT":
+					print("files", fileKeys)
 
-				if len(allLptsScripts) > 0:			
-					AWSSession.shared().s3Client.download_file("dbp-prod", objKey, "./sample.html")
-					fileScript = unicodeScript.findScriptName("./sample.html")
+				pos = 0
+				text = []
+				while len(text) < 200 and len(fileKeys) > pos:
+					s3Client.download_file("dbp-prod", fileKeys[pos], "./sample.html")
+					text += unicodeScript.readFile("./sample.html")
+					pos += 1
+				print("text", "".join(text[:60]))
+				fileScript = unicodeScript.findScript(text)
+				print("fileScript", fileScript)
+				lptsScript = lptsRecord.Orthography(index)
 
-					#print("final", fileScript)
-					#sys.exit()
+				isMatch = unicodeScript.matchScripts(fileScript, lptsScript)
+				if isMatch:
+					print("******* MATCH", bibleId, filesetId, fileScript, index)
+				else:
+					print("******* No match for", bibleId, filesetId, fileScript, index, lptsScript)
 
 
-					bibleId = unicodeScript.matchScripts(fileScript, allLptsScripts)
-					if bibleId == None:
-						print("******* No match for", filesetId, fileScript, allLptsScripts)
-					else:
-						print("******* MATCH", bibleId, filesetId, fileScript)
-
-
-
-
-
+				#sys.exit()
 
