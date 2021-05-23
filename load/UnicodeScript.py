@@ -66,6 +66,8 @@ class UnicodeScript:
 	def matchScripts(self, fileScript, lptsScript):
 		if fileScript == "CJK":
 			fileScript = "HAN"
+		if fileScript == "MYANMAR":
+			fileScript = "BURMESE"
 		if fileScript == None:
 			return False
 		if lptsScript != None:
