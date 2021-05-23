@@ -64,6 +64,8 @@ class UnicodeScript:
 
 
 	def matchScripts(self, fileScript, lptsScript):
+		if fileScript == "CJK":
+			fileScript = "HAN"
 		if fileScript == None:
 			return False
 		if lptsScript != None:
@@ -90,67 +92,83 @@ if (__name__ == '__main__'):
 		" FROM bible_filesets f, bible_fileset_connections c, bible_fileset_tags t"
 		" WHERE c.hash_id = f.hash_id AND c.hash_id = t.hash_id"
 		" AND f.set_type_code = %s AND t.name = 'stock_no' ORDER BY c.bible_id, f.id")
-
 	dbpFilesetList = db.select(sql, (setTypeCode,))
 	print("DBP filesets to process", len(dbpFilesetList))
-	unicodeScript = UnicodeScript()
-	for (bibleId, filesetId, stockNo, hashId) in dbpFilesetList:
-		print(bibleId, filesetId, stockNo)
-		lptsRecord = lptsReader.getByStockNumber(stockNo)
-		textDamIds = lptsRecord.DamIdList("text")
-		textDamIds = lptsRecord.ReduceTextList(textDamIds)
 
-		#bibleId = 'ARBBIB'  
-		#filesetId = 'ARBBIB'
-		#stockNo = 'N1ARB/BIB'
-		#textDamIds = [('ARBBIBN_ET', 1, 'Live')]
-		trySet = set()
-		for (damId, index, status) in textDamIds:
-			if not index in trySet:
-				trySet.add(index)
-				print(" ", damId, index, status)
-		
-				if setTypeCode == "text_format":
-					objKey = "text/%s/%s" % (bibleId, filesetId[:6])
-					print("prefix", objKey)
-					fileKeys = []
-					request = { 'Bucket': 'dbp-prod', 'MaxKeys':10, 'Prefix': objKey }
-					response = s3Client.list_objects_v2(**request)
-					for item in response.get('Contents', []):
-						filename = item.get('Key')
-						if filename.endswith(".html") and not filename.endswith("about.html") and not filename.endswith("index.html"):
-							fileKeys.append(filename)
-					if len(fileKeys) == 0:
-						print(objKey, "has no files?")
-					if bibleId == "AMPWBT":
-						print("files", fileKeys)
+	with open("UnicodeScript.csv", 'w', newline='\n') as csvfile:
+		writer = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+		writer.writerow(("OK/NOT", "stockNo", "bibleId", "filesetId6", "sample text", "actual script", "lpts script", "message"))
 
-					pos = 0
-					text = []
-					while len(text) < 200 and len(fileKeys) > pos:
-						s3Client.download_file("dbp-prod", fileKeys[pos], "./sample.html")
-						text += unicodeScript.readFile("./sample.html")
-						pos += 1
+		unicodeScript = UnicodeScript()
+		for (bibleId, filesetId, stockNo, hashId) in dbpFilesetList:
+			print(bibleId, filesetId, stockNo)
+			lptsRecord = lptsReader.getByStockNumber(stockNo)
+			textDamIds = lptsRecord.DamIdList("text")
+			textDamIds = lptsRecord.ReduceTextList(textDamIds)
 
-				elif setTypeCode == "text_plain":
-					dbpText = db.selectList("SELECT verse_text FROM bible_verses WHERE hash_id = %s limit 10", (hashId,))
-					#print(dbpText)
-					text = []
-					for dbpVerse in dbpText:
-						for char in dbpVerse:
-							text.append(char)
+			#bibleId = 'ARBBIB'  
+			#filesetId = 'ARBBIB'
+			#stockNo = 'N1ARB/BIB'
+			#textDamIds = [('ARBBIBN_ET', 1, 'Live')]
+			trySet = set()
+			for (damId, index, status) in textDamIds:
+				if not index in trySet:
+					trySet.add(index)
+					print(" ", damId, index, status)
+					message = None
+			
+					if setTypeCode == "text_format":
+						objKey = "text/%s/%s" % (bibleId, filesetId[:6])
+						print("prefix", objKey)
+						fileKeys = []
+						request = { 'Bucket': 'dbp-prod', 'MaxKeys':10, 'Prefix': objKey }
+						response = s3Client.list_objects_v2(**request)
+						for item in response.get('Contents', []):
+							filename = item.get('Key')
+							if filename.endswith(".html") and not filename.endswith("about.html") and not filename.endswith("index.html"):
+								fileKeys.append(filename)
+						if len(fileKeys) == 0:
+							print(objKey, "has no files?")
+							message = "DBP has no files"
+						if bibleId == "AMPWBT":
+							print("files", fileKeys)
 
-				print("text", "".join(text[:60]))
+						pos = 0
+						text = []
+						while len(text) < 200 and len(fileKeys) > pos:
+							s3Client.download_file("dbp-prod", fileKeys[pos], "./sample.html")
+							text += unicodeScript.readFile("./sample.html")
+							pos += 1
 
-				fileScript = unicodeScript.findScript(text)
-				print("fileScript", fileScript)
-				lptsScript = lptsRecord.Orthography(index)
+					elif setTypeCode == "text_plain":
+						dbpText = db.selectList("SELECT verse_text FROM bible_verses WHERE hash_id = %s limit 10", (hashId,))
+						#print(dbpText)
+						text = []
+						for dbpVerse in dbpText:
+							for char in dbpVerse:
+								text.append(char)
 
-				isMatch = unicodeScript.matchScripts(fileScript, lptsScript)
-				if isMatch:
-					print("******* MATCH", bibleId, filesetId, fileScript, index)
-				else:
-					print("******* No match for", bibleId, filesetId, fileScript, index, lptsScript)
+					print("text", "".join(text[:60]))
+					if len(text) == 0 and message == None:
+						message = "No verse text"
+
+					fileScript = unicodeScript.findScript(text)
+					print("fileScript", fileScript)
+					lptsScript = lptsRecord.Orthography(index)
+					if lptsScript == None:
+						message = "No LPTS Script"
+
+					isMatch = unicodeScript.matchScripts(fileScript, lptsScript)
+					if isMatch:
+						print("******* MATCH", bibleId, filesetId, fileScript, index)
+						matchAns = "OK"
+					else:
+						print("******* No match for", bibleId, filesetId, fileScript, index, lptsScript)
+						matchAns = "NOT"
+						if message == None:
+							message = "Mismatch"
+
+					writer.writerow((matchAns, stockNo, bibleId, filesetId, "".join(text[:20]), fileScript, lptsScript, message))
 
 
 				#sys.exit()
