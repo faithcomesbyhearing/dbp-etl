@@ -41,7 +41,7 @@ class UnicodeScript:
 		return text
 				
 			
-	def findScript(self, text):
+	def findScript(self, text, stockNo, filesetId):
 		scriptSet = {}
 		for c in text:
 			#print(c, unicodedata.category(c))
@@ -55,19 +55,26 @@ class UnicodeScript:
 		#print(scriptSet)
 		mostCount = 0
 		mostScript = None
+		message = []
+		totalCount = 0
 		for (script, count) in scriptSet.items():
+			message.append("%s=%d" % (script, count))
+			totalCount += count
 			#print("iterate scripts", script, count)
 			if count > mostCount:
 				mostCount = count
 				mostScript = script
-		return mostScript
+		pctMatch = int(scriptSet.get(mostScript) / totalCount * 100.0) if mostScript != None else 0
+		if mostScript == "CJK":
+			mostScript = "HAN"
+		if mostScript == "MYANMAR":
+			mostScript = "BURMESE"
+		#if mostScript != None:
+		print("In %s %s %s Found %s at %d pct" % (stockNo, filesetId, ", ".join(message), mostScript, pctMatch))
+		return (mostScript, pctMatch)
 
 
 	def matchScripts(self, fileScript, lptsScript):
-		if fileScript == "CJK":
-			fileScript = "HAN"
-		if fileScript == "MYANMAR":
-			fileScript = "BURMESE"
 		if fileScript == None:
 			return False
 		if lptsScript != None:
@@ -99,7 +106,7 @@ if (__name__ == '__main__'):
 
 	with open("UnicodeScript.csv", 'w', newline='\n') as csvfile:
 		writer = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-		writer.writerow(("OK/NOT", "stockNo", "bibleId", "filesetId6", "sample text", "actual script", "lpts script", "message"))
+		writer.writerow(("OK/NOT", "stockNo", "bibleId", "filesetId6", "index", "sample text", "actual script", "pct match", "lpts script", "message"))
 
 		unicodeScript = UnicodeScript()
 		for (bibleId, filesetId, stockNo, hashId) in dbpFilesetList:
@@ -136,7 +143,7 @@ if (__name__ == '__main__'):
 							print("files", fileKeys)
 
 						pos = 0
-						text = []
+						text = ""
 						while len(text) < 200 and len(fileKeys) > pos:
 							s3Client.download_file("dbp-prod", fileKeys[pos], "./sample.html")
 							text += unicodeScript.readFile("./sample.html")
@@ -154,8 +161,8 @@ if (__name__ == '__main__'):
 					if len(text) == 0 and message == None:
 						message = "No verse text"
 
-					fileScript = unicodeScript.findScript(text)
-					print("fileScript", fileScript)
+					(fileScript, pctMatch) = unicodeScript.findScript(text, stockNo, damId)
+					print("fileScript", fileScript, pctMatch)
 					lptsScript = lptsRecord.Orthography(index)
 					if lptsScript == None:
 						message = "No LPTS Script"
@@ -170,7 +177,7 @@ if (__name__ == '__main__'):
 						if message == None:
 							message = "Mismatch"
 
-					writer.writerow((matchAns, stockNo, bibleId, filesetId, "".join(text[:20]), fileScript, lptsScript, message))
+					writer.writerow((matchAns, stockNo, bibleId, damId, index, "".join(text[:20]), fileScript, str(pctMatch) + "%", lptsScript, message))
 
 
 				#sys.exit()
