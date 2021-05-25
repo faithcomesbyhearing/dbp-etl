@@ -32,7 +32,7 @@ class Validate:
 			logger = Log.getLogger(inp.filesetId)
 			for file in inp.files:
 				ext = os.path.splitext(file.name)[-1]
-				if inp.typeCode == "audio" and ext not in {".mp3", ".opus", ".webm", ".m4a", ".jpg", ".tif"}:
+				if inp.typeCode == "audio" and ext not in {".mp3", ".opus", ".webm", ".m4a", ".jpg", ".tif", ".png", ".zip"}:
 					logger.invalidFileExt(file.name)
 				elif inp.typeCode == "text" and not ext in {".html", ".usx", ".xml"}:
 					logger.invalidFileExt(file.name)

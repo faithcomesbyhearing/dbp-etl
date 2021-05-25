@@ -213,7 +213,7 @@ class InputFileset:
 		results = []
 		for file in self.files:
 			ext = file.name.split(".")[-1]
-			if not ext in { "xml", "jpg", "tif" }:  ### Does this belong in _setFilenames
+			if not ext in { "xml", "jpg", "tif", "png", "zip" }:  ### Does this belong in _setFilenames
 				results.append(file.name)
 		return results
 
@@ -222,7 +222,7 @@ class InputFileset:
 		results = []
 		for file in self.files:
 			ext = file.name.split(".")[-1]
-			if not ext in { "xml", "jpg", "tif" }:
+			if not ext in { "xml", "jpg", "tif", "png", "zip" }:
 				results.append(file.filenameTuple())
 		return results
 
@@ -245,7 +245,7 @@ class InputFileset:
 				os.remove(os.path.join(directory, f))
 		for file in self.files:
 			ext = file.name.split(".")[-1]
-			if not ext in { "jpg", "tif" }:  ## notice that I do pick up the xml file
+			if not ext in { "jpg", "tif", "png", "zip" }:  ## notice that I do pick up the xml file
 				objectKey = self.filesetPath + "/" + file.name
 				filepath = directory + os.sep + file.name
 				try:
