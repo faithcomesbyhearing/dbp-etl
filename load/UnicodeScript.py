@@ -10,6 +10,32 @@ from LPTSExtractReader import *
 class UnicodeScript:
 
 
+	## Returns a list of files in a bucket of on a local disk.
+	def getFilenames(s3Client, location, filesetPath):
+		results = []
+		ignoreSet = {"Thumbs.db"}
+		if not location.startswith("s3://"):
+			pathname = location + os.sep + filesetPath
+			if os.path.isdir(pathname):
+				for filename in [f for f in os.listdir(pathname) if not f.startswith('.')]:
+					if filename not in ignoreSet and os.path.isfile(pathname + os.sep + filename):
+						filepath = pathname + os.sep + filename
+						results.append(filepath)
+			else:
+				print("ERROR: Invalid pathname %s" % (pathname,))
+		else:
+			bucket = location[5:]
+			print("bucket", bucket)
+			request = { 'Bucket': bucket, 'MaxKeys': 1000, 'Prefix': filesetPath + "/" }
+			response = s3Client.list_objects_v2(**request)
+			for item in response.get('Contents', []):
+				objKey = item.get('Key')
+				results.append(objKey)
+			if len(results) == 0:
+				print("ERROR: Invalid bucket %s or prefix %s/" % (bucket, filesetPath))
+		return results
+
+
 	## Downloads an objects, returns content as an array of lines, but discards first 10 lines
 	def readS3Object(s3Client, s3Bucket, s3Key):
 		response = s3Client.get_object(Bucket=s3Bucket, Key=s3Key)
@@ -121,8 +147,8 @@ if (__name__ == '__main__'):
 	s3Client = AWSSession.shared().s3Client
 	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
 	db = SQLUtility(config)
-	setTypeCode = 'text_plain'
-	#setTypeCode = 'text_format'
+	#setTypeCode = 'text_plain'
+	setTypeCode = 'text_format'
 	sql = ("SELECT distinct c.bible_id, f.id, t.description AS stock_no, f.hash_id"
 		" FROM bible_filesets f, bible_fileset_connections c, bible_fileset_tags t"
 		" WHERE c.hash_id = f.hash_id AND c.hash_id = t.hash_id"
@@ -152,22 +178,17 @@ if (__name__ == '__main__'):
 
 					if setTypeCode == "text_format":
 						objKey = "text/%s/%s" % (bibleId, filesetId[:6])
-						print("prefix", objKey)
-						fileKeys = []
-						request = { 'Bucket': 'dbp-prod', 'MaxKeys':10, 'Prefix': objKey }
-						response = s3Client.list_objects_v2(**request)
-						for item in response.get('Contents', []):
-							filename = item.get('Key')
-							if filename.endswith(".html") and not filename.endswith("about.html") and not filename.endswith("index.html"):
-								fileKeys.append(filename)
-						print("fileKeys", fileKeys)
+						fileKeys = UnicodeScript.getFilenames(s3Client, "s3://dbp-prod", objKey)
+						#print("fileKeys", fileKeys)
 						if len(fileKeys) == 0:
 							message = "DBP has no files"
 						
 						pos = 1 # skip first file
 						lines = []
 						while len("".join(lines)) < 2000 and len(fileKeys) > pos:
-							lines += UnicodeScript.readS3Object(s3Client, "dbp-prod", fileKeys[pos])
+							filename = fileKeys[pos]
+							if filename.endswith(".html") and not filename.endswith("about.html") and not filename.endswith("index.html"):
+								lines += UnicodeScript.readS3Object(s3Client, "dbp-prod", filename)
 							pos += 1
 						textList = UnicodeScript.parseXMLStrings(lines)
 
