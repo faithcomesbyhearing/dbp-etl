@@ -36,11 +36,10 @@ DUR_MP3_DIRECTORY = "/tmp"
 
 class BibleFiles_Duration_Update:
 
-	def __init__(self):
-		self.config = Config()
-		AWSSession.shared() # ensure init		
-		self.client = AWSSession.shared().s3Client		
-		self.db = SQLUtility(config)
+	def __init__(self, config, db):
+		self.config = config
+		self.s3Client = AWSSession.shared().s3Client		
+		self.db = db
 		#session = boto3.Session(profile_name=config.s3_aws_profile)
 		#self.s3Client = session.client("s3")
 		self.durationRegex = re.compile(r"duration=([0-9\.]+)")
@@ -136,12 +135,16 @@ class BibleFiles_Duration_Update:
 if (__name__ == '__main__'):
 	config = Config()
 	AWSSession.shared() # ensure AWSSession init
+	db = SQLUtility(config)
+	ctrl = BibleFiles_Duration_Update(config, db)
+	ctrl.process()
 
-tags = BibleFiles_Duration_Update()
-tags.process()
+# tags = BibleFiles_Duration_Update()
+# tags.process()
 
 # python3 py/BibleFiles_Duration_Update.py test AAAAAA ZZZZZ
 
-
+		# self.client = AWSSession.shared().s3Client		
+		# self.db = SQLUtility(self.config)
 
 
