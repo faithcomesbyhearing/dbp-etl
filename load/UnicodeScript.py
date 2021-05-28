@@ -25,7 +25,7 @@ class UnicodeScript:
 				print("ERROR: Invalid pathname %s" % (pathname,))
 		else:
 			bucket = location[5:]
-			print("bucket", bucket)
+			#print("bucket", bucket)
 			request = { 'Bucket': bucket, 'MaxKeys': 1000, 'Prefix': filesetPath + "/" }
 			response = s3Client.list_objects_v2(**request)
 			for item in response.get('Contents', []):

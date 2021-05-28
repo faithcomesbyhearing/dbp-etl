@@ -113,8 +113,9 @@ class InputFileset:
 		results.append(" lptsDamId=" + self.lptsDamId)
 		results.append(" stockNum=" + self.stockNum())
 		results.append(" typeCode=" + self.typeCode)
-		results.append(" bibleId=" + self.bibleId)
-		results.append(" index=" + str(self.index) + "\n")
+		results.append(" bibleId=" + str(self.bibleId))
+		results.append(" index=" + str(self.index))
+		results.append(" script=" + str(self.lptsRecord.Orthography(self.index)) + "\n")
 		results.append("filesetPrefix=" + self.filesetPrefix + "\n")
 		results.append("csvFilename=" + self.csvFilename + "\n")
 		for file in self.files:
