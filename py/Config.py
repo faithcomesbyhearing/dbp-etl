@@ -70,10 +70,12 @@ class Config:
 		self.database_port = self._getInt("database.port")
 		self.database_tunnel = self._getOptional("database.tunnel")
 
-		#self.s3_bucket = self._get("s3.bucket")
-		#self.s3_vid_bucket = self._get("s3.vid_bucket")
-		#self.s3_artifacts_bucket = self._get("s3.artifacts_bucket")
-		#self.s3_aws_profile = self._getOptional("s3.aws_profile")
+		self.s3_bucket = self._get("s3.bucket")
+		self.s3_vid_bucket = self._get("s3.vid_bucket")
+		self.s3_artifacts_bucket = self._get("s3.artifacts_bucket")
+		self.s3_aws_profile = self._getOptional("s3.aws_profile")
+		self.s3_aws_role = self._getOptional("s3.aws_role")
+		self.s3_aws_role_profile = self._getOptional("s3.aws_role_profile")
 		#session = boto3.Session(profile_name=self.s3_aws_profile)
 		#self.s3_client = session.client('s3')
 

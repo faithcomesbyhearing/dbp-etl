@@ -24,34 +24,33 @@ import os
 import io
 import re
 import math
+from Config import *
 from SQLUtility import *
+from AWSSession import *
 import boto3
 import subprocess
 
+DUR_MP3_DIRECTORY = "/tmp"
 
-DUR_HOST = "localhost"
-DUR_USER = "root"
-DUR_PORT = 3306
-DUR_DB_NAME = "dbp"
-DUR_MP3_DIRECTORY = "%s/FCBH/files/tmp" % (os.environ["HOME"])
-DUR_AWS_PROFILE = "FCBH_Gary"
 
 
 class BibleFiles_Duration_Update:
 
-	def __init__(self):
-		self.db = SQLUtility(DUR_HOST, DUR_PORT, DUR_USER, DUR_DB_NAME)
-		session = boto3.Session(profile_name=DUR_AWS_PROFILE)
-		self.s3Client = session.client("s3")
+	def __init__(self, config, db):
+		self.config = config
+		self.s3Client = AWSSession.shared().s3Client		
+		self.db = db
+		#session = boto3.Session(profile_name=config.s3_aws_profile)
+		#self.s3Client = session.client("s3")
 		self.durationRegex = re.compile(r"duration=([0-9\.]+)")
 		self.output = io.open("BibleFiles_Duration_Update.log", mode="w")
 
 
 	def getCommandLine(self):
-		if len(sys.argv) < 3:
-			print("Usage: BibleFiles_Duration_Update.py starting_bible_id ending_bible_id")
+		if len(sys.argv) < 4:
+			print("Usage: BibleFiles_Duration_Update.py  config_profile  starting_bible_id  ending_bible_id")
 			sys.exit()
-		return(sys.argv[1], sys.argv[2])
+		return(sys.argv[2], sys.argv[3])
 		
 
 	def getAudioKeys(self, startingBibleId, endingBibleId):
@@ -60,9 +59,11 @@ class BibleFiles_Duration_Update:
 			" WHERE bfc.hash_id = bs.hash_id"
 			" AND bs.hash_id = bf.hash_id"
 			" AND bs.set_type_code in ('audio', 'audio_drama')"
-			" AND bfc.bible_id >= %s AND bfc.bible_id <= %s"
-			" ORDER BY bfc.bible_id, bs.id, bf.file_name")
-		return self.db.select(sql, (startingBibleId, endingBibleId))
+			" AND bfc.bible_id >= '%s' AND bfc.bible_id <= '%s'"
+			" AND (right(bs.id, 6) = 'opus16' OR right(bs.id, 6) = 'opus32' OR right(bs.id, 6) = 'opus64')"
+			" ORDER BY bfc.bible_id, bs.id, bf.file_name") % (startingBibleId, endingBibleId)
+		print(sql)
+		return self.db.select(sql, ())
 
 #SELECT bfc.bible_id, bs.id, bf.file_name, bf.id, bf.duration, bf.file_size
 #FROM bible_fileset_connections bfc, bible_filesets bs, bible_files bf
@@ -131,11 +132,19 @@ class BibleFiles_Duration_Update:
 		self.output.write("%s\n" % (priorBibleId))
 		self.output.close()
 
+if (__name__ == '__main__'):
+	config = Config()
+	AWSSession.shared() # ensure AWSSession init
+	db = SQLUtility(config)
+	ctrl = BibleFiles_Duration_Update(config, db)
+	ctrl.process()
 
+# tags = BibleFiles_Duration_Update()
+# tags.process()
 
-tags = BibleFiles_Duration_Update()
-tags.process()
+# python3 py/BibleFiles_Duration_Update.py test AAAAAA ZZZZZ
 
-
+		# self.client = AWSSession.shared().s3Client		
+		# self.db = SQLUtility(self.config)
 
 
