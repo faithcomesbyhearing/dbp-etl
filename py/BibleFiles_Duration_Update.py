@@ -26,6 +26,7 @@ import re
 import math
 from Config import *
 from SQLUtility import *
+from AWSSession import *
 import boto3
 import subprocess
 
@@ -37,9 +38,11 @@ class BibleFiles_Duration_Update:
 
 	def __init__(self):
 		config = Config()
+		AWSSession.shared() # ensure init		
+		self.client = AWSSession.shared().s3Client		
 		self.db = SQLUtility(config)
-		session = boto3.Session(profile_name=config.s3_aws_profile)
-		self.s3Client = session.client("s3")
+		#session = boto3.Session(profile_name=config.s3_aws_profile)
+		#self.s3Client = session.client("s3")
 		self.durationRegex = re.compile(r"duration=([0-9\.]+)")
 		self.output = io.open("BibleFiles_Duration_Update.log", mode="w")
 
