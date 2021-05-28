@@ -38,6 +38,8 @@ class UnicodeScript:
 
 	## Downloads an objects, returns content as an array of lines, but discards first 10 lines
 	def readS3Object(s3Client, s3Bucket, s3Key):
+		if s3Bucket.startswith("s3://"):
+			s3Bucket = s3Bucket[5:]
 		response = s3Client.get_object(Bucket=s3Bucket, Key=s3Key)
 		content = response['Body'].read().decode("utf-8")
 		lines = content.split("\n") if content != None else []
