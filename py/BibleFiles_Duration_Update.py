@@ -37,7 +37,7 @@ DUR_MP3_DIRECTORY = "/tmp"
 class BibleFiles_Duration_Update:
 
 	def __init__(self):
-		config = Config()
+		self.config = Config()
 		AWSSession.shared() # ensure init		
 		self.client = AWSSession.shared().s3Client		
 		self.db = SQLUtility(config)
@@ -133,7 +133,9 @@ class BibleFiles_Duration_Update:
 		self.output.write("%s\n" % (priorBibleId))
 		self.output.close()
 
-
+if (__name__ == '__main__'):
+	config = Config()
+	AWSSession.shared() # ensure AWSSession init
 
 tags = BibleFiles_Duration_Update()
 tags.process()
