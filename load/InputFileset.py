@@ -148,10 +148,11 @@ class InputFileset:
 				for item in response.get('Contents', []):
 					objKey = item.get('Key')
 					filename = objKey[len(self.filesetPath) + 1:]
-					size = item.get('Size')
-					lastModified = str(item.get('LastModified'))
-					lastModified = lastModified.split("+")[0]
-					results.append(InputFile(filename, size, lastModified))
+					if not filename.startswith("."):
+						size = item.get('Size')
+						lastModified = str(item.get('LastModified'))
+						lastModified = lastModified.split("+")[0]
+						results.append(InputFile(filename, size, lastModified))
 				hasMore = response['IsTruncated']
 				if hasMore:
 					request['ContinuationToken'] = response['NextContinuationToken']
