@@ -150,36 +150,28 @@ if (__name__ == '__main__'):
 	from SQLUtility import *
 
 	config = Config.shared()
+	db = SQLUtility(config)
 	s3Client = AWSSession.shared().s3Client
 	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
-	db = SQLUtility(config)
 	unicodeScript = UnicodeScript()
 	setTypeCode = 'text_plain'
 	#setTypeCode = 'text_format'
-	sql = ("SELECT distinct c.bible_id, f.id, t.description AS stock_no, f.hash_id"
-		" FROM bible_filesets f, bible_fileset_connections c, bible_fileset_tags t"
-		" WHERE c.hash_id = f.hash_id AND c.hash_id = t.hash_id"
-		" AND f.set_type_code = %s AND t.name = 'stock_no' ORDER BY c.bible_id, f.id")
-	dbpFilesetList = db.select(sql, (setTypeCode,))
-	print("DBP filesets to process", len(dbpFilesetList))
 
 	with open("UnicodeScript.csv", 'w', newline='\n') as csvfile:
 		writer = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
 		writer.writerow(("OK/NOT", "stockNo", "bibleId", "filesetId6", "index", "sample text", "actual script", "pct match", "lpts script", "message"))
 
-		for (bibleId, filesetId, stockNo, hashId) in dbpFilesetList:
-			print(bibleId, filesetId, stockNo)
-			lptsRecord = lptsReader.getByStockNumber(stockNo)
-			textDamIds = lptsRecord.DamIdList("text")
-			textDamIds = lptsRecord.ReduceTextList(textDamIds)
-
-			trySet = set()
-			for (damId, index, status) in textDamIds:
-				if not index in trySet:
-					trySet.add(index)
-					print(" ", damId, index, status)
-					message = None
+		for lptsRecord in lptsReader.resultSet:
+			stockNo = lptsRecord.Reg_StockNumber()
+			damIdList = lptsRecord.DamIdList("text")
+			#print(damIdList)
+			damIdList = lptsRecord.ReduceTextList(damIdList)
+			for (damId, index, status) in damIdList:
+				if status in { "Live", "live" }:
+					bibleId = lptsRecord.DBP_EquivalentByIndex(index)
 					lptsScript = lptsRecord.Orthography(index)
+					print(stockNo, damId, index, bibleId)
+					message = None
 					if lptsScript == None:
 						message = "No LPTS Script"
 
@@ -200,9 +192,8 @@ if (__name__ == '__main__'):
 						textList = unicodeScript.parseXMLStrings(lines)
 
 					elif setTypeCode == "text_plain":
-						#sql = "SELECT verse_text FROM bible_verses WHERE hash_id IN (SELECT hash_id FROM bible_filesets WHERE id = %s) limit 10"
-						#sampleText = db.selectList(sql, (filesetId,))
-						sampleText = db.selectList("SELECT verse_text FROM bible_verses WHERE hash_id = %s limit 10", (hashId,))
+						sql = "SELECT verse_text FROM bible_verses WHERE hash_id IN (SELECT hash_id FROM bible_filesets WHERE id = %s) limit 10"
+						sampleText = db.selectList(sql, (damId[:6],))
 
 						if len(sampleText) == 0 and message == None:
 							message = "No verse text"
@@ -220,10 +211,10 @@ if (__name__ == '__main__'):
 
 					isMatch = unicodeScript.matchScripts(fileScript, lptsScript)
 					if isMatch:
-						print("******* MATCH", bibleId, filesetId, fileScript, index)
+						print("******* MATCH", bibleId, damId, fileScript, index)
 						matchAns = "OK"
 					else:
-						print("******* No match for", bibleId, filesetId, fileScript, index, lptsScript)
+						print("******* No match for", bibleId, damId, fileScript, index, lptsScript)
 						matchAns = "NOT"
 						if message == None:
 							message = "Mismatch"
