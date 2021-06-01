@@ -10,8 +10,12 @@ from LPTSExtractReader import *
 class UnicodeScript:
 
 
+	def __init__(self):
+		self.errors = []
+
+
 	## Returns a list of files in a bucket of on a local disk.
-	def getFilenames(s3Client, location, filesetPath):
+	def getFilenames(self, s3Client, location, filesetPath):
 		results = []
 		ignoreSet = {"Thumbs.db"}
 		if not location.startswith("s3://"):
@@ -22,7 +26,7 @@ class UnicodeScript:
 						filepath = pathname + os.sep + filename
 						results.append(filepath)
 			else:
-				print("ERROR: Invalid pathname %s" % (pathname,))
+				self.errors.append("ERROR: Invalid pathname %s" % (pathname,))
 		else:
 			bucket = location[5:]
 			#print("bucket", bucket)
@@ -32,12 +36,12 @@ class UnicodeScript:
 				objKey = item.get('Key')
 				results.append(objKey)
 			if len(results) == 0:
-				print("ERROR: Invalid bucket %s or prefix %s/" % (bucket, filesetPath))
+				self.errors.append("ERROR: Invalid bucket %s or prefix %s/" % (bucket, filesetPath))
 		return results
 
 
 	## Downloads an objects, returns content as an array of lines, but discards first 10 lines
-	def readS3Object(s3Client, s3Bucket, s3Key):
+	def readS3Object(self, s3Client, s3Bucket, s3Key):
 		if s3Bucket.startswith("s3://"):
 			s3Bucket = s3Bucket[5:]
 		response = s3Client.get_object(Bucket=s3Bucket, Key=s3Key)
@@ -49,7 +53,7 @@ class UnicodeScript:
 
 
 	## Opens a file and returns as an array of strings, but discards first 10 lines
-	def readFile(filePath):
+	def readFile(self, filePath):
 		file = open(filePath, mode='r', encoding="utf-8")
 		lines = file.readlines()
 		file.close()
@@ -60,7 +64,7 @@ class UnicodeScript:
 
 
 	## Parses XML contents and returns an array of characters
-	def parseXMLStrings(lines):
+	def parseXMLStrings(self, lines):
 		text = []
 		inText = False
 		for line in lines:
@@ -75,7 +79,7 @@ class UnicodeScript:
 
 
 	## Converts an array of text string to a array of text chars, which is needed for findScript
-	def textToArray(contents):
+	def textToArray(self, contents):
 		text = []
 		for line in contents:
 			for char in line:
@@ -85,7 +89,7 @@ class UnicodeScript:
 				
 		
 	## Returns the script code of text based upon results returned by unicodedata	
-	def findScript(text):
+	def findScript(self, text):
 		scriptSet = {}
 		for c in text:
 			#print(c, unicodedata.category(c))
@@ -117,7 +121,7 @@ class UnicodeScript:
 
 
 	## Compares the actual script determined from text, and the lpts Script
-	def matchScripts(fileScript, lptsScript):
+	def matchScripts(self, fileScript, lptsScript):
 		if fileScript == None:
 			return False
 		if lptsScript != None:
@@ -130,11 +134,11 @@ class UnicodeScript:
 
 
 	## This is a convenience method used to check a script using verse_text
-	def checkScripts(db, filesetId, lptsScript):
-		sampleText = UnicodeScript.findVerseText(db, filesetId[:6]) ## can't be in this class
-		textList = UnicodeScript.textToArray(sampleText)
-		actualScript = UnicodeScript.findScript(textList)
-		isMatch = UnicodeScript.matchScripts(actualScript, lptsScript)
+	def checkScripts(self, db, filesetId, lptsScript):
+		sampleText = self.findVerseText(db, filesetId[:6]) ## can't be in this class
+		textList = self.textToArray(sampleText)
+		actualScript = self.findScript(textList)
+		isMatch = self.matchScripts(actualScript, lptsScript)
 		return isMatch
 
 
@@ -149,8 +153,9 @@ if (__name__ == '__main__'):
 	s3Client = AWSSession.shared().s3Client
 	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
 	db = SQLUtility(config)
-	#setTypeCode = 'text_plain'
-	setTypeCode = 'text_format'
+	unicodeScript = UnicodeScript()
+	setTypeCode = 'text_plain'
+	#setTypeCode = 'text_format'
 	sql = ("SELECT distinct c.bible_id, f.id, t.description AS stock_no, f.hash_id"
 		" FROM bible_filesets f, bible_fileset_connections c, bible_fileset_tags t"
 		" WHERE c.hash_id = f.hash_id AND c.hash_id = t.hash_id"
@@ -180,7 +185,7 @@ if (__name__ == '__main__'):
 
 					if setTypeCode == "text_format":
 						objKey = "text/%s/%s" % (bibleId, filesetId[:6])
-						fileKeys = UnicodeScript.getFilenames(s3Client, "s3://dbp-prod", objKey)
+						fileKeys = unicodeScript.getFilenames(s3Client, "s3://dbp-prod", objKey)
 						#print("fileKeys", fileKeys)
 						if len(fileKeys) == 0:
 							message = "DBP has no files"
@@ -190,9 +195,9 @@ if (__name__ == '__main__'):
 						while len("".join(lines)) < 2000 and len(fileKeys) > pos:
 							filename = fileKeys[pos]
 							if filename.endswith(".html") and not filename.endswith("about.html") and not filename.endswith("index.html"):
-								lines += UnicodeScript.readS3Object(s3Client, "dbp-prod", filename)
+								lines += unicodeScript.readS3Object(s3Client, "dbp-prod", filename)
 							pos += 1
-						textList = UnicodeScript.parseXMLStrings(lines)
+						textList = unicodeScript.parseXMLStrings(lines)
 
 					elif setTypeCode == "text_plain":
 						#sql = "SELECT verse_text FROM bible_verses WHERE hash_id IN (SELECT hash_id FROM bible_filesets WHERE id = %s) limit 10"
@@ -203,17 +208,17 @@ if (__name__ == '__main__'):
 							message = "No verse text"
 							textList = []
 						else:
-							textList = UnicodeScript.textToArray(sampleText)
+							textList = unicodeScript.textToArray(sampleText)
 
 					print("text", "".join(textList[:60]))
 
-					(fileScript, pctMatch) = UnicodeScript.findScript(textList)
+					(fileScript, pctMatch) = unicodeScript.findScript(textList)
 					print("fileScript", fileScript, pctMatch)
 					lptsScript = lptsRecord.Orthography(index)
 					if lptsScript == None:
 						message = "No LPTS Script"
 
-					isMatch = UnicodeScript.matchScripts(fileScript, lptsScript)
+					isMatch = unicodeScript.matchScripts(fileScript, lptsScript)
 					if isMatch:
 						print("******* MATCH", bibleId, filesetId, fileScript, index)
 						matchAns = "OK"
