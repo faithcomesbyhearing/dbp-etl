@@ -143,9 +143,6 @@ class AWSTranscoder:
 			inpFile = inpFileset.getInputFile(inpFilename)
 			if inpFile != None:
 				inpFile.duration = inpDuration
-			else:
-				print("ERROR: Duration not set on input file %" % (inpFilename))
-				sys.exit()
 
 			outJson = file.get("output")
 			outDuration = outJson.get("duration")

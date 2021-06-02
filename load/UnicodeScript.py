@@ -41,26 +41,20 @@ class UnicodeScript:
 
 
 	## Downloads an objects, returns content as an array of lines, but discards first 10 lines
-	def readS3Object(self, s3Client, s3Bucket, s3Key):
-		if s3Bucket.startswith("s3://"):
-			s3Bucket = s3Bucket[5:]
-		response = s3Client.get_object(Bucket=s3Bucket, Key=s3Key)
-		content = response['Body'].read().decode("utf-8")
-		lines = content.split("\n") if content != None else []
-		lines = lines[10:] # discard first 10 lines
+	def readObject(self, s3Client, location, filePath):
+		if location.startswith("s3://"):
+			s3Bucket = location[5:]
+			response = s3Client.get_object(Bucket=s3Bucket, Key=filePath)
+			content = response['Body'].read().decode("utf-8")
+			lines = content.split("\n") if content != None else []
+			lines = lines[10:] # discard first 10 lines
+		else:
+			file = open(filePath, mode='r', encoding="utf-8")
+			lines = file.readlines()
+			file.close()
+			lines = lines[10:] # discard first 10 lines
 		#print("read", lines)
-		return lines
-
-
-	## Opens a file and returns as an array of strings, but discards first 10 lines
-	def readFile(self, filePath):
-		file = open(filePath, mode='r', encoding="utf-8")
-		lines = file.readlines()
-		file.close()
-		lines = lines[10:] # discard first 10 lines
-		#print("***** read", len(lines))
-		print(lines)
-		return lines
+		return lines	
 
 
 	## Parses XML contents and returns an array of characters
@@ -187,7 +181,7 @@ if (__name__ == '__main__'):
 						while len("".join(lines)) < 2000 and len(fileKeys) > pos:
 							filename = fileKeys[pos]
 							if filename.endswith(".html") and not filename.endswith("about.html") and not filename.endswith("index.html"):
-								lines += unicodeScript.readS3Object(s3Client, "dbp-prod", filename)
+								lines += unicodeScript.readObject(s3Client, "s3://dbp-prod", filename)
 							pos += 1
 						textList = unicodeScript.parseXMLStrings(lines)
 

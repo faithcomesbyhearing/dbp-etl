@@ -54,7 +54,7 @@ class InputFileset:
 
 
 	## parse command line, and return [InputFileset]
-	def filesetCommandLineParser(config, lptsReader):
+	def filesetCommandLineParser(config, s3Client, lptsReader):
 		if len(sys.argv) < 4:
 			print("FATAL command line parameters: config_profile  s3://bucket|localPath  filesetPath_list ")
 			sys.exit()
@@ -62,19 +62,20 @@ class InputFileset:
 		results = []
 		location = sys.argv[2][:-1] if sys.argv[2].endswith("/") else sys.argv[2]
 		filesetPaths = sys.argv[3:]
-		preValidate = PreValidate(lptsReader)
 
 		for filesetPath in filesetPaths:
 			filesetPath = filesetPath[:-1] if filesetPath.endswith("/") else filesetPath
 			filesetId = filesetPath.split("/")[-1]
-			lptsData = preValidate.validateFilesetId(filesetId)
-			if lptsData != None:
-				(lptsRecord, damId, typeCode, bibleId, index) = lptsData
-				filesetId = filesetId[:7] + "_" + filesetId[8:] + "-usx" if typeCode == "text" else filesetId
-				preValidate.validateLPTS(typeCode, filesetId, lptsRecord, index)
-				if not preValidate.hasErrors(filesetId):
-					results.append(InputFileset(config, location, filesetId, filesetPath, damId, typeCode, bibleId, index, lptsRecord))
-		Log.addPreValidationErrors(preValidate.messages)
+			filesetId = filesetId[:7] + "_" + filesetId[8:] + "-usx" if filesetId[8:10] == "ET" else filesetId
+			(data, messages) = PreValidate.validateDBPELT(lptsReader, s3Client, location, filesetId, filesetPath)
+			if data != None:
+				inp = InputFileset(config, location, data.filesetId, filesetPath, data.damId, 
+					data.typeCode, data.bibleId, data.index, data.lptsRecord)
+				#print("INPUT", inp.toString())
+				results.append(inp)
+			if messages != None and len(messages) > 0:
+				RunStatus.set(filesetId, False)
+				Log.addPreValidationErrors(messages)
 		return results
 
 
@@ -109,11 +110,9 @@ class InputFileset:
 		results.append("InputFileset\n")
 		results.append("location=" + self.location + "\n")
 		results.append("locationType=" + self.locationType)
-		results.append(" filesetId=" + self.filesetId)
-		results.append(" lptsDamId=" + self.lptsDamId)
+		results.append("prefix=%s/%s/%s" % (self.typeCode, self.bibleId, self.filesetId))
+		results.append(" damId=" + self.lptsDamId)
 		results.append(" stockNum=" + self.stockNum())
-		results.append(" typeCode=" + self.typeCode)
-		results.append(" bibleId=" + str(self.bibleId))
 		results.append(" index=" + str(self.index))
 		results.append(" script=" + str(self.lptsRecord.Orthography(self.index)) + "\n")
 		results.append("filesetPrefix=" + self.filesetPrefix + "\n")
@@ -284,8 +283,9 @@ class InputFileset:
 
 if (__name__ == '__main__'):
 	config = Config()
+	s3Client = AWSSession.shared().s3Client
 	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
-	InputFileset.validate = InputFileset.filesetCommandLineParser(config, lptsReader)
+	InputFileset.validate = InputFileset.filesetCommandLineParser(config, s3Client, lptsReader)
 	for inp in InputFileset.validate:
 		if inp.typeCode == "text" and inp.locationType == InputFileset.BUCKET:
 			inp.downloadFiles()

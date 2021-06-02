@@ -12,22 +12,25 @@ from UnicodeScript import *
 
 class PreValidateResult:
 
-	def __init__(self, lptsRecord, damId, typeCode, index):
+	def __init__(self, lptsRecord, filesetId, damId, typeCode, index):
 		self.lptsRecord = lptsRecord
-		self.filesetId = damId[:7] + "_" + damId[8:] + "-usx" if typeCode == "text" else damId
+		self.filesetId = filesetId
 		self.damId = damId
 		self.typeCode = typeCode
 		self.bibleId = lptsRecord.DBP_EquivalentByIndex(index)
 		self.index = index
+
+	def toString(self):
+		return("out: %s/%s/%s is %s %d" % (self.typeCode, self.bibleId, self.filesetId, self.damId, self.index))		
 
 
 class PreValidate:
 
 
 	## Validate input and return an errorList.
-	def validateLambda(lptsReader, fullPath, filenames):
-		directory = os.path.basename(fullPath)
-		preValidate = PreValidate(lptsReader)
+	def validateLambda(lptsReader, directory, filenames):
+		unicodeScript = UnicodeScript()
+		preValidate = PreValidate(lptsReader, unicodeScript)
 		result = None
 		stockNumber = preValidate.isTextStockNo(directory)
 		if stockNumber != None:
@@ -38,30 +41,32 @@ class PreValidate:
 			result = preValidate.validateFilesetId(directory)
 		if result != None:
 			preValidate.validateLPTS(result)
+		preValidate.addErrorMessages(directory, unicodeScript.errors)
 		return preValidate.formatMessages()
 
 
-	def validateDBPELT(lptsReader, s3Client, location, fullPath):
-		directory = os.path.basename(fullPath)
-		preValidate = PreValidate(lptsReader)
+	def validateDBPELT(lptsReader, s3Client, location, directory, fullPath):
+		unicodeScript = UnicodeScript()
+		preValidate = PreValidate(lptsReader, unicodeScript)
 		result = None
 		stockNumber = preValidate.isTextStockNo(directory)
 		if stockNumber != None:
-			fullPath = os.path.dirname(fullPath) ### This is required by the debug main, but not production
-			filenames = UnicodeScript.getFilenames(s3Client, location, fullPath)
+			filenames = unicodeScript.getFilenames(s3Client, location, fullPath)
 			resultList = preValidate.validateUSXStockNo(stockNumber, filenames)
 			if resultList != None:
-				sampleText = UnicodeScript.readS3Object(s3Client, location, filenames[0])
+				sampleText = unicodeScript.readObject(s3Client, location, filenames[0])
 				result = preValidate.validateScript(stockNumber, resultList, sampleText)
 		else:
 			result = preValidate.validateFilesetId(directory)
 		if result != None:
 			preValidate.validateLPTS(result)
+		preValidate.addErrorMessages(directory, unicodeScript.errors)
 		return (result, preValidate.messages)
 
 
-	def __init__(self, lptsReader):
+	def __init__(self, lptsReader, unicodeScript):
 		self.lptsReader = lptsReader
+		self.unicodeScript = unicodeScript
 		self.messages = {}
 		self.OT = { "GEN", "EXO", "LEV", "NUM", "DEU", "JOS", "JDG", "RUT", "1SA", "2SA", "1KI", "2KI", "1CH", "2CH", 
 					"EZR", "NEH", "EST", "JOB", "PSA", "PRO", "ECC", "SNG", "ISA", "JER", "LAM", "EZK", "DAN", "HOS", 
@@ -135,7 +140,7 @@ class PreValidate:
 				self.errorMessage(filesetId, "in %s has more than one DBP_Equivalent: %s" % (", ".join(stockNumSet), ", ".join(bibleIdSet)))
 
 			if len(mediaSet) > 0 and len(bibleIdSet) > 0:
-				return PreValidateResult(lptsRecord, damId, list(mediaSet)[0], index)
+				return PreValidateResult(lptsRecord, filesetId, damId, list(mediaSet)[0], index)
 			else:
 				return None
 
@@ -144,7 +149,7 @@ class PreValidate:
 	def validateUSXStockNo(self, stockNo, filenames):
 		lptsRecord = self.lptsReader.getByStockNumber(stockNo)
 		if lptsRecord == None:
-			self.errorMessage(stockNo, "stockNum %s is not in LPTS")
+			self.errorMessage(stockNo, "stockNum is not in LPTS")
 			return None
 		else:
 			results = []
@@ -156,7 +161,8 @@ class PreValidate:
 			for (damId, index, status) in textDamIds:
 				#print("looking for", damId[6])
 				if damId[6] == actualScope:
-					result = PreValidateResult(lptsRecord, damId, "text", index)
+					filesetId = damId[:7] + "_" + damId[8:] + "-usx"
+					result = PreValidateResult(lptsRecord, filesetId, damId, "text", index)
 					results.append(result)
 			if len(results) == 0:
 				self.errorMessage(stockNo, "Has no filesets with scope %s" % (actualScope,))
@@ -167,13 +173,14 @@ class PreValidate:
 
 	## Validate that the script code is correct and return matching PreValidateResult
 	def validateScript(self, stockNo, preValidateResults, sampleText):
-		textArray = UnicodeScript.parseXMLStrings(sampleText)
-		(actualScript, matchPct) = UnicodeScript.findScript(textArray)	
+		textArray = self.unicodeScript.parseXMLStrings(sampleText)
+		#print("sample", "".join(textArray[:40]))
+		(actualScript, matchPct) = self.unicodeScript.findScript(textArray)	
 		#print("actualScript", actualScript)
 		for result in preValidateResults:
 			lptsScript = result.lptsRecord.Orthography(result.index)
 			#print("lptsScript", lptsScript, result.index)
-			if UnicodeScript.matchScripts(actualScript, lptsScript):
+			if self.unicodeScript.matchScripts(actualScript, lptsScript):
 				return result
 		self.errorMessage(stockNo, "Has no filesets with correct scope and script %s" % (actualScript,))
 		return None
@@ -222,6 +229,14 @@ class PreValidate:
 		if pre.typeCode == "text" and pre.lptsRecord.Orthography(pre.index) == None:
 			fieldName = "_x003%d_Orthography" % (pre.index)
 			self.requiredFields(pre.filesetId, stockNo, fieldName)
+
+
+	def addErrorMessages(self, identifier, messages):
+		if messages != None and len(messages) > 0:
+			errors = self.messages.get(identifier, [])
+			for message in messages:
+				errors.append(message)
+			self.messages[identifier] = errors
 
 
 	def errorMessage(self, identifier, message):
@@ -273,7 +288,7 @@ if (__name__ == "__main__"):
 	for (bibleId, filesetId, setTypeCode) in resultSet:
 		typeCode = setTypeCode.split("_")[0]
 		filesetPath = "%s/%s/%s" % (typeCode, bibleId, filesetId)
-		print(filesetPath)
+		print("input:", filesetPath)
 
 		## Do validateDBPELT Test
 		if typeCode == "audio":
@@ -281,26 +296,29 @@ if (__name__ == "__main__"):
 		elif typeCode == "text":
 			(lptsRecord, index) = lptsReader.getLPTSRecord(typeCode, bibleId, filesetId)
 			stockNo = lptsRecord.Reg_StockNumber().replace("/", "")
-			directory = filesetPath + "/ABCD_" + stockNo + "_USX"
-			(inp, messages) = PreValidate.validateDBPELT(lptsReader, s3Client, location, directory)
+			directory = "/ABCD_" + stockNo + "_USX"
+			#filesetPath += directory
+			(inp, messages) = PreValidate.validateDBPELT(lptsReader, s3Client, location, directory, filesetPath)
 		if messages != None and len(messages) > 0:
 			Log.addPreValidationErrors(messages)
 			print("DBP-ELT", messages)
-			#sys.exit()
 		if inp != None:
-			filesetId = inp.damId[:7] + "_" + inp.damId[8:] + "-usx" if inp.typeCode == "text" else inp.damId
-			result = InputFileset(config, location, filesetId, filesetPath, inp.damId, inp.typeCode, inp.bibleId, inp.index, inp.lptsRecord)
-			#print(result.toString())
+			result = InputFileset(config, location, inp.filesetId, filesetPath, inp.damId, inp.typeCode, inp.bibleId, inp.index, inp.lptsRecord)
+			#print("dbp-out", result.toString())
 
 		## Do validateLambda Test
-		if type == "audio":
+		directory = None
+		filenames = []
+		if typeCode == "audio":
 			filenames = []
-			fullPath = filesetPath
+			directory = filesetId
 		elif typeCode == "text":
 			stockNo = lptsRecord.Reg_StockNumber().replace("/", "")
-			fullPath = filesetPath + "/ABCD_" + stockNo + "_USX"
-			filenames = UnicodeScript.getFilenames(s3Client, location, filesetPath)
-		lambdaMessages = PreValidate.validateLambda(lptsReader, filesetPath, [])
+			directory = "ABCD_" + stockNo + "_USX"
+			unicodeScript = UnicodeScript()
+			filenames = unicodeScript.getFilenames(s3Client, location, filesetPath)
+		print(filesetPath, filenames)
+		lambdaMessages = PreValidate.validateLambda(lptsReader, directory, filenames)
 		if lambdaMessages != None and len(lambdaMessages) > 0:
 			print("Lambda", lambdaMessages)
 

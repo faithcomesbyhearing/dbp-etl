@@ -107,7 +107,7 @@ if (__name__ == '__main__'):
 	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
 	ctrl = DBPLoadController(config, db, lptsReader)
 	if len(sys.argv) != 2:
-		InputFileset.validate = InputFileset.filesetCommandLineParser(config, lptsReader)
+		InputFileset.validate = InputFileset.filesetCommandLineParser(config, AWSSession.shared().s3Client, lptsReader)
 		ctrl.repairAudioFileNames(InputFileset.validate)
 		ctrl.validate(InputFileset.validate)
 		if ctrl.updateBibles():
@@ -127,6 +127,9 @@ if (__name__ == '__main__'):
 # aws s3 --profile dbp-etl-dev sync --acl bucket-owner-full-control /Volumes/FCBH/all-dbp-etl-test/audio/UNRWFW/UNRWFWP1DA s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr/UNRWFWP1DA
 # aws s3 --profile dbp-etl-dev sync --acl bucket-owner-full-control /Volumes/FCBH/all-dbp-etl-test/HYWWAVN2ET s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr/HYWWAVN2ET
 # aws s3 --profile dbp-etl-dev sync --acl bucket-owner-full-control /Volumes/FCBH/all-dbp-etl-test/ENGESVP2DV s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr/ENGESVP2DV
+
+# No parameter, should execute only bible and lpts updates
+# time python3 load/DBPLoadController.py test
 
 # Successful tests with source on local drive
 # time python3 load/TestCleanup.py test HYWWAV
@@ -165,8 +168,37 @@ if (__name__ == '__main__'):
 # time python3 load/TestCleanup.py test GNWNTMN_ET-usx
 # time python3 load/DBPLoadController.py test /Volumes/FCBH/all-dbp-etl-test/ text/GNWNTM/GNWNTMN2ET
 
-# No parameter
-# time python3 load/DBPLoadController.py test
+# Test stock number upload from Drive with path
+# time python3 load/TestCleanup.py test BBBWBT
+# time python3 load/TestCleanup.py test BBBWBTN_ET-usx
+# time python3 load/DBPLoadController.py test /Volumes/FCBH/TextStockNo/ Barai_N2BBBWBT_USX
+# time python3 load/TestCleanup.py test ORCBTL
+# time python3 load/TestCleanup.py test ORCBTLN_ET-usx
+# time python3 load/DBPLoadController.py test /Volumes/FCBH/TextStockNo/ Orma_N2ORCBTL_USX
+# time python3 load/TestCleanup.py test URDPAK
+# time python3 load/TestCleanup.py test URDPAKN_ET-usx
+# time python3 load/DBPLoadController.py test /Volumes/FCBH/TextStockNo/ Urdu_N2URDPAK_USX
+
+### prepare test data in bucket
+### aws --profile DBP_DEV s3 sync /Volumes/FCBH/TextStockNo/Barai_N2BBBWBT_USX/ s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr/Barai_N2BBBWBT_USX/
+### aws --profile DBP_DEV s3 sync /Volumes/FCBH/TextStockNo/Orma_N2ORCBTL_USX/ s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr/Orma_N2ORCBTL_USX/
+### aws --profile DBP_DEV s3 sync /Volumes/FCBH/TextStockNo/Urdu_N2URDPAK_USX/ s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr/Urdu_N2URDPAK_USX/
+
+# Test stock number upload from Drive with path
+# time python3 load/TestCleanup.py test BBBWBT
+# time python3 load/TestCleanup.py test BBBWBTN_ET-usx
+# time python3 load/DBPLoadController.py test s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr/ Barai_N2BBBWBT_USX
+# time python3 load/TestCleanup.py test ORCBTL
+# time python3 load/TestCleanup.py test ORCBTLN_ET-usx
+# time python3 load/DBPLoadController.py test s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr/ Orma_N2ORCBTL_USX
+# time python3 load/TestCleanup.py test URDPAK
+# time python3 load/TestCleanup.py test URDPAKN_ET-usx
+# time python3 load/DBPLoadController.py test s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr/ Urdu_N2URDPAK_USX
+
+
+
+
+
 
 
 
