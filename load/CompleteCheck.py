@@ -138,6 +138,30 @@ class CompleteCheck:
 			print("%s Has some or all bible_verses records missing" % (missed,))
 
 
+	def bibleIdCheck(self):
+		sql = "SELECT f.id, c.bible_id FROM bible_filesets f, bible_fileset_connections c WHERE f.hash_id=c.hash_id"
+		filesetMap = db.selectMap(sql, ())
+		for record in self.lptsReader.resultSet:
+			stockNo = record.Reg_StockNumber()
+			#print(stockNo)
+			text = record.DamIdList("text")
+			audio = record.DamIdList("audio")
+			video = record.DamIdList("video")
+			damIds = text + audio + video 
+			for (damId, index, status, fieldname) in damIds:
+				#print(stockNo, damId, index, status, fieldname)
+				if status in { "Live", "live" }:
+					lptsBibleId = record.DBP_EquivalentByIndex(index)
+					dbpBibleId = filesetMap.get(damId)
+					if dbpBibleId == None:
+						dbpBibleId = filesetMap.get(damId[:6])
+					if dbpBibleId == None:
+						print("%s %s(%s) %s has no filesetId in DBP" % (stockNo, damId, fieldname, status))
+					elif dbpBibleId != lptsBibleId:
+						print("%s %s(%s) %s has bibleId %s, but does not match %s in DBP" % (stockNo, damId, fieldname, status, lptsBibleId, dbpBibleId))
+
+
+
 if (__name__ == '__main__'):
 	print("WARNING: This program outputs to the console.  You may want to redirect to a file using > filename")
 	config = Config()
@@ -158,8 +182,19 @@ if (__name__ == '__main__'):
 	check.checkForMissingBandwidth()
 	check.checkForMissingBibleFiles()
 	check.checkForMissingBibleVerses()
+	check.bibleIdCheck()
 	db.close()
 
 # python3 load/CompleteCheck.py test retry
 # python3 load/CompleteCheck.py newdata > complete.out
+
+
+"""
+if (__name__ == '__main__'):
+	config = Config()
+	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
+	db = SQLUtility(config)
+	check = CompleteCheck(config, db, lptsReader)
+	check.bibleIdCheck()
+"""
 
