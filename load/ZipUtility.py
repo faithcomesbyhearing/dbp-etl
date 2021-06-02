@@ -48,10 +48,12 @@ class ZipUtility:
 			os.remove(zipfilePath)
 		zipDir = zipfile.ZipFile(zipfilePath, "w")
 		with zipDir:
+			filesetId = os.path.basename(directory)
 			for file in os.listdir(directory):
 				if file.endswith(".mp3") and not file.startswith("."):
 					fullPath = directory + os.sep + file
-					zipDir.write(fullPath, file)
+					localPath = filesetId + os.sep + file
+					zipDir.write(fullPath, localPath)
 		return zipfilePath
 
 
@@ -79,7 +81,18 @@ if (__name__ == '__main__'):
 	zipObjName = filesetPrefix + os.sep + os.path.basename(filesetPrefix) + ".zip"
 	zip.downloadZipFile("dbp-staging", zipObjName, "./test.zip")
 
+	"""
+	db = SQLUtility(config)
+	sql = ("SELECT c.bible_id, f.id FROM bible_filesets f, bible_fileset_connections c WHERE f.hash_id=c.hash_id"
+			" AND f.set_type_code IN ('audio', 'audio_drama') AND length(f.id) = 10")
+	resultSet = db.select(sql, ())
+	for (bibleId, filesetId) in resultSet:
+		filesetPrefix = "audio/%s/%s" % bibleId, filesetId
+		isOK = zip.zipAudio(config.s3_bucket, filesetPrefix)
+		if not isOK:
+			print("ERROR: failed to generate zip for", filesetPrefix)
 
+	"""
 
 
 
