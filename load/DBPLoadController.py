@@ -141,11 +141,11 @@ if (__name__ == '__main__'):
 # Successful tests with source on s3
 # time python3 load/TestCleanup.py test UNRWFWP1DA
 # time python3 load/TestCleanup.py test UNRWFWP1DA-opus16
+# time python3 load/DBPLoadController.py test s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr UNRWFWP1DA
 # time python3 load/TestCleanup.py test HYWWAV
 # time python3 load/TestCleanup.py test HYWWAVN_ET-usx
-# time python3 load/TestCleanup.py test ENGESVP2DV
-# time python3 load/DBPLoadController.py test s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr UNRWFWP1DA
 # time python3 load/DBPLoadController.py test s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr HYWWAVN2ET
+# time python3 load/TestCleanup.py test ENGESVP2DV
 # time python3 load/DBPLoadController.py test s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr ENGESVP2DV
 
 # Combined test of two dissimilar filesets on s3
