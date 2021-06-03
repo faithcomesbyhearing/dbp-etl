@@ -159,6 +159,9 @@ class PreValidate:
 			textDamIds = lptsRecord.ReduceTextList(textDamIds)
 			#print("damIds", textDamIds)
 			for (damId, index, status) in textDamIds:
+				if not damId.endswith("ET"):
+					self.errorMessage(stockNo, "DamId %s is in LPTS as text, but does not have a text ET ending." % (damId,))
+					return None
 				#print("looking for", damId[6])
 				if damId[6] == actualScope:
 					filesetId = damId[:7] + "_" + damId[8:] + "-usx"
