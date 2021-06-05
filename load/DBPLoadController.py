@@ -48,7 +48,6 @@ class DBPLoadController:
 	def validate(self, inputFilesets):
 		validate = Validate(self.config, self.db)
 		validate.process(inputFilesets)
-		Log.writeLog(self.config)
 		for inp in inputFilesets:
 			if os.path.isfile(inp.csvFilename):
 				InputFileset.upload.append(inp)
@@ -69,6 +68,7 @@ class DBPLoadController:
 
 	def upload(self, inputFilesets):
 		self.s3Utility.uploadAllFilesets(inputFilesets)
+		Log.writeLog(self.config)
 
 
 	def updateFilesetTables(self, inputFilesets):

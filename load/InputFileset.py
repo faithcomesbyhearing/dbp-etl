@@ -210,6 +210,14 @@ class InputFileset:
 			return None
 
 
+	def isMP3Fileset(self):
+		for file in self.files:
+			ext = file.name.split(".")[-1]
+			if ext == "mp3":
+				return True
+		return False
+
+
 	def filenames(self):
 		results = []
 		for file in self.files:
@@ -235,6 +243,23 @@ class InputFileset:
 				objectKey = self.filesetPrefix + "/" + file.name
 				results.append(objectKey)
 		return results
+
+
+	def artFiles(self):
+		results = []
+		for file in self.files:
+			ext = file.name.split(".")[-1]
+			if ext in { "jpg", "tif", "png" }:
+				results.append(file.name)
+		return results
+
+
+	def zipFile(self):
+		for file in self.files:
+			ext = file.name.split(".")[-1]
+			if ext == "zip":
+				return file
+		return None
 
 
 	def downloadFiles(self):

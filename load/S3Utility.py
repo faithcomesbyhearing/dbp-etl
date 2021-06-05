@@ -42,9 +42,7 @@ class S3Utility:
 				parser.process3(outFilesets) # create accepted.csv
 				for outFileset in outFilesets:
 					if os.path.isfile(outFileset.csvFilename): # test if it was accepted
-						InputFileset.database.append(outFileset)
-					else:
-						Log.writeLog(self.config)				 		
+						InputFileset.database.append(outFileset)			 		
 			elif inp.typeCode == "text":
 				subTypeCode = inp.subTypeCode()
 				if inp.subTypeCode() == "text_format":
@@ -65,7 +63,7 @@ class S3Utility:
 		print("upload:", cmd)
 		response = subprocess.run(cmd, shell=True, stderr=subprocess.PIPE)
 		if response.returncode != 0:
-			print("ERROR: Upload of %s to %s failed. MESSAGE: %s" % (inp.filesetPrefix, s3Bucket, response.stderr))
+			Log.getLogger(inp.filesetId).message(Log.FATAL, "ERROR: Upload of %s to %s failed. MESSAGE: %s" % (inp.filesetPrefix, s3Bucket, response.stderr))
 			return False
 		else:
 			if inp.filesetPrefix.startswith("video"):
