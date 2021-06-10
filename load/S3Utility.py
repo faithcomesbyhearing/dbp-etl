@@ -61,7 +61,7 @@ class S3Utility:
 		else:
 			source = "s3://%s" % (inp.fullPath())
 		target = "s3://%s/%s" % (s3Bucket, inp.filesetPrefix)
-		cmd = "aws %s s3 sync --acl bucket-owner-full-control %s %s" % (profile, source, target)
+		cmd = "aws %s s3 sync --acl bucket-owner-full-control \"%s\" \"%s\"" % (profile, source, target)
 		print("upload:", cmd)
 		response = subprocess.run(cmd, shell=True, stderr=subprocess.PIPE)
 		if response.returncode != 0:
