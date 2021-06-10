@@ -39,6 +39,12 @@ class Validate:
 				elif inp.typeCode == "video" and ext != ".mp4":
 					logger.invalidFileExt(file.name)
 
+			if inp.typeCode == "text":
+				unicodeScript = UnicodeScript()
+				errors = unicodeScript.validateStockNoRecord(inp.lptsRecord, self.db)
+				for error in errors:
+					logger.message(Log.EROR, error)
+
 		## Validate Text Filesets
 		texts = UpdateDBPTextFilesets(self.config, self.db, None)
 		results = []

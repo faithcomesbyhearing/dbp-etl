@@ -128,12 +128,53 @@ class UnicodeScript:
 
 
 	## This is a convenience method used to check a script using verse_text
-	def checkScripts(self, db, filesetId, lptsScript):
-		sampleText = self.findVerseText(db, filesetId[:6]) ## can't be in this class
-		textList = self.textToArray(sampleText)
-		actualScript = self.findScript(textList)
-		isMatch = self.matchScripts(actualScript, lptsScript)
-		return isMatch
+#	def checkScripts(self, db, filesetId, lptsScript):
+#		sampleText = self.findVerseText(db, filesetId[:6]) ## can't be in this class
+#		textList = self.textToArray(sampleText)
+#		actualScript = self.findScript(textList)
+#		isMatch = self.matchScripts(actualScript, lptsScript)
+#		return isMatch
+
+
+	## Used from inside Validate to that existing damId's in stockNo have the correct script
+	def validateStockNoRecord(self, lptsRecord, db):
+		stockNo = lptsRecord.Reg_StockNumber()
+		damIdList = lptsRecord.DamIdList("text")
+		#print(damIdList)
+		damIdList = lptsRecord.ReduceTextList(damIdList)
+		for (damId, index, status) in damIdList:
+			lptsScript = lptsRecord.Orthography(index)
+			sql = "SELECT verse_text FROM bible_verses WHERE hash_id IN (SELECT hash_id FROM bible_filesets WHERE id = %s) limit 10"
+			sampleText = db.selectList(sql, (damId[:6],))
+			if sampleText != None and len(sampleText) > 0:
+				textList = self.textToArray(sampleText)
+				#print("text", "".join(textList[:60]))
+				(fileScript, pctMatch) = self.findScript(textList)
+				#print("fileScript", fileScript, pctMatch)
+				isMatch = self.matchScripts(fileScript, lptsScript)
+				if not isMatch:
+					fileScript = fileScript.capitalize() if fileScript != None else None
+					#print("******* No match for", damId, fileScript, index, lptsScript)
+					self.errors.append("Script code incorrect in %s for damId %s; Change %s to %s" % (stockNo, damId, lptsScript, fileScript))
+		return self.errors
+
+
+"""
+## Unit Test of validateStockNoRecord
+if (__name__ == '__main__'):
+	from SQLUtility import *
+	config = Config()
+	db = SQLUtility(config)
+	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
+	results = []
+	for lptsRecord in lptsReader.resultSet:
+		unicodeScript = UnicodeScript()
+		results += unicodeScript.validateStockNoRecord(lptsRecord, db)
+	db.close()
+	print("FINAL")
+	for result in results:
+		print(result)
+"""
 
 
 if (__name__ == '__main__'):
@@ -214,5 +255,4 @@ if (__name__ == '__main__'):
 							message = "Mismatch"
 
 					writer.writerow((matchAns, stockNo, bibleId, damId, index, "".join(textList[:20]), fileScript, str(pctMatch) + "%", lptsScript, message))
-
 
