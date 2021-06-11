@@ -34,8 +34,8 @@ class UpdateDBPBibleFilesSecondary:
 	def createZipFile(self, inputFileset):
 		inp = inputFileset
 		if inp.typeCode == "audio" and inp.isMP3Fileset():
-			source = "s3://%s/" % (inp.fullPath(),)
-			target = "s3://%s/%s.zip" % (inp.fullPath(), inp.filesetId)
+			source = "s3://%s/%s/" % (self.config.s3_bucket, inp.filesetPrefix)
+			target = "s3://%s/%s/%s.zip" % (self.config.s3_bucket, inp.filesetPrefix, inp.filesetId)
 			zipDirectory = self.getZipInternalDir(inp.lptsDamId, inp.lptsRecord)
 			fileTypes = ["mp3"]
 			data = { "source": source, "target": target, "directoryName": zipDirectory, "fileTypes": fileTypes }
@@ -49,12 +49,12 @@ class UpdateDBPBibleFilesSecondary:
 													InvocationType = "RequestResponse",
 													Payload = dataBytes)
 				respData = response.get("Payload").read()
-				result = json.loads(respData.decode("utf-8"))
-				#print("result", result)
-				result = json.loads(result.get("body"))
+				#print("respData", respData)
+				respStr = respData.decode("utf-8")
+				result = json.loads(respStr)
 				status = result.get("status")
-				#print("status", status)
 				if status != "SUCCESS":
+					result = json.loads(result.get("body"))
 					Log.getLogger(inp.filesetId).message(Log.EROR, "Error in zip file creation %s" % (result.get("error"),))
 			except Exception as err:
 				Log.getLogger(inp.filesetId).message(Log.EROR, "Failure in zip file creation %s" % (err,))

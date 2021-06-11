@@ -68,9 +68,9 @@ class DBPLoadController:
 
 
 	def upload(self, inputFilesets):
+		self.s3Utility.uploadAllFilesets(inputFilesets)
 		secondary = UpdateDBPBibleFilesSecondary(self.config, None, None)
 		secondary.createAllZipFiles(inputFilesets)
-		self.s3Utility.uploadAllFilesets(inputFilesets)
 		Log.writeLog(self.config)
 
 

@@ -21,6 +21,7 @@ def deleteFileset(db, filesetId):
 	sql.append("DELETE bft FROM bible_file_tags AS bft"
 		" JOIN bible_files AS bf ON bft.file_id = bf.id"
 		" WHERE bf.hash_id = %s")
+	sql.append("DELETE FROM bible_files_secondary WHERE hash_id = %s")
 	sql.append("DELETE FROM bible_files WHERE hash_id = %s")
 	sql.append("DELETE FROM bible_verses WHERE hash_id = %s")
 	sql.append("DELETE FROM access_group_filesets WHERE hash_id = %s")
