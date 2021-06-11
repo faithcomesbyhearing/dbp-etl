@@ -21,6 +21,7 @@ from SQLUtility import *
 from SQLBatchExec import *
 from UpdateDBPTextFilesets import *
 from UpdateDBPBooksTable import *
+from UpdateDBPBibleFilesSecondary import *
 
 
 class UpdateDBPFilesetTables:
@@ -107,16 +108,19 @@ class UpdateDBPFilesetTables:
 		inp = inputFileset
 		print(inp.typeCode, inp.bibleId, inp.filesetId)
 		bookIdSet = self.getBibleBooks(inp.csvFilename)
+		updateBibleFilesSecondary = UpdateDBPBibleFilesSecondary(self.config, self.db, self.dbOut)
 		if inp.typeCode in {"audio", "video"}:
 			setTypeCode = UpdateDBPFilesetTables.getSetTypeCode(inp.typeCode, inp.filesetId)
 			hashId = self.insertBibleFileset(inp.typeCode, setTypeCode, inp.bibleId, inp.filesetId, bookIdSet)
 			self.insertFilesetConnections(hashId, inp.bibleId)
 			self.insertBibleFiles(hashId, inputFileset, bookIdSet)
+			updateBibleFilesSecondary.updateBibleFilesSecondary(hashId, inp)
 		elif inp.typeCode == "text":
 			if inp.subTypeCode() == "text_usx":
 				hashId = self.insertBibleFileset(inp.typeCode, "text_usx", inp.bibleId, inp.filesetId, bookIdSet)
 				self.insertFilesetConnections(hashId, inp.bibleId)
 				self.insertBibleFiles(hashId, inputFileset, bookIdSet)
+				updateBibleFilesSecondary.updateBibleFilesSecondary(hashId, inp)
 			elif inp.subTypeCode() == "text_format":
 				hashId = self.insertBibleFileset(inp.typeCode, "text_plain", inp.bibleId, inp.filesetId, bookIdSet)
 				self.insertFilesetConnections(hashId, inp.bibleId)

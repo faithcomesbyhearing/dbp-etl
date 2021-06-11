@@ -94,6 +94,8 @@ class Config:
 			self.audio_transcoder_key = self._get("audio.transcoder.key")
 			self.audio_transcoder_sleep_sec = self._getInt("audio.transcoder.sleep.sec")
 			self.audio_transcoder_input = self._get("audio.transcoder.input")
+			self.lambda_zip_function = self._get("lambda.zip.function")
+			self.lambda_zip_region = self._get("lambda.zip.region")
 
 			self.video_transcoder_region = self._get("video.transcoder.region")
 			self.video_transcoder_pipeline = self._get("video.transcoder.pipeline")

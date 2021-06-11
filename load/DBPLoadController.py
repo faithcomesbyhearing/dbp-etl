@@ -21,6 +21,7 @@ from UpdateDBPFilesetTables import *
 from UpdateDBPBiblesTable import *
 from UpdateDBPLPTSTable import *
 from UpdateDBPVideoTables import *
+from UpdateDBPBibleFilesSecondary import *
 
 
 class DBPLoadController:
@@ -67,6 +68,8 @@ class DBPLoadController:
 
 
 	def upload(self, inputFilesets):
+		secondary = UpdateDBPBibleFilesSecondary(self.config, None, None)
+		secondary.createAllZipFiles(inputFilesets)
 		self.s3Utility.uploadAllFilesets(inputFilesets)
 		Log.writeLog(self.config)
 

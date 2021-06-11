@@ -4,6 +4,8 @@ import os
 import sys
 import zipfile
 import boto3
+import json
+import urllib
 import subprocess
 from Log import *
 from Config import *
@@ -26,23 +28,43 @@ class UpdateDBPBibleFilesSecondary:
 
 	def createAllZipFiles(self, inputFilesetList):
 		for inp in inputFilesetList:
-			if inp.typeCode == "audio" and inp.isMP3Fileset():
-				if inp.zipFile() == None:
-					target = self.config.s3_bucket + "/" + self.filesetPath
-					zipDirectory = self.getZipInternalDir(inp.damId, inp.lptsRecord)
-					data = { "source": inp.fullPath(), "target": target, "directory": zipDirectory }
-					response = self.httpPost(self.config.audio_zip_url, self.config.audio_zip_key, data)
-					if response.get("status") != "SUCCESS":
-						error = response.get("error", "")
-						error = "Error in zip " + error
-						Log.getLogger(inp.filesetId).message(Log.EROR, error)
+			self.createZipFile(inp)
+
+
+	def createZipFile(self, inputFileset):
+		inp = inputFileset
+		if inp.typeCode == "audio" and inp.isMP3Fileset():
+			source = "s3://%s/" % (inp.fullPath(),)
+			target = "s3://%s/%s.zip" % (inp.fullPath(), inp.filesetId)
+			zipDirectory = self.getZipInternalDir(inp.lptsDamId, inp.lptsRecord)
+			fileTypes = ["mp3"]
+			data = { "source": source, "target": target, "directoryName": zipDirectory, "fileTypes": fileTypes }
+			#print(data)
+			dataJson = json.dumps(data)
+			dataBytes = dataJson.encode("utf-8")
+			lambdaClient = AWSSession.shared().lambdaInvoker()
+			try:
+				response = lambdaClient.invoke(
+													FunctionName = self.config.lambda_zip_function,
+													InvocationType = "RequestResponse",
+													Payload = dataBytes)
+				respData = response.get("Payload").read()
+				result = json.loads(respData.decode("utf-8"))
+				#print("result", result)
+				result = json.loads(result.get("body"))
+				status = result.get("status")
+				#print("status", status)
+				if status != "SUCCESS":
+					Log.getLogger(inp.filesetId).message(Log.EROR, "Error in zip file creation %s" % (result.get("error"),))
+			except Exception as err:
+				Log.getLogger(inp.filesetId).message(Log.EROR, "Failure in zip file creation %s" % (err,))
 
 
 	def getZipInternalDir(self, damId, lptsRecord):
 		langName = lptsRecord.LangName()
 		iso3 = lptsRecord.ISO()
 		stockNo = lptsRecord.Reg_StockNumber()
-		versionCode = stockNo[-3] if stockNo != None else ""
+		versionCode = stockNo[-3:] if stockNo != None else ""
 		scope = damId[6]
 		if scope == "N" or scope == "O":
 			scope += "T"
@@ -50,16 +72,19 @@ class UpdateDBPBibleFilesSecondary:
 		return "%s_%s_%s_%s_%s" % (langName, iso3, versionCode, scope, style)
 
 
-	def httpPost(self, url, key, data):
-		content = data.encode('utf-8')
-		req = urllib.request.Request(url, data=content)
-		req.add_header("Content-Type", "application/json")
-		req.add_header("X-API-Key", key)
-		resp = urllib.request.urlopen(req)
-		out = resp.read()
-		result = out.decode('utf-8')
-		return json.loads(result)
-
+#	def httpPost(self, url, key, data):
+#		content = data.encode('utf-8')
+#		print(content)
+#		req = urllib.request.Request(url, data=content)
+#		req.add_header("Content-Type", "application/json")
+#		req.add_header("X-API-Key", key)
+#		for header in req.header_items():
+#			print("request", header)
+#		resp = urllib.request.urlopen(req)
+#		out = resp.read()
+#		result = out.decode('utf-8')
+#		return json.loads(result)
+#
 
 	def updateBibleFilesSecondary(self, hashId, inputFileset):
 		inp = inputFileset
@@ -174,6 +199,7 @@ if (__name__ == '__main__'):
 								data.typeCode, data.bibleId, data.index, data.lptsRecord)
 				if len(inputFileset.files) > 0:
 					print("3.", inputFileset.toString())
+					update.createZipFile(inputFileset)
 					update.updateBibleFilesSecondary(hashId, inputFileset)
 					dbOut.displayStatements()
 					dbOut.displayCounts()
