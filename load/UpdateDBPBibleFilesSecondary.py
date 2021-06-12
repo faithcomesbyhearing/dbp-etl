@@ -32,7 +32,7 @@ class UpdateDBPBibleFilesSecondary:
 
 	def createZipFile(self, inputFileset):
 		inp = inputFileset
-		if inp.typeCode == "audio" and inp.isMP3Fileset():
+		if inp.typeCode == "audio" and inp.isMP3Fileset() and len(inp.filesetId) == 10:
 			source = "s3://%s/%s/" % (self.config.s3_bucket, inp.filesetPrefix)
 			target = "s3://%s/%s/%s.zip" % (self.config.s3_bucket, inp.filesetPrefix, inp.filesetId)
 			zipDirectory = self.getZipInternalDir(inp.lptsDamId, inp.lptsRecord)
@@ -84,7 +84,7 @@ class UpdateDBPBibleFilesSecondary:
 				if not artFile in dbpArtSet:
 					insertRows.append(('art', hashId, artFile))
 
-			if inp.isMP3Fileset() and len(inp.lptsDamId) == 10:
+			if inp.isMP3Fileset() and len(inp.filesetId) == 10:
 				zipFile = inp.zipFile()
 				if zipFile != None:
 					dbpZipSet = self.db.selectSet(sql, (hashId, 'zip'))
