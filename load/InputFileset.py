@@ -161,6 +161,10 @@ class InputFileset:
 		return results
 
 
+	def reloadFilenames(self):
+		self.files = _setFilenames()
+
+
 	def setFileSizes(self):
 		request = { 'Bucket': self.location, 'MaxKeys': 1000, 'Prefix': self.filesetPrefix + "/" }
 		response = AWSSession.shared().s3Client.list_objects_v2(**request)
