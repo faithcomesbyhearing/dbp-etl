@@ -17,7 +17,6 @@ from AWSSession import *
 
 class UpdateDBPBibleFilesSecondary:
 
-	## How do failures in processing get passed to log, and effect the RunStatus
 
 	def __init__(self, config, db, dbOut):
 		self.config = config
