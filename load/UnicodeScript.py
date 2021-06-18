@@ -23,8 +23,7 @@ class UnicodeScript:
 			if os.path.isdir(pathname):
 				for filename in [f for f in os.listdir(pathname) if not f.startswith('.')]:
 					if filename not in ignoreSet and os.path.isfile(pathname + os.sep + filename):
-						filepath = pathname + os.sep + filename
-						results.append(filepath)
+						results.append(filename)
 			else:
 				self.errors.append("ERROR: Invalid pathname %s" % (pathname,))
 		else:
@@ -34,7 +33,8 @@ class UnicodeScript:
 			response = s3Client.list_objects_v2(**request)
 			for item in response.get('Contents', []):
 				objKey = item.get('Key')
-				results.append(objKey)
+				filename = objKey[len(self.filesetPath) + 1:]
+				results.append(filename)
 			if len(results) == 0:
 				self.errors.append("ERROR: Invalid bucket %s or prefix %s/" % (bucket, filesetPath))
 		return results
@@ -126,16 +126,6 @@ class UnicodeScript:
 		return False
 
 
-
-	## This is a convenience method used to check a script using verse_text
-#	def checkScripts(self, db, filesetId, lptsScript):
-#		sampleText = self.findVerseText(db, filesetId[:6]) ## can't be in this class
-#		textList = self.textToArray(sampleText)
-#		actualScript = self.findScript(textList)
-#		isMatch = self.matchScripts(actualScript, lptsScript)
-#		return isMatch
-
-
 	## Used from inside Validate to that existing damId's in stockNo have the correct script
 	def validateStockNoRecord(self, lptsRecord, db):
 		stockNo = lptsRecord.Reg_StockNumber()
@@ -157,24 +147,6 @@ class UnicodeScript:
 					#print("******* No match for", damId, fileScript, index, lptsScript)
 					self.errors.append("Script code incorrect in %s for damId %s; Change %s to %s" % (stockNo, damId, lptsScript, fileScript))
 		return self.errors
-
-
-"""
-## Unit Test of validateStockNoRecord
-if (__name__ == '__main__'):
-	from SQLUtility import *
-	config = Config()
-	db = SQLUtility(config)
-	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
-	results = []
-	for lptsRecord in lptsReader.resultSet:
-		unicodeScript = UnicodeScript()
-		results += unicodeScript.validateStockNoRecord(lptsRecord, db)
-	db.close()
-	print("FINAL")
-	for result in results:
-		print(result)
-"""
 
 
 if (__name__ == '__main__'):
@@ -222,7 +194,7 @@ if (__name__ == '__main__'):
 						while len("".join(lines)) < 2000 and len(fileKeys) > pos:
 							filename = fileKeys[pos]
 							if filename.endswith(".html") and not filename.endswith("about.html") and not filename.endswith("index.html"):
-								lines += unicodeScript.readObject(s3Client, "s3://dbp-prod", filename)
+								lines += unicodeScript.readObject(s3Client, "s3://dbp-prod", objKey + "/" + filename)
 							pos += 1
 						textList = unicodeScript.parseXMLStrings(lines)
 
