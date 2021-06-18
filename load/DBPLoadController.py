@@ -198,6 +198,13 @@ if (__name__ == '__main__'):
 # time python3 load/TestCleanup.py test URDPAKN_ET-usx
 # time python3 load/DBPLoadController.py test s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr/ Urdu_N2URDPAK_USX
 
+# python3 load/TestCleanup.py test ABIWBT
+# python3 load/TestCleanup.py test ABIWBTN_ET-usx
+# python3 load/DBPLoadController.py test s3://dbp-etl-mass-batch "Abidji N2ABIWBT/05 DBP & GBA/Abidji_N2ABIWBT/Abidji_N2ABIWBT_USX"
+# python3 load/TestCleanup.py test ACHBSU
+# python3 load/TestCleanup.py test ACHBSUN_ET-usx
+# python3 load/DBPLoadController.py test s3://dbp-etl-mass-batch "Acholi N2ACHBSU/05 DBP & GBA/Acholi_N2ACHBSU - Update/Acholi_N2ACHBSU_USX"
+
 
 
 

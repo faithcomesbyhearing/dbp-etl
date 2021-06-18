@@ -67,8 +67,8 @@ class InputFileset:
 			filesetPath = filesetPath[:-1] if filesetPath.endswith("/") else filesetPath
 			filesetId = filesetPath.split("/")[-1]
 			filesetId = filesetId[:7] + "_" + filesetId[8:] + "-usx" if filesetId[8:10] == "ET" else filesetId
-			(data, messages) = PreValidate.validateDBPELT(lptsReader, s3Client, location, filesetId, filesetPath)
-			if data != None:
+			(dataList, messages) = PreValidate.validateDBPELT(lptsReader, s3Client, location, filesetId, filesetPath)
+			for data in dataList:
 				inp = InputFileset(config, location, data.filesetId, filesetPath, data.damId, 
 					data.typeCode, data.bibleId, data.index, data.lptsRecord)
 				#print("INPUT", inp.toString())
@@ -313,13 +313,16 @@ class InputFileset:
 if (__name__ == '__main__'):
 	config = Config()
 	s3Client = AWSSession.shared().s3Client
+	session = boto3.Session(profile_name = config.s3_aws_profile)
+	s3Client = session.client('s3')
 	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
 	InputFileset.validate = InputFileset.filesetCommandLineParser(config, s3Client, lptsReader)
 	for inp in InputFileset.validate:
 		if inp.typeCode == "text" and inp.locationType == InputFileset.BUCKET:
 			inp.downloadFiles()
 
-			os.remove(inp.databasePath)
+			if os.path.isfile(inp.databasePath):
+				os.remove(inp.databasePath)
 			bibleDB = SqliteUtility(inp.databasePath)
 			print("DatabasePath", inp.databasePath)
 			bibleDB.execute("CREATE TABLE tableContents (code text not null)", ())
@@ -336,4 +339,18 @@ if (__name__ == '__main__'):
 # python3 load/InputFileset.py newdata s3://dbp-prod ENGESVN2DA ENGESVN2DA16
 
 # time python3 load/InputFileset.py test s3://test-dbp-etl HYWWAVN2ET
+
+
+# python3 load/InputFileset.py test s3://dbp-etl-mass-batch "Abidji N2ABIWBT/05 DBP & GBA/Abidji_N2ABIWBT/Abidji_N2ABIWBT_USX"
+# python3 load/InputFileset.py test s3://dbp-etl-mass-batch "Acholi N2ACHBSU/05 DBP & GBA/Acholi_N2ACHBSU - Update/Acholi_N2ACHBSU_USX"
+# python3 load/InputFileset.py test s3://dbp-etl-mass-batch "Achuar [ACU]/N2ACUTBL/05 DBP & GBA/Achuar_N2ACUTBL - Update/Achuar_N2ACUTBL_USX"
+# python3 load/InputFileset.py test s3://dbp-etl-mass-batch "Agni Sanvi N2ANYWBT/05 DBP & GBA/Agni Sanvi_N2ANYWBT/Agni Sanvi_N2ANYWBT_USX"
+# python3 load/InputFileset.py test s3://dbp-etl-mass-batch "Agta, Pahanan N2APFCMU/05 DBP & GBA/Agta, Pahanan_N2APFCMU/Agta, Pahanan_N2APFCMU_USX"
+# python3 load/InputFileset.py test s3://dbp-etl-mass-batch "Akan [AKA]/N1AKABIB (Asante)/05 DBP & GBA/Akan, Asante_N1AKABIB/Akan, Asante_N1AKABIB_USX"
+
+
+
+
+
+
 
