@@ -12,14 +12,14 @@ from UnicodeScript import *
 
 class PreValidateResult:
 
-	def __init__(self, lptsRecord, filesetId, damId, typeCode, index, fileSet = None):
+	def __init__(self, lptsRecord, filesetId, damId, typeCode, index, fileList = None):
 		self.lptsRecord = lptsRecord
 		self.filesetId = filesetId
 		self.damId = damId
 		self.typeCode = typeCode
 		self.bibleId = lptsRecord.DBP_EquivalentByIndex(index)
 		self.index = index
-		self.fileSet = fileSet
+		self.fileList = fileList
 
 	def scope(self):
 		return self.damId[6]
@@ -28,7 +28,11 @@ class PreValidateResult:
 		return self.lptsRecord.Orthography(self.index)
 
 	def toString(self):
-		return("out: %s/%s/%s is %s %d" % (self.typeCode, self.bibleId, self.filesetId, self.damId, self.index))		
+		results = []
+		results.append("out: %s/%s/%s is %s %d" % (self.typeCode, self.bibleId, self.filesetId, self.damId, self.index))
+		for file in self.fileList:
+			results.append(file)
+		return ", ".join(results)		
 
 
 class PreValidate:
@@ -59,7 +63,7 @@ class PreValidate:
 		stockNumber = preValidate.isTextStockNo(directory)
 		if stockNumber != None:
 			filenames = unicodeScript.getFilenames(s3Client, location, fullPath)
-			sampleText = unicodeScript.readObject(s3Client, location, filenames[0])
+			sampleText = unicodeScript.readObject(s3Client, location, fullPath + "/" + filenames[0])
 			resultList = preValidate.validateUSXStockNo(stockNumber, filenames, sampleText)
 		else:
 			result = preValidate.validateFilesetId(directory)
@@ -219,8 +223,8 @@ class PreValidate:
 			if scopeMap.get(scope) != None:
 				for (damId, index, script) in scopeMap.get(scope):
 					if actualScript == None or self.unicodeScript.matchScripts(actualScript, script):
-						filenameSet = self._getFilenameSet(scope, bookIdsFound, bookIdMap)
-						result = PreValidateResult(lptsRecord, damId + "-usx", damId, "text", index, filenameSet)
+						filenameList = self._getFilenameList(scope, bookIdsFound, bookIdMap)
+						result = PreValidateResult(lptsRecord, damId + "-usx", damId, "text", index, filenameList)
 				if result == None:
 					self.errorMessage(stockNo, "text is script %s, but there is no damId with that script in scope %s." % (actualScript, scope))
 			else:
@@ -229,8 +233,8 @@ class PreValidate:
 			if scopeMap.get("P") != None:
 				for (damId, index, script) in scopeMap.get("P"):
 					if actualScript == None or self.unicodeScript.matchScripts(actualScript, script):
-						filenameSet = self._getFilenameSet(scope, bookIdsFound, bookIdMap)
-						result = PreValidateResult(lptsRecord, damId + "-usx", damId, "text", index, filenameSet)
+						filenameList = self._getFilenameList(scope, bookIdsFound, bookIdMap)
+						result = PreValidateResult(lptsRecord, damId + "-usx", damId, "text", index, filenameList)
 				if result == None:
 					self.errorMessage(stockNo, "text is script %s, but there is no damId with that script in scope P." % (actualScript,))
 			else:
@@ -238,25 +242,25 @@ class PreValidate:
 		return result
 
 
-	def _getFilenameSet(self, nToT, selectBookIds, bookIdMap):
-		result = set()
+	def _getFilenameList(self, nToT, selectBookIds, bookIdMap):
+		result = []
 		if nToT == "N":
 			includeBooks = selectBookIds
 		else:
 			includeBooks = set(bookIdMap.keys()).difference(self.NT)
 		for bookId in includeBooks:
 			filename = bookIdMap[bookId]
-			result.add(filename)
-		return result
+			result.append(filename)
+		return sorted(result)
 
 
 	def _combineMultiplePScope(self, stockNo, ntResult, otResult):
 		results = []
-		if ntResult != None and otResult != None:
-			if ntResult.scope() == "P" and otResult.scope() == "P":
-				fullFiles = ntResult.fileSet.union(otResult.fileSet)
-				ntResult.fileSet = fullFiles
-				results.append(ntResult)
+		if ntResult != None and ntResult.scope() == "P" and otResult != None and otResult.scope() == "P":
+			fullFiles = otResult.fileList + ntResult.fileList
+			ntResult.fileList = fullFiles
+			results.append(ntResult)
+			return results
 		if ntResult != None:
 			results.append(ntResult)
 		if otResult != None:
@@ -356,6 +360,7 @@ if (__name__ == "__main__"):
 			request['ContinuationToken'] = response['NextContinuationToken']
 
 	for (directory, filenames) in testDataMap.items():
+		print(directory)
 		baseDir = os.path.basename(directory)
 		stockNumber = preValidate.isTextStockNo(baseDir)
 		if stockNumber == None:
@@ -364,10 +369,12 @@ if (__name__ == "__main__"):
 			oneFilePath = directory + "/" + filenames[0]
 			sampleText = unicodeScript.readObject(s3Client, "s3://" + bucket, oneFilePath)
 			resultList = preValidate.validateUSXStockNo(stockNumber, filenames, sampleText)
+			for result in resultList:
+				print(result.toString())
 		print("ERRORS", preValidate.messages)
 		preValidate.messages = {}
 
 
-# time python3 load/PreValidate.py newdata
+# time python3 load/PreValidate.py test
 	
 
