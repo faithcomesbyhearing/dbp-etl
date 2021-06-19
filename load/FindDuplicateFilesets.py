@@ -14,6 +14,7 @@
 import os
 import csv
 from Config import *
+from Log import *
 
 class FindDuplicateFilesets:
 

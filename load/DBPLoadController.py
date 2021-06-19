@@ -205,6 +205,12 @@ if (__name__ == '__main__'):
 # python3 load/TestCleanup.py test ACHBSUN_ET-usx
 # python3 load/DBPLoadController.py test s3://dbp-etl-mass-batch "Acholi N2ACHBSU/05 DBP & GBA/Acholi_N2ACHBSU - Update/Acholi_N2ACHBSU_USX"
 
+# python3 load/TestCleanup.py test CRXWYI
+# python3 load/TestCleanup.py test CRXWYIP_ET-html
+# python3 load/TestCleanup.py test CRXWYIN_ET-html
+# python3 load/TestCleanup.py test CRXWYIP_ET-usx
+# python3 load/TestCleanup.py test CRXWYIN_ET-usx
+# python3 load/DBPLoadController.py test s3://dbp-etl-mass-batch "Carrier, Central N2CRXWYI/05 DBP & GBA/Carrier, Central_P1CRXWYI/Carrier, Central_P1CRXWYI_USX"
 
 
 

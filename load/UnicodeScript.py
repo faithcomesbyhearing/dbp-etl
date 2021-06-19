@@ -22,7 +22,7 @@ class UnicodeScript:
 			pathname = location + os.sep + filesetPath
 			if os.path.isdir(pathname):
 				for filename in [f for f in os.listdir(pathname) if not f.startswith('.')]:
-					if filename not in ignoreSet and os.path.isfile(pathname + os.sep + filename):
+					if filename not in ignoreSet:# and os.path.isfile(pathname + os.sep + filename):
 						results.append(filename)
 			else:
 				self.errors.append("ERROR: Invalid pathname %s" % (pathname,))
@@ -33,7 +33,7 @@ class UnicodeScript:
 			response = s3Client.list_objects_v2(**request)
 			for item in response.get('Contents', []):
 				objKey = item.get('Key')
-				filename = objKey[len(self.filesetPath) + 1:]
+				filename = objKey[len(filesetPath) + 1:]
 				results.append(filename)
 			if len(results) == 0:
 				self.errors.append("ERROR: Invalid bucket %s or prefix %s/" % (bucket, filesetPath))
