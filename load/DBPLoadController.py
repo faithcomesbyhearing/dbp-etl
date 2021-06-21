@@ -158,7 +158,7 @@ if (__name__ == '__main__'):
 # time python3 load/DBPLoadController.py test s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr UNRWFWP1DA HYWWAVN2ET
 
 # Some video uploads
-# time python3 load/TestCleanup.py test-video ENGESVP2DV
+# time python3 load/TestCleanup.py test ENGESVP2DV
 # time python3 load/DBPLoadController.py test /Volumes/FCBH/all-dbp-etl-test/ ENGESVP2DV
 # time python3 load/DBPLoadController.py test /Volumes/FCBH/all-dbp-etl-test/ video/ENGESV/ENGESVP2DV
 # time python3 load/DBPLoadController.py test /Volumes/FCBH/all-dbp-etl-test/ video/ENGESX/ENGESVP2DV
@@ -167,20 +167,10 @@ if (__name__ == '__main__'):
 # time python3 load/TestCleanup.py test GNWNTM
 # time python3 load/TestCleanup.py test GNWNTMN_ET-usx
 # time python3 load/DBPLoadController.py test /Volumes/FCBH/all-dbp-etl-test/ GNWNTMN2ET
+
 # time python3 load/TestCleanup.py test GNWNTM
 # time python3 load/TestCleanup.py test GNWNTMN_ET-usx
 # time python3 load/DBPLoadController.py test /Volumes/FCBH/all-dbp-etl-test/ text/GNWNTM/GNWNTMN2ET
-
-# Test stock number upload from Drive with path
-# time python3 load/TestCleanup.py test BBBWBT
-# time python3 load/TestCleanup.py test BBBWBTN_ET-usx
-# time python3 load/DBPLoadController.py test /Volumes/FCBH/TextStockNo/ Barai_N2BBBWBT_USX
-# time python3 load/TestCleanup.py test ORCBTL
-# time python3 load/TestCleanup.py test ORCBTLN_ET-usx
-# time python3 load/DBPLoadController.py test /Volumes/FCBH/TextStockNo/ Orma_N2ORCBTL_USX
-# time python3 load/TestCleanup.py test URDPAK
-# time python3 load/TestCleanup.py test URDPAKN_ET-usx
-# time python3 load/DBPLoadController.py test /Volumes/FCBH/TextStockNo/ Urdu_N2URDPAK_USX
 
 ### prepare test data in bucket
 ### aws --profile DBP_DEV s3 sync /Volumes/FCBH/TextStockNo/Barai_N2BBBWBT_USX/ s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr/Barai_N2BBBWBT_USX/
@@ -191,9 +181,11 @@ if (__name__ == '__main__'):
 # time python3 load/TestCleanup.py test BBBWBT
 # time python3 load/TestCleanup.py test BBBWBTN_ET-usx
 # time python3 load/DBPLoadController.py test s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr/ Barai_N2BBBWBT_USX
+
 # time python3 load/TestCleanup.py test ORCBTL
 # time python3 load/TestCleanup.py test ORCBTLN_ET-usx
 # time python3 load/DBPLoadController.py test s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr/ Orma_N2ORCBTL_USX
+
 # time python3 load/TestCleanup.py test URDPAK
 # time python3 load/TestCleanup.py test URDPAKN_ET-usx
 # time python3 load/DBPLoadController.py test s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr/ Urdu_N2URDPAK_USX
@@ -202,6 +194,7 @@ if (__name__ == '__main__'):
 # python3 load/TestCleanup.py test ABIWBTN_ET-usx
 # python3 load/DBPLoadController.py test s3://dbp-etl-mass-batch "Abidji N2ABIWBT/05 DBP & GBA/Abidji_N2ABIWBT/Abidji_N2ABIWBT_USX"
 
+# This one BiblePublisher has two copies of 1CO:16, but I can only find one in the USX file.
 # python3 load/TestCleanup.py test ACHBSU
 # python3 load/TestCleanup.py test ACHBSUN_ET-usx
 # python3 load/DBPLoadController.py test s3://dbp-etl-mass-batch "Acholi N2ACHBSU/05 DBP & GBA/Acholi_N2ACHBSU - Update/Acholi_N2ACHBSU_USX"

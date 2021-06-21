@@ -32,8 +32,9 @@ class PreValidateResult:
 	def toString(self):
 		results = []
 		results.append("out: %s/%s/%s is %s %d" % (self.typeCode, self.bibleId(), self.filesetId, self.damId, self.index))
-		for file in self.fileList:
-			results.append(file)
+		if self.fileList != None:
+			for file in self.fileList:
+				results.append(file)
 		return ", ".join(results)		
 
 

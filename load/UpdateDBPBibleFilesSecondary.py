@@ -115,24 +115,25 @@ if (__name__ == '__main__'):
 		#print(bibleId, filesetId, hashId)
 		location = "s3://%s" % (config.s3_bucket,)
 		filesetPath = "audio/%s/%s" % (bibleId, filesetId)
-		(data, messages) = PreValidate.validateDBPELT(lptsReader, s3Client, location, filesetId, filesetPath)
+		(dataList, messages) = PreValidate.validateDBPELT(lptsReader, s3Client, location, filesetId, filesetPath)
 		if messages != None and len(messages) > 0:
 			Log.addPreValidationErrors(messages)
 			print(filesetPath, messages)
-		if data == None:
+		if dataList == None or len(dataList) == 0:
 			print("NO InputFileset", filesetPath)
 		else:
-			print(data.toString())
-			inp = InputFileset(config, location, data.filesetId, filesetPath, data.damId, 
+			for data in dataList:
+				print(data.toString())
+				inp = InputFileset(config, location, data.filesetId, filesetPath, data.damId, 
 								data.typeCode, data.bibleId, data.index, data.lptsRecord)
-			#print(inp.toString())
-			if inp.zipFile() == None:
-				print("must create zip file")
-				update.createZipFile(inp)
-			update.updateBibleFilesSecondary(hashId, inp)
-			dbOut.displayStatements()
-			dbOut.displayCounts()
-			dbOut.execute("zip_art_" + filesetId)	
+				print(inp.toString())
+				if inp.zipFile() == None:
+					print("must create zip file")
+					update.createZipFile(inp)
+				update.updateBibleFilesSecondary(hashId, inp)
+				dbOut.displayStatements()
+				dbOut.displayCounts()
+				#dbOut.execute("zip_art_" + filesetId)	
 	Log.writeLog(config)
 
 
