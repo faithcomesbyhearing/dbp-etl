@@ -43,7 +43,7 @@ class AWSSession:
 			    aws_session_token = credentials['SessionToken'],
 			    region_name = regionName
 			)				
-			print("Created role %s based session for %s." % (self.config.s3_aws_role, clientType))
+			#print("Created role %s based session for %s." % (self.config.s3_aws_role, clientType))
 		return client
 
 

@@ -375,8 +375,8 @@ if (__name__ == '__main__'):
 				if file.name.endswith(".usx"):
 					bibleDB.execute("INSERT INTO tableContents (code) VALUES (?)", (file.name.split(".")[0],))
 			inp.numberUSXFileset(inp)
-		print(inp.toString())
-		print("subtype", inp.subTypeCode())
+		#print(inp.toString())
+		#print("subtype", inp.subTypeCode())
 	Log.writeLog(config)
 
 # python3 load/InputFileset.py test /Volumes/FCBH/files/complete/audio/ENGESV/ ENGESVN2DA ENGESVN2DA16
