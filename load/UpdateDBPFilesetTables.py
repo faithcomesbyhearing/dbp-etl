@@ -111,7 +111,7 @@ class UpdateDBPFilesetTables:
 		bookIdSet = self.getBibleBooks(inp.typeCode, inp.csvFilename, inp.databasePath)
 		updateBibleFilesSecondary = UpdateDBPBibleFilesSecondary(self.config, dbConn, self.dbOut)
 		if inp.typeCode in {"audio", "video"}:
-			setTypeCode = UpdateDBPFilesetTables.getSetTypeCode(dbConn, inp.typeCode, inp.filesetId)
+			setTypeCode = UpdateDBPFilesetTables.getSetTypeCode(inp.typeCode, inp.filesetId)
 			hashId = self.insertBibleFileset(dbConn, inp.typeCode, setTypeCode, inp.bibleId, inp.filesetId, bookIdSet)
 			self.insertFilesetConnections(dbConn, hashId, inp.bibleId)
 			self.insertBibleFiles(dbConn, hashId, inputFileset, bookIdSet)

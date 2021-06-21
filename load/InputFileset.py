@@ -95,7 +95,6 @@ class InputFileset:
 		self.index = index
 		self.lptsRecord = lptsRecord
 		self.filesetPrefix = "%s/%s/%s" % (self.typeCode, self.bibleId, self.filesetId)
-		#self.csvFilename = "%s%s_%s_%s.csv" % (config.directory_accepted, self.typeCode, self.bibleId, self.filesetId)
 		if self.typeCode == "text":
 			self.databasePath = "%s%s.db" % (config.directory_accepted, damId[:7] + "_" + damId[8:])
 		else:
