@@ -133,7 +133,7 @@ if (__name__ == '__main__'):
 				update.updateBibleFilesSecondary(hashId, inp)
 				dbOut.displayStatements()
 				dbOut.displayCounts()
-				#dbOut.execute("zip_art_" + filesetId)	
+				dbOut.execute("zip_art_" + filesetId)	
 	Log.writeLog(config)
 
 
