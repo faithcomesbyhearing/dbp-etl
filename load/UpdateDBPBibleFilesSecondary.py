@@ -125,7 +125,7 @@ if (__name__ == '__main__'):
 			for data in dataList:
 				print(data.toString())
 				inp = InputFileset(config, location, data.filesetId, filesetPath, data.damId, 
-								data.typeCode, data.bibleId, data.index, data.lptsRecord)
+								data.typeCode, data.bibleId(), data.index, data.lptsRecord)
 				print(inp.toString())
 				if inp.zipFile() == None:
 					print("must create zip file")
