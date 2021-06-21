@@ -33,9 +33,10 @@ class FilenameReducer:
 			print("Accept Errors:", item)
 
 
-	def __init__(self, config, filePrefix, fileList, extraChapters, missingChapters, missingVerses):
+	def __init__(self, config, filePrefix, csvFilename, fileList, extraChapters, missingChapters, missingVerses):
 		self.config = config
 		self.filePrefix = filePrefix
+		self.csvFilename = csvFilename
 		self.fileList = fileList
 		self.extraChapters = extraChapters
 		self.missingChapters = missingChapters
@@ -135,9 +136,7 @@ class FilenameReducer:
 		for file in fileList:
 			file.setSortSequence()
 
-		filename = path + self.filePrefix.replace("/", "_") + ".csv"
-		self.ensureDirectory(filename)
-
+		filename = path + os.path.basename(self.csvFilename)
 		with open(filename, 'w', newline='\n') as csvfile:
 			writer = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
 			writer.writerow(("type_code", "bible_id", "fileset_id", "sequence", "file_name", "book_id", "book_name",
@@ -221,13 +220,5 @@ class FilenameReducer:
 		else:
 			results.append("%s %d:%d-%d" % (book, chapStart, verseStart, verseEnd - 1))
 
-
-	## This should be in conf program, not here.
-	def ensureDirectory(self, filename):
-		dirPath = os.path.dirname(filename)
-		#print("dirPath", dirPath)
-		if not os.path.exists(dirPath):
-			os.makedirs(dirPath)
-			#print("mkdirs", dirPath)
 
 

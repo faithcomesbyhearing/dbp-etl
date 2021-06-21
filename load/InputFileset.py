@@ -95,12 +95,15 @@ class InputFileset:
 		self.index = index
 		self.lptsRecord = lptsRecord
 		self.filesetPrefix = "%s/%s/%s" % (self.typeCode, self.bibleId, self.filesetId)
-		self.csvFilename = "%s%s_%s_%s.csv" % (config.directory_accepted, self.typeCode, self.bibleId, self.filesetId)
+		#self.csvFilename = "%s%s_%s_%s.csv" % (config.directory_accepted, self.typeCode, self.bibleId, self.filesetId)
 		if self.typeCode == "text":
-			tempFilesetId = damId[:7] + "_" + damId[8:]
-			self.databasePath = "%s%s.db" % (config.directory_accepted, tempFilesetId)
+			self.databasePath = "%s%s.db" % (config.directory_accepted, damId[:7] + "_" + damId[8:])
 		else:
 			self.databasePath = None
+		if self.typeCode == "text" and len(self.filesetId) < 10:
+			self.csvFilename = "%s%s_%s_%s.csv" % (config.directory_accepted, self.typeCode, self.bibleId, damId[:7] + "_" + damId[8:])
+		else:
+			self.csvFilename = "%s%s_%s_%s.csv" % (config.directory_accepted, self.typeCode, self.bibleId, self.filesetId)
 		if fileList != None:
 			self.files = self._downloadSelectedFiles(fileList)
 		else:

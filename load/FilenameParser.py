@@ -531,7 +531,7 @@ class FilenameParser:
 			elif inp.typeCode == "text":
 				(extraChapters, missingChapters, missingVerses) = ([], [], [])
 			
-			reducer = FilenameReducer(self.config, prefix, files, extraChapters, missingChapters, missingVerses)
+			reducer = FilenameReducer(self.config, prefix, inp.csvFilename, files, extraChapters, missingChapters, missingVerses)
 			reducer.process(logger)
 		print("")
 

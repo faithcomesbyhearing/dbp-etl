@@ -16,6 +16,9 @@ import csv
 from Config import *
 from Log import *
 
+### This class is not used as of 6/21/21. It was intended to be used for processing the dbp-prod, dbp-vid
+### buckets, but the dbp-etl program has not been used in that way.
+
 class FindDuplicateFilesets:
 
 	def __init__(self, config):
