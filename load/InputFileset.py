@@ -34,7 +34,7 @@ class InputFile:
 		results = []
 		results.append("name=%s" % (self.name,))
 		results.append("size=%d" % (self.size,))
-		results.append("date=%s" % (self.lastModified))
+		results.append("date=%s" % (self.lastModified)) ## I think this should be deprecated
 		if self.duration != None:
 			results.append("duration={:.{}f}".format(self.duration, 3))
 		return " ".join(results)
@@ -70,7 +70,7 @@ class InputFileset:
 			(dataList, messages) = PreValidate.validateDBPELT(lptsReader, s3Client, location, filesetId, filesetPath)
 			for data in dataList:
 				inp = InputFileset(config, location, data.filesetId, filesetPath, data.damId, 
-					data.typeCode, data.bibleId, data.index, data.lptsRecord)
+					data.typeCode, data.bibleId(), data.index, data.lptsRecord, data.fileList)
 				#print("INPUT", inp.toString())
 				results.append(inp)
 			if messages != None and len(messages) > 0:
@@ -79,7 +79,7 @@ class InputFileset:
 		return results
 
 
-	def __init__(self, config, location, filesetId, filesetPath, damId, typeCode, bibleId, index, lptsRecord):
+	def __init__(self, config, location, filesetId, filesetPath, damId, typeCode, bibleId, index, lptsRecord, fileList = None):
 		self.config = config
 		if location.startswith("s3://"):
 			self.locationType = InputFileset.BUCKET
@@ -96,8 +96,15 @@ class InputFileset:
 		self.lptsRecord = lptsRecord
 		self.filesetPrefix = "%s/%s/%s" % (self.typeCode, self.bibleId, self.filesetId)
 		self.csvFilename = "%s%s_%s_%s.csv" % (config.directory_accepted, self.typeCode, self.bibleId, self.filesetId)
-		self.databasePath = "%s%s.db" % (config.directory_accepted, self.filesetId) if self.typeCode == "text" else None
-		self.files = self._setFilenames()
+		if self.typeCode == "text":
+			tempFilesetId = damId[:7] + "_" + damId[8:]
+			self.databasePath = "%s%s.db" % (config.directory_accepted, tempFilesetId)
+		else:
+			self.databasePath = None
+		if fileList != None:
+			self.files = self._downloadSelectedFiles(fileList)
+		else:
+			self.files = self._setFilenames()
 		self.filesMap = None
 		self.mediaContainer = None
 		self.mediaCodec = None
@@ -120,6 +127,34 @@ class InputFileset:
 		for file in self.files:
 			results.append(file.toString() + "\n")
 		return " ".join(results)
+
+
+	## This method is used instead of _setFilenames when a specific list of files has been provided
+	def _downloadSelectedFiles(self, fileList):
+		results = []
+		s3Client = AWSSession.shared().s3Client
+		directory = self.config.directory_upload_aws + self.filesetId
+		if not os.path.isdir(directory):
+			os.makedirs(directory)
+		else:
+			for f in os.listdir(directory):
+				os.remove(os.path.join(directory, f))
+		for filename in fileList:
+			objectKey = self.filesetPath + "/" + filename
+			filepath = directory + os.sep + filename
+			try:
+				print("Download s3://%s/%s to %s" % (self.location, objectKey, filepath))
+				s3Client.download_file(self.location, objectKey, filepath)
+				filesize = os.path.getsize(filepath)
+				modifiedTS = os.path.getmtime(filepath)
+				lastModified = str(datetime.fromtimestamp(modifiedTS)).split(".")[0]
+				results.append(InputFile(filename, filesize, lastModified))				
+			except Exception as err:
+				print("ERROR: Download s3://%s/%s failed with error %s" % (self.location, objectKey, err))
+		self.locationType = InputFileset.LOCAL
+		self.location = self.config.directory_upload_aws
+		self.filesetPath = self.filesetId		
+		return results
 
 
 	def _setFilenames(self):
@@ -162,7 +197,7 @@ class InputFileset:
 
 
 	def reloadFilenames(self):
-		self.files = _setFilenames()
+		self.files = self._setFilenames()
 
 
 	def setFileSizes(self):
@@ -266,6 +301,7 @@ class InputFileset:
 		return None
 
 
+	## This method is used to download files to local disk when needed for processing, such as BiblePublisher
 	def downloadFiles(self):
 		directory = self.config.directory_upload_aws + self.filesetPath
 		if not os.path.isdir(directory):
@@ -308,6 +344,13 @@ class InputFileset:
 				newFilename = pos + filename
 				os.rename(directory + filename, directory + newFilename)
 			self.files = self._setFilenames() # reload files after renaming
+
+
+	def batchName(self):
+		if self.typeCode == "text" and len(self.filesetId) < 10:
+			return self.lptsDamId[:7] + "_" + self.lptsDamId[8:]
+		else:
+			return self.filesetId
 
 
 if (__name__ == '__main__'):

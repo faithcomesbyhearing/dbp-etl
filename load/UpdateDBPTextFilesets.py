@@ -46,11 +46,12 @@ class UpdateDBPTextFilesets:
 			self.newFilesetId = filesetId[:6]
 		elif subTypeCode == "text_html":
 			self.newFilesetId = filesetId.split("-")[0] + "-html"
+		databaseName = filesetId.split("-")[0]
 		cmd = [self.config.node_exe,
 			self.config.publisher_js,
 			fullFilesetPath,
 			self.config.directory_accepted,
-			self.newFilesetId, iso3, iso1, direction]
+			databaseName, iso3, iso1, direction]
 		response = subprocess.run(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=120)
 		if response == None or response.returncode != 0:
 			return((Log.EROR, "BiblePublisher: " + str(response.stderr.decode("utf-8"))))

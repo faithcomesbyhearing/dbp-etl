@@ -107,23 +107,24 @@ class UpdateDBPFilesetTables:
 	def processFileset(self, inputFileset):
 		inp = inputFileset
 		print(inp.typeCode, inp.bibleId, inp.filesetId)
-		bookIdSet = self.getBibleBooks(inp.csvFilename)
-		updateBibleFilesSecondary = UpdateDBPBibleFilesSecondary(self.config, self.db, self.dbOut)
+		dbConn = SQLUtility(self.config)
+		bookIdSet = self.getBibleBooks(inp.typeCode, inp.csvFilename, inp.databasePath)
+		updateBibleFilesSecondary = UpdateDBPBibleFilesSecondary(self.config, dbConn, self.dbOut)
 		if inp.typeCode in {"audio", "video"}:
-			setTypeCode = UpdateDBPFilesetTables.getSetTypeCode(inp.typeCode, inp.filesetId)
-			hashId = self.insertBibleFileset(inp.typeCode, setTypeCode, inp.bibleId, inp.filesetId, bookIdSet)
-			self.insertFilesetConnections(hashId, inp.bibleId)
-			self.insertBibleFiles(hashId, inputFileset, bookIdSet)
+			setTypeCode = UpdateDBPFilesetTables.getSetTypeCode(dbConn, inp.typeCode, inp.filesetId)
+			hashId = self.insertBibleFileset(dbConn, inp.typeCode, setTypeCode, inp.bibleId, inp.filesetId, bookIdSet)
+			self.insertFilesetConnections(dbConn, hashId, inp.bibleId)
+			self.insertBibleFiles(dbConn, hashId, inputFileset, bookIdSet)
 			updateBibleFilesSecondary.updateBibleFilesSecondary(hashId, inp)
 		elif inp.typeCode == "text":
 			if inp.subTypeCode() == "text_usx":
-				hashId = self.insertBibleFileset(inp.typeCode, "text_usx", inp.bibleId, inp.filesetId, bookIdSet)
-				self.insertFilesetConnections(hashId, inp.bibleId)
-				self.insertBibleFiles(hashId, inputFileset, bookIdSet)
+				hashId = self.insertBibleFileset(dbConn, inp.typeCode, "text_usx", inp.bibleId, inp.filesetId, bookIdSet)
+				self.insertFilesetConnections(dbConn, hashId, inp.bibleId)
+				self.insertBibleFiles(dbConn, hashId, inputFileset, bookIdSet)
 				updateBibleFilesSecondary.updateBibleFilesSecondary(hashId, inp)
 			elif inp.subTypeCode() == "text_format":
-				hashId = self.insertBibleFileset(inp.typeCode, "text_plain", inp.bibleId, inp.filesetId, bookIdSet)
-				self.insertFilesetConnections(hashId, inp.bibleId)
+				hashId = self.insertBibleFileset(dbConn, inp.typeCode, "text_plain", inp.bibleId, inp.filesetId, bookIdSet)
+				self.insertFilesetConnections(dbConn, hashId, inp.bibleId)
 				self.textUpdater.updateFileset(inp.bibleId, inp.filesetId, hashId, bookIdSet, inp.databasePath)
 				## Future code for text_html
 				#hashId = self.insertBibleFileset(inp.typeCode, "text_format", inp.bibleId, inp.filesetId, bookIdSet)
@@ -133,38 +134,44 @@ class UpdateDBPFilesetTables:
 		if inp.subTypeCode() != "text_usx":
 			tocBooks = self.booksUpdater.getTableOfContents(inp.typeCode, inp.bibleId, inp.filesetId, inp.csvFilename, inp.databasePath)
 			self.booksUpdater.updateBibleBooks(inp.typeCode, inp.bibleId, tocBooks)
+		dbConn.close()
 		return hashId
 
 
-	def getBibleBooks(self, csvFilename):
+	def getBibleBooks(self, typeCode, csvFilename, databasePath):
 		bookIdSet = set()
-		with open(csvFilename, newline='\n') as csvfile:
-			reader = csv.DictReader(csvfile)
-			for row in reader:
-				bookIdSet.add(row["book_id"])
+		if typeCode == "text":
+			sqlite = SqliteUtility(databasePath)
+			bookIdSet = sqlite.selectSet("SELECT distinct code FROM tableContents", ())
+			sqlite.close()
+		else:
+			with open(csvFilename, newline='\n') as csvfile:
+				reader = csv.DictReader(csvfile)
+				for row in reader:
+					bookIdSet.add(row["book_id"])
 		return bookIdSet
 
 
-	def getSizeCode(self, typeCode, hashId, bookIdSet):
+	def getSizeCode(self, dbConn, typeCode, hashId, bookIdSet):
 		if typeCode == "text":
-			existingBookIdSet = self.db.selectSet("SELECT book_id FROM bible_verses WHERE hash_id = %s", (hashId,))
+			existingBookIdSet = dbConn.selectSet("SELECT book_id FROM bible_verses WHERE hash_id = %s", (hashId,))
 		else:
-			existingBookIdSet = self.db.selectSet("SELECT book_id FROM bible_files WHERE hash_id = %s", (hashId,))			
+			existingBookIdSet = dbConn.selectSet("SELECT book_id FROM bible_files WHERE hash_id = %s", (hashId,))			
 		fullBookIdSet = existingBookIdSet.union(bookIdSet)
 		otBooks = fullBookIdSet.intersection(self.OT)
 		ntBooks = fullBookIdSet.intersection(self.NT)
 		return UpdateDBPFilesetTables.getSetSizeCode(ntBooks, otBooks)
 
 
-	def insertBibleFileset(self, typeCode, setTypeCode, bibleId, filesetId, bookIdSet):
+	def insertBibleFileset(self, dbConn, typeCode, setTypeCode, bibleId, filesetId, bookIdSet):
 		tableName = "bible_filesets"
 		pkeyNames = ("hash_id",)
 		attrNames = ("id", "asset_id", "set_type_code", "set_size_code")
 		updateRows = []
 		bucket = self.config.s3_vid_bucket if typeCode == "video" else self.config.s3_bucket
 		hashId = UpdateDBPFilesetTables.getHashId(bucket, filesetId, setTypeCode)
-		setSizeCode = self.getSizeCode(typeCode, hashId, bookIdSet)
-		row = self.db.selectRow("SELECT id, asset_id, set_type_code, set_size_code FROM bible_filesets WHERE hash_id=%s", (hashId,))
+		setSizeCode = self.getSizeCode(dbConn, typeCode, hashId, bookIdSet)
+		row = dbConn.selectRow("SELECT id, asset_id, set_type_code, set_size_code FROM bible_filesets WHERE hash_id=%s", (hashId,))
 		if row == None:
 			updateRows.append((filesetId, bucket, setTypeCode, setSizeCode, hashId))
 			self.dbOut.insert(tableName, pkeyNames, attrNames, updateRows)
@@ -179,9 +186,9 @@ class UpdateDBPFilesetTables:
 		return hashId
 
 
-	def insertFilesetConnections(self, hashId, bibleId):
+	def insertFilesetConnections(self, dbConn, hashId, bibleId):
 		insertRows = []
-		row = self.db.selectRow("SELECT * FROM bible_fileset_connections WHERE hash_id=%s AND bible_id=%s", (hashId, bibleId))
+		row = dbConn.selectRow("SELECT * FROM bible_fileset_connections WHERE hash_id=%s AND bible_id=%s", (hashId, bibleId))
 		if row == None:
 			insertRows.append((hashId, bibleId))
 			tableName = "bible_fileset_connections"
@@ -190,14 +197,14 @@ class UpdateDBPFilesetTables:
 			self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
 
 
-	def insertBibleFiles(self, hashId, inputFileset, bookIdSet):
+	def insertBibleFiles(self, dbConn, hashId, inputFileset, bookIdSet):
 		inp = inputFileset
 		insertRows = []
 		updateRows = []
 		deleteRows = []
 		sql = ("SELECT book_id, chapter_start, verse_start, chapter_end, verse_end, file_name, file_size, duration"
 				" FROM bible_files WHERE hash_id = %s AND book_id IN ('") + "','".join(bookIdSet) + "')"
-		resultSet = self.db.select(sql, (hashId,))
+		resultSet = dbConn.select(sql, (hashId,))
 		dbpMap = {}
 		for row in resultSet:
 			(dbpBookId, dbpChapterStart, dbpVerseStart, dbpChapterEnd, dbpVerseEnd, dbpFileName, dbpFileSize, dbpDuration) = row

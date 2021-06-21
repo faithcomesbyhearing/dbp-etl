@@ -69,6 +69,7 @@ class Validate:
 		parser = FilenameParser(self.config)
 		parser.process3(filesets)
 
+		## This was intended for processing an entire bucket.
 		find = FindDuplicateFilesets(self.config)
 		duplicates = find.findDuplicates()
 		find.moveDuplicates(duplicates)

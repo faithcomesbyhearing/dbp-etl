@@ -17,9 +17,11 @@ class PreValidateResult:
 		self.filesetId = filesetId
 		self.damId = damId
 		self.typeCode = typeCode
-		self.bibleId = lptsRecord.DBP_EquivalentByIndex(index)
 		self.index = index
 		self.fileList = fileList
+
+	def bibleId(self):
+		return self.lptsRecord.DBP_EquivalentByIndex(self.index)
 
 	def scope(self):
 		return self.damId[6]
@@ -29,7 +31,7 @@ class PreValidateResult:
 
 	def toString(self):
 		results = []
-		results.append("out: %s/%s/%s is %s %d" % (self.typeCode, self.bibleId, self.filesetId, self.damId, self.index))
+		results.append("out: %s/%s/%s is %s %d" % (self.typeCode, self.bibleId(), self.filesetId, self.damId, self.index))
 		for file in self.fileList:
 			results.append(file)
 		return ", ".join(results)		
