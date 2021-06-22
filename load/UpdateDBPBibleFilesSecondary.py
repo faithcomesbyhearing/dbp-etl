@@ -104,14 +104,14 @@ if (__name__ == '__main__'):
 	db = SQLUtility(config)
 	dbOut = SQLBatchExec(config)
 	update = UpdateDBPBibleFilesSecondary(config, db, dbOut)
-	#s3Client = AWSSession.shared().s3Client
+	s3Client = AWSSession.shared().s3Client
 	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
 
 	sql = ("SELECT c.bible_id, f.id, f.hash_id FROM bible_filesets f, bible_fileset_connections c"
 			" WHERE f.hash_id = c.hash_id AND set_type_code in ('audio', 'audio_drama') AND length(f.id) = 10")
 	resultSet = db.select(sql, ())
 	for (bibleId, filesetId, hashId) in resultSet:
-		s3Client = AWSSession().s3Client
+		#s3Client = AWSSession().s3Client
 		#print(bibleId, filesetId, hashId)
 		location = "s3://%s" % (config.s3_bucket,)
 		filesetPath = "audio/%s/%s" % (bibleId, filesetId)
