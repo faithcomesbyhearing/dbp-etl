@@ -111,7 +111,7 @@ class InputFileset:
 		self.mediaContainer = None
 		self.mediaCodec = None
 		self.mediaBitrate = None
-		RunStatus.add(filesetId)
+		RunStatus.add(self)
 
 
 	def toString(self):
@@ -230,6 +230,13 @@ class InputFileset:
 
 	def stockNum(self):
 		return self.lptsRecord.Reg_StockNumber()
+
+
+	def locationForS3(self):
+		if self.locationType == InputFileset.BUCKET:
+			return "s3://" + self.location
+		else:
+			return self.location
 
 
 	def fullPath(self):
