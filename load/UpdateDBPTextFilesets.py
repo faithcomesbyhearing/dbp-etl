@@ -4,6 +4,7 @@
 import io
 import sys
 import os
+import re
 import sqlite3
 from Config import *
 from Log import *
@@ -134,12 +135,9 @@ class UpdateDBPTextFilesets:
 				priorBookId = bookId
 				priorChapter = chapterNum
 				priorVerseEnd = 0
-			parts = verseNum.split("-")
-			verseStart = self.verseString2Int(parts[0])
-			if len(parts) > 1:
-				verseEnd = self.verseString2Int(parts[1])
-			else:
-				verseEnd = verseStart
+			parts = re.split("[-,]", verseNum)
+			verseStart = self.verseString2Int(bookId, chapter, parts[0])
+			verseEnd = self.verseString2Int(bookId, chapter, parts[len(parts) -1])
 			verseText = verseText.replace('\r', '')
 
 			if verseStart > priorVerseEnd:
@@ -153,11 +151,12 @@ class UpdateDBPTextFilesets:
 		return results
 
 
-	def verseString2Int(self, verse):
+	def verseString2Int(self, bookId, chapter, verse):
 		if verse.isdigit():
 			return int(verse)
 		else:
-			return int(verse[0:-1])
+			print("ERROR: Verse %s contains non-number at %s %s" % (verse, bookId, chapter))
+			sys.exit()
 
 
 if (__name__ == '__main__'):
