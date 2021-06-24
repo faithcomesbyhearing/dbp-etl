@@ -52,10 +52,11 @@ class RunStatus:
 			logger = Log.loggers[key]
 			for message in logger.format():
 				errors.append(message)
-		if len(errors) > 0:
-			message = "\n".join(errors)
-			RunStatus.dbConn.execute("UPDATE run_history SET errors = %s WHERE run_id = %s", (message, RunStatus.runId))
-		RunStatus.dbConn.close()
+		if RunStatus.dbConn != None:
+			if len(errors) > 0:
+				message = "\n".join(errors)
+				RunStatus.dbConn.execute("UPDATE run_history SET errors = %s WHERE run_id = %s", (message, RunStatus.runId))
+			RunStatus.dbConn.close()
 		if all(msg == "ok" for msg in RunStatus.statusMap.values()):
 			print("All Success in RunStatus")
 			sys.exit()
