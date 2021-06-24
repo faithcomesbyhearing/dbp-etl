@@ -124,6 +124,9 @@ if (__name__ == '__main__'):
 		ctrl.updateLPTSTables()
 	RunStatus.exit()
 
+# Get currrent lpts-dbp.xml
+# aws --profile DBP_DEV s3 cp s3://dbp-etl-upload-newdata-fiu49s0cnup1yr0q/lpts-dbp.xml /Volumes/FCBH/bucket_data/lpts-dbp.xml
+
 # Clean up filesets in dbp-stating and dbp-vid-staging
 
 # Prepare by getting some local data into a test bucket

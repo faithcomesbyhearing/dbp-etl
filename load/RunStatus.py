@@ -40,7 +40,7 @@ class RunStatus:
 		RunStatus.statusMap[name] = msg
 		print("********** %s Tables Update %s **********" % (name, msg,))
 		RunStatus.store()
-		if name != RunStatus.BIBLE and name != RunStatus.LPTS:
+		if RunStatus.dbConn != None and name != RunStatus.BIBLE and name != RunStatus.LPTS:
 			sql = "UPDATE run_batch SET status = %s WHERE run_id = %s AND batch = %s"
 			statusNum = 1 if status else -1
 			RunStatus.dbConn.execute(sql, (statusNum, RunStatus.runId, name))

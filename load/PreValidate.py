@@ -104,7 +104,6 @@ class PreValidate:
 
     ## Validate filesetId and return PreValidateResult
 	def validateFilesetId(self, filesetId):
-		#print("validate filesetId", filesetId)
 		filesetId1 = filesetId.split("-")[0]
 		damId = filesetId1.replace("_", "2")
 		results = self.lptsReader.getFilesetRecords10(damId) # This method expects 10 digit DamId's always
@@ -114,52 +113,51 @@ class PreValidate:
 			if results == None:
 				self.errorMessage(filesetId1, "filesetId is not in LPTS")
 				return None
-		else:
-			stockNumSet = set()
-			mediaSet = set()
-			bibleIdSet = set()
-			for (lptsRecord, status, fieldName) in results:
-				stockNum = lptsRecord.Reg_StockNumber()
-				if stockNum != None:
-					stockNumSet.add(stockNum)
-				damId = lptsRecord.record.get(fieldName)
+		stockNumSet = set()
+		mediaSet = set()
+		bibleIdSet = set()
+		for (lptsRecord, status, fieldName) in results:
+			stockNum = lptsRecord.Reg_StockNumber()
+			if stockNum != None:
+				stockNumSet.add(stockNum)
+			damId = lptsRecord.record.get(fieldName)
 
-				dbpFilesetId = filesetId
-				if "Audio" in fieldName:
-					media = "audio"
-				elif "Text" in fieldName:
-					media = "text"
-					dbpFilesetId = filesetId[:6]
-				elif "Video" in fieldName:
-					media = "video"
-				else:
-					media = "unknown"
-					self.errorMessage(filesetId, "in %s does not have Audio, Text, or Video in DamId fieldname." % (stockNum,))
-				mediaSet.add(media)
-
-				if "3" in fieldName:
-					index = 3
-				elif "2" in fieldName:
-					index = 2
-				else:
-					index = 1
-
-				bibleId = lptsRecord.DBP_EquivalentByIndex(index)
-				if bibleId != None:
-					bibleIdSet.add(bibleId)
-			if len(stockNumSet) > 1:
-				self.errorMessage(filesetId, "has more than one stock no: %s" % (", ".join(stockNumSet)))
-			if len(mediaSet) > 1:
-				self.errorMessage(filesetId, "in %s has more than one media type: %s" % (", ".join(stockNumSet), ", ".join(mediaSet)))
-			if len(bibleIdSet) == 0:
-				self.errorMessage(filesetId, "in %s does not have a DBP_Equivalent" % (", ".join(stockNumSet)))
-			if len(bibleIdSet) > 1:
-				self.errorMessage(filesetId, "in %s has more than one DBP_Equivalent: %s" % (", ".join(stockNumSet), ", ".join(bibleIdSet)))
-
-			if len(mediaSet) > 0 and len(bibleIdSet) > 0:
-				return PreValidateResult(lptsRecord, filesetId, damId, list(mediaSet)[0], index)
+			dbpFilesetId = filesetId
+			if "Audio" in fieldName:
+				media = "audio"
+			elif "Text" in fieldName:
+				media = "text"
+				dbpFilesetId = filesetId[:6]
+			elif "Video" in fieldName:
+				media = "video"
 			else:
-				return None
+				media = "unknown"
+				self.errorMessage(filesetId, "in %s does not have Audio, Text, or Video in DamId fieldname." % (stockNum,))
+			mediaSet.add(media)
+
+			if "3" in fieldName:
+				index = 3
+			elif "2" in fieldName:
+				index = 2
+			else:
+				index = 1
+
+			bibleId = lptsRecord.DBP_EquivalentByIndex(index)
+			if bibleId != None:
+				bibleIdSet.add(bibleId)
+		if len(stockNumSet) > 1:
+			self.errorMessage(filesetId, "has more than one stock no: %s" % (", ".join(stockNumSet)))
+		if len(mediaSet) > 1:
+			self.errorMessage(filesetId, "in %s has more than one media type: %s" % (", ".join(stockNumSet), ", ".join(mediaSet)))
+		if len(bibleIdSet) == 0:
+			self.errorMessage(filesetId, "in %s does not have a DBP_Equivalent" % (", ".join(stockNumSet)))
+		if len(bibleIdSet) > 1:
+			self.errorMessage(filesetId, "in %s has more than one DBP_Equivalent: %s" % (", ".join(stockNumSet), ", ".join(bibleIdSet)))
+
+		if len(mediaSet) > 0 and len(bibleIdSet) > 0:
+			return PreValidateResult(lptsRecord, filesetId, damId, list(mediaSet)[0], index)
+		else:
+			return None
 
 
 	def validateUSXStockNo( self, stockNo, filenames, sampleText = None):
