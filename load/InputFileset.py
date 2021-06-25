@@ -76,6 +76,10 @@ class InputFileset:
 			if messages != None and len(messages) > 0:
 				RunStatus.set(filesetId, False)
 				Log.addPreValidationErrors(messages)
+			if (dataList == None or len(dataList) == 0) and (messages == None or len(message) == 0):
+				Log.getLogger(filesetPath).message(Log.FATAL, "Unknown Error in InputFileset.filesetCommandLineParser()")
+				Log.writeLog(config)
+				sys.exit()
 		return results
 
 
