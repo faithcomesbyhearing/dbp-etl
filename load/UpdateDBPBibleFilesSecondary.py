@@ -33,7 +33,8 @@ class UpdateDBPBibleFilesSecondary:
 		inp = inputFileset
 		if inp.typeCode == "audio" and inp.isMP3Fileset() and len(inp.filesetId) == 10:
 			source = "s3://%s/%s/" % (self.config.s3_bucket, inp.filesetPrefix)
-			target = "s3://%s/%s/%s.zip" % (self.config.s3_bucket, inp.filesetPrefix, inp.filesetId)
+			zipFilename = "%s.zip" % (inp.filesetId,)
+			target = "s3://%s/%s/%s" % (self.config.s3_bucket, inp.filesetPrefix, zipFilename)
 			zipDirectory = self.getZipInternalDir(inp.lptsDamId, inp.lptsRecord)
 			fileTypes = ["mp3"]
 			data = { "source": source, "target": target, "directoryName": zipDirectory, "fileTypes": fileTypes }
@@ -47,11 +48,10 @@ class UpdateDBPBibleFilesSecondary:
 													InvocationType = "RequestResponse",
 													Payload = dataBytes)
 				respData = response.get("Payload").read()
-				#print("respData", respData)
 				respStr = respData.decode("utf-8")
 				result = json.loads(respStr)
 				status = result.get("status")
-				inp.reloadFilenames() # Need to get zipfile into inputFileset
+				inp.addInputFile(zipFilename, 0) # size is unknown and not needed
 				if status != "SUCCESS":
 					result = json.loads(result.get("body"))
 					Log.getLogger(inp.filesetId).message(Log.EROR, "Error in zip file creation %s" % (result.get("error"),))
@@ -83,12 +83,11 @@ class UpdateDBPBibleFilesSecondary:
 				if not artFile in dbpArtSet:
 					insertRows.append(('art', hashId, artFile))
 
-			if inp.isMP3Fileset() and len(inp.filesetId) == 10:
-				zipFile = inp.zipFile()
-				if zipFile != None:
-					dbpZipSet = self.db.selectSet(sql, (hashId, 'zip'))
-					if not zipFile.name in dbpZipSet:
-						insertRows.append(('zip', hashId, zipFile.name))
+			zipFile = inp.zipFile()
+			if zipFile != None:
+				dbpZipSet = self.db.selectSet(sql, (hashId, 'zip'))
+				if not zipFile.name in dbpZipSet:
+					insertRows.append(('zip', hashId, zipFile.name))
 
 		tableName = "bible_files_secondary"
 		pkeyNames = ("hash_id", "file_name")

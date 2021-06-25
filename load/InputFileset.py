@@ -198,8 +198,8 @@ class InputFileset:
 		return results
 
 
-	def reloadFilenames(self):
-		self.files = self._setFilenames()
+	def addInputFile(self, filename, filesize):
+		self.files.append(InputFile(filename, filesize, None))
 
 
 	def setFileSizes(self):
