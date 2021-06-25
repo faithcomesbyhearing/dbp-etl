@@ -99,6 +99,12 @@ if (__name__ == '__main__'):
 	from PreValidate import *
 	from InputFileset import *
 
+	if len(sys.argv) < 4:
+		print("Usage: UpdateDBPBibleFilesSecondary.py  your_profile  starting_bible_id   ending_bible_id")
+		sys.exit()
+	startingBibleId = sys.argv[2]
+	endingBibleId = sys.argv[3]
+
 	config = Config.shared()
 	db = SQLUtility(config)
 	dbOut = SQLBatchExec(config)
@@ -107,10 +113,10 @@ if (__name__ == '__main__'):
 	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
 
 	sql = ("SELECT c.bible_id, f.id, f.hash_id FROM bible_filesets f, bible_fileset_connections c"
-			" WHERE f.hash_id = c.hash_id AND set_type_code in ('audio', 'audio_drama') AND length(f.id) = 10")
-	resultSet = db.select(sql, ())
+			" WHERE f.hash_id = c.hash_id AND set_type_code in ('audio', 'audio_drama') AND length(f.id) = 10"
+			" AND c.bible_id >= %s AND c.bible_id <= %s")
+	resultSet = db.select(sql, (startingBibleId, endingBibleId))
 	for (bibleId, filesetId, hashId) in resultSet:
-		#s3Client = AWSSession().s3Client
 		#print(bibleId, filesetId, hashId)
 		location = "s3://%s" % (config.s3_bucket,)
 		filesetPath = "audio/%s/%s" % (bibleId, filesetId)
@@ -132,9 +138,10 @@ if (__name__ == '__main__'):
 				update.updateBibleFilesSecondary(hashId, inp)
 				dbOut.displayStatements()
 				dbOut.displayCounts()
-				dbOut.execute("zip_art_" + filesetId)	
+				dbOut.execute("zip_art_" + filesetId)
 	Log.writeLog(config)
 
+# python3 load/UpdateDBPBibleFilesSecondary.py test starting_bible_id  ending_bible_id
 
 """
 CREATE TABLE bible_files_secondary (
