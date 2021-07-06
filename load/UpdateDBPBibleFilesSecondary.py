@@ -38,7 +38,7 @@ class UpdateDBPBibleFilesSecondary:
 			zipDirectory = self.getZipInternalDir(inp.lptsDamId, inp.lptsRecord)
 			fileTypes = ["mp3"]
 			data = { "source": source, "target": target, "directoryName": zipDirectory, "fileTypes": fileTypes }
-			#print(data)
+			print(data)
 			dataJson = json.dumps(data)
 			dataBytes = dataJson.encode("utf-8")
 			lambdaClient = AWSSession.shared().lambdaInvoker()
@@ -117,21 +117,21 @@ if (__name__ == '__main__'):
 			" AND c.bible_id >= %s AND c.bible_id <= %s")
 	resultSet = db.select(sql, (startingBibleId, endingBibleId))
 	for (bibleId, filesetId, hashId) in resultSet:
-		#print(bibleId, filesetId, hashId)
+		print(bibleId, filesetId, hashId)
 		location = "s3://%s" % (config.s3_bucket,)
 		filesetPath = "audio/%s/%s" % (bibleId, filesetId)
 		(dataList, messages) = PreValidate.validateDBPELT(lptsReader, s3Client, location, filesetId, filesetPath)
 		if messages != None and len(messages) > 0:
 			Log.addPreValidationErrors(messages)
-			print(filesetPath, messages)
+			#print(filesetPath, messages)
 		if dataList == None or len(dataList) == 0:
 			print("NO InputFileset", filesetPath)
 		else:
 			for data in dataList:
-				print(data.toString())
+				#print(data.toString())
 				inp = InputFileset(config, location, data.filesetId, filesetPath, data.damId, 
 								data.typeCode, data.bibleId(), data.index, data.lptsRecord)
-				print(inp.toString())
+				#print(inp.toString())
 				if inp.zipFile() == None:
 					print("must create zip file")
 					update.createZipFile(inp)

@@ -44,7 +44,7 @@ class Log:
 			pattern = config.filename_datetime 
 			path = errorDir + "Errors.out"
 			print("openErrorReport", path)
-			errorFile = open(path, "w", encoding="utf-8")
+			errorFile = open(path, "a", encoding="utf-8")
 			for message in errors:
 				errorFile.write(message + '\n')
 				print(message, end='\n')

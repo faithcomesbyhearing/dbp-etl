@@ -38,7 +38,8 @@ class AWSSession:
 			stsClient = session.client('sts')
 			assumedRoleObject = stsClient.assume_role(
 				RoleArn = self.config.s3_aws_role,
-			    RoleSessionName = roleSessionName
+			    RoleSessionName = roleSessionName,
+				DurationSeconds = 12*60*60
 			)
 			credentials = assumedRoleObject['Credentials']
 			if timeout != None:
