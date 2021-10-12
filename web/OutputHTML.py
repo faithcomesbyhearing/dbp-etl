@@ -33,80 +33,26 @@ class OutputHTML:
 			"}",
 			"-->",
 			"</style>" ]
-		styles22 = ('// sets\n' +
-			'$gl-ms         : "screen and (max-width: 23.5em)"; // up to 360px\n' +
-			'$gl-xs         : "screen and (max-width: 35.5em)"; // up to 568px\n' +
-			'$gl-sm         : "screen and (max-width: 48em)";   // max 768px\n' +
-			'$gl-md         : "screen and (max-width: 64em)";   // max 1024px\n' +
-			'$gl-lg         : "screen and (max-width: 80em)";   // max 1280px\n' +
-			'// table style\n' +
-			'table {\n' +
-			'	border-spacing: 1;\n' +
-			'	border-collapse: collapse;\n' +
-			'	background:white;\n' +
-			'	border-radius:6px;\n' +
-			'	overflow:hidden;\n' +
-			'	max-width:800px;\n' +
-			'	width:100%;\n' +
-			'	margin:0 auto;\n' +
-			'	position:relative;\n' +
-			'	* { position:relative }\n' +
-			'	td,th { padding-left:8px}\n' +
-			'	thead tr {\n' +
-			'		height:60px;\n' +
-			'		background:#FFED86;\n' +
-			'		font-size:16px;\n' +
-			'	}\n' +
-			'	tbody tr { height:48px; border-bottom:1px solid #E3F1D5 ;\n' +
-			'		&:last-child  { border:0; }\n' +
-			'	}\n' +
-			'	td,th { text-align:left;\n' +
-			'		&.l { text-align:right }\n' +
-			'		&.c { text-align:center }\n' +
-			'		&.r { text-align:center }\n' +
-			'	}\n' +
-			'}\n' +
-			'@media #{$gl-xs} {\n' +
-			'table { display:block;\n' +
-			'> *,tr,td,th { display:block }\n' +
-			'thead { display:none }\n' +
-			'tbody tr { height:auto; padding:8px 0;\n' +
-			'td { padding-left:45%; margin-bottom:12px;\n' +
-			'	&:last-child { margin-bottom:0 }\n' +
-			'	&:before {\n' +
-			'		position:absolute;\n' +
-			'		font-weight:700;\n' +
-			'		width:40%;\n' +
-			'		left:10px;\n' +
-			'		top:0\n' +
-			'	}\n' +
-			'	&:nth-child(1):before { content:"Code";}\n' +
-			'	&:nth-child(2):before { content:"Stock";}\n' +
-			'	&:nth-child(3):before { content:"Cap";}\n' +
-			'	&:nth-child(4):before { content:"Inch";}\n' +
-			'	&:nth-child(5):before { content:"Box Type";}\n' +
-			'}\n' +      
-		'}\n' +
-	'}\n' +
-'}\n')
+		form = [ '<form action="sample.html">',
+			'<p><input type="radio" name="ident" value="bibleid" checked>BibleId</input>',
+			'<input type="radio" name="ident" value="filesetid">FilesetId</input>',
+			'<input type="text" name="type" /></p>',
+			'<p><br/><label>Detail:</label>',
+			'<input type="radio" name="detail" value="no" checked>No</input>',
+			'<input type="radio" name="detail" value="yes">Yes</input></p>',
+			'<p><br/><label>Output:</label>',
+			'<input type="radio" name="output" value="html" checked>HTML</input>',
+			'<input type="radio" name="output" value="json">JSON</input></p>',
+			'<p><br/><input type="submit"></p>',
+			'</form>' ]
 
-#'// body style
-#'body { 
-#'  background:#9BC86A; 
-#'  font:400 14px "Calibri","Arial";
-#'  padding:20px;
-#'}')
 		self.output = []
 		self.output.append("<html>\n")
 		self.output.append("<head>\n")
-		#self.output.append("<!--\n")
 		self.output.append("\n".join(styles))
-		#for style in styles:
-		#	self.output.append(style + "\n")
-		#self.output.append(styles)
-		#self.output.append("\n-->\n")
 		self.output.append("</head>\n")
 		self.output.append("<body>\n")
+		self.output.append("\n".join(form))
 		
 		
 	def title(self, level, text):

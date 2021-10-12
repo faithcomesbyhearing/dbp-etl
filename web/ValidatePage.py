@@ -204,7 +204,7 @@ if __name__ == "__main__":
 	print("bibleid", bibleId)
 	page = ValidatePage()
 	hashIdList = page.getHashIds(bibleId, filesetId)
-	page.process(hashIdList)
+	page.process(bibleId, hashIdList)
 	page.close()
 	#page = ValidatePage()
 	
