@@ -93,7 +93,8 @@ class Filename:
 				return
 			if self.bookId == "DAG" and book == "DAN":
 				return
-			self.errors.append("book id by sequence is %s and book id by name is %s" % (self.bookId, book))
+			self.bookId = book
+			#self.errors.append("book id by sequence is %s and book id by name is %s" % (self.bookId, book))
 
 
 	def setBookId(self, bookId, chapterMap):
