@@ -93,6 +93,7 @@ class Filename:
 				return
 			if self.bookId == "DAG" and book == "DAN":
 				return
+			self.bookId = book
 			#self.errors.append("book id by sequence is %s and book id by name is %s" % (self.bookId, book))
 
 

@@ -23,23 +23,27 @@ class AWSSession:
 
 
 	def lambdaInvoker(self):
-		return self._securityTokenService("lambda", "AssumeRoleSession3", self.config.lambda_zip_region, 
-			self.config.lambda_zip_timeout)
+		return self._securityTokenService("lambda", "AssumeRoleSession3", self.config.lambda_zip_region, self.config.lambda_zip_timeout)
 
 
 	def _securityTokenService(self, clientType, roleSessionName, regionName, timeout=None):
 		session = boto3.Session(profile_name = self.config.s3_aws_profile, region_name = regionName)
 		if self.config.s3_aws_role == None:
-			client = session.client(clientType)
+			if timeout != None:
+				botoConfig = BotoConfig(retries={'max_attempts': 0}, read_timeout = timeout, connect_timeout = timeout)
+				client = session.client(clientType, config = botoConfig)
+			else:
+				client = session.client(clientType)
 		else:
 			stsClient = session.client('sts')
 			assumedRoleObject = stsClient.assume_role(
 				RoleArn = self.config.s3_aws_role,
-			    RoleSessionName = roleSessionName
+			    RoleSessionName = roleSessionName,
+				DurationSeconds = 12*60*60
 			)
 			credentials = assumedRoleObject['Credentials']
 			if timeout != None:
-				botoConfig = BotoConfig(read_timeout = timeout, connect_timeout = timeout)
+				botoConfig = BotoConfig(retries={'max_attempts': 0}, read_timeout = timeout, connect_timeout = timeout)
 				client = boto3.client(
 			    	clientType,
 			    	aws_access_key_id = credentials['AccessKeyId'],
