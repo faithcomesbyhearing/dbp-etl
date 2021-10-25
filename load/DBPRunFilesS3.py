@@ -2,6 +2,7 @@
 
 import os
 from datetime import datetime
+import pytz
 import boto3
 from Config import *
 from AWSSession import *
@@ -35,6 +36,40 @@ class DBPRunFilesS3:
 			client.upload_file(filepath, bucket, s3Key, ExtraArgs={'ContentType': contentType, 'ACL': 'bucket-owner-full-control'})
 		except Exception as err:
 			print("ERROR: Upload %s failed  with error %s" % (s3Key, err))
+
+
+	def simpleUpload(config, filepath, contentType):
+		s3Key = os.path.basename(filepath)
+		client = AWSSession.shared().s3Client
+		bucket = config.s3_artifacts_bucket
+		try:
+			client.upload_file(filepath, bucket, s3Key, ExtraArgs={'ContentType': contentType, 'ACL': 'bucket-owner-full-control'})
+		except Exception as err:
+			print("ERROR: Upload %s failed with error %s" % (s3Key, err))
+			sys.exit()
+
+
+	def simpleDownload(config, filepath):
+		s3Key = os.path.basename(filepath)
+		client = AWSSession.shared().s3Client
+		bucket = config.s3_artifacts_bucket
+		try:
+			client.download_file(bucket, s3Key, filepath)
+		except Exception as err:
+			print("ERROR: Download %s failed with error %s" % (s3Key, err))
+			sys.exit()
+
+
+	def simpleLastModified(config, s3Key):
+		client = AWSSession.shared().s3Client
+		bucket = config.s3_artifacts_bucket	
+		try:
+			obj = client.head_object(Bucket=bucket, Key=s3Key)
+			lastModified = obj["LastModified"]
+			return lastModified
+		except Exception as err:
+			print("ERROR: Last Modified on %s failed with error %s" % (s3Key, err))
+			sys.exit()	
 
 
 	def __init__(self, config):

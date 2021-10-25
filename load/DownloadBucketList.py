@@ -46,6 +46,7 @@ class DownloadBucketList:
 				request['ContinuationToken'] = response['NextContinuationToken']
 
 		out.close()
+		return pathname
 
 if __name__ == "__main__":
 	if len(sys.argv) < 3:
@@ -54,5 +55,6 @@ if __name__ == "__main__":
 	BUCKET_NAME = sys.argv[2]
 	config = Config.shared()
 	download = DownloadBucketList(config)
-	download.listBucket(BUCKET_NAME)
+	pathname = download.listBucket(BUCKET_NAME)
+	print("downloaded", pathname)
 
