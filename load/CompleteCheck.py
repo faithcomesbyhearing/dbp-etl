@@ -25,10 +25,38 @@ class CompleteCheck:
 		self.lptsReader = lptsReader
 		self.textOut = open(CompleteCheck.TEXT_FILE, "w")
 		self.htmlOut = open(CompleteCheck.HTML_FILE, "w")
-		self.htmlOut.write("<html><body><h1>Complete Check Report</h1>\n<table><caption>")
+		self.htmlOut.write("<html><head>")
+		styles = [ "<style>",
+			"<!--",
+			"caption {",
+			"font-size: 16pt;",
+			"padding-top: 1em;",
+			"padding-bottom: 0.5em;",
+			"}",
+			"table {",
+			"border: 1px solid black;",
+			"border-collapse: collapse;",
+			"}",
+			"th {",
+			"border: 1px solid black;",
+			"background-color: #00CCFF;",
+			"padding-left: 1em;",
+			"padding-right: 1em;",
+			"padding-top: 0.5em;",
+			"padding-bottom: 0.5em;",
+			"}",
+			"td {",
+			"border: 1px solid black;",
+			"padding-top: 0.5em;",
+			"padding-bottom: 0.5em;",
+			"text-align: center",
+			"}",
+			"-->",
+			"</style>" ]
+		self.htmlOut.write("\n".join(styles))
+		self.htmlOut.write("</head><body><h1>Complete Check Report</h1>\n")
 		now = datetime.now()
-		self.htmlOut.write(now.strftime("%A, %d %b %Y %-I:%-M %p"))
-		self.htmlOut.write("\n</caption>\n")
+		self.htmlOut.write("<h3>" + now.strftime("%A, %d %b %Y %-I:%-M %p") + "</h3>\n")
 		self.missingS3Objects = []
 
 
@@ -40,6 +68,82 @@ class CompleteCheck:
 		self.textOut.close()
 		self.htmlOut.write("</table></body></html>")
 		self.htmlOut.close()
+
+
+	def biblesWithoutConnects(self):
+		resultSet = self.db.select("SELECT count(*) FROM bibles WHERE id NOT IN" +
+			" (SELECT bible_id FROM bible_fileset_connections)", ())
+		self.outputTable("Bibles without Fileset Connections", ["Count"], resultSet)
+
+
+	def filesetsWithoutConnects(self):
+		resultSet = self.db.select("SELECT id, hash_id FROM bible_filesets WHERE hash_id NOT IN" +
+			" (SELECT hash_id FROM bible_fileset_connections) ORDER by id", ())
+		self.outputTable("Filesets without Bible Connections", ["filesetId", "hashId"], resultSet)
+
+
+	def filesetsWithoutFiles(self):
+		resultSet = self.db.select("SELECT id, hash_id FROM bible_filesets WHERE hash_id NOT IN" +
+			" (SELECT hash_id FROM bible_files) AND set_type_code != 'text_plain' ORDER by id", ())
+		self.outputTable("Filesets without Files (ignoring plain text)", ["filesetId", "hashId"], resultSet)
+
+
+	def filesetsWithoutVerses(self):
+		resultSet = self.db.select("SELECT id, hash_id FROM bible_filesets WHERE hash_id NOT IN" +
+			" (SELECT hash_id FROM bible_verses) AND set_type_code = 'text_plain' ORDER by id", ())
+		self.outputTable("Filesets without Verses (plain text only)", ["filesetId", "hashId"], resultSet)
+
+
+	def biblesWithoutTitles(self):
+		resultSet = self.db.select("SELECT distinct id FROM bibles WHERE id IN" +
+			" (SELECT bible_id FROM bible_fileset_connections)" +
+			" AND id NOT IN (SELECT bible_id FROM bible_translations) ORDER by id", ())
+		self.outputTable("Bibles without Titles (and have filesets)", ["filesetId", "hashId"], resultSet)
+
+
+	def biblesWithoutBooks(self):
+		resultSet = self.db.select("SELECT distinct id FROM bibles WHERE id IN" +
+			" (SELECT bible_id FROM bible_fileset_connections)" +
+			" AND id NOT IN (SELECT bible_id FROM bible_books) ORDER by id", ())
+		self.outputTable("Bibles without Books (and have filesets)", ["filesetId", "hashId"], resultSet)
+
+
+	def filesetsWithoutCopyrights(self):
+		resultSet = self.db.select("SELECT id, hash_id FROM bible_filesets WHERE hash_id NOT IN" +
+			" (SELECT hash_id FROM bible_fileset_copyrights) ORDER by id", ())
+		self.outputTable("Filesets without Copyrights", ["filesetId", "hashId"], resultSet)
+
+
+	def filesetsWithoutOrganizations(self):
+		resultSet = self.db.select("SELECT id, hash_id FROM bible_filesets WHERE hash_id NOT IN" +
+			" (SELECT hash_id FROM bible_fileset_copyrights) ORDER by id", ())
+		self.outputTable("Filesets without Organizations", ["filesetId", "hashId"], resultSet)
+
+
+	def filesetsWithoutAccessGroups(self):
+		resultSet = self.db.select("SELECT id, hash_id FROM bible_filesets WHERE hash_id NOT IN" +
+			" (SELECT hash_id FROM access_group_filesets) ORDER BY id", ())
+		self.outputTable("Filesets without Access Groups", ["filesetId", "hashId"], resultSet)
+
+
+	def booksWithPlaceholders(self):
+		resultSet = self.db.select("SELECT bible_id, count(*) FROM bible_books WHERE LEFT(name,1) = '[' GROUP BY bible_id", ())
+		self.outputTable("Books with Placeholders ([book_name])", ["bibleId", "num books"], resultSet)
+
+
+	def totalLanguageCount(self):
+		resultSet = self.db.select("SELECT count(distinct iso) FROM languages WHERE id IN (SELECT language_id FROM bibles)", ())		
+		self.outputTable("Total ISO-639-3 languages", ["count"], resultSet)
+
+
+	def totalBiblesWithFilesets(self):
+		resultSet = self.db.select("SELECT count(distinct bible_id) FROM bible_fileset_connections", ())
+		self.outputTable("Total Bibles with Filesets", ["count"], resultSet)
+
+
+	def totalFilesetCount(self):
+		resultSet = self.db.select("SELECT count(distinct hash_id) FROM bible_fileset_connections", ())
+		self.outputTable("Total Filesets", ["count"], resultSet)
 
 
 	# Check for each file in bible_files to insure that it exists in the DBP
@@ -185,6 +289,27 @@ class CompleteCheck:
 		self.htmlOut.write("<tr><td>%s</td></tr>\n" % (line,))
 
 
+	def outputTable(self, title, columns, results):
+		self.htmlOut.write("<h3>%s</h3>\n" % (title,))
+		self.htmlOut.write("<table>")
+		self.htmlOut.write("<tr>")
+		for col in columns:
+			self.htmlOut.write("<th>%s</th>" % (col,))
+		self.htmlOut.write("</tr>\n")
+		if len(results) > 0:
+			for row in results:
+				self.htmlOut.write("<tr>")
+				for value in row:
+					self.htmlOut.write("<td>%s</td>" % (value,))
+				self.htmlOut.write("</tr>\n")
+		else:
+			self.htmlOut.write("<tr>")
+			for col in columns:
+				self.htmlOut.write("<td></td>")
+			self.htmlOut.write("</tr>")
+		self.htmlOut.write("</table>\n")
+
+
 if (__name__ == '__main__'):
 	config = Config()
 	if len(sys.argv) > 2 and sys.argv[2].lower() == "full":
@@ -205,36 +330,36 @@ if (__name__ == '__main__'):
 	elif len(sys.argv) > 2 and sys.argv[2].lower() == "restart":
 		dbpProdModified = DBPRunFilesS3.simpleLastModified(config, "dbp-prod.txt")
 		dbpVidModified = DBPRunFilesS3.simpleLastModified(config, "dbp-vid.txt")
-		print(dbpProdModified, dbpVidModified)
 	else:
 		print("Usage: python3 load/CompleteCheck.py  config_profile  full|fast|restart")
 		sys.exit()
 	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
 	db = SQLUtility(config)
 	check = CompleteCheck(config, db, lptsReader)
-	check.bibleFilesToS3(dbpProdModified)
-	check.bibleFilesetsToLPTS()
-	check.checkForMissingTS()
-	check.checkForMissingBandwidth()
-	check.checkForMissingBibleFiles()
-	check.checkForMissingBibleVerses()
-	check.bibleIdCheck()
+	check.biblesWithoutConnects()
+	check.filesetsWithoutConnects()
+	check.filesetsWithoutFiles()
+	check.filesetsWithoutVerses()
+	check.biblesWithoutTitles()
+	check.biblesWithoutBooks()
+	check.filesetsWithoutCopyrights()
+	check.filesetsWithoutOrganizations()
+	check.filesetsWithoutAccessGroups()
+	check.booksWithPlaceholders()
+	check.totalLanguageCount()
+	check.totalBiblesWithFilesets()
+	check.totalFilesetCount()
+	#check.bibleFilesToS3(dbpProdModified)
+	#check.bibleFilesetsToLPTS()
+	#check.checkForMissingTS()
+	#check.checkForMissingBandwidth()
+	#check.checkForMissingBibleFiles()
+	#check.checkForMissingBibleVerses()
+	#check.bibleIdCheck()
 	check.close()
 	db.close()
-	DBPRunFilesS3.simpleUpload(config, CompleteCheck.TEXT_FILE, "text/plain")
-	DBPRunFilesS3.simpleUpload(config, CompleteCheck.HTML_FILE, "text/html")
+	#DBPRunFilesS3.simpleUpload(config, CompleteCheck.TEXT_FILE, "text/plain")
+	#DBPRunFilesS3.simpleUpload(config, CompleteCheck.HTML_FILE, "text/html")
 
 
-# python3 load/CompleteCheck.py test retry
-# python3 load/CompleteCheck.py newdata > complete.out
-
-
-"""
-if (__name__ == '__main__'):
-	config = Config()
-	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
-	db = SQLUtility(config)
-	check = CompleteCheck(config, db, lptsReader)
-	check.bibleIdCheck()
-"""
 
