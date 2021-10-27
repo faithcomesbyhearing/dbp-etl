@@ -314,7 +314,7 @@ class LPTSRecord:
 		damIdMap = self.DamIdMap(typeCode, index)
 		results = set()
 		for (damId, status) in damIdMap.items():
-			if status in {"Live", "live"}:
+			if status in {"Live", "live", None}:
 				results.add(damId)
 		return results
 
