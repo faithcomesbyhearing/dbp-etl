@@ -59,7 +59,7 @@ class CompleteCheck:
 
 
 	def close(self):
-		self.outputTable("Missing Objects, not in s3 bucket:", ["s3Key"], self.missingS3Objects)
+		self.outputTable("Missing Objects, not in s3 bucket:", ["s3Key"], sorted(self.missingS3Objects))
 		self.htmlOut.write("</table></body></html>")
 		self.htmlOut.close()
 
