@@ -18,14 +18,14 @@ class DownloadBucketList:
 	def __init__(self, config):
 		self.config = config
 
-	def listBucket(self, bucketName):
+	def listBucket(self, bucketName, prefix):
 		pathname = self.config.directory_bucket_list + "%s.txt" % (bucketName)
 		out = io.open(pathname, mode="w", encoding="utf-8")
 
 		client = AWSSession.shared().s3Client
 
-		request = { 'Bucket':bucketName, 'MaxKeys':1000 }
-		# Bucket, Delimiter, EncodingType, Market, MaxKeys, Prefix
+		request = { 'Bucket':bucketName, 'Prefix':prefix,'MaxKeys':100000}
+#		request = { 'Bucket':bucketName, 'Prefix':'video','MaxKeys':100000, 'StartAfter':'M' }
 
 		hasMore = True
 		while hasMore:
@@ -49,12 +49,13 @@ class DownloadBucketList:
 		return pathname
 
 if __name__ == "__main__":
-	if len(sys.argv) < 3:
-		print("Usage: DownloadBucketList  config_name  bucket_name")
+	if len(sys.argv) < 4:
+		print("Usage: DownloadBucketList  config_name  bucket_name prefix")
 		sys.exit()
 	BUCKET_NAME = sys.argv[2]
+	PREFIX = sys.argv[3]
 	config = Config.shared()
 	download = DownloadBucketList(config)
-	pathname = download.listBucket(BUCKET_NAME)
+	pathname = download.listBucket(BUCKET_NAME, PREFIX)
 	print("downloaded", pathname)
 

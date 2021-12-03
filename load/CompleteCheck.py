@@ -14,6 +14,7 @@ from DownloadBucketList import *
 from DBPRunFilesS3 import *
 
 
+
 class CompleteCheck:
 
 	HTML_FILE = "complete-check.html"
@@ -115,7 +116,7 @@ class CompleteCheck:
 
 
 	def filesetsWithoutAccessGroups(self):
-		resultSet = self.db.select("SELECT id, hash_id FROM bible_filesets WHERE hash_id NOT IN" +
+		resultSet = self.db.select("SELECT id, hash_id FROM bible_filesets WHERE hidden = 0 and hash_id NOT IN" +
 			" (SELECT hash_id FROM access_group_filesets) ORDER BY id", ())
 		self.outputTable("Filesets without Access Groups.", ["filesetId", "hashId"], resultSet)
 
@@ -288,10 +289,10 @@ if (__name__ == '__main__'):
 	config = Config()
 	if len(sys.argv) > 2 and sys.argv[2].lower() == "full":
 		bucket = DownloadBucketList(config)
-		pathname = bucket.listBucket("dbp-prod")
+		pathname = bucket.listBucket("dbp-prod", "audio")
 		DBPRunFilesS3.simpleUpload(config, pathname, "text/plain")
 		dbpProdModified = datetime.utcnow()
-		pathname = bucket.listBucket("dbp-vid")
+		pathname = bucket.listBucket("dbp-vid", "video")
 		DBPRunFilesS3.simpleUpload(config, pathname, "text/plain")
 		dbpVidModified = dbpProdModified
 	elif len(sys.argv) > 2 and sys.argv[2].lower() == "fast":
