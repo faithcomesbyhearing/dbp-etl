@@ -49,9 +49,11 @@ class TestBiblePublisher:
 		return None
 
 	def syncTextFileset(self, objectKey):
-		cmd = "aws --profile %s s3 sync s3://%s/%s %s/%s " % (self.config.s3_aws_profile, s3Bucket, objectKey, self.testDirectory, self.textStockNum)
+#		cmd = "aws --profile %s s3 sync s3://%s/%s %s/%s " % (self.config.s3_aws_profile, self.bucket, objectKey, self.testDirectory, self.textStockNum)
+		cmd = "aws --profile %s s3 cp \"s3://%s/%s\" %s/%s " % (self.config.s3_aws_profile, self.bucket, objectKey, self.testDirectory, self.textStockNum)
+		print("subprocess: %s" %(cmd))
 		response = subprocess.run(cmd, shell=True, stderr=subprocess.PIPE)
-		if response.returncode != 0
+		if response.returncode != 0:
 			print("ERROR: Download of %s to %s/%s failed. MESSAGE: %s" % (objectKey, self.testDirectory, self.textStockNum, response.stderr))
 			return False
 		else:
@@ -124,29 +126,29 @@ class TestBiblePublisher:
 			exePath = "%s/validate" % (self.publisherRoot)
 		print("exePath", exePath)
 		os.chdir(exePath)
-		source = self.testDirectory + "/text/" + self.stockNum + "/" + self.stockNum
+		source = self.testDirectory + "/text/" + self.textStockNum+ "/" + self.textStockNum
 		if program == "publish":
-			return ["BuildPublisher.sh", source, source, self.stockNum, "eng", "en", "ltr"]
+			return ["BuildPublisher.sh", source, source, self.textStockNum, "eng", "en", "ltr"]
 		elif program == "xml":
-			return ["XMLTokenizerTest.sh", source, source, source + "/output", self.stockNum]
+			return ["XMLTokenizerTest.sh", source, source, source + "/output", self.textStockNum]
 		elif program == "usx":
-			return ["USXParserTest.sh", source, source, source + "/output", self.stockNum]
+			return ["USXParserTest.sh", source, source, source + "/output", self.textStockNum]
 		elif program == "html":
-			return ["HTMLValidator.sh", source, source, source + "/output", self.stockNum]
+			return ["HTMLValidator.sh", source, source, source + "/output", self.textStockNum]
 		elif program == "style":
-			return ["StyleUseValidator.sh", source, source + "/output", self.stockNum]
+			return ["StyleUseValidator.sh", source, source + "/output", self.textStockNum]
 		elif program == "verses":
-			return ["VersesValidator.sh", source, source + "/output", self.stockNum]
+			return ["VersesValidator.sh", source, source + "/output", self.textStockNum]
 		elif program == "toc":
-			return ["TableContentsValidator.sh", source, self.stockNum]
+			return ["TableContentsValidator.sh", source, self.textStockNum]
 		elif program == "concordance":
-			return ["ConcordanceValidator.sh", source, source + "/output", self.stockNum]
+			return ["ConcordanceValidator.sh", source, source + "/output", self.textStockNum]
 		else:
 			print("ERROR: Unknown program %s" % (program))
 
 
 if len(sys.argv) < 4:
-	print("Usage: python3 TestBiblePublisher.js  config_profile root_directory  stockNum  [program]")
+	print("Usage: python3 load/TestBiblePublisher.py  config_profile root_directory  stockNum  [program]")
 	sys.exit()
 
 rootDirectory = sys.argv[2]
@@ -158,7 +160,8 @@ else:
 
 config = Config()
 test = TestBiblePublisher(config, rootDirectory, "dbp-etl-mass-batch", stockNum)
-objectKey = test.findStockNumEntry()
+#objectKey = test.findStockNumEntry()
+objectKey = "Toura N2NEBWYI/05 DBP & GBA/Toura_N2NEBWYI/Toura_N2NEBWYI_USX/040MAT.usx"
 if objectKey != None:
 	if test.syncTextFileset(objectKey):
 		if program != None:
@@ -167,3 +170,5 @@ if objectKey != None:
 			for program in test.programs:
 				test.execute(program)
 
+# python3 load/TestBiblePublisher.py  test ~/test-publisher  "P1AHR/WFW"  html
+# python3 load/TestBiblePublisher.py  test ~/test-publisher  "N2NEBWYI"  html
