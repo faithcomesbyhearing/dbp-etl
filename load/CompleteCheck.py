@@ -289,10 +289,10 @@ if (__name__ == '__main__'):
 	config = Config()
 	if len(sys.argv) > 2 and sys.argv[2].lower() == "full":
 		bucket = DownloadBucketList(config)
-		pathname = bucket.listBucket("dbp-prod", "audio")
+		pathname = bucket.listBucket("dbp-prod")
 		DBPRunFilesS3.simpleUpload(config, pathname, "text/plain")
 		dbpProdModified = datetime.utcnow()
-		pathname = bucket.listBucket("dbp-vid", "video")
+		pathname = bucket.listBucket("dbp-vid")
 		DBPRunFilesS3.simpleUpload(config, pathname, "text/plain")
 		dbpVidModified = dbpProdModified
 	elif len(sys.argv) > 2 and sys.argv[2].lower() == "fast":
@@ -320,7 +320,6 @@ if (__name__ == '__main__'):
 	check.filesetsWithoutCopyrights()
 	check.filesetsWithoutOrganizations()
 	check.filesetsWithoutAccessGroups()
-	check.booksWithPlaceholders()
 	check.totalLanguageCount()
 	check.totalBiblesWithFilesets()
 	check.totalFilesetCount()
@@ -329,6 +328,7 @@ if (__name__ == '__main__'):
 	check.checkForMissingTS()
 	check.checkForMissingBandwidth()
 	check.bibleIdCheck()
+	check.booksWithPlaceholders()
 	check.close()
 	db.close()
 	DBPRunFilesS3.simpleUpload(config, CompleteCheck.HTML_FILE, "text/html")
