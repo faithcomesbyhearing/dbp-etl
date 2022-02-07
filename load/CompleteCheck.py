@@ -66,9 +66,9 @@ class CompleteCheck:
 
 
 	def biblesWithoutConnects(self):
-		resultSet = self.db.select("SELECT count(*) FROM bibles WHERE id NOT IN" +
+		resultSet = self.db.select("SELECT id, language_id FROM bibles WHERE id NOT IN" +
 			" (SELECT bible_id FROM bible_fileset_connections)", ())
-		self.outputTable("Bibles without Fileset Connections.", ["Count"], resultSet)
+		self.outputTable("Bibles without Fileset Connections.", ["bibleid", "language_id"], resultSet)
 
 
 	def filesetsWithoutConnects(self):
@@ -311,7 +311,9 @@ if (__name__ == '__main__'):
 	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
 	db = SQLUtility(config)
 	check = CompleteCheck(config, db, lptsReader)
-	check.biblesWithoutConnects()
+	check.totalLanguageCount()
+	check.totalFilesetCount()
+	check.totalBiblesWithFilesets()
 	check.filesetsWithoutConnects()
 	check.filesetsWithoutFiles()
 	check.filesetsWithoutVerses()
@@ -320,14 +322,12 @@ if (__name__ == '__main__'):
 	check.filesetsWithoutCopyrights()
 	check.filesetsWithoutOrganizations()
 	check.filesetsWithoutAccessGroups()
-	check.totalLanguageCount()
-	check.totalBiblesWithFilesets()
-	check.totalFilesetCount()
 	check.bibleFilesToS3(dbpProdModified)
 	check.bibleFilesetsToLPTS()
 	check.checkForMissingTS()
 	check.checkForMissingBandwidth()
 	check.bibleIdCheck()
+	check.biblesWithoutConnects()
 	check.booksWithPlaceholders()
 	check.close()
 	db.close()
