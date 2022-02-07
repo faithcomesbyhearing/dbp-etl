@@ -43,6 +43,7 @@ class DownloadBucketList:
 					print("Could not write key %s" % (err))
 
 			if hasMore:
+				print("ContinuationToken %s" % (response['NextContinuationToken']))
 				request['ContinuationToken'] = response['NextContinuationToken']
 
 		out.close()
