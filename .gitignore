@@ -1,4 +1,6 @@
 .DS_Store
 *.pyc
 *.log
-Trans-*.sql
+*.sql
+*.txt
+Errors.out
