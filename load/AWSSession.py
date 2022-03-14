@@ -28,39 +28,27 @@ class AWSSession:
 
 	def _securityTokenService(self, clientType, roleSessionName, regionName, timeout=None):
 		session = boto3.Session(profile_name = self.config.s3_aws_profile, region_name = regionName)
-		if self.config.s3_aws_role == None:
-			if timeout != None:
-				botoConfig = BotoConfig(retries={'max_attempts': 0}, read_timeout = timeout, connect_timeout = timeout)
-				client = session.client(clientType, config = botoConfig)
-			else:
-				client = session.client(clientType)
-		else:
-			stsClient = session.client('sts')
-			assumedRoleObject = stsClient.assume_role(
-				RoleArn = self.config.s3_aws_role,
-			    RoleSessionName = roleSessionName,
-				DurationSeconds = 12*60*60
-			)
-			credentials = assumedRoleObject['Credentials']
-			if timeout != None:
-				botoConfig = BotoConfig(retries={'max_attempts': 0}, read_timeout = timeout, connect_timeout = timeout)
-				client = boto3.client(
-			    	clientType,
-			    	aws_access_key_id = credentials['AccessKeyId'],
-			    	aws_secret_access_key = credentials['SecretAccessKey'],
-			    	aws_session_token = credentials['SessionToken'],
-			    	region_name = regionName,
-			    	config = botoConfig
-				)
-			else:
-				client = boto3.client(
-				    clientType,
-				    aws_access_key_id = credentials['AccessKeyId'],
-				    aws_secret_access_key = credentials['SecretAccessKey'],
-				    aws_session_token = credentials['SessionToken'],
-				    region_name = regionName
-				)				
-			#print("Created role %s based session for %s." % (self.config.s3_aws_role, clientType))
+		stsClient = session.client('sts')
+		assumedRoleObject = stsClient.assume_role(
+			RoleArn = self.config.s3_aws_role,
+		    RoleSessionName = roleSessionName,
+			DurationSeconds = 12*60*60
+		)
+		credentials = assumedRoleObject['Credentials']
+		botoConfig = BotoConfig()
+		if timeout != None:
+			botoConfig = BotoConfig(retries={'max_attempts': 0}, read_timeout = timeout, connect_timeout = timeout)
+
+		#print ("connect timeout: %s, read_timeout: %s" % (botoConfig.connect_timeout,botoConfig.read_timeout))
+		client = boto3.client(
+	    	clientType,
+	    	aws_access_key_id = credentials['AccessKeyId'],
+	    	aws_secret_access_key = credentials['SecretAccessKey'],
+	    	aws_session_token = credentials['SessionToken'],
+	    	region_name = regionName,
+	    	config = botoConfig
+		)
+		print("Created role %s based session for %s." % (self.config.s3_aws_role, clientType))
 		return client
 
 
@@ -71,14 +59,15 @@ class AWSSession:
 			return "--profile %s" % (self.config.s3_aws_profile)
 		else:
 			return ""		
-
+	
 
 # Unit Test
 if (__name__ == '__main__'):
 	session = AWSSession.shared()
-	#for bucket in session.s3Client.buckets.all():
-	response = session.s3Client.list_buckets()
-	for bucket in response['Buckets']:
-		print(bucket['Name'])
+	request = { 'Bucket': 'etl-development-input', 'MaxKeys': 10 }
+	response = session.s3Client.list_objects_v2(**request)
+	for item in response.get('Contents', []):
+		objKey = item.get('Key')
+		print (objKey)
 	
 

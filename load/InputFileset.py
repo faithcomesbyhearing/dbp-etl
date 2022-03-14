@@ -390,6 +390,8 @@ if (__name__ == '__main__'):
 		#print("subtype", inp.subTypeCode())
 	Log.writeLog(config)
 
+# python3 load/InputFileset.py test s3://etl-development-input Spanish_N2SPNTLA_USX
+
 # python3 load/InputFileset.py test /Volumes/FCBH/files/complete/audio/ENGESV/ ENGESVN2DA ENGESVN2DA16
 
 # python3 load/InputFileset.py newdata s3://dbp-prod ENGESVN2DA ENGESVN2DA16
