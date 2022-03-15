@@ -30,7 +30,7 @@ class AWSSession:
 		session = boto3.Session(profile_name = self.config.s3_aws_profile, region_name = regionName)
 		stsClient = session.client('sts')
 		assumedRoleObject = stsClient.assume_role(
-			RoleArn = self.config.s3_aws_role,
+			RoleArn = self.config.s3_aws_role_arn,
 		    RoleSessionName = roleSessionName,
 			DurationSeconds = 12*60*60
 		)
@@ -48,7 +48,7 @@ class AWSSession:
 	    	region_name = regionName,
 	    	config = botoConfig
 		)
-		print("Created role %s based session for %s." % (self.config.s3_aws_role, clientType))
+		print("Created role %s based session for %s." % (self.config.s3_aws_role_arn, clientType))
 		return client
 
 

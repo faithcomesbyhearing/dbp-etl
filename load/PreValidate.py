@@ -336,7 +336,8 @@ if (__name__ == "__main__"):
 	from Config import *
 	from AWSSession import *
 
-	lptsReader = LPTSExtractReader(os.environ["LPTS_XML"])
+	config = Config.shared()
+	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
 	unicodeScript = UnicodeScript()
 	preValidate = PreValidate(lptsReader, unicodeScript)
 	config = Config.shared()

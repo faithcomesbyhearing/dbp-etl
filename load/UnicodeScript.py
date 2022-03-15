@@ -42,6 +42,7 @@ class UnicodeScript:
 
 	## Downloads an objects, returns content as an array of lines, but discards first 10 lines
 	def readObject(self, s3Client, location, filePath):
+		print("UnicodeScript:readObject. location: %s, filepath: %s" % (location, filePath))
 		if location.startswith("s3://"):
 			s3Bucket = location[5:]
 			response = s3Client.get_object(Bucket=s3Bucket, Key=filePath)
@@ -49,7 +50,7 @@ class UnicodeScript:
 			lines = content.split("\n") if content != None else []
 			lines = lines[10:] # discard first 10 lines
 		else:
-			file = open(filePath, mode='r', encoding="utf-8")
+			file = open(location +'/'+filePath, mode='r', encoding="utf-8")
 			lines = file.readlines()
 			file.close()
 			lines = lines[10:] # discard first 10 lines
