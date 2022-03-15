@@ -52,11 +52,9 @@ class AWSSession:
 		return client
 
 
-	def profile(self):
+	def role_profile(self):
 		if self.config.s3_aws_role_profile != None:
 			return "--profile %s" % (self.config.s3_aws_role_profile)
-		elif self.config.s3_aws_profile != None:
-			return "--profile %s" % (self.config.s3_aws_profile)
 		else:
 			return ""		
 	
