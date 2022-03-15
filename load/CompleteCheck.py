@@ -289,10 +289,10 @@ if (__name__ == '__main__'):
 	config = Config()
 	if len(sys.argv) > 2 and sys.argv[2].lower() == "full":
 		bucket = DownloadBucketList(config)
-		pathname = bucket.listBucket("dbp-prod")
+		pathname = bucket.listBucket(config.s3_bucket)
 		DBPRunFilesS3.simpleUpload(config, pathname, "text/plain")
 		dbpProdModified = datetime.utcnow()
-		pathname = bucket.listBucket("dbp-vid")
+		pathname = bucket.listBucket(config.s3_vid_bucket)
 		DBPRunFilesS3.simpleUpload(config, pathname, "text/plain")
 		dbpVidModified = dbpProdModified
 	elif len(sys.argv) > 2 and sys.argv[2].lower() == "fast":
