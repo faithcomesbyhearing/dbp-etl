@@ -53,7 +53,7 @@ class S3Utility:
 
 	def uploadFileset(self, s3Bucket, inputFileset):
 		inp = inputFileset
-		profile = AWSSession.shared().profile()
+		profile = AWSSession.shared().role_profile()
 		if inp.locationType == InputFileset.LOCAL:
 			source = inp.fullPath()
 		else:
@@ -100,13 +100,15 @@ if (__name__ == '__main__'):
 
 	s3.uploadAllFilesets(filesets + results)
 
+# python3 load/S3Utility.py test $ETL_LOCAL/ ENGESVN2DA
+
 # Successful tests with source on local drive
 # time python3 load/S3Utility.py test /Volumes/FCBH/all-dbp-etl-test/ ENGESVN2DA ENGESVN2DA16
 # time python3 load/S3Utility.py test /Volumes/FCBH/all-dbp-etl-test/ HYWWAVN2ET
 # time python3 load/S3Utility.py test-video /Volumes/FCBH/all-dbp-etl-test/ ENGESVP2DV
-# python3 load/S3Utility.py test $ETL_LOCAL/ ENGESVN2DA
 
 # Successful tests with source on s3
+# time python3 load/S3Utility.py test s3://etl-development-input ENGESVN2DA
 # time python3 load/S3Utility.py test s3://test-dbp-etl ENGESVN2DA
 # time python3 load/S3Utility.py test s3://test-dbp-etl text/ENGESV/ENGESVN2DA16
 # time python3 load/S3Utility.py test s3://test-dbp-etl HYWWAVN2ET
