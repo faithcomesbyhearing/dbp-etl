@@ -118,11 +118,23 @@ class CompleteCheck:
 	def filesetsWithoutAccessGroups(self):
 		resultSet = self.db.select("SELECT id, hash_id FROM bible_filesets WHERE hidden = 0 and hash_id NOT IN" +
 			" (SELECT hash_id FROM access_group_filesets) ORDER BY id", ())
-		self.outputTable("Filesets without Access Groups.", ["filesetId", "hashId"], resultSet)
 
+		lptsReader = LPTSExtractReader(config.filename_lpts_xml)
+
+		finalResultSet = []
+		for fileset in resultSet:
+			(filesetId, hashId) = fileset
+
+			filesetFromReader = lptsReader.getFilesetRecords(filesetId)
+			if filesetFromReader != None:
+				for (status, record) in filesetFromReader:
+					if status == "Live":
+						finalResultSet.append(fileset)
+
+		self.outputTable("Filesets without Access Groups.", ["filesetId", "hashId"], finalResultSet)
 
 	def booksWithPlaceholders(self):
-		resultSet = self.db.select("SELECT bible_id, count(*) FROM bible_books WHERE LEFT(name,1) = '[' GROUP BY bible_id", ())
+		resultSet = self.db.select("SELECT bb.bible_id, count(*) FROM bible_books bb WHERE bb.bible_id in (SELECT DISTINCT (bfl.bibleid) FROM bible_fileset_lookup bfl WHERE bfl.type like %s) and LEFT(bb.name,1) = %s GROUP BY bb.bible_id", ('text%', '['))
 		self.outputTable("Books with Placeholders ([book_name]).", ["bibleId", "num books"], resultSet)
 
 
