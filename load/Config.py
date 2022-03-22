@@ -73,17 +73,9 @@ class Config:
 		self.s3_bucket = self._get("s3.bucket")
 		self.s3_vid_bucket = self._get("s3.vid_bucket")
 		self.s3_artifacts_bucket = self._get("s3.artifacts_bucket")
-		self.s3_aws_profile = self._getOptional("s3.aws_profile")
-		#session = boto3.Session(profile_name=self.s3_aws_profile)  ## deprecated, should be AWSSession, remove
-		#self.s3_client = session.client('s3')  ## deprecated, should be AWSSession, remove from here
-		self.s3_aws_role = self._getOptional("s3.aws_role")
-		self.s3_aws_role_profile = self._getOptional("s3.aws_role_profile")
-		if self.s3_aws_role == None and self.s3_aws_role_profile != None:
-			print("ERROR: s3.aws_role_profile is present, but s3.aws_role is absent.")
-			sys.exit()
-		if self.s3_aws_role != None and self.s3_aws_role_profile == None:
-			print("ERROR: s3.aws_role is present, but s3.aws_role_profile is absent.")
-			sys.exit()
+		self.s3_aws_profile = self._getOptional("s3.aws_profile") 
+		self.s3_aws_role_arn = self._getOptional("s3.aws_role_arn") 
+		self.s3_aws_role_profile = self._getOptional("s3.aws_role_profile") # this is temporary
 
 		if programRunning in {"AudioHLS.py"}:
 			self.directory_audio_hls = self._getPath("directory.audio_hls") #"%s/FCBH/files/tmp" % (self.home)

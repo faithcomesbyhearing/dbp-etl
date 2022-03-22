@@ -52,6 +52,8 @@ class InputFileset:
 	database = []
 	complete = []
 
+	def parseFilesetId(directory) :
+		return directory[:7] + "_" + directory[8:] + "-usx" if directory[8:10] == "ET" else directory
 
 	## parse command line, and return [InputFileset]
 	def filesetCommandLineParser(config, s3Client, lptsReader):
@@ -64,9 +66,18 @@ class InputFileset:
 		filesetPaths = sys.argv[3:]
 
 		for filesetPath in filesetPaths:
+			stocknumbers = PreValidate.getStockNumbersFromFile(filesetPath, location.replace("s3://", ""))
+			hasStocknumbersFile = True if len(stocknumbers) > 0 else False
 			filesetPath = filesetPath[:-1] if filesetPath.endswith("/") else filesetPath
-			filesetId = filesetPath.split("/")[-1]
-			filesetId = filesetId[:7] + "_" + filesetId[8:] + "-usx" if filesetId[8:10] == "ET" else filesetId
+			directory = filesetPath.split("/")[-1]
+			filesetId = directory
+
+			# the variable filesetId refers to a directory name. Originally, the directory name was an actual fileset id. Now,
+			# the directory name can be either (a) a fileset id; or (b) the name of a directory which contains a file called
+			# stocknumber.txt, which contains one or more stocknumbers associated with the content in that directory
+			if hasStocknumbersFile == False:
+				filesetId = InputFileset.parseFilesetId(directory)
+
 			(dataList, messages) = PreValidate.validateDBPELT(lptsReader, s3Client, location, filesetId, filesetPath)
 			for data in dataList:
 				inp = InputFileset(config, location, data.filesetId, filesetPath, data.damId, 
@@ -389,6 +400,8 @@ if (__name__ == '__main__'):
 		#print(inp.toString())
 		#print("subtype", inp.subTypeCode())
 	Log.writeLog(config)
+
+# python3 load/InputFileset.py test s3://etl-development-input Spanish_N2SPNTLA_USX
 
 # python3 load/InputFileset.py test /Volumes/FCBH/files/complete/audio/ENGESV/ ENGESVN2DA ENGESVN2DA16
 

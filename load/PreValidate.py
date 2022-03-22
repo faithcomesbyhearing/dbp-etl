@@ -40,6 +40,25 @@ class PreValidateResult:
 
 class PreValidate:
 
+	def getStockNumbersFromFile(directory, bucket = "etl-development-input"):
+		config = Config.shared()
+		prefix = directory
+		session = boto3.Session(profile_name = config.s3_aws_profile)
+		s3Client = session.client('s3')
+
+		request = { 'Bucket': bucket, 'Prefix': prefix, 'MaxKeys': 1000 }
+		stocknumberArray = []
+
+		response = s3Client.list_objects_v2(**request)
+		for item in response.get('Contents', []):
+			objKey = item.get('Key')
+			(_, filename) = objKey.rsplit("/", 1)
+			if filename == 'stocknumber.txt':
+				stocknumberData = s3Client.get_object(Bucket=bucket, Key=objKey)
+				contents = stocknumberData['Body'].read()
+				stocknumberArray = contents.decode("utf-8").splitlines()
+
+		return stocknumberArray
 
 	## Validate input and return an errorList.
 	def validateLambda(lptsReader, directory, filenames):
@@ -48,13 +67,12 @@ class PreValidate:
 		result = None
 		stockNumber = preValidate.isTextStockNo(directory)
 		if stockNumber != None:
-			resultList = preValidate.validateUSXStockNo(stockNumber, filenames)
-			if resultList != None and len(resultList) > 0:
-				result = resultList[0]
+			stockResultList = preValidate.validateUSXStockList(stocknumberArrayFinal, filenames)
+			for stockResult in stockResultList:
+				preValidate.validateLPTS(stockResult)
 		else:
 			result = preValidate.validateFilesetId(directory)
-		if result != None:
-			preValidate.validateLPTS(result)
+
 		preValidate.addErrorMessages(directory, unicodeScript.errors)
 		return preValidate.formatMessages()
 
@@ -66,8 +84,12 @@ class PreValidate:
 		stockNumber = preValidate.isTextStockNo(directory)
 		if stockNumber != None:
 			filenames = unicodeScript.getFilenames(s3Client, location, fullPath)
-			sampleText = unicodeScript.readObject(s3Client, location, fullPath + "/" + filenames[0])
-			resultList = preValidate.validateUSXStockNo(stockNumber, filenames, sampleText)
+			sampleText =  unicodeScript.readObject(s3Client, location, fullPath + "/" + filenames[0]) if len(filenames) > 0 else None
+			stockResultList = preValidate.validateUSXStockList(stockNumber, filenames, sampleText)
+
+			for stockResult in stockResultList:
+				for result in stockResult:
+					resultList.append(result)
 		else:
 			result = preValidate.validateFilesetId(directory)
 			if result != None:
@@ -89,20 +111,43 @@ class PreValidate:
 					"1TI", "2TI", "TIT", "PHM", "HEB", "JAS", "1PE", "2PE", "1JN", "2JN", "3JN", "JUD", "REV" }
 
 
+	def isTextStockNoFromFile(self, directory):
+		stockNumberArray = PreValidate.getStockNumbersFromFile(directory)
+
+		stockNumberArrayFinal = []
+
+		if len(stockNumberArray) > 0:
+			for stockNumberItem in stockNumberArray:
+				stockNumberArrayFinal.append(stockNumberItem[:-3] + "/" + stockNumberItem[-3:])
+
+		return stockNumberArrayFinal
+
 	## determine if directory is USX text stockNo
 	def isTextStockNo(self, directory):
+		stockNumberArray = self.isTextStockNoFromFile(directory)
+
+		if len(stockNumberArray) > 0:
+			return stockNumberArray
+
 		parts = directory.split("_")
 		if len(parts) > 2:
 			stockNo = parts[-2]
 			if len(stockNo) > 5:
 				stockNumber = stockNo[:-3] + "/" + stockNo[-3:]
-				return stockNumber
+				return [stockNumber]
 			else:
 				self.errorMessage(directory, "Could not find a stock no.")
 		return None
 
 
-    ## Validate filesetId and return PreValidateResult
+	def validateUSXStockList(self, stockList, filenames, sampleText = None):
+		resultList = []
+		for stockListNumber in stockList:
+			result = self.validateUSXStockNo(stockListNumber, filenames, sampleText)
+			resultList.append(result)
+		return resultList
+
+	## Validate filesetId and return PreValidateResult
 	def validateFilesetId(self, filesetId):
 		filesetId1 = filesetId.split("-")[0]
 		damId = filesetId1.replace("_", "2")
@@ -174,14 +219,14 @@ class PreValidate:
 		else:
 			actualScript = None
 		ntResult = self._matchFilesToDamId(stockNo, "N", lptsRecord, scopeMap, bookIdMap, actualScript) # PreValidateResult or None
-		#if ntResult != None:
-		#	print("NT", ntResult.toString())
+		# if ntResult != None:
+		# 	print("NT", ntResult.toString())
 		otResult = self._matchFilesToDamId(stockNo, "O", lptsRecord, scopeMap, bookIdMap, actualScript) # PreValidateResult or None
-		#if otResult != None:
-		#	print("OT", otResult.toString())
+		# if otResult != None:
+		# 	print("OT", otResult.toString())
 		bothResults = self._combineMultiplePScope(stockNo, ntResult, otResult)
-		#for result in bothResults:
-		#	print("BOTH", result.toString())
+		# for result in bothResults:
+		# 	print("BOTH", result.toString())
 		return bothResults
 
 
@@ -336,16 +381,22 @@ if (__name__ == "__main__"):
 	from Config import *
 	from AWSSession import *
 
-	lptsReader = LPTSExtractReader(os.environ["LPTS_XML"])
+	if len(sys.argv) < 3:
+		print("FATAL command line parameters: environment from_text_processing_folder ")
+		sys.exit()
+
+	prefix = sys.argv[2][:-1] if sys.argv[2].endswith("/") else sys.argv[2]
+	config = Config.shared()
+	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
 	unicodeScript = UnicodeScript()
 	preValidate = PreValidate(lptsReader, unicodeScript)
 	config = Config.shared()
-	bucket = "dbp-etl-mass-batch"
+	bucket = "etl-development-input"
 	session = boto3.Session(profile_name = config.s3_aws_profile)
 	s3Client = session.client('s3')
 
 	testDataMap = {}
-	request = { 'Bucket': bucket, 'MaxKeys': 1000 }
+	request = { 'Bucket': bucket, 'Prefix': prefix, 'MaxKeys': 1000 }
 	hasMore = True 
 	while hasMore:
 		response = s3Client.list_objects_v2(**request)
@@ -369,9 +420,10 @@ if (__name__ == "__main__"):
 		else:
 			oneFilePath = directory + "/" + filenames[0]
 			sampleText = unicodeScript.readObject(s3Client, "s3://" + bucket, oneFilePath)
-			resultList = preValidate.validateUSXStockNo(stockNumber, filenames, sampleText)
-			for result in resultList:
-				print(result.toString())
+			stockResultList = preValidate.validateUSXStockList(stockNumber, filenames, sampleText)
+			for stockResult in stockResultList:
+				for result in stockResult:
+					print(result.toString())
 		print("ERRORS", preValidate.messages)
 		preValidate.messages = {}
 

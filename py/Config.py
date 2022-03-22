@@ -74,10 +74,8 @@ class Config:
 		self.s3_vid_bucket = self._get("s3.vid_bucket")
 		self.s3_artifacts_bucket = self._get("s3.artifacts_bucket")
 		self.s3_aws_profile = self._getOptional("s3.aws_profile")
-		self.s3_aws_role = self._getOptional("s3.aws_role")
-		self.s3_aws_role_profile = self._getOptional("s3.aws_role_profile")
-		#session = boto3.Session(profile_name=self.s3_aws_profile)
-		#self.s3_client = session.client('s3')
+		self.s3_aws_role_arn = self._getOptional("s3.aws_role_arn")
+		self.s3_aws_role_profile = self._getOptional("s3.aws_role_profile") # this is temporary
 
 		#if programRunning in {"AudioHLS.py"}:
 		#	self.directory_audio_hls = self._getPath("directory.audio_hls") #"%s/FCBH/files/tmp" % (self.home)
