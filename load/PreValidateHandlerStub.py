@@ -1,5 +1,5 @@
-# Handler.py
-# AWS Lambda Handler for PreValidate
+# PreValidateHandlerStub.py
+# This is a test stub intended to provide the same interface as the AWS Lambda Handler
 import boto3
 from LPTSExtractReader import *
 from PreValidate import *
