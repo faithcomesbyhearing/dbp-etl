@@ -118,11 +118,23 @@ class CompleteCheck:
 	def filesetsWithoutAccessGroups(self):
 		resultSet = self.db.select("SELECT id, hash_id FROM bible_filesets WHERE hidden = 0 and hash_id NOT IN" +
 			" (SELECT hash_id FROM access_group_filesets) ORDER BY id", ())
-		self.outputTable("Filesets without Access Groups.", ["filesetId", "hashId"], resultSet)
 
+		lptsReader = LPTSExtractReader(config.filename_lpts_xml)
+
+		finalResultSet = []
+		for fileset in resultSet:
+			(filesetId, hashId) = fileset
+
+			filesetFromReader = lptsReader.getFilesetRecords(filesetId)
+			if filesetFromReader != None:
+				for (status, record) in filesetFromReader:
+					if status == "Live":
+						finalResultSet.append(fileset)
+
+		self.outputTable("Filesets without Access Groups.", ["filesetId", "hashId"], finalResultSet)
 
 	def booksWithPlaceholders(self):
-		resultSet = self.db.select("SELECT bible_id, count(*) FROM bible_books WHERE LEFT(name,1) = '[' GROUP BY bible_id", ())
+		resultSet = self.db.select("SELECT bb.bible_id, count(*) FROM bible_books bb WHERE bb.bible_id in (SELECT DISTINCT (bfl.bibleid) FROM bible_fileset_lookup bfl WHERE bfl.type like %s) and LEFT(bb.name,1) = %s GROUP BY bb.bible_id", ('text%', '['))
 		self.outputTable("Books with Placeholders ([book_name]).", ["bibleId", "num books"], resultSet)
 
 
@@ -147,7 +159,7 @@ class CompleteCheck:
 		filesets = set()
 		missingFilesetIds = set()
 		absentFilesetIds = set()
-		dbProd = io.open(self.config.directory_bucket_list + "dbp-prod.txt", mode="r", encoding="utf-8")
+		dbProd = io.open(self.config.directory_bucket_list + self.config.s3_bucket +".txt", mode="r", encoding="utf-8")
 		for line in dbProd:
 			if "delete" not in line:
 				fullFilename = line.split("\t")[0]
@@ -157,8 +169,8 @@ class CompleteCheck:
 					fileset = "%s/%s/%s/" % (parts[0], parts[1], parts[2])
 					filesets.add(fileset)
 		dbProd.close()
-		print(len(files), "dbp-prod records")
-		dbVid = io.open(self.config.directory_bucket_list + "dbp-vid.txt", mode="r", encoding="utf-8")
+		print(len(files), self.config.s3_bucket +" records")
+		dbVid = io.open(self.config.directory_bucket_list + self.config.s3_vid_bucket +".txt", mode="r", encoding="utf-8")
 		for line in dbVid:
 			fullFilename = line.split("\t")[0]
 			if fullFilename.endswith(".m3u8"):
@@ -168,7 +180,7 @@ class CompleteCheck:
 					fileset = "%s/%s/%s/" % (parts[0], parts[1], parts[2])
 					filesets.add(fileset)
 		dbVid.close()
-		print(len(files), "dbp-prod + dbp-vid records")
+		print(len(files), self.config.s3_bucket + " + " + self.config.s3_vid_bucket + " records")
 		sql = ("SELECT f.set_type_code, c.bible_id, f.id, bf.file_name"
 			" FROM bible_filesets f, bible_files bf, bible_fileset_connections c"
 			" WHERE f.hash_id = bf.hash_id AND f.hash_id = c.hash_id"
@@ -296,15 +308,15 @@ if (__name__ == '__main__'):
 		DBPRunFilesS3.simpleUpload(config, pathname, "text/plain")
 		dbpVidModified = dbpProdModified
 	elif len(sys.argv) > 2 and sys.argv[2].lower() == "fast":
-		pathname = config.directory_bucket_list + "dbp-prod.txt"
+		pathname = config.directory_bucket_list + config.s3_bucket +".txt"
 		DBPRunFilesS3.simpleDownload(config, pathname)
-		dbpProdModified = DBPRunFilesS3.simpleLastModified(config, "dbp-prod.txt")
-		pathname = config.directory_bucket_list + "dbp-vid.txt"
+		dbpProdModified = DBPRunFilesS3.simpleLastModified(config, config.s3_bucket +".txt")
+		pathname = config.directory_bucket_list + config.s3_vid_bucket +".txt"
 		DBPRunFilesS3.simpleDownload(config, pathname)
-		dbpVidModified = DBPRunFilesS3.simpleLastModified(config, "dbp-vid.txt")
+		dbpVidModified = DBPRunFilesS3.simpleLastModified(config, config.s3_vid_bucket +".txt")
 	elif len(sys.argv) > 2 and sys.argv[2].lower() == "restart":
-		dbpProdModified = DBPRunFilesS3.simpleLastModified(config, "dbp-prod.txt")
-		dbpVidModified = DBPRunFilesS3.simpleLastModified(config, "dbp-vid.txt")
+		dbpProdModified = DBPRunFilesS3.simpleLastModified(config, config.s3_bucket +".txt")
+		dbpVidModified = DBPRunFilesS3.simpleLastModified(config, config.s3_vid_bucket +".txt")
 	else:
 		print("Usage: python3 load/CompleteCheck.py  config_profile  full|fast|restart")
 		sys.exit()

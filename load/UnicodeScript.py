@@ -4,7 +4,6 @@
 import io
 import math
 import unicodedata
-from Config import *
 from LPTSExtractReader import *
 
 class UnicodeScript:
@@ -154,6 +153,7 @@ if (__name__ == '__main__'):
 	import time
 	import boto3
 	import csv
+	from Config import *	
 	from AWSSession import *
 	from SQLUtility import *
 

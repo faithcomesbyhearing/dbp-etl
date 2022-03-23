@@ -18,6 +18,7 @@ from LPTSExtractReader import *
 from SqliteUtility import *
 from PreValidate import *
 from AWSSession import *
+from UnicodeScript import *
 
 class InputFile:
 
@@ -65,8 +66,11 @@ class InputFileset:
 		location = sys.argv[2][:-1] if sys.argv[2].endswith("/") else sys.argv[2]
 		filesetPaths = sys.argv[3:]
 
+		unicodeScript = UnicodeScript()
+		preValidate = PreValidate(lptsReader, unicodeScript, s3Client, location)
+
 		for filesetPath in filesetPaths:
-			stocknumbers = PreValidate.getStockNumbersFromFile(filesetPath, location.replace("s3://", ""))
+			stocknumbers = preValidate.getStockNumbersFromFile(filesetPath, location.replace("s3://", ""))
 			hasStocknumbersFile = True if len(stocknumbers) > 0 else False
 			filesetPath = filesetPath[:-1] if filesetPath.endswith("/") else filesetPath
 			directory = filesetPath.split("/")[-1]
