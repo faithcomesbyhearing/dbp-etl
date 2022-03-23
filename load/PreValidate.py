@@ -40,46 +40,52 @@ class PreValidateResult:
 
 class PreValidate:
 
-	def getStockNumbersFromFile(directory, bucket = "etl-development-input"):
-		config = Config.shared()
+	def getStockNumbersFromFile(self, directory, bucket = None):
 		prefix = directory
-		session = boto3.Session(profile_name = config.s3_aws_profile)
-		s3Client = session.client('s3')
+		if bucket == None:
+			bucket = self.bucket
 
 		request = { 'Bucket': bucket, 'Prefix': prefix, 'MaxKeys': 1000 }
 		stocknumberArray = []
 
-		response = s3Client.list_objects_v2(**request)
+		response = self.s3Client.list_objects_v2(**request)
 		for item in response.get('Contents', []):
 			objKey = item.get('Key')
 			(_, filename) = objKey.rsplit("/", 1)
 			if filename == 'stocknumber.txt':
-				stocknumberData = s3Client.get_object(Bucket=bucket, Key=objKey)
+				stocknumberData = self.s3Client.get_object(Bucket=bucket, Key=objKey)
 				contents = stocknumberData['Body'].read()
 				stocknumberArray = contents.decode("utf-8").splitlines()
 
 		return stocknumberArray
 
 	## Validate input and return an errorList.
-	def validateLambda(lptsReader, directory, filenames):
+	def validateLambda(self, lptsReader, directory, filenames):
 		unicodeScript = UnicodeScript()
-		preValidate = PreValidate(lptsReader, unicodeScript)
 		result = None
-		stockNumber = preValidate.isTextStockNo(directory)
+		stockNumber = self.isTextStockNo(directory)
 		if stockNumber != None:
-			stockResultList = preValidate.validateUSXStockList(stocknumberArrayFinal, filenames)
-			for stockResult in stockResultList:
-				preValidate.validateLPTS(stockResult)
-		else:
-			result = preValidate.validateFilesetId(directory)
+			stockResultList = self.validateUSXStockList(stockNumber, filenames)
+			resultList = []
 
-		preValidate.addErrorMessages(directory, unicodeScript.errors)
-		return preValidate.formatMessages()
+			for stockResult in stockResultList:
+				for result in stockResult:
+					resultList.append(result)
+
+			if len(resultList) > 0:
+				self.validateLPTS(resultList[0])
+		else:
+			result = self.validateFilesetId(directory)
+			self.validateLPTS(result)
+
+		self.addErrorMessages(directory, unicodeScript.errors)
+		return self.formatMessages()
 
 
 	def validateDBPELT(lptsReader, s3Client, location, directory, fullPath):
 		unicodeScript = UnicodeScript()
-		preValidate = PreValidate(lptsReader, unicodeScript)
+		bucket = location.replace("s3://", "")
+		preValidate = PreValidate(lptsReader, unicodeScript, s3Client, bucket)
 		resultList = []
 		stockNumber = preValidate.isTextStockNo(directory)
 		if stockNumber != None:
@@ -100,7 +106,7 @@ class PreValidate:
 		return (resultList, preValidate.messages)
 
 
-	def __init__(self, lptsReader, unicodeScript):
+	def __init__(self, lptsReader, unicodeScript, s3Client, bucket):
 		self.lptsReader = lptsReader
 		self.unicodeScript = unicodeScript
 		self.messages = {}
@@ -109,10 +115,11 @@ class PreValidate:
 					"JOL", "AMO", "OBA", "JON", "MIC", "NAM", "HAB", "ZEP", "HAG", "ZEC", "MAL" }
 		self.NT = { "MAT", "MRK", "LUK", "JHN", "ACT", "ROM", "1CO", "2CO", "GAL", "EPH", "PHP", "COL", "1TH", "2TH", 
 					"1TI", "2TI", "TIT", "PHM", "HEB", "JAS", "1PE", "2PE", "1JN", "2JN", "3JN", "JUD", "REV" }
-
+		self.s3Client = s3Client
+		self.bucket = bucket
 
 	def isTextStockNoFromFile(self, directory):
-		stockNumberArray = PreValidate.getStockNumbersFromFile(directory)
+		stockNumberArray = self.getStockNumbersFromFile(directory)
 
 		stockNumberArrayFinal = []
 
@@ -389,15 +396,14 @@ if (__name__ == "__main__"):
 	config = Config.shared()
 	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
 	unicodeScript = UnicodeScript()
-	preValidate = PreValidate(lptsReader, unicodeScript)
-	config = Config.shared()
 	bucket = "etl-development-input"
 	session = boto3.Session(profile_name = config.s3_aws_profile)
 	s3Client = session.client('s3')
+	preValidate = PreValidate(lptsReader, unicodeScript, s3Client, bucket)
 
 	testDataMap = {}
 	request = { 'Bucket': bucket, 'Prefix': prefix, 'MaxKeys': 1000 }
-	hasMore = True 
+	hasMore = True
 	while hasMore:
 		response = s3Client.list_objects_v2(**request)
 		hasMore = response['IsTruncated']
