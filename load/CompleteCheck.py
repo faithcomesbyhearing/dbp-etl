@@ -159,7 +159,7 @@ class CompleteCheck:
 		filesets = set()
 		missingFilesetIds = set()
 		absentFilesetIds = set()
-		dbProd = io.open(self.config.directory_bucket_list + "dbp-prod.txt", mode="r", encoding="utf-8")
+		dbProd = io.open(self.config.directory_bucket_list + self.config.bucket, mode="r", encoding="utf-8")
 		for line in dbProd:
 			if "delete" not in line:
 				fullFilename = line.split("\t")[0]
