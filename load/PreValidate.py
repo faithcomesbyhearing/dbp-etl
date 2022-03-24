@@ -8,7 +8,7 @@
 import json
 from LPTSExtractReader import *
 from UnicodeScript import *
-
+from botocore.exceptions import ClientError
 
 class PreValidateResult:
 
@@ -45,18 +45,18 @@ class PreValidate:
 		if bucket == None:
 			bucket = self.bucket
 
-		request = { 'Bucket': bucket, 'Prefix': prefix, 'MaxKeys': 1000 }
-		stocknumberArray = []
-
-		response = self.s3Client.list_objects_v2(**request)
-		for item in response.get('Contents', []):
-			objKey = item.get('Key')
-			(_, filename) = objKey.rsplit("/", 1)
-			if filename == 'stocknumber.txt':
-				stocknumberData = self.s3Client.get_object(Bucket=bucket, Key=objKey)
-				contents = stocknumberData['Body'].read()
-				stocknumberArray = contents.decode("utf-8").splitlines()
-
+		key = prefix + "/stocknumber.txt"
+		stocknumberArray = []		
+		try:
+			response = self.s3Client.get_object(Bucket=bucket, Key=key)
+			contents = response['Body'].read()
+			stocknumberArray = contents.decode("utf-8").splitlines()
+		except ClientError as ex:
+			if ex.response['Error']['Code'] == 'NoSuchKey':			
+				print("No stocknumber.txt file found")
+		except Exception as err:
+			print("Error retrieving stocknumber.txt file: %s" % (err))
+		
 		return stocknumberArray
 
 	## Validate input and return an errorList.
