@@ -1,0 +1,13 @@
+version: 0.2
+
+phases:
+  build:
+    commands:
+      - echo Build started on `date`
+      - cd prevalidate
+      - zip -j lambda Handler.py ../../load/PreValidate.py ../../load/LPTSExtractReader.py ../../load/UnicodeScript.py   
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      - echo Pushing lambda function update...
+      - aws lambda update-function-code --function-name $FUNCTION_NAME  --zip-file fileb://./lambda.zip
