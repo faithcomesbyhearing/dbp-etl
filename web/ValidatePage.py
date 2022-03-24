@@ -17,6 +17,7 @@
 
 
 import os
+import tempfile
 import sys
 import pymysql
 from OutputHTML import *
@@ -68,7 +69,7 @@ class ValidatePage:
 		if self.conn != None:
 			self.conn.close()
 			self.conn = None
-		self.output.file("sample.html")
+		self.output.file(tempfile.gettempdir() + "/sample.html")
 			
 		
 	def getHashIds(self, bibleId, filesetId):
