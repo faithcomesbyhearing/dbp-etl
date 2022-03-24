@@ -4,7 +4,7 @@ phases:
   build:
     commands:
       - echo Build started on `date`
-      - cd postvalidate
+      - cd lambda/postvalidate
       - zip -j lambda Handler.py ../../web/*.py 
   post_build:
     commands:
