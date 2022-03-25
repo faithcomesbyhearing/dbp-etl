@@ -28,6 +28,17 @@ class AWSSession:
 
 	def _securityTokenService(self, clientType, roleSessionName, regionName, timeout=None):
 		session = boto3.Session(profile_name = self.config.s3_aws_profile, region_name = regionName)
+
+		# for docker execution, assume_role_arn is provided by ECS task configuration
+		if self.config.s3_aws_role_arn == None:
+			if timeout != None:
+				botoConfig = BotoConfig(retries={'max_attempts': 0}, read_timeout = timeout, connect_timeout = timeout)
+				client = session.client(clientType, config = botoConfig)
+			else:
+				client = session.client(clientType)
+			return client 
+			
+		# assume_role_arn explicitely provided
 		stsClient = session.client('sts')
 		assumedRoleObject = stsClient.assume_role(
 			RoleArn = self.config.s3_aws_role_arn,
