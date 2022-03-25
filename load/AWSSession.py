@@ -30,7 +30,7 @@ class AWSSession:
 		session = boto3.Session(profile_name = self.config.s3_aws_profile, region_name = regionName)
 
 		# for docker execution, assume_role_arn is provided by ECS task configuration
-		if self.config.s3_aws_role == None:
+		if self.config.s3_aws_role_arn == None:
 			if timeout != None:
 				botoConfig = BotoConfig(retries={'max_attempts': 0}, read_timeout = timeout, connect_timeout = timeout)
 				client = session.client(clientType, config = botoConfig)
