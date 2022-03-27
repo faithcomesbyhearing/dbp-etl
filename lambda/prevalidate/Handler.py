@@ -10,7 +10,7 @@ from PreValidate import *
 
 def handler(event, context):
 	directory = event["prefix"] # can be filesetId or lang_stockno_USX
-	filenames = event["files"] # Should be object keys 
+	filenames = event["files"] # Should be object keys  
 	bucket    = os.getenv("UPLOAD_BUCKET")
 
 	session = boto3.Session()
