@@ -1,0 +1,19 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin $IMAGE_REPO_URL
+  build:
+    commands:
+      - echo Build started on `date`
+      - cd docker
+      - echo Building the Docker image...         
+      - docker build -t dbp-etl .
+      - docker tag dbp-etl:latest $IMAGE_REPO_URL:latest     
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      - echo Pushing the Docker image...
+      - docker push $IMAGE_REPO_URL:latest
