@@ -8,7 +8,6 @@ phases:
   build:
     commands:
       - echo Build started on `date`
-      - cd docker
       - echo Building the Docker image...         
       - docker build -t dbp-etl .
       - docker tag dbp-etl:latest $IMAGE_REPO_URL:latest     
