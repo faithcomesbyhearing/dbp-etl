@@ -46,24 +46,34 @@ class PreValidate:
 			bucket = self.bucket
 
 		key = prefix + "/stocknumber.txt"
-		stocknumberArray = []		
+		stocknumberArray = []
+		stocknumberArrayFinal = []	
+
 		try:
 			response = self.s3Client.get_object(Bucket=bucket, Key=key)
 			contents = response['Body'].read()
 			stocknumberArray = contents.decode("utf-8").splitlines()
+
+			for stocknumber in stocknumberArray:
+				if stocknumber != '':
+					stocknumberArrayFinal.append(stocknumber)
+
 		except ClientError as ex:
 			if ex.response['Error']['Code'] == 'NoSuchKey':			
 				print("No stocknumber.txt file found")
 		except Exception as err:
 			print("Error retrieving stocknumber.txt file: %s" % (err))
-		
-		return stocknumberArray
+
+		return stocknumberArrayFinal
 
 	## Validate input and return an errorList.
 	def validateLambda(self, lptsReader, directory, filenames):
 		unicodeScript = UnicodeScript()
 		result = None
 		stockNumber = self.isTextStockNo(directory)
+		print("=======================================================")
+		print("validateDBPELT stockNumbers => ", stockNumber)
+		print("=======================================================")
 		if stockNumber != None:
 			stockResultList = self.validateUSXStockList(stockNumber, filenames)
 			resultList = []
@@ -88,6 +98,9 @@ class PreValidate:
 		preValidate = PreValidate(lptsReader, unicodeScript, s3Client, bucket)
 		resultList = []
 		stockNumber = preValidate.isTextStockNo(directory)
+		print("=======================================================")
+		print("validateDBPELT stockNumbers => ", stockNumber)
+		print("=======================================================")
 		if stockNumber != None:
 			filenames = unicodeScript.getFilenames(s3Client, location, fullPath)
 			sampleText =  unicodeScript.readObject(s3Client, location, fullPath + "/" + filenames[0]) if len(filenames) > 0 else None
