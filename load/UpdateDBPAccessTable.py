@@ -61,7 +61,7 @@ class UpdateDBPAccessTable:
 				elif accessId == 181: # allow_text_DOWNLOAD
 					accessIdInLPTS = self._isPublicDomain(lptsRecord)
 				elif accessId in {191, 193}: # allow_text_APP_OFFLINE and allow_audio_APP_OFFLINE
-					accessIdInLPTS = self._isSILOnly(lptsRecord)
+					accessIdInLPTS = self._isSILOnly(lptsRecord) or self._isPublicDomain(lptsRecord)
 				else:
 					accessIdInLPTS = lpts.get(accessDesc) == "-1"
 

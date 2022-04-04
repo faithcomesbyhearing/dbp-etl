@@ -105,7 +105,7 @@ class LPTSExtractReader:
 					else:
 						print("ERROR: Duplicate Stock Num", stockNum);
 				else:
-					print("ERROR: Record has no stock number")
+					print("INFO: the following record has no stock number: EthName: %s and AltName: %s" % (rec.EthName(), rec.AltName()))
 		return self.stockNumMap.get(stockNumber)
 
 
