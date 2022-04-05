@@ -98,9 +98,9 @@ class PreValidate:
 		preValidate = PreValidate(lptsReader, unicodeScript, s3Client, bucket)
 		resultList = []
 		stockNumber = preValidate.isTextStockNo(directory)
-		print("=======================================================")
+		print("==============================================================")
 		print("validateDBPELT stockNumbers => ", stockNumber)
-		print("=======================================================")
+		print("==============================================================")
 		if stockNumber != None:
 			filenames = unicodeScript.getFilenames(s3Client, location, fullPath)
 			sampleText =  unicodeScript.readObject(s3Client, location, fullPath + "/" + filenames[0]) if len(filenames) > 0 else None
@@ -228,7 +228,7 @@ class PreValidate:
 	def validateUSXStockNo( self, stockNo, filenames, sampleText = None):
 		lptsRecord = self.lptsReader.getByStockNumber(stockNo)
 		if lptsRecord == None:
-			self.errorMessage(stockNo, "stockNum is not in LPTS")
+			self.errorMessage(stockNo, "stockNum  (read from stockNumber.txt [%s]) is not in LPTS" % (stockNo))
 			return []
 		scopeMap = self._findDamIdScopeMap(stockNo, lptsRecord) # scopeMap is { scope: [(damId, script)] }
 		bookIdMap = self._findBookIdMap(stockNo, filenames) # bookIdMap is { bookId: filename }
