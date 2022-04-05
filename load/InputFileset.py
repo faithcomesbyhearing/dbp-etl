@@ -169,7 +169,8 @@ class InputFileset:
 				filesize = os.path.getsize(filepath)
 				modifiedTS = os.path.getmtime(filepath)
 				lastModified = str(datetime.fromtimestamp(modifiedTS)).split(".")[0]
-				results.append(InputFile(filename, filesize, lastModified))				
+				if filename != 'stocknumber.txt':
+					results.append(InputFile(filename, filesize, lastModified))
 			except Exception as err:
 				print("ERROR: Download s3://%s/%s failed with error %s" % (self.location, objectKey, err))
 		self.locationType = InputFileset.LOCAL
@@ -193,7 +194,8 @@ class InputFileset:
 						filesize = os.path.getsize(filepath)
 						modifiedTS = os.path.getmtime(filepath)
 						lastModified = str(datetime.fromtimestamp(modifiedTS)).split(".")[0]
-						results.append(InputFile(filename, filesize, lastModified))
+						if filename != 'stocknumber.txt':
+							results.append(InputFile(filename, filesize, lastModified))
 			else:
 				Log.getLogger(self.filesetId).message(Log.EROR, "Invalid pathname %s" % (pathname))
 		else:
@@ -208,7 +210,8 @@ class InputFileset:
 						size = item.get('Size')
 						lastModified = str(item.get('LastModified'))
 						lastModified = lastModified.split("+")[0]
-						results.append(InputFile(filename, size, lastModified))
+						if filename != 'stocknumber.txt':
+							results.append(InputFile(filename, size, lastModified))
 				hasMore = response['IsTruncated']
 				if hasMore:
 					request['ContinuationToken'] = response['NextContinuationToken']
@@ -298,7 +301,7 @@ class InputFileset:
 		results = []
 		for file in self.files:
 			ext = file.name.split(".")[-1]
-			if not ext in { "xml", "jpg", "tif", "png", "zip" }:
+			if not ext in { "xml", "jpg", "tif", "png", "zip", "txt" }:
 				results.append(file.filenameTuple())
 		return results
 

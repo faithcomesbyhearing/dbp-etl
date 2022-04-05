@@ -545,7 +545,7 @@ class FilenameParser:
 			files.append(file)
 			if file.numErrors() > 0:
 				numErrors += 1
-				#print(file.template.name, prefix, file.file, ", ".join(file.errors))
+				# print(file.template.name, prefix, file.file, ", ".join(file.errors))
 			else:
 				self.successCount[file.template.name] = self.successCount.get(file.template.name, 0) + 1
 		return (numErrors, files)
