@@ -14,6 +14,7 @@ from RunStatus import *
 from LPTSExtractReader import *
 from Log import *
 from InputFileset import *
+from InputProcessor import *
 from Validate import *
 from S3Utility import *
 from SQLBatchExec import *
@@ -110,7 +111,7 @@ if (__name__ == '__main__'):
 	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
 	ctrl = DBPLoadController(config, db, lptsReader)
 	if len(sys.argv) != 2:
-		InputFileset.validate = InputFileset.filesetCommandLineParser(config, AWSSession.shared().s3Client, lptsReader)
+		InputFileset.validate = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, lptsReader)
 		ctrl.repairAudioFileNames(InputFileset.validate)
 		ctrl.validate(InputFileset.validate)
 		if ctrl.updateBibles():
@@ -124,10 +125,18 @@ if (__name__ == '__main__'):
 		ctrl.updateLPTSTables()
 	RunStatus.exit()
 
-# Get currrent lpts-dbp.xml
+# Get current lpts-dbp.xml
 # aws --profile DBP_DEV s3 cp s3://dbp-etl-upload-newdata-fiu49s0cnup1yr0q/lpts-dbp.xml /Volumes/FCBH/bucket_data/lpts-dbp.xml
 
-# Clean up filesets in dbp-stating and dbp-vid-staging
+#python3 load/DBPLoadController.py test s3://etl-development-input Spanish_N2SPNTLA_USX #works with refactor
+
+
+
+
+
+
+
+# Clean up filesets in dbp-staging and dbp-vid-staging
 
 # Prepare by getting some local data into a test bucket
 # aws s3 --profile dbp-etl-dev sync --acl bucket-owner-full-control /Volumes/FCBH/all-dbp-etl-test/audio/UNRWFW/UNRWFWP1DA s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr/UNRWFWP1DA

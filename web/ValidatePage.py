@@ -91,6 +91,11 @@ class ValidatePage:
 			"notes", "created_at", "updated_at"],
 			("SELECT id, language_id, versification, numeral_system_id, date, scope, script, derived, copyright, priority, reviewed," +
 				" notes, created_at, updated_at FROM bibles WHERE id = %s"), (bibleId,))
+		# add language_id, language_name, iso from language_info table.
+		# for KMLWBT, want 
+		# COL2	"kml:Mangali" and Kalinga(3801)
+		# COL3  3801: Kalinga, Mangali, and 6414: Kalinga, Mangali
+		# COL4  eng: Wycliffe Bible Translators, Inc
 				
 		self.displayQuery("Bible_Filesets",
 			["fileset_id", "hash_id", "asset_id", "set_type_code", "set_size_code", "hidden", "created_at", "updated_at"],

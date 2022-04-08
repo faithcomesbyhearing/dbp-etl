@@ -44,7 +44,11 @@ class UpdateDBPTextFilesets:
 		if direction not in {"ltr", "rtl"}:
 			return((Log.EROR, "%s script has no direction in alphabets." % (scriptId,)))
 		if subTypeCode == "text_format":
-			self.newFilesetId = filesetId[:6]
+			# BWF. six character filesetid is deprecated. Analysis shows that calls to this method should not send subTypeCode=text_format 
+			print("**** text_format subTypeCode... creating SIX character filesetId")
+			#self.newFilesetId = filesetId[:6]
+		elif subTypeCode == "text_plain":
+			self.newFilesetId = filesetId.split("-")[0]
 		elif subTypeCode == "text_html":
 			self.newFilesetId = filesetId.split("-")[0] + "-html"
 		databaseName = filesetId.split("-")[0]
