@@ -125,7 +125,9 @@ class SQLBatchExec:
 			print(statement)
 
 
-	def execute(self, batchName):
+	def execute(self, batchName, dataBaseName = None):
+		if dataBaseName == None:
+			dataBaseName = self.config.database_db_name
 		if len(self.statements) == 0:
 			print("NO INSERT, UPDATE, or DELETE Transactions to process")
 			return True
@@ -152,7 +154,9 @@ class SQLBatchExec:
 						"-P", str(self.config.database_port),
 						"-u", self.config.database_user,
 						"-p" + self.config.database_passwd,
-						self.config.database_db_name]
+						# self.config.database_db_name
+						dataBaseName
+					]
 				response = subprocess.run(cmd, shell=False, stdin=sql, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=2400)
 				success = response.returncode == 0
 				print("SQLBATCH:", str(response.stderr.decode('utf-8')))
@@ -180,7 +184,7 @@ if (__name__ == '__main__'):
 	sql.counts.append(("insert", "table0", 36))
 	sql.counts.append(("delete", "table9", 1))
 	sql.displayCounts()
-	#sql.execute("test")
+	# sql.execute("test")
 
 
 

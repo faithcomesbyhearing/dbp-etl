@@ -23,6 +23,8 @@ if (__name__ == '__main__'):
     from Config import *    
     languageReader = LanguageReaderCreator("B").create(Config().filename_lpts_xml)
     #languageReader = LanguageReaderCreator("C").create()
-    languageReader.getByStockNumber("abd")
+    results = languageReader.getByStockNumber("N1SPA/PDT")
+    for duple in results:
+        print(duple)
 
 # python3 load/LanguageReaderCreator.py test

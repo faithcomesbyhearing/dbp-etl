@@ -21,14 +21,15 @@ class SQLUtility:
 			results1 = os.popen(config.database_tunnel).read()
 			print("tunnel opened:", results1)
 
-		self.conn = pymysql.connect(host = config.database_host,
-                             		user = config.database_user,
-                             		password = config.database_passwd,
-                             		db = config.database_db_name,
-                             		port = config.database_port,
-                             		charset = 'utf8mb4',
-                             		cursorclass = pycursor)
-		print("Database '%s' is opened." % (config.database_db_name))
+		self.conn = pymysql.connect(
+			host = config.database_host,
+			user = config.database_user,
+			password = config.database_passwd,
+			db = config.getCurrentDatabaseDBName(),
+			port = config.database_port,
+			charset = 'utf8mb4',
+			cursorclass = pycursor)
+		print("Database '%s' is opened." % (config.getCurrentDatabaseDBName()))
 
 	def close(self):
 		if self.conn != None:
@@ -168,8 +169,39 @@ class SQLUtility:
 
 if (__name__ == '__main__'):
 	config = Config()
+
+	## dbp
+	config.setCurrentDatabaseDBName('dbp')
 	sql = SQLUtility(config)
-	resultSet = sql.select("SELECT * FROM bibles", ())
+	resultSet = sql.select("SELECT count(*) FROM bibles", ())
+	print("SELECT count(*) FROM bibles", ())
+	for row in resultSet:
+		print(row)
+	sql.close()
+
+	## dbp_users
+	config.setCurrentDatabaseDBName('dbp_users')
+	sql = SQLUtility(config)
+	resultSet = sql.select("SELECT count(*) FROM users", ())
+	print("SELECT count(*) FROM users", ())
+	for row in resultSet:
+		print(row)
+	sql.close()
+
+	## LANGUAGE
+	config.setCurrentDatabaseDBName('LANGUAGE')
+	sql = SQLUtility(config)
+	resultSet = sql.select("SELECT count(*) FROM bible", ())
+	print("SELECT count(*) FROM bible")
+	for row in resultSet:
+		print(row)
+	sql.close()
+
+	## BIBLEBRAIN
+	config.setCurrentDatabaseDBName('BIBLEBRAIN')
+	sql = SQLUtility(config)
+	resultSet = sql.select("SELECT count(*) FROM fileset", ())
+	print("SELECT count(*) FROM fileset")
 	for row in resultSet:
 		print(row)
 	sql.close()

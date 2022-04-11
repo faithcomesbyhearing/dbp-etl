@@ -33,9 +33,12 @@ class LPTSExtractReader (LanguageReaderInterface):
 						sys.exit()
 					else:
 						resultRow = {}
+						# print("==================================================================")
+						# print("==================================================================")
+						# print("==================================================================")
 						for fldNode in recNode.childNodes:
 							if fldNode.nodeType == 1:
-								#print(fldNode.nodeName + " = " + fldNode.firstChild.nodeValue)
+								# print(fldNode.nodeName + " = " + fldNode.firstChild.nodeValue)
 								resultRow[fldNode.nodeName] = fldNode.firstChild.nodeValue
 						#print("\n\n\n *** creating an languageRecord object ***\n\n\n")
 						self.resultSet.append(LanguageRecord(resultRow))
