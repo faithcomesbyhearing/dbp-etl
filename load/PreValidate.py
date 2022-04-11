@@ -7,7 +7,7 @@
 # The main of this class expects an environment variable $LPTS_XML set to the full path to that XML file.
 
 import json
-from LPTSExtractReader import *
+from LanguageReader import *
 from UnicodeScript import *
 from botocore.exceptions import ClientError
 
@@ -41,8 +41,8 @@ class PreValidateResult:
 
 class PreValidate:
 
-	def __init__(self, lptsReader, unicodeScript, s3Client, bucket):
-		self.lptsReader = lptsReader
+	def __init__(self, languageReader, unicodeScript, s3Client, bucket):
+		self.languageReader = languageReader
 		self.unicodeScript = unicodeScript
 		self.messages = {}
 		self.OT = { "GEN", "EXO", "LEV", "NUM", "DEU", "JOS", "JDG", "RUT", "1SA", "2SA", "1KI", "2KI", "1CH", "2CH", 
@@ -54,7 +54,7 @@ class PreValidate:
 		self.bucket = bucket
 
 	## ENTRY POINT FOR LAMBDA  - validate input and return an errorList.
-	def validateLambda(self, lptsReader, directory, filenames):
+	def validateLambda(self, languageReader, directory, filenames):
 		unicodeScript = UnicodeScript()
 		result = None
 		stockNumber = self.isTextStockNo(directory)
@@ -77,7 +77,7 @@ class PreValidate:
 
 
 	# ENTRY POINT for DBPLoadController processing - 
-	def validateDBPELT(lptsReader, s3Client, location, directory, fullPath):
+	def validateDBPELT(languageReader, s3Client, location, directory, fullPath):
 
 		# For audio and video, the directory name contains an embedded fileset id (eg ENGESVN2DA)
 		# For text, stocknumber is used instead of filesetid. Usually, the directory name contains an embedded stocknumber (Abidji_N2ABIWBT_USX). 
@@ -86,7 +86,7 @@ class PreValidate:
 
 		unicodeScript = UnicodeScript()
 		bucket = location.replace("s3://", "")
-		preValidate = PreValidate(lptsReader, unicodeScript, s3Client, bucket)
+		preValidate = PreValidate(languageReader, unicodeScript, s3Client, bucket)
 		resultList = []
 		stockNumber = preValidate.isTextStockNo(directory)
 		if stockNumber != None:
@@ -180,10 +180,10 @@ class PreValidate:
 	def validateFilesetId(self, filesetId):
 		filesetId1 = filesetId.split("-")[0]
 		damId = filesetId1.replace("_", "2")
-		results = self.lptsReader.getFilesetRecords10(damId) # This method expects 10 digit DamId's always
+		results = self.languageReader.getFilesetRecords10(damId) # This method expects 10 digit DamId's always
 		if results == None:
 			damId = filesetId1.replace("_", "1")
-			results = self.lptsReader.getFilesetRecords10(damId)
+			results = self.languageReader.getFilesetRecords10(damId)
 			if results == None:
 				self.errorMessage(filesetId1, "filesetId is not in LPTS")
 				return None
@@ -235,7 +235,7 @@ class PreValidate:
 
 
 	def validateUSXStockNo( self, stockNo, filenames, sampleText = None):
-		lptsRecord = self.lptsReader.getByStockNumber(stockNo)
+		lptsRecord = self.languageReader.getByStockNumber(stockNo)
 		if lptsRecord == None:
 			self.errorMessage(stockNo, "stockNum  (read from stockNumber.txt [%s]) is not in LPTS" % (stockNo))
 			return []
@@ -419,12 +419,12 @@ if (__name__ == "__main__"):
 
 	prefix = sys.argv[2][:-1] if sys.argv[2].endswith("/") else sys.argv[2]
 	config = Config.shared()
-	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
+	languageReader = LanguageReaderCreator().create(config)
 	unicodeScript = UnicodeScript()
 	bucket = "etl-development-input"
 	session = boto3.Session(profile_name = config.s3_aws_profile)
 	s3Client = session.client('s3')
-	preValidate = PreValidate(lptsReader, unicodeScript, s3Client, bucket)
+	preValidate = PreValidate(languageReader, unicodeScript, s3Client, bucket)
 
 	testDataMap = {}
 	request = { 'Bucket': bucket, 'Prefix': prefix, 'MaxKeys': 1000 }

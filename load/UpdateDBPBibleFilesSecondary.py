@@ -110,7 +110,7 @@ if (__name__ == '__main__'):
 	dbOut = SQLBatchExec(config)
 	update = UpdateDBPBibleFilesSecondary(config, db, dbOut)
 	s3Client = AWSSession.shared().s3Client
-	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
+	languageReader = LanguageReaderCreator().create(config)
 
 	sql = ("SELECT c.bible_id, f.id, f.hash_id FROM bible_filesets f, bible_fileset_connections c"
 			" WHERE f.hash_id = c.hash_id AND set_type_code in ('audio', 'audio_drama') AND length(f.id) = 10"
@@ -120,7 +120,7 @@ if (__name__ == '__main__'):
 		print(bibleId, filesetId, hashId)
 		location = "s3://%s" % (config.s3_bucket,)
 		filesetPath = "audio/%s/%s" % (bibleId, filesetId)
-		(dataList, messages) = PreValidate.validateDBPELT(lptsReader, s3Client, location, filesetId, filesetPath)
+		(dataList, messages) = PreValidate.validateDBPELT(languageReader, s3Client, location, filesetId, filesetPath)
 		if messages != None and len(messages) > 0:
 			Log.addPreValidationErrors(messages)
 			#print(filesetPath, messages)

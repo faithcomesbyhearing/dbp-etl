@@ -4,18 +4,18 @@ import io
 import os
 import sys
 from Config import *
-from LPTSExtractReader import *
+from LanguageReader import *
 from SQLUtility import *
 from SQLBatchExec import *
 
 class LoadOrganizations:
 
 
-	def __init__(self, config, db, dbOut, lptsReader):
+	def __init__(self, config, db, dbOut, languageReader):
 		self.config = config
 		self.db = db
 		self.dbOut = dbOut
-		self.lptsReader = lptsReader
+		self.languageReader = languageReader
 
 
 	## This program requires the primary key of bible_fileset_copyright_organizations
@@ -47,7 +47,7 @@ class LoadOrganizations:
 #		resultSet = set()
 #		sql = "SELECT lpts_organization FROM lpts_organizations WHERE organization_role=2"
 #		licensorSet = self.db.selectSet(sql, ())
-#		for record in self.lptsReader.resultSet:
+#		for record in self.languageReader.resultSet:
 #			if self.hasDamIds(record, "text"):
 #				licensor = record.Licensor()
 #				coLicensor = record.CoLicensor()
@@ -79,7 +79,7 @@ class LoadOrganizations:
 #		resultSet = set()
 #		sql = "SELECT lpts_organization FROM lpts_organizations WHERE organization_role=1"
 #		copyrightSet = self.db.selectSet(sql, ())
-#		for record in self.lptsReader.resultSet:
+#		for record in self.languageReader.resultSet:
 #			if self.hasDamIds(record, "text"):
 #				self.copyrightMatch(resultSet, record.Copyrightc(), copyrightSet)
 #			if self.hasDamIds(record, "audio"):
@@ -93,7 +93,7 @@ class LoadOrganizations:
 
 #	def copyrightMatch(self, resultSet, copyright, copyrightSet):
 #		if copyright != None:
-#			name = self.lptsReader.reduceCopyrightToName(copyright)
+#			name = self.languageReader.reduceCopyrightToName(copyright)
 #			if not name in copyrightSet:
 #				resultSet.add(name)
 
@@ -113,7 +113,7 @@ class LoadOrganizations:
 				dbpFilesetId = filesetId[:8] + "DA" + filesetId[10:]
 			else:
 				dbpFilesetId = filesetId
-			(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecordLoose(typeCode, bibleId, dbpFilesetId)
+			(lptsRecord, lptsIndex) = self.languageReader.getLPTSRecordLoose(typeCode, bibleId, dbpFilesetId)
 			licensorOrg = None
 			if lptsRecord != None:
 				lptsLicensor = lptsRecord.Licensor()
@@ -122,7 +122,7 @@ class LoadOrganizations:
 				if lptsLicensor == None:
 					print("WARN %s has no licensor field." % (filesetId))
 				else:
-					#name = self.lptsReader.reduceCopyrightToName(lptsLicensor)
+					#name = self.languageReader.reduceCopyrightToName(lptsLicensor)
 					licensorOrg = organizationMap.get(lptsLicensor)
 					if licensorOrg == None:
 						print("WARN %s has no org_id for licensor: %s" % (filesetId, lptsLicensor))
@@ -160,7 +160,7 @@ class LoadOrganizations:
 				dbpFilesetId = filesetId
 			copyrightOrg = None
 			if typeCode != "app":
-				(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecordLoose(typeCode, bibleId, dbpFilesetId)
+				(lptsRecord, lptsIndex) = self.languageReader.getLPTSRecordLoose(typeCode, bibleId, dbpFilesetId)
 				if lptsRecord != None:
 					lptsCopyright = None
 					if typeCode == "text":
@@ -174,7 +174,7 @@ class LoadOrganizations:
 							lptsCopyright = lptsRecord.Copyright_Video()
 
 					if lptsCopyright != None:
-						name = self.lptsReader.reduceCopyrightToName(lptsCopyright)
+						name = self.languageReader.reduceCopyrightToName(lptsCopyright)
 						copyrightOrg = organizationMap.get(name)
 						if copyrightOrg == None:
 							print("WARN %s has no org_id for copyright: %s" % (filesetId, name))
@@ -202,7 +202,7 @@ class LoadOrganizations:
 #		sql = "SELECT lpts_organization, organization_id FROM lpts_organizations WHERE organization_role=2"
 #		organizationMap = self.db.selectMapSet(sql, ())
 #		totalDamIdSet = set()
-#		for lptsRecord in self.lptsReader.resultSet:
+#		for lptsRecord in self.languageReader.resultSet:
 #			licensorSet = set()
 #			for licensor in [lptsRecord.Licensor(), lptsRecord.CoLicensor()]:
 #				if licensor != None:
@@ -246,7 +246,7 @@ class LoadOrganizations:
 #		sql = "SELECT lpts_organization, organization_id FROM lpts_organizations WHERE organization_role=1"
 #		organizationMap = self.db.selectMapSet(sql, ())
 #		totalDamIdSet = set()
-#		for lptsRecord in self.lptsReader.resultSet:
+#		for lptsRecord in self.languageReader.resultSet:
 #			self.compareOneTypeCode(totalDamIdSet, organizationMap, lptsRecord, "text")
 #			self.compareOneTypeCode(totalDamIdSet, organizationMap, lptsRecord, "audio")
 #			self.compareOneTypeCode(totalDamIdSet, organizationMap, lptsRecord, "video")
@@ -275,7 +275,7 @@ class LoadOrganizations:
 #		elif typeCode == "video":
 #			copyright = lptsRecord.Copyright_Video()
 #		if copyright != None:
-#			copyrightName = self.lptsReader.reduceCopyrightToName(copyright)
+#			copyrightName = self.languageReader.reduceCopyrightToName(copyright)
 #			copyrightOrgSet = organizationMap.get(copyrightName, set())
 #
 #		if typeCode != "video":
@@ -305,8 +305,8 @@ if (__name__ == '__main__'):
 	config = Config()
 	db = SQLUtility(config)
 	dbOut = SQLBatchExec(config)
-	lptsReader = LPTSExtractReader(config)
-	orgs = LoadOrganizations(config, db, dbOut, lptsReader)
+	languageReader = LanguageReaderCreator().create(config)
+	orgs = LoadOrganizations(config, db, dbOut, languageReader)
 	orgs.changeCopyrightOrganizationsPrimaryKey()
 	sql = ("SELECT b.bible_id, bf.id, bf.set_type_code, bf.set_size_code, bf.asset_id, bf.hash_id"
 		" FROM bible_filesets bf JOIN bible_fileset_connections b ON bf.hash_id = b.hash_id"

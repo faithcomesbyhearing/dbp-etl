@@ -160,7 +160,7 @@ if (__name__ == '__main__'):
 	config = Config.shared()
 	db = SQLUtility(config)
 	s3Client = AWSSession.shared().s3Client
-	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
+	languageReader = LanguageReaderCreator().create(config)
 	unicodeScript = UnicodeScript()
 	setTypeCode = 'text_plain'
 	#setTypeCode = 'text_format'
@@ -169,7 +169,7 @@ if (__name__ == '__main__'):
 		writer = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
 		writer.writerow(("OK/NOT", "stockNo", "bibleId", "filesetId6", "index", "sample text", "actual script", "pct match", "lpts script", "message"))
 
-		for lptsRecord in lptsReader.resultSet:
+		for lptsRecord in languageReader.resultSet:
 			stockNo = lptsRecord.Reg_StockNumber()
 			damIdList = lptsRecord.DamIdList("text")
 			#print(damIdList)

@@ -6,10 +6,8 @@ import urllib
 import json
 import os
 from Config import *
-from LPTSExtractReader import *
+from LanguageReader import *
 from InputFileset import *
-
-
 class AWSTranscoder:
 
 	## Debug response result
@@ -162,8 +160,8 @@ class AWSTranscoder:
 
 if (__name__ == '__main__'):
 	config = Config.shared()
-	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
-	inpFilesets = InputFileset.filesetCommandLineParser(config, lptsReader)
+	languageReader = LanguageReaderCreator().create(config)
+	inpFilesets = InputFileset.filesetCommandLineParser(config, languageReader)
 	inpFileset = inpFilesets[0]
 	transcoder = AWSTranscoder(config)
 	outFilesets = transcoder.transcodeAudio(inpFileset)

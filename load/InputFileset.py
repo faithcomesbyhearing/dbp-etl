@@ -14,7 +14,7 @@ from datetime import datetime
 from Log import *
 from Config import *
 from RunStatus import *
-from LPTSExtractReader import *
+from LanguageReader import *
 from SqliteUtility import *
 from PreValidate import *
 from AWSSession import *
@@ -352,8 +352,8 @@ if (__name__ == '__main__'):
 	s3Client = AWSSession.shared().s3Client
 	session = boto3.Session(profile_name = config.s3_aws_profile)
 	s3Client = session.client('s3')
-	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
-	InputFileset.validate = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, lptsReader)
+	languageReader = LanguageReaderCreator().create(config)
+	InputFileset.validate = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
 	for inp in InputFileset.validate:
 		if inp.typeCode == "text" and inp.locationType == InputFileset.BUCKET:
 			inp.downloadFiles()

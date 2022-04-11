@@ -9,20 +9,18 @@ import io
 from datetime import datetime
 from Config import *
 from SQLUtility import *
-from LPTSExtractReader import *
+from LanguageReader import *
 from DownloadBucketList import *
 from DBPRunFilesS3 import *
-
-
 
 class CompleteCheck:
 
 	HTML_FILE = "complete-check.html"
 
-	def __init__(self, config, db, lptsReader):
+	def __init__(self, config, db, languageReader):
 		self.config = config
 		self.db = db
-		self.lptsReader = lptsReader
+		self.languageReader = languageReader
 		self.htmlOut = open(CompleteCheck.HTML_FILE, "w")
 		self.htmlOut.write("<html><head>")
 		styles = [ "<style>",
@@ -119,13 +117,13 @@ class CompleteCheck:
 		resultSet = self.db.select("SELECT id, hash_id FROM bible_filesets WHERE hidden = 0 and hash_id NOT IN" +
 			" (SELECT hash_id FROM access_group_filesets) ORDER BY id", ())
 
-		lptsReader = LPTSExtractReader(config.filename_lpts_xml)
+		languageReader = LanguageReaderCreator().create(config)
 
 		finalResultSet = []
 		for fileset in resultSet:
 			(filesetId, hashId) = fileset
 
-			filesetFromReader = lptsReader.getFilesetRecords(filesetId)
+			filesetFromReader = languageReader.getFilesetRecords(filesetId)
 			if filesetFromReader != None:
 				for (status, record) in filesetFromReader:
 					if status == "Live":
@@ -205,7 +203,7 @@ class CompleteCheck:
 	def bibleFilesetsToLPTS(self):
 		missing = []
 		filesetIds = self.db.selectSet("SELECT id FROM bible_filesets", ())
-		for rec in self.lptsReader.resultSet:
+		for rec in self.languageReader.resultSet:
 			for typeCode in ["audio", "text", "video"]:
 				apiPermiss = None
 				appPermiss = None
@@ -255,7 +253,7 @@ class CompleteCheck:
 		bibleIdMismatch = []
 		sql = "SELECT f.id, c.bible_id FROM bible_filesets f, bible_fileset_connections c WHERE f.hash_id=c.hash_id"
 		filesetMap = db.selectMap(sql, ())
-		for record in self.lptsReader.resultSet:
+		for record in self.languageReader.resultSet:
 			stockNo = record.Reg_StockNumber()
 			text = record.DamIdList("text")
 			audio = record.DamIdList("audio")
@@ -320,9 +318,9 @@ if (__name__ == '__main__'):
 	else:
 		print("Usage: python3 load/CompleteCheck.py  config_profile  full|fast|restart")
 		sys.exit()
-	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
+	languageReader = LanguageReaderCreator().create(config)
 	db = SQLUtility(config)
-	check = CompleteCheck(config, db, lptsReader)
+	check = CompleteCheck(config, db, languageReader)
 	check.totalLanguageCount()
 	check.totalFilesetCount()
 	check.totalBiblesWithFilesets()

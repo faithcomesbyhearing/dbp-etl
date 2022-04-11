@@ -8,7 +8,7 @@ import re
 import sqlite3
 from Config import *
 from Log import *
-from LPTSExtractReader import *
+from LanguageReader import *
 from SQLUtility import *
 from SQLBatchExec import *
 from S3Utility import *
@@ -169,10 +169,10 @@ if (__name__ == '__main__'):
 	from DBPLoadController import *
 
 	config = Config.shared()
-	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
-	filesets = InputFileset.filesetCommandLineParser(config, lptsReader)
+	languageReader = LanguageReaderCreator().create(config)
+	filesets = InputFileset.filesetCommandLineParser(config, languageReader)
 	db = SQLUtility(config)
-	ctrl = DBPLoadController(config, db, lptsReader)
+	ctrl = DBPLoadController(config, db, languageReader)
 	ctrl.validate(filesets)
 
 	dbOut = SQLBatchExec(config)

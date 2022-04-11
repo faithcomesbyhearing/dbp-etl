@@ -119,8 +119,8 @@ class TranscodeVideo:
 
 if (__name__ == '__main__'):
 	config = Config.shared()
-	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
-	filesets = InputFileset.filesetCommandLineParser(config, lptsReader)
+	languageReader = LanguageReaderCreator().create(config)
+	filesets = InputFileset.filesetCommandLineParser(config, languageReader)
 	for inp in filesets:
 		if inp.typeCode == "video":
 			TranscodeVideo.transcodeVideoFileset(config, inp.filesetPrefix, inp.s3FileKeys())

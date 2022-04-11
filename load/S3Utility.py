@@ -77,8 +77,8 @@ if (__name__ == '__main__'):
 	from UpdateDBPTextFilesets import *
 
 	config = Config.shared()
-	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
-	filesets = InputFileset.filesetCommandLineParser(config, AWSSession.shared().s3Client, lptsReader)
+	languageReader = LanguageReaderCreator().create(config)
+	filesets = InputFileset.filesetCommandLineParser(config, AWSSession.shared().s3Client, languageReader)
 	s3 = S3Utility(config)
 
 	db = SQLUtility(config)

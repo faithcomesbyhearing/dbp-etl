@@ -10,11 +10,11 @@ from SQLBatchExec import *
 class UpdateDBPAccessTable:
 
 
-	def __init__(self, config, db, dbOut, lptsReader):
+	def __init__(self, config, db, dbOut, languageReader):
 		self.config = config
 		self.db = db
 		self.dbOut = dbOut
-		self.lptsReader = lptsReader
+		self.languageReader = languageReader
 
 
 	##
@@ -46,7 +46,7 @@ class UpdateDBPAccessTable:
 				print("FATAL: Unknown typeCode % in fileset: %s, hashId: %s" % (typeCode, filesetId, hashId))
 				sys.exit()
 
-			(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecord(typeCode, bibleId, dbpFilesetId)
+			(lptsRecord, lptsIndex) = self.languageReader.getLPTSRecord(typeCode, bibleId, dbpFilesetId)
 			if lptsRecord != None:
 				lpts = lptsRecord.record
 			else:
@@ -98,10 +98,10 @@ class UpdateDBPAccessTable:
 
 if (__name__ == '__main__'):
 	config = Config()
-	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
+	languageReader = LanguageReaderCreator().create(config)
 	db = SQLUtility(config)
 	dbOut = SQLBatchExec(config)
-	filesets = UpdateDBPAccessTable(config, db, dbOut, lptsReader)
+	filesets = UpdateDBPAccessTable(config, db, dbOut, languageReader)
 	sql = ("SELECT b.bible_id, bf.id, bf.set_type_code, bf.set_size_code, bf.asset_id, bf.hash_id"
 			" FROM bible_filesets bf JOIN bible_fileset_connections b ON bf.hash_id = b.hash_id"
 			" ORDER BY b.bible_id, bf.id, bf.set_type_code")

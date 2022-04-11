@@ -16,7 +16,7 @@ from UnicodeScript import *
 class InputProcessor:
 
 	## parse command line, and return [InputFileset]
-	def commandLineProcessor(config, s3Client, lptsReader):
+	def commandLineProcessor(config, s3Client, languageReader):
 		if len(sys.argv) < 4:
 			print("FATAL command line parameters: config_profile  s3://bucket|localPath  path_list ")
 			sys.exit()
@@ -32,7 +32,7 @@ class InputProcessor:
 			directory = path.split("/")[-1]
 
 			# this call will return a list of PreValidateResult objects containing information on validated filesets
-			(dataList, messages) = PreValidate.validateDBPELT(lptsReader, s3Client, location, directory, path)
+			(dataList, messages) = PreValidate.validateDBPELT(languageReader, s3Client, location, directory, path)
 			for data in dataList:
 				inp = InputFileset(config, location, data.filesetId, path, data.damId, 
 					data.typeCode, data.bibleId(), data.index, data.lptsRecord, data.fileList)
@@ -79,12 +79,14 @@ class InputProcessor:
 
 
 if (__name__ == '__main__'):
+	from LanguageReader import *
+
 	config = Config()
 	s3Client = AWSSession.shared().s3Client
 	session = boto3.Session(profile_name = config.s3_aws_profile)
 	s3Client = session.client('s3')
-	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
-	InputFileset.validate = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, lptsReader)
+	languageReader = LanguageReaderCreator().create(config)
+	InputFileset.validate = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
 	for inp in InputFileset.validate:
 		print("INPUT", inp.toString())		
 	Log.writeLog(config)

@@ -97,13 +97,13 @@ class RunStatus:
 
 
 # if __name__ == "__main__":
-# 	from LPTSExtractReader import *
+#   from LanguageReader import *
 # 	from InputFileset import *
 
 # 	config = Config.shared()
-# 	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
+# 	languageReader = LanguageReaderCreator().create(config)
 # 	s3Client = AWSSession.shared().s3Client
-# 	filesets = InputFileset.filesetCommandLineParser(config, s3Client, lptsReader)
+# 	filesets = InputFileset.filesetCommandLineParser(config, s3Client, languageReader)
 # 	time.sleep(1)
 # 	RunStatus.set(RunStatus.BIBLE, False)
 # 	time.sleep(2)

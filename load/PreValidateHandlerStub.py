@@ -14,8 +14,8 @@ def handler(event, context):
     prefix = event["prefix"]
     unicodeScript = UnicodeScript()
     print("Copying lpts-dbp.xml...")
-    lptsReader = LPTSExtractReader(config.filename_lpts_xml)
-    preValidate = PreValidate(lptsReader, unicodeScript, s3Client, bucket)
+    languageReader = LanguageReaderCreator().create(config)
+    preValidate = PreValidate(languageReader, unicodeScript, s3Client, bucket)
 
     testDataMap = {}
     request = { 'Bucket': bucket, 'Prefix': prefix, 'MaxKeys': 1000 }
@@ -35,7 +35,7 @@ def handler(event, context):
 
     messages = []
     for (directory, filenames) in testDataMap.items():
-        messages.append(preValidate.validateLambda(lptsReader, directory, filenames))
+        messages.append(preValidate.validateLambda(languageReader, directory, filenames))
     
     print("messages: ", messages)
     

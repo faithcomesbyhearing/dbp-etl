@@ -13,17 +13,16 @@ import sys
 from Config import *
 from SQLUtility import *
 from SQLBatchExec import *
-from LPTSExtractReader import *
 
 
 class UpdateDBPBiblesTable:
 
 
-	def __init__(self, config, db, dbOut, lptsReader):
+	def __init__(self, config, db, dbOut, languageReader):
 		self.config = config
 		self.db = db
 		self.dbOut = dbOut
-		self.lptsReader = lptsReader
+		self.languageReader = languageReader
 		self.filesetConnectionSet = self.db.selectSet("SELECT distinct bible_id FROM bible_fileset_connections", ())
 		sql = ("SELECT l.iso, a.script_id FROM alphabet_language a"
 				" JOIN languages l ON a.language_id = l.id"
@@ -65,7 +64,7 @@ class UpdateDBPBiblesTable:
 			dbpBibleMap[row[0]] = row[1:]
 
 		## retrieve bibles from LPTS
-		lptsBibleMap = self.lptsReader.getBibleIdMap()
+		lptsBibleMap = self.languageReader.getBibleIdMap()
 		lptsBibleMap.pop("JESUS FILM", None) # delete JESUS FILM
 
 		for dbpBibleId in sorted(dbpBibleMap.keys()):
@@ -323,11 +322,12 @@ class UpdateDBPBiblesTable:
 
 ## Unit Test
 if (__name__ == '__main__'):
+	from LanguageReader import *	
 	config = Config()
 	db = SQLUtility(config)
 	dbOut = SQLBatchExec(config)
-	lptsReader = LPTSExtractReader(config)
-	bibles = UpdateDBPBiblesTable(config, db, dbOut, lptsReader)
+	languageReader = LanguageReaderCreator().create(config)
+	bibles = UpdateDBPBiblesTable(config, db, dbOut, languageReader)
 	bibles.process()
 	db.close()
 

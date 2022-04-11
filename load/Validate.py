@@ -123,12 +123,12 @@ class Validate:
 
 if (__name__ == '__main__'):
 	from DBPLoadController import *
-	from LPTSExtractReader import *
+	from LanguageReader import *
 	config = Config.shared()
 	db = SQLUtility(config)
-	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
-	filesets = InputFileset.filesetCommandLineParser(config, lptsReader)
-	ctrl = DBPLoadController(config, db, lptsReader)
+	languageReader = LanguageReaderCreator().create(config)
+	filesets = InputFileset.filesetCommandLineParser(config, languageReader)
+	ctrl = DBPLoadController(config, db, languageReader)
 	ctrl.validate(filesets)
 
 # Successful tests with source on s3

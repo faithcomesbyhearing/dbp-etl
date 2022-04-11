@@ -7,9 +7,10 @@ import io
 import sys
 import os
 from xml.dom import minidom
+from LanguageReader import LanguageReaderInterface
 
 
-class LPTSExtractReader:
+class LPTSExtractReader (LanguageReaderInterface):
 
 	def __init__(self, lptsExtractPath):
 		self.lptsExtractPath = lptsExtractPath
@@ -717,7 +718,7 @@ class LPTSRecord:
 # Get listing of damIds, per stock no
 if __name__ == '__main__':
 	config = Config.shared()
-	reader = LPTSExtractReader(config.filename_lpts_xml)
+	reader = LanguageReaderCreator().create(config)
 	for lptsRecord in reader.resultSet:
 		stockNo = lptsRecord.Reg_StockNumber()
 		for typeCode in ["audio", "text", "video"]:
@@ -802,9 +803,10 @@ if (__name__ == '__main__'):
 
 if (__name__ == '__main__'):
 	from Config import *
+	from LanguageReaderCreator import *	
 	result = {}
 	config = Config()
-	reader = LPTSExtractReader(config.filename_lpts_xml)
+	reader = LanguageReaderCreator().create(config)
 	for rec in reader.resultSet:
 		textDamIds = rec.DamIdList("text")
 		textDamIds = rec.ReduceTextList(textDamIds)
