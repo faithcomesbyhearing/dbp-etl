@@ -80,7 +80,6 @@ class InputProcessor:
 
 if (__name__ == '__main__'):
 	config = Config()
-	s3Client = AWSSession.shared().s3Client
 	session = boto3.Session(profile_name = config.s3_aws_profile)
 	s3Client = session.client('s3')
 	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
