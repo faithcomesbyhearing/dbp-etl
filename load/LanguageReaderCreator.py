@@ -1,5 +1,6 @@
 import os
 from LPTSExtractReader import LPTSExtractReader
+from StageCLanguageReader import *
 
 
 class LanguageReaderCreator:
@@ -13,9 +14,14 @@ class LanguageReaderCreator:
 
         if (stage == "B"):
             return LPTSExtractReader(config.filename_lpts_xml)
+        elif (stage == "C"):
+            return StageCLanguageReader()
+        else:
+            print ("unrecognized stage: ", stage)
 
 
 if (__name__ == '__main__'):
     from Config import *
+    # export DATA_MODEL_MIGRATION_STAGE="C"
     languageReader = LanguageReaderCreator().create(Config())
     languageReader.getByStockNumber("abd")
