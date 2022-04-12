@@ -3,24 +3,22 @@ from LanguageReader import LanguageReaderInterface
 
 class StageCLanguageReader (LanguageReaderInterface):
     def getBibleIdMap(self):
-        print("TBD. getBibleIdMap... ")
-        pass 
+       raise Exception("Not implemented")
 
     def getByStockNumber(self, stockNumber):
-        print("TBD. getByStockNumber... ")
-        pass
+       raise Exception("Not implemented")
     
     def getLPTSRecord(self, typeCode, bibleId, filesetId):
-        pass
+       raise Exception("Not implemented")
 
     def getFilesetRecords(filesetId):
-        pass 
+       raise Exception("Not implemented")
 
     def getLPTSRecordLoose(typeCode, bibleId, dbpFilesetId):
-        pass 
+       raise Exception("Not implemented")
 
     def reduceCopyrightToName(lptsCopyright):
-        pass
+       raise Exception("Not implemented")
 
     def getFilesetRecords10(damId):
-        pass
+       raise Exception("Not implemented")
