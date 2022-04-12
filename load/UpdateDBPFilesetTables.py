@@ -122,7 +122,7 @@ class UpdateDBPFilesetTables:
 				self.insertFilesetConnections(dbConn, hashId, inp.bibleId)
 				self.insertBibleFiles(dbConn, hashId, inputFileset, bookIdSet)
 				updateBibleFilesSecondary.updateBibleFilesSecondary(hashId, inp)
-			elif inp.subTypeCode() == "text_format":
+			elif inp.subTypeCode() == "text_plain":
 				hashId = self.insertBibleFileset(dbConn, inp.typeCode, "text_plain", inp.bibleId, inp.filesetId, bookIdSet)
 				self.insertFilesetConnections(dbConn, hashId, inp.bibleId)
 				self.textUpdater.updateFileset(inp.bibleId, inp.filesetId, hashId, bookIdSet, inp.databasePath)
@@ -130,6 +130,8 @@ class UpdateDBPFilesetTables:
 				#hashId = self.insertBibleFileset(inp.typeCode, "text_format", inp.bibleId, inp.filesetId, bookIdSet)
 				#self.insertFilesetConnections(hashId, inp.bibleId)
 				#self.textUpdater.updateFileset(inp.bibleId, inp.filesetId, hashId, bookIdSet, inp.databasePath)
+			else:
+				print("typeCode is text, but subTypeCode is not text_usx or text_plain. No hashId available to return, so it's going to fail next")
 
 		if inp.subTypeCode() != "text_usx":
 			tocBooks = self.booksUpdater.getTableOfContents(inp.typeCode, inp.bibleId, inp.filesetId, inp.csvFilename, inp.databasePath)

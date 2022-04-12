@@ -1,7 +1,8 @@
 # PreValidate
 
-# This program is used as an AWS lambda to verify filesets that are to be uploaded.
-# It is also called by the primary Validate.py program during the actual run.
+# This program has two entrypoints:
+# 1) it is called by an AWS lambda handler to verify metadata and configuration is correct before uploading to S3;
+# 2) it is also called during DBPLoadController processing
 
 # The main of this class expects an environment variable $LPTS_XML set to the full path to that XML file.
 
@@ -40,6 +41,91 @@ class PreValidateResult:
 
 class PreValidate:
 
+	def __init__(self, lptsReader, unicodeScript, s3Client, bucket):
+		self.lptsReader = lptsReader
+		self.unicodeScript = unicodeScript
+		self.messages = {}
+		self.OT = { "GEN", "EXO", "LEV", "NUM", "DEU", "JOS", "JDG", "RUT", "1SA", "2SA", "1KI", "2KI", "1CH", "2CH", 
+					"EZR", "NEH", "EST", "JOB", "PSA", "PRO", "ECC", "SNG", "ISA", "JER", "LAM", "EZK", "DAN", "HOS", 
+					"JOL", "AMO", "OBA", "JON", "MIC", "NAM", "HAB", "ZEP", "HAG", "ZEC", "MAL" }
+		self.NT = { "MAT", "MRK", "LUK", "JHN", "ACT", "ROM", "1CO", "2CO", "GAL", "EPH", "PHP", "COL", "1TH", "2TH", 
+					"1TI", "2TI", "TIT", "PHM", "HEB", "JAS", "1PE", "2PE", "1JN", "2JN", "3JN", "JUD", "REV" }
+		self.s3Client = s3Client
+		self.bucket = bucket
+
+	## ENTRY POINT FOR LAMBDA  - validate input and return an errorList.
+	def validateLambda(self, lptsReader, directory, filenames):
+		unicodeScript = UnicodeScript()
+		result = None
+		stockNumber = self.isTextStockNo(directory)
+		if stockNumber != None:
+			stockResultList = self.validateUSXStockList(stockNumber, filenames)
+			resultList = []
+
+			for stockResult in stockResultList:
+				for result in stockResult:
+					resultList.append(result)
+
+			if len(resultList) > 0:
+				self.validateLPTS(resultList[0])
+		else:
+			result = self.validateFilesetId(directory)
+			self.validateLPTS(result)
+
+		self.addErrorMessages(directory, unicodeScript.errors)
+		return self.formatMessages()
+
+
+	# ENTRY POINT for DBPLoadController processing - 
+	def validateDBPELT(lptsReader, s3Client, location, directory, fullPath):
+
+		# For audio and video, the directory name contains an embedded fileset id (eg ENGESVN2DA)
+		# For text, stocknumber is used instead of filesetid. Usually, the directory name contains an embedded stocknumber (Abidji_N2ABIWBT_USX). 
+		# But in some cases, the same USX applies to multiple stocknumbers. When this occurs, the directory contains a file
+		# called stocknumber.txt, which lists each associated stocknumber.
+
+		unicodeScript = UnicodeScript()
+		bucket = location.replace("s3://", "")
+		preValidate = PreValidate(lptsReader, unicodeScript, s3Client, bucket)
+		resultList = []
+		stockNumber = preValidate.isTextStockNo(directory)
+		if stockNumber != None:
+			filenames = unicodeScript.getFilenames(s3Client, location, fullPath)
+			sampleText =  unicodeScript.readObject(s3Client, location, fullPath + "/" + filenames[0]) if len(filenames) > 0 else None
+			stockResultList = preValidate.validateUSXStockList(stockNumber, filenames, sampleText)
+
+			for stockResult in stockResultList:
+				for result in stockResult:
+					resultList.append(result)
+		else:
+			filesetId = preValidate.parseFilesetIdFromDirectoryName(directory)			
+			result = preValidate.validateFilesetId(filesetId)
+			if result != None:
+				resultList = [result]
+		if len(resultList) > 0:
+			preValidate.validateLPTS(resultList[0])
+		preValidate.addErrorMessages(directory, unicodeScript.errors)
+		return (resultList, preValidate.messages)
+
+
+	## determine if directory is USX text stockNo
+	def isTextStockNo(self, directory):
+		stockNumberArray = self.isTextStockNoFromFile(directory)
+
+		if len(stockNumberArray) > 0:
+			return stockNumberArray
+
+		parts = directory.split("_")
+		if len(parts) > 2:
+			stockNo = parts[-2]
+			if len(stockNo) > 5:
+				stockNumber = stockNo[:-3] + "/" + stockNo[-3:]
+				return [stockNumber]
+			else:
+				self.errorMessage(directory, "Could not find a stock no.")
+		return None
+
+# determine if stocknumber.txt file exists, and process if so
 	def getStockNumbersFromFile(self, directory, bucket = None):
 		prefix = directory
 		if bucket == None:
@@ -66,71 +152,6 @@ class PreValidate:
 
 		return stocknumberArrayFinal
 
-	## Validate input and return an errorList.
-	def validateLambda(self, lptsReader, directory, filenames):
-		unicodeScript = UnicodeScript()
-		result = None
-		stockNumber = self.isTextStockNo(directory)
-		print("=======================================================")
-		print("validateDBPELT stockNumbers => ", stockNumber)
-		print("=======================================================")
-		if stockNumber != None:
-			stockResultList = self.validateUSXStockList(stockNumber, filenames)
-			resultList = []
-
-			for stockResult in stockResultList:
-				for result in stockResult:
-					resultList.append(result)
-
-			if len(resultList) > 0:
-				self.validateLPTS(resultList[0])
-		else:
-			result = self.validateFilesetId(directory)
-			self.validateLPTS(result)
-
-		self.addErrorMessages(directory, unicodeScript.errors)
-		return self.formatMessages()
-
-
-	def validateDBPELT(lptsReader, s3Client, location, directory, fullPath):
-		unicodeScript = UnicodeScript()
-		bucket = location.replace("s3://", "")
-		preValidate = PreValidate(lptsReader, unicodeScript, s3Client, bucket)
-		resultList = []
-		stockNumber = preValidate.isTextStockNo(directory)
-		print("==============================================================")
-		print("validateDBPELT stockNumbers => ", stockNumber)
-		print("==============================================================")
-		if stockNumber != None:
-			filenames = unicodeScript.getFilenames(s3Client, location, fullPath)
-			sampleText =  unicodeScript.readObject(s3Client, location, fullPath + "/" + filenames[0]) if len(filenames) > 0 else None
-			stockResultList = preValidate.validateUSXStockList(stockNumber, filenames, sampleText)
-
-			for stockResult in stockResultList:
-				for result in stockResult:
-					resultList.append(result)
-		else:
-			result = preValidate.validateFilesetId(directory)
-			if result != None:
-				resultList = [result]
-		if len(resultList) > 0:
-			preValidate.validateLPTS(resultList[0])
-		preValidate.addErrorMessages(directory, unicodeScript.errors)
-		return (resultList, preValidate.messages)
-
-
-	def __init__(self, lptsReader, unicodeScript, s3Client, bucket):
-		self.lptsReader = lptsReader
-		self.unicodeScript = unicodeScript
-		self.messages = {}
-		self.OT = { "GEN", "EXO", "LEV", "NUM", "DEU", "JOS", "JDG", "RUT", "1SA", "2SA", "1KI", "2KI", "1CH", "2CH", 
-					"EZR", "NEH", "EST", "JOB", "PSA", "PRO", "ECC", "SNG", "ISA", "JER", "LAM", "EZK", "DAN", "HOS", 
-					"JOL", "AMO", "OBA", "JON", "MIC", "NAM", "HAB", "ZEP", "HAG", "ZEC", "MAL" }
-		self.NT = { "MAT", "MRK", "LUK", "JHN", "ACT", "ROM", "1CO", "2CO", "GAL", "EPH", "PHP", "COL", "1TH", "2TH", 
-					"1TI", "2TI", "TIT", "PHM", "HEB", "JAS", "1PE", "2PE", "1JN", "2JN", "3JN", "JUD", "REV" }
-		self.s3Client = s3Client
-		self.bucket = bucket
-
 	def isTextStockNoFromFile(self, directory):
 		stockNumberArray = self.getStockNumbersFromFile(directory)
 
@@ -142,22 +163,7 @@ class PreValidate:
 
 		return stockNumberArrayFinal
 
-	## determine if directory is USX text stockNo
-	def isTextStockNo(self, directory):
-		stockNumberArray = self.isTextStockNoFromFile(directory)
 
-		if len(stockNumberArray) > 0:
-			return stockNumberArray
-
-		parts = directory.split("_")
-		if len(parts) > 2:
-			stockNo = parts[-2]
-			if len(stockNo) > 5:
-				stockNumber = stockNo[:-3] + "/" + stockNo[-3:]
-				return [stockNumber]
-			else:
-				self.errorMessage(directory, "Could not find a stock no.")
-		return None
 
 
 	def validateUSXStockList(self, stockList, filenames, sampleText = None):
@@ -166,6 +172,9 @@ class PreValidate:
 			result = self.validateUSXStockNo(stockListNumber, filenames, sampleText)
 			resultList.append(result)
 		return resultList
+
+	def parseFilesetIdFromDirectoryName(self, directory):
+		return directory[:7] + "_" + directory[8:] + "-usx" if directory[8:10] == "ET" else directory
 
 	## Validate filesetId and return PreValidateResult
 	def validateFilesetId(self, filesetId):
@@ -294,7 +303,10 @@ class PreValidate:
 				if result == None:
 					self.errorMessage(stockNo, "text is script %s, but there is no damId with that script in scope %s." % (actualScript, scope))
 			else:
-				self.errorMessage(stockNo, "contains a full set of books for %s, but there is no damId with that scope" % (scope,))
+				# at least for USX, it is common for a directory to contain both OT and NT, so the below would throw an unnecessary error. 
+				# this happens when all OT books are found, but this method is called for NT, and vice-versa.
+				# this may cause other error situations to go unnoticed. 
+				print("info only (but potential error for audio and video)... %s contains a full set of books for %s, but there is no damId with that scope" % (stockNo, scope,))
 		elif len(bookIdsFound) > 0:
 			if scopeMap.get("P") != None:
 				for (damId, index, script) in scopeMap.get("P"):

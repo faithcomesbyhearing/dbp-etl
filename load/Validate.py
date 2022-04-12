@@ -54,15 +54,15 @@ class Validate:
 					filePath = inp.downloadFiles()
 				else:
 					filePath = inp.fullPath()
-				errorTuple = texts.validateFileset("text_format", inp.bibleId, inp.filesetId, inp.lptsRecord, inp.index, filePath)
+				errorTuple = texts.validateFileset("text_plain", inp.bibleId, inp.filesetId, inp.lptsRecord, inp.index, filePath)
 				if errorTuple != None:
 					logger = Log.getLogger(inp.filesetId)
 					logger.messageTuple(errorTuple)
 				else:
-					htmlFormatFileset = texts.createTextFileset(inp)
-					results.append(htmlFormatFileset)
-
+					derivativeFileset = texts.createTextFileset(inp)
+					results.append(derivativeFileset)
 		filesets += results
+
 		self.validateLPTS(filesets)
 
 		FilenameReducer.openAcceptErrorSet(self.config)
