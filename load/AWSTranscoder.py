@@ -126,7 +126,7 @@ class AWSTranscoder:
 			bitrate = output.get("bitrate")
 
 			outFileset = InputFileset(self.config, bucket, filesetId, filesetPath, damId, "audio", 
-				inpFileset.bibleId, inpFileset.index, inpFileset.lptsRecord)
+				inpFileset.bibleId, inpFileset.index, inpFileset.languageRecord)
 			outFileset.files = [] # Erase files, because they will be overwritten by transcoding
 			outFileset.setAudio(container, codec, bitrate)
 			outFilesets[filesetPath] = outFileset

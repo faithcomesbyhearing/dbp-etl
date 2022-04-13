@@ -41,7 +41,7 @@ class Validate:
 
 			if inp.typeCode == "text":
 				unicodeScript = UnicodeScript()
-				errors = unicodeScript.validateStockNoRecord(inp.lptsRecord, self.db)
+				errors = unicodeScript.validateStockNoRecord(inp.languageRecord, self.db)
 				for error in errors:
 					logger.message(Log.EROR, error)
 
@@ -54,7 +54,7 @@ class Validate:
 					filePath = inp.downloadFiles()
 				else:
 					filePath = inp.fullPath()
-				errorTuple = texts.validateFileset("text_plain", inp.bibleId, inp.filesetId, inp.lptsRecord, inp.index, filePath)
+				errorTuple = texts.validateFileset("text_plain", inp.bibleId, inp.filesetId, inp.languageRecord, inp.index, filePath)
 				if errorTuple != None:
 					logger = Log.getLogger(inp.filesetId)
 					logger.messageTuple(errorTuple)
@@ -112,11 +112,11 @@ class Validate:
 			logger = Log.getLogger(inp.filesetId)
 			if inp.typeCode == "text":
 
-				scriptName = inp.lptsRecord.Orthography(inp.index)
+				scriptName = inp.languageRecord.Orthography(inp.index)
 				if scriptName != None and scriptName not in self.scriptNameSet:
 					logger.invalidValues(inp.stockNum(), "_x003n_Orthography", scriptName)
 
-				numeralsName = inp.lptsRecord.Numerals()
+				numeralsName = inp.languageRecord.Numerals()
 				if numeralsName != None and numeralsName not in self.numeralsSet:
 					logger.invalidValues(inp.stockNum(), "Numerals", numeralsName)
 

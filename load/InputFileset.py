@@ -55,7 +55,7 @@ class InputFileset:
 
 	
 
-	def __init__(self, config, location, filesetId, filesetPath, damId, typeCode, bibleId, index, lptsRecord, fileList = None):
+	def __init__(self, config, location, filesetId, filesetPath, damId, typeCode, bibleId, index, languageRecord, fileList = None):
 		self.config = config
 		if location.startswith("s3://"):
 			self.locationType = InputFileset.BUCKET
@@ -69,7 +69,7 @@ class InputFileset:
 		self.typeCode = typeCode
 		self.bibleId = bibleId
 		self.index = index
-		self.lptsRecord = lptsRecord
+		self.languageRecord = languageRecord
 		self.filesetPrefix = "%s/%s/%s" % (self.typeCode, self.bibleId, self.filesetId)
 		if self.typeCode == "text":
 			self.databasePath = "%s%s.db" % (config.directory_accepted, damId[:7] + "_" + damId[8:])
@@ -101,7 +101,7 @@ class InputFileset:
 		results.append(" damId=" + self.lptsDamId)
 		results.append(" stockNum=" + self.stockNum())
 		results.append(" index=" + str(self.index))
-		results.append(" script=" + str(self.lptsRecord.Orthography(self.index)) + "\n")
+		results.append(" script=" + str(self.languageRecord.Orthography(self.index)) + "\n")
 		results.append("filesetPrefix=" + self.filesetPrefix + "\n")
 		results.append("csvFilename=" + self.csvFilename + "\n")
 		for file in self.files:
@@ -212,7 +212,7 @@ class InputFileset:
 
 
 	def stockNum(self):
-		return self.lptsRecord.Reg_StockNumber()
+		return self.languageRecord.Reg_StockNumber()
 
 
 	def locationForS3(self):

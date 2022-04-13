@@ -96,13 +96,13 @@ class UpdateDBPLPTSTable:
 				else:
 					tagNameList = ["stock_no", "volume"]
 
-				(lptsRecord, lptsIndex) = self.languageReader.getLPTSRecordLoose(typeCode, bibleId, dbpFilesetId)
+				(languageRecord, lptsIndex) = self.languageReader.getLanguageRecordLoose(typeCode, bibleId, dbpFilesetId)
 
 				tagMap = tagHashIdMap.get(hashId, {})
 				for name in tagNameList:
 					oldDescription = tagMap.get(name)
 
-					if lptsRecord != None:
+					if languageRecord != None:
 						if name == "container":
 							if codec == "aac":
 								description = "mp4"
@@ -117,9 +117,9 @@ class UpdateDBPLPTSTable:
 						elif name == "bitrate":
 							description = bitrate
 						elif name == "stock_no":
-							description = lptsRecord.Reg_StockNumber()
+							description = languageRecord.Reg_StockNumber()
 						elif name == "volume":
-							description = lptsRecord.Volumne_Name()
+							description = languageRecord.Volumne_Name()
 						else:
 							print("ERROR: unknown bible_fileset_tags name %s" % (name))
 							sys.exit()
@@ -169,15 +169,15 @@ class UpdateDBPLPTSTable:
 				dbpFilesetId = filesetId[:8] + "DA" + filesetId[10:]
 			else:
 				dbpFilesetId = filesetId
-			#lptsRecords = self.languageReader.getFilesetRecords(dbpFilesetId)
+			#languageRecords = self.languageReader.getFilesetRecords(dbpFilesetId)
 			row = copyrightHashIdMap.get(hashId, None)
 
 			if typeCode != "app":
-				(lptsRecord, lptsIndex) = self.languageReader.getLPTSRecordLoose(typeCode, bibleId, dbpFilesetId)
-				if lptsRecord != None:
-					copyrightText = self.escapeChars(lptsRecord.Copyrightc())
-					copyrightAudio = self.escapeChars(lptsRecord.Copyrightp())
-					copyrightVideo = self.escapeChars(lptsRecord.Copyright_Video())
+				(languageRecord, lptsIndex) = self.languageReader.getLanguageRecordLoose(typeCode, bibleId, dbpFilesetId)
+				if languageRecord != None:
+					copyrightText = self.escapeChars(languageRecord.Copyrightc())
+					copyrightAudio = self.escapeChars(languageRecord.Copyrightp())
+					copyrightVideo = self.escapeChars(languageRecord.Copyright_Video())
 
 					if typeCode == "text":
 						copyright = copyrightText
@@ -196,10 +196,10 @@ class UpdateDBPLPTSTable:
 						if year != None:
 							copyrightDate = year.group(1)
 
-				if row != None and lptsRecord == None:
+				if row != None and languageRecord == None:
 					deleteRows.append((hashId,))
 
-				elif lptsRecord != None and row == None:
+				elif languageRecord != None and row == None:
 					copyrightMsg = copyrightMsg.replace("'", "\\'")
 					insertRows.append((copyrightDate, copyrightMsg, copyrightMsg, 1, hashId))
 

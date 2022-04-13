@@ -13,8 +13,8 @@ from botocore.exceptions import ClientError
 
 class PreValidateResult:
 
-	def __init__(self, lptsRecord, filesetId, damId, typeCode, index, fileList = None):
-		self.lptsRecord = lptsRecord
+	def __init__(self, languageRecord, filesetId, damId, typeCode, index, fileList = None):
+		self.languageRecord = languageRecord
 		self.filesetId = filesetId
 		self.damId = damId
 		self.typeCode = typeCode
@@ -22,13 +22,13 @@ class PreValidateResult:
 		self.fileList = fileList
 
 	def bibleId(self):
-		return self.lptsRecord.DBP_EquivalentByIndex(self.index)
+		return self.languageRecord.DBP_EquivalentByIndex(self.index)
 
 	def scope(self):
 		return self.damId[6]
 
 	def script(self):
-		return self.lptsRecord.Orthography(self.index)
+		return self.languageRecord.Orthography(self.index)
 
 	def toString(self):
 		results = []
@@ -190,11 +190,11 @@ class PreValidate:
 		stockNumSet = set()
 		mediaSet = set()
 		bibleIdSet = set()
-		for (lptsRecord, status, fieldName) in results:
-			stockNum = lptsRecord.Reg_StockNumber()
+		for (languageRecord, status, fieldName) in results:
+			stockNum = languageRecord.Reg_StockNumber()
 			if stockNum != None:
 				stockNumSet.add(stockNum)
-			damId = lptsRecord.record.get(fieldName)
+			damId = languageRecord.record.get(fieldName)
 
 			dbpFilesetId = filesetId
 			if "Audio" in fieldName:
@@ -216,7 +216,7 @@ class PreValidate:
 			else:
 				index = 1
 
-			bibleId = lptsRecord.DBP_EquivalentByIndex(index)
+			bibleId = languageRecord.DBP_EquivalentByIndex(index)
 			if bibleId != None:
 				bibleIdSet.add(bibleId)
 		if len(stockNumSet) > 1:
@@ -229,17 +229,17 @@ class PreValidate:
 			self.errorMessage(filesetId, "in %s has more than one DBP_Equivalent: %s" % (", ".join(stockNumSet), ", ".join(bibleIdSet)))
 
 		if len(mediaSet) > 0 and len(bibleIdSet) > 0:
-			return PreValidateResult(lptsRecord, filesetId, damId, list(mediaSet)[0], index)
+			return PreValidateResult(languageRecord, filesetId, damId, list(mediaSet)[0], index)
 		else:
 			return None
 
 
 	def validateUSXStockNo( self, stockNo, filenames, sampleText = None):
-		lptsRecord = self.languageReader.getByStockNumber(stockNo)
-		if lptsRecord == None:
+		languageRecord = self.languageReader.getByStockNumber(stockNo)
+		if languageRecord == None:
 			self.errorMessage(stockNo, "stockNum  (read from stockNumber.txt [%s]) is not in LPTS" % (stockNo))
 			return []
-		scopeMap = self._findDamIdScopeMap(stockNo, lptsRecord) # scopeMap is { scope: [(damId, script)] }
+		scopeMap = self._findDamIdScopeMap(stockNo, languageRecord) # scopeMap is { scope: [(damId, script)] }
 		bookIdMap = self._findBookIdMap(stockNo, filenames) # bookIdMap is { bookId: filename }
 		if sampleText != None:
 			textArray = self.unicodeScript.parseXMLStrings(sampleText)
@@ -247,10 +247,10 @@ class PreValidate:
 			(actualScript, matchPct) = self.unicodeScript.findScript(textArray)
 		else:
 			actualScript = None
-		ntResult = self._matchFilesToDamId(stockNo, "N", lptsRecord, scopeMap, bookIdMap, actualScript) # PreValidateResult or None
+		ntResult = self._matchFilesToDamId(stockNo, "N", languageRecord, scopeMap, bookIdMap, actualScript) # PreValidateResult or None
 		# if ntResult != None:
 		# 	print("NT", ntResult.toString())
-		otResult = self._matchFilesToDamId(stockNo, "O", lptsRecord, scopeMap, bookIdMap, actualScript) # PreValidateResult or None
+		otResult = self._matchFilesToDamId(stockNo, "O", languageRecord, scopeMap, bookIdMap, actualScript) # PreValidateResult or None
 		# if otResult != None:
 		# 	print("OT", otResult.toString())
 		bothResults = self._combineMultiplePScope(stockNo, ntResult, otResult)
@@ -260,14 +260,14 @@ class PreValidate:
 
 
 	## This method returns a map { scope: [(damId, script)] } from LPTS for a stock number
-	def _findDamIdScopeMap(self, stockNo, lptsRecord):
+	def _findDamIdScopeMap(self, stockNo, languageRecord):
 		result = {}
-		textDamIds = lptsRecord.DamIdList("text")
-		textDamIds = lptsRecord.ReduceTextList(textDamIds)
+		textDamIds = languageRecord.DamIdList("text")
+		textDamIds = languageRecord.ReduceTextList(textDamIds)
 		#print("damIds", textDamIds)
 		for (damId, index, status) in textDamIds:
 			scope = damId[6]
-			script = lptsRecord.Orthography(index)
+			script = languageRecord.Orthography(index)
 			damIdList = result.get(scope, [])
 			damIdList.append((damId, index, script))
 			result[scope] = damIdList
@@ -287,7 +287,7 @@ class PreValidate:
 
 
 	## Match files included in 
-	def _matchFilesToDamId(self, stockNo, scope, lptsRecord, scopeMap, bookIdMap, actualScript = None):
+	def _matchFilesToDamId(self, stockNo, scope, languageRecord, scopeMap, bookIdMap, actualScript = None):
 		result = None
 		if scope == "N":
 			bookIdSet = self.NT 
@@ -299,7 +299,7 @@ class PreValidate:
 				for (damId, index, script) in scopeMap.get(scope):
 					if actualScript == None or self.unicodeScript.matchScripts(actualScript, script):
 						filenameList = self._getFilenameList(scope, bookIdsFound, bookIdMap)
-						result = PreValidateResult(lptsRecord, damId + "-usx", damId, "text", index, filenameList)
+						result = PreValidateResult(languageRecord, damId + "-usx", damId, "text", index, filenameList)
 				if result == None:
 					self.errorMessage(stockNo, "text is script %s, but there is no damId with that script in scope %s." % (actualScript, scope))
 			else:
@@ -312,7 +312,7 @@ class PreValidate:
 				for (damId, index, script) in scopeMap.get("P"):
 					if actualScript == None or self.unicodeScript.matchScripts(actualScript, script):
 						filenameList = self._getFilenameList(scope, bookIdsFound, bookIdMap)
-						result = PreValidateResult(lptsRecord, damId + "-usx", damId, "text", index, filenameList)
+						result = PreValidateResult(languageRecord, damId + "-usx", damId, "text", index, filenameList)
 				if result == None:
 					self.errorMessage(stockNo, "text is script %s, but there is no damId with that script in scope P." % (actualScript,))
 			else:
@@ -348,25 +348,25 @@ class PreValidate:
 
 	def validateLPTS(self, preValidateResult):
 		pre = preValidateResult
-		stockNo = pre.lptsRecord.Reg_StockNumber()
-		if pre.lptsRecord.Copyrightc() == None:
+		stockNo = pre.languageRecord.Reg_StockNumber()
+		if pre.languageRecord.Copyrightc() == None:
 			self.requiredFields(pre.filesetId, stockNo, "Copyrightc")
-		if pre.typeCode in {"audio", "video"} and pre.lptsRecord.Copyrightp() == None:
+		if pre.typeCode in {"audio", "video"} and pre.languageRecord.Copyrightp() == None:
 			self.requiredFields(pre.filesetId, stockNo, "Copyrightp")
-		if pre.typeCode == "video" and pre.lptsRecord.Copyright_Video() == None:
+		if pre.typeCode == "video" and pre.languageRecord.Copyright_Video() == None:
 			self.requiredFields(pre.filesetId, stockNo, "Copyright_Video")
-		if pre.lptsRecord.ISO() == None:
+		if pre.languageRecord.ISO() == None:
 			self.requiredFields(pre.filesetId, stockNo, "ISO")
-		if pre.lptsRecord.LangName() == None:
+		if pre.languageRecord.LangName() == None:
 			self.requiredFields(pre.filesetId, stockNo, "LangName")
-		if pre.lptsRecord.Licensor() == None:
+		if pre.languageRecord.Licensor() == None:
 			self.requiredFields(pre.filesetId, stockNo, "Licensor")
-		if pre.lptsRecord.Reg_StockNumber() == None:
+		if pre.languageRecord.Reg_StockNumber() == None:
 			self.requiredFields(pre.filesetId, stockNo, "Reg_StockNumber")
-		if pre.lptsRecord.Volumne_Name() == None:
+		if pre.languageRecord.Volumne_Name() == None:
 			self.requiredFields(pre.filesetId, stockNo, "Volumne_Name")
 
-		if pre.typeCode == "text" and pre.lptsRecord.Orthography(pre.index) == None:
+		if pre.typeCode == "text" and pre.languageRecord.Orthography(pre.index) == None:
 			fieldName = "_x003%d_Orthography" % (pre.index)
 			self.requiredFields(pre.filesetId, stockNo, fieldName)
 

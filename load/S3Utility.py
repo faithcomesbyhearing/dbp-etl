@@ -90,7 +90,7 @@ if (__name__ == '__main__'):
 				filePath = inp.downloadFiles()
 			else:
 				filePath = inp.fullPath()
-			errorTuple = texts.validateFileset("text_plain", inp.bibleId, inp.filesetId, inp.lptsRecord, inp.index, filePath)
+			errorTuple = texts.validateFileset("text_plain", inp.bibleId, inp.filesetId, inp.languageRecord, inp.index, filePath)
 			if errorTuple != None:
 				logger = Log.getLogger(inp.filesetId)
 				logger.messageTuple(errorTuple)

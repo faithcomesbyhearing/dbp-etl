@@ -46,9 +46,9 @@ class UpdateDBPAccessTable:
 				print("FATAL: Unknown typeCode % in fileset: %s, hashId: %s" % (typeCode, filesetId, hashId))
 				sys.exit()
 
-			(lptsRecord, lptsIndex) = self.languageReader.getLPTSRecord(typeCode, bibleId, dbpFilesetId)
-			if lptsRecord != None:
-				lpts = lptsRecord.record
+			(languageRecord, lptsIndex) = self.languageReader.getLanguageRecord(typeCode, bibleId, dbpFilesetId)
+			if languageRecord != None:
+				lpts = languageRecord.record
 			else:
 				lpts = {}
 
@@ -59,9 +59,9 @@ class UpdateDBPAccessTable:
 				elif accessId == 102: # allow_text_OT_DBP
 					accessIdInLPTS = lpts.get(accessDesc) == "-1" and "OT" in setSizeCode
 				elif accessId == 181: # allow_text_DOWNLOAD
-					accessIdInLPTS = self._isPublicDomain(lptsRecord)
+					accessIdInLPTS = self._isPublicDomain(languageRecord)
 				elif accessId in {191, 193}: # allow_text_APP_OFFLINE and allow_audio_APP_OFFLINE
-					accessIdInLPTS = self._isSILOnly(lptsRecord) or self._isPublicDomain(lptsRecord)
+					accessIdInLPTS = self._isSILOnly(languageRecord) or self._isPublicDomain(languageRecord)
 				else:
 					accessIdInLPTS = lpts.get(accessDesc) == "-1"
 

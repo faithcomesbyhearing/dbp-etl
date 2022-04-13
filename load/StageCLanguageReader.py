@@ -8,13 +8,13 @@ class StageCLanguageReader (LanguageReaderInterface):
     def getByStockNumber(self, stockNumber):
        raise Exception("Not implemented")
     
-    def getLPTSRecord(self, typeCode, bibleId, filesetId):
+    def getLanguageRecord(self, typeCode, bibleId, filesetId):
        raise Exception("Not implemented")
 
     def getFilesetRecords(filesetId):
        raise Exception("Not implemented")
 
-    def getLPTSRecordLoose(typeCode, bibleId, dbpFilesetId):
+    def getLanguageRecordLoose(typeCode, bibleId, dbpFilesetId):
        raise Exception("Not implemented")
 
     def reduceCopyrightToName(lptsCopyright):

@@ -10,16 +10,18 @@
 from abc import ABC, abstractmethod
 
 class LanguageReaderInterface(ABC):
+
+    # returns a LanguageReaderInterface record
+    @abstractmethod 
+    def getByStockNumber(self, stockNumber):
+        pass
+
     @abstractmethod 
     def getBibleIdMap(self):
         pass 
 
     @abstractmethod 
-    def getByStockNumber(self, stockNumber):
-        pass
-    
-    @abstractmethod 
-    def getLPTSRecord(self, typeCode, bibleId, filesetId):
+    def getLanguageRecord(self, typeCode, bibleId, filesetId):
         pass
 
     @abstractmethod
@@ -27,7 +29,7 @@ class LanguageReaderInterface(ABC):
         pass 
 
     @abstractmethod
-    def getLPTSRecordLoose(typeCode, bibleId, dbpFilesetId):
+    def getLanguageRecordLoose(typeCode, bibleId, dbpFilesetId):
         pass 
 
     @abstractmethod
@@ -48,5 +50,37 @@ class LanguageReaderInterface(ABC):
     #     pass
 
 
+class LanguageRecordInterface(ABC):
+
+    @abstractmethod 
+    def DamIdList(self, typeCode):  
+        pass
+
+    @abstractmethod 
+    def DamIdMap(self, typeCode, index):
+        pass
+
+    @abstractmethod
+    def Reg_StockNumber():
+        pass
+
+    @abstractmethod
+    def Volumne_Name():
+        pass
+
+    @abstractmethod
+    def Licensor():
+        pass
+
+    @abstractmethod
+    def CoLicensor():
+        pass
+
+    @abstractmethod
+    def Copyrightc():
+        pass
 
 
+    ## BWF - part of LanguageRecord interface. may be a common base class method
+    def ReduceTextList(self, damIdList):
+        pass    

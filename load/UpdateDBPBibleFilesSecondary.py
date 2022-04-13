@@ -35,7 +35,7 @@ class UpdateDBPBibleFilesSecondary:
 			source = "s3://%s/%s/" % (self.config.s3_bucket, inp.filesetPrefix)
 			zipFilename = "%s.zip" % (inp.filesetId,)
 			target = "s3://%s/%s/%s" % (self.config.s3_bucket, inp.filesetPrefix, zipFilename)
-			zipDirectory = self.getZipInternalDir(inp.lptsDamId, inp.lptsRecord)
+			zipDirectory = self.getZipInternalDir(inp.lptsDamId, inp.languageRecord)
 			fileTypes = ["mp3"]
 			data = { "source": source, "target": target, "directoryName": zipDirectory, "fileTypes": fileTypes }
 			print(data)
@@ -59,10 +59,10 @@ class UpdateDBPBibleFilesSecondary:
 				Log.getLogger(inp.filesetId).message(Log.EROR, "Failure in zip file creation %s" % (err,))
 
 
-	def getZipInternalDir(self, damId, lptsRecord):
-		langName = lptsRecord.LangName()
-		iso3 = lptsRecord.ISO()
-		stockNo = lptsRecord.Reg_StockNumber()
+	def getZipInternalDir(self, damId, languageRecord):
+		langName = languageRecord.LangName()
+		iso3 = languageRecord.ISO()
+		stockNo = languageRecord.Reg_StockNumber()
 		versionCode = stockNo[-3:] if stockNo != None else ""
 		scope = damId[6]
 		if scope == "N" or scope == "O":
@@ -130,7 +130,7 @@ if (__name__ == '__main__'):
 			for data in dataList:
 				#print(data.toString())
 				inp = InputFileset(config, location, data.filesetId, filesetPath, data.damId, 
-								data.typeCode, data.bibleId(), data.index, data.lptsRecord)
+								data.typeCode, data.bibleId(), data.index, data.languageRecord)
 				#print(inp.toString())
 				if inp.zipFile() == None:
 					print("must create zip file")

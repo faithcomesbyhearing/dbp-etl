@@ -32,8 +32,8 @@ class UpdateDBPBibleTranslations:
 		lptsBibleMap.pop("JESUS FILM", None) # delete JESUS FILM
 
 		for bibleId in sorted(lptsBibleMap.keys()):
-			lptsRecords = lptsBibleMap[bibleId]
-			volumeName = self.biblesVolumneName(bibleId, lptsRecords)
+			languageRecords = lptsBibleMap[bibleId]
+			volumeName = self.biblesVolumneName(bibleId, languageRecords)
 
 			dbpNameCols = dbpMap.get(bibleId)
 
@@ -55,10 +55,10 @@ class UpdateDBPBibleTranslations:
 		self.dbOut.delete(tableName, pkeyNames, deleteRows)
 
 
-	def biblesVolumneName(self, bibleId, lptsRecords):
+	def biblesVolumneName(self, bibleId, languageRecords):
 		final = set()
-		for (lptsIndex, lptsRecord) in lptsRecords:
-			volName = lptsRecord.Volumne_Name()
+		for (lptsIndex, languageRecord) in languageRecords:
+			volName = languageRecord.Volumne_Name()
 			if volName != None:
 				final.add(volName)
 		if len(final) == 0:
