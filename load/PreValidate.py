@@ -54,7 +54,11 @@ class PreValidate:
 		self.bucket = bucket
 
 	## ENTRY POINT FOR LAMBDA  - validate input and return an errorList.
-	def validateLambda(self, lptsReader, directory, filenames):
+	## note: for the lambda, the files have not been uploaded to S3 yet; instead, they are uploaded to the etl front end via a typescript dropzone component.  As a
+	## result, the logic to validate the stock list cannot access S3.
+	## filenames would be ["a.usx", "b.usx"] and sometimes ["a.usx", "b.usx", "stocknumber.txt"]
+	## stocknumberDotTxtContents would be either "" or "N1KANDPI\nO1KANDPI"
+	def validateLambda(self, lptsReader, directory, filenames, stocknumberDotTxtContents):
 		unicodeScript = UnicodeScript()
 		result = None
 		stockNumber = self.isTextStockNo(directory)
@@ -426,37 +430,50 @@ if (__name__ == "__main__"):
 	s3Client = session.client('s3')
 	preValidate = PreValidate(lptsReader, unicodeScript, s3Client, bucket)
 
-	testDataMap = {}
-	request = { 'Bucket': bucket, 'Prefix': prefix, 'MaxKeys': 1000 }
-	hasMore = True
-	while hasMore:
-		response = s3Client.list_objects_v2(**request)
-		hasMore = response['IsTruncated']
-		for item in response.get('Contents', []):
-			objKey = item.get('Key')
-			#print(objKey)
-			(directory, filename) = objKey.rsplit("/", 1)
-			files = testDataMap.get(directory, [])
-			files.append(filename)
-			testDataMap[directory] = files
-		if hasMore:
-			request['ContinuationToken'] = response['NextContinuationToken']
+	# this is the lambda invocation
+#{
+#   "prefix": "Kondaporja_P1KFCWFW_USX",
+#   "files": ["041MRK.usx", "stocknumber.txt"]
+# }	
+	# Test Case 1: no stocknumber.txt file present
+	#preValidate.validateLambda(lptsReader, "Kondaporja_P1KFCWFW_USX", ["041MRK.usx"], "")
 
-	for (directory, filenames) in testDataMap.items():
-		print(directory)
-		baseDir = os.path.basename(directory)
-		stockNumber = preValidate.isTextStockNo(baseDir)
-		if stockNumber == None:
-			print("ERROR stock no not recognized")
-		else:
-			oneFilePath = directory + "/" + filenames[0]
-			sampleText = unicodeScript.readObject(s3Client, "s3://" + bucket, oneFilePath)
-			stockResultList = preValidate.validateUSXStockList(stockNumber, filenames, sampleText)
-			for stockResult in stockResultList:
-				for result in stockResult:
-					print(result.toString())
-		print("ERRORS", preValidate.messages)
-		preValidate.messages = {}
+	# Test Case 2: stocknumber.txt file present, contents are provided as third parameter
+	#preValidate.validateLambda(lptsReader, "Kondaporja_P1KFCWFW_USX", ["041MRK.usx", "stocknumber.txt"], "N1KANDPI\nO1KANDPI")
+
+
+
+	# testDataMap = {}
+	# request = { 'Bucket': bucket, 'Prefix': prefix, 'MaxKeys': 1000 }
+	# hasMore = True
+	# while hasMore:
+	# 	response = s3Client.list_objects_v2(**request)
+	# 	hasMore = response['IsTruncated']
+	# 	for item in response.get('Contents', []):
+	# 		objKey = item.get('Key')
+	# 		#print(objKey)
+	# 		(directory, filename) = objKey.rsplit("/", 1)
+	# 		files = testDataMap.get(directory, [])
+	# 		files.append(filename)
+	# 		testDataMap[directory] = files
+	# 	if hasMore:
+	# 		request['ContinuationToken'] = response['NextContinuationToken']
+
+	# for (directory, filenames) in testDataMap.items():
+	# 	print(directory)
+	# 	baseDir = os.path.basename(directory)
+	# 	stockNumber = preValidate.isTextStockNo(baseDir)
+	# 	if stockNumber == None:
+	# 		print("ERROR stock no not recognized")
+	# 	else:
+	# 		oneFilePath = directory + "/" + filenames[0]
+	# 		sampleText = unicodeScript.readObject(s3Client, "s3://" + bucket, oneFilePath)
+	# 		stockResultList = preValidate.validateUSXStockList(stockNumber, filenames, sampleText)
+	# 		for stockResult in stockResultList:
+	# 			for result in stockResult:
+	# 				print(result.toString())
+	# 	print("ERRORS", preValidate.messages)
+	# 	preValidate.messages = {}
 
 
 # time python3 load/PreValidate.py test
