@@ -16,7 +16,7 @@ class UnicodeScript:
 	## Returns a list of files in a bucket of on a local disk.
 	def getFilenames(self, s3Client, location, filesetPath):
 		results = []
-		ignoreSet = {"Thumbs.db"}
+		ignoreSet = {"Thumbs.db", "stocknumber.txt"}
 		if not location.startswith("s3://"):
 			pathname = location + os.sep + filesetPath
 			if os.path.isdir(pathname):
