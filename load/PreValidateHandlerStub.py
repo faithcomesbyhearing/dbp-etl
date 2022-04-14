@@ -12,6 +12,7 @@ def handler(event, context):
     s3Client = session.client("s3")
     bucket = event["bucket"]
     prefix = event["prefix"]
+    stocknumbers = event["stocknumbers"]
     unicodeScript = UnicodeScript()
     print("Copying lpts-dbp.xml...")
     lptsReader = LPTSExtractReader(config.filename_lpts_xml)
@@ -20,7 +21,7 @@ def handler(event, context):
     testDataMap = {}
     request = { 'Bucket': bucket, 'Prefix': prefix, 'MaxKeys': 1000 }
     hasMore = True
-    
+
     while hasMore:
         response = s3Client.list_objects_v2(**request)
         hasMore = response['IsTruncated']
@@ -35,13 +36,19 @@ def handler(event, context):
 
     messages = []
     for (directory, filenames) in testDataMap.items():
-        messages.append(preValidate.validateLambda(lptsReader, directory, filenames))
-    
+        messages.append(preValidate.validateLambda(lptsReader, directory, filenames, stocknumbers))
+
     print("messages: ", messages)
-    
+
     return messages
 
 if (__name__ == '__main__'):
     prefix = sys.argv[2][:-1] if sys.argv[2].endswith("/") else sys.argv[2]
+    stocknumbersContents = sys.argv[3] if len(sys.argv) > 3 and sys.argv[3] != None else None
     bucket = "etl-development-input"
-    handler({"prefix": prefix, "bucket": bucket}, None)
+    handler(
+        {
+            "prefix": prefix,
+            "bucket": bucket,
+            "stocknumbers": stocknumbersContents
+        }, None)
