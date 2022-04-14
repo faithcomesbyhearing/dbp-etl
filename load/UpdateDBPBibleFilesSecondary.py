@@ -120,7 +120,7 @@ if (__name__ == '__main__'):
 		print(bibleId, filesetId, hashId)
 		location = "s3://%s" % (config.s3_bucket,)
 		filesetPath = "audio/%s/%s" % (bibleId, filesetId)
-		(dataList, messages) = PreValidate.validateDBPELT(languageReader, s3Client, location, filesetId, filesetPath)
+		(dataList, messages) = PreValidate.validateDBPETL(s3Client, location, filesetId, filesetPath)
 		if messages != None and len(messages) > 0:
 			Log.addPreValidationErrors(messages)
 			#print(filesetPath, messages)
