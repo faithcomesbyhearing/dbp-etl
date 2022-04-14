@@ -54,10 +54,14 @@ class PreValidate:
 		self.bucket = bucket
 
 	## ENTRY POINT FOR LAMBDA  - validate input and return an errorList.
-	def validateLambda(self, lptsReader, directory, filenames):
+	def validateLambda(self, lptsReader, directory, filenames, stocknumberContent = ""):
 		unicodeScript = UnicodeScript()
 		result = None
-		stockNumber = self.isTextStockNo(directory)
+		if (stocknumberContent != None and stocknumberContent != ""):
+			stockNumber = self.isStringContentStockNo(stocknumberContent)
+		else:
+			stockNumber = self.isTextStockNo(directory)
+
 		if stockNumber != None:
 			stockResultList = self.validateUSXStockList(stockNumber, filenames)
 			resultList = []
@@ -89,6 +93,7 @@ class PreValidate:
 		preValidate = PreValidate(lptsReader, unicodeScript, s3Client, bucket)
 		resultList = []
 		stockNumber = preValidate.isTextStockNo(directory)
+		print("stockNumber ===========>", stockNumber)
 		if stockNumber != None:
 			filenames = unicodeScript.getFilenames(s3Client, location, fullPath)
 			sampleText =  unicodeScript.readObject(s3Client, location, fullPath + "/" + filenames[0]) if len(filenames) > 0 else None
@@ -107,8 +112,35 @@ class PreValidate:
 		preValidate.addErrorMessages(directory, unicodeScript.errors)
 		return (resultList, preValidate.messages)
 
+	def setFormatStocknumberArray(self, stockNumberArray):
+		stockNumberArrayFinal = []
 
-	## determine if directory is USX text stockNo
+		if len(stockNumberArray) > 0:
+			for stockNumberItem in stockNumberArray:
+				stockNumberArrayFinal.append(stockNumberItem[:-3] + "/" + stockNumberItem[-3:])
+
+		return stockNumberArrayFinal
+
+	def transformStocknumberStringToArray(self, contents):
+		# avoid that \r\n is scaped
+		contents = contents.replace("\\r", "\r")
+		contents = contents.replace("\\n", "\n")
+		stocknumberArray = contents.encode("utf-8").decode("utf-8").splitlines()
+		stocknumberArrayFinal = []
+
+		for stocknumber in stocknumberArray:
+			if stocknumber != '':
+				stocknumberArrayFinal.append(stocknumber)
+
+		return stocknumberArrayFinal
+
+	def isStringContentStockNo(self, contents):
+		stockNumberArray = self.transformStocknumberStringToArray(contents)
+
+		if len(stockNumberArray) > 0:
+			return self.setFormatStocknumberArray(stockNumberArray)
+
+    ## determine if directory is USX text stockNo
 	def isTextStockNo(self, directory):
 		stockNumberArray = self.isTextStockNoFromFile(directory)
 
@@ -138,11 +170,7 @@ class PreValidate:
 		try:
 			response = self.s3Client.get_object(Bucket=bucket, Key=key)
 			contents = response['Body'].read()
-			stocknumberArray = contents.decode("utf-8").splitlines()
-
-			for stocknumber in stocknumberArray:
-				if stocknumber != '':
-					stocknumberArrayFinal.append(stocknumber)
+			stocknumberArrayFinal = self.transformStocknumberStringToArray(contents.decode("utf-8"))
 
 		except ClientError as ex:
 			if ex.response['Error']['Code'] == 'NoSuchKey':			
@@ -155,16 +183,7 @@ class PreValidate:
 	def isTextStockNoFromFile(self, directory):
 		stockNumberArray = self.getStockNumbersFromFile(directory)
 
-		stockNumberArrayFinal = []
-
-		if len(stockNumberArray) > 0:
-			for stockNumberItem in stockNumberArray:
-				stockNumberArrayFinal.append(stockNumberItem[:-3] + "/" + stockNumberItem[-3:])
-
-		return stockNumberArrayFinal
-
-
-
+		return self.setFormatStocknumberArray(stockNumberArray)
 
 	def validateUSXStockList(self, stockList, filenames, sampleText = None):
 		resultList = []
@@ -446,6 +465,7 @@ if (__name__ == "__main__"):
 		print(directory)
 		baseDir = os.path.basename(directory)
 		stockNumber = preValidate.isTextStockNo(baseDir)
+
 		if stockNumber == None:
 			print("ERROR stock no not recognized")
 		else:
