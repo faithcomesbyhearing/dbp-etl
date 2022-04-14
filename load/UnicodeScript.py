@@ -33,7 +33,8 @@ class UnicodeScript:
 			for item in response.get('Contents', []):
 				objKey = item.get('Key')
 				filename = objKey[len(filesetPath) + 1:]
-				results.append(filename)
+				if filename not in ignoreSet and not filename.startswith("."):
+					results.append(filename)				
 			if len(results) == 0:
 				self.errors.append("ERROR: Invalid bucket %s or prefix %s/" % (bucket, filesetPath))
 		return results
