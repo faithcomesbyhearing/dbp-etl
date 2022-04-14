@@ -165,15 +165,19 @@ class LPTSExtractReader (LanguageReaderInterface):
 	def getFilesetRecords(self, filesetId):
 		if self.filesetIdMap == None:
 			self.filesetIdMap = {}
-			damIdDict = {**languageRecord.audio1DamIdDict,
-						**languageRecord.audio2DamIdDict,
-						**languageRecord.audio3DamIdDict,
-						**languageRecord.text1DamIdDict,
-						**languageRecord.text2DamIdDict,
-						**languageRecord.text3DamIdDict,
-						**languageRecord.videoDamIdDict}
+
+
 			for languageRecord in self.resultSet:
 				record = languageRecord.record
+				damIdDict = dict(
+					list(languageRecord.audio1DamIdDict.items()) + 
+					list(languageRecord.audio2DamIdDict.items()) + 
+					list(languageRecord.audio3DamIdDict.items()) +
+					list(languageRecord.text1DamIdDict.items()) + 
+					list(languageRecord.text2DamIdDict.items()) + 
+					list(languageRecord.text3DamIdDict.items()) +
+					list(languageRecord.videoDamIdDict.items()) 
+					)
 				hasKeys = set(damIdDict.keys()).intersection(set(record.keys()))
 				for key in hasKeys:
 					statusKey = damIdDict[key]
@@ -200,13 +204,15 @@ class LPTSExtractReader (LanguageReaderInterface):
 	def getFilesetRecords10(self, filesetId):	
 		if self.filesetIdMap10 == None:
 			self.filesetIdMap10 = {}
-			damIdDict = {**languageRecord.audio1DamIdDict,
-						**languageRecord.audio2DamIdDict,
-						**languageRecord.audio3DamIdDict,
-						**languageRecord.text1DamIdDict,
-						**languageRecord.text2DamIdDict,
-						**languageRecord.text3DamIdDict,
-						**languageRecord.videoDamIdDict}
+			damIdDict = dict(
+					list(languageRecord.audio1DamIdDict.items()) + 
+					list(languageRecord.audio2DamIdDict.items()) + 
+					list(languageRecord.audio3DamIdDict.items()) + 
+					list(languageRecord.text1DamIdDict.items()) + 
+					list(languageRecord.text2DamIdDict.items()) +
+					list(languageRecord.text3DamIdDict.items()) +
+					list(languageRecord.videoDamIdDict.items())
+					)
 			for languageRecord in self.resultSet:
 				record = languageRecord.record
 				hasKeys = set(damIdDict.keys()).intersection(set(record.keys()))
@@ -315,8 +321,6 @@ class languageRecord (LanguageRecordInterface):
 	
 	def __init__(self, record):
 		self.record = record
-		print ("created languageRecord...")
-		print (self.record)
 
 	def recordLen(self):
 		return len(self.record.keys())
@@ -379,13 +383,17 @@ class languageRecord (LanguageRecordInterface):
 		if not typeCode in {"audio", "text", "video"}:
 			print("ERROR: Unknown typeCode '%s', audio, text, or video is expected." % (typeCode))
 		if typeCode == "audio":
-			damIdDict = {**languageRecord.audio1DamIdDict,
-						**languageRecord.audio2DamIdDict,
-						**languageRecord.audio3DamIdDict}
+			damIdDict = dict(
+					list(languageRecord.audio1DamIdDict.items()) + 
+					list(languageRecord.audio2DamIdDict.items()) + 
+					list(languageRecord.audio3DamIdDict.items()) 
+					)						
 		elif typeCode == "text":
-			damIdDict = {**languageRecord.text1DamIdDict,
-						**languageRecord.text2DamIdDict,
-						**languageRecord.text3DamIdDict}
+			damIdDict = dict(
+					list(languageRecord.text1DamIdDict.items()) + 
+					list(languageRecord.text2DamIdDict.items()) + 
+					list(languageRecord.text3DamIdDict.items()) 
+					)						
 		elif typeCode == "video":
 			damIdDict = languageRecord.videoDamIdDict
 		else:

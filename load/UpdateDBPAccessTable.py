@@ -86,9 +86,9 @@ class UpdateDBPAccessTable:
 	def _isPublicDomain(self, record):
 		if record != None:
 			pattern = re.compile(r"Public Domain", re.IGNORECASE)
-			if pattern.search(record.Licensor()):
+			if record.Licensor() != None and pattern.search(record.Licensor()):
 				return True
-			if pattern.search(record.Copyrightc()):
+			if record.Copyrightc() != None and pattern.search(record.Copyrightc()):
 				if len(record.Copyrightc()) < 20:
 					return True
 				else:
