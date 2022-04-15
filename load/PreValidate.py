@@ -82,6 +82,7 @@ class PreValidate:
 
 	# ENTRY POINT for DBPLoadController processing - 
 	def validateDBPELT(lptsReader, s3Client, location, directory, fullPath):
+		print("entry to validateDBPELT.. location [%s], directory [%s], fullPath [%s]" % (location, directory, fullPath))
 
 		# For audio and video, the directory name contains an embedded fileset id (eg ENGESVN2DA)
 		# For text, stocknumber is used instead of filesetid. Usually, the directory name contains an embedded stocknumber (Abidji_N2ABIWBT_USX). 
@@ -174,7 +175,7 @@ class PreValidate:
 
 		except ClientError as ex:
 			if ex.response['Error']['Code'] == 'NoSuchKey':			
-				print("No stocknumber.txt file found")
+				print("No stocknumber.txt file found. bucket [%s], prefix: [%s], key [%s]" % (bucket, prefix, key))
 		except Exception as err:
 			print("Error retrieving stocknumber.txt file: %s" % (err))
 
