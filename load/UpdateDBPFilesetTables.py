@@ -123,9 +123,11 @@ class UpdateDBPFilesetTables:
 				self.insertBibleFiles(dbConn, hashId, inputFileset, bookIdSet)
 				updateBibleFilesSecondary.updateBibleFilesSecondary(hashId, inp)
 			elif inp.subTypeCode() == "text_plain":
+				print ("**************** temporary for testing ... not updating text_plain")
 				hashId = self.insertBibleFileset(dbConn, inp.typeCode, "text_plain", inp.bibleId, inp.filesetId, bookIdSet)
-				self.insertFilesetConnections(dbConn, hashId, inp.bibleId)
-				self.textUpdater.updateFileset(inp.bibleId, inp.filesetId, hashId, bookIdSet, inp.databasePath)
+				# self.insertFilesetConnections(dbConn, hashId, inp.bibleId)			
+				# self.textUpdater.updateFileset(inp.bibleId, inp.filesetId, hashId, bookIdSet, inp.databasePath)
+
 				## Future code for text_html
 				#hashId = self.insertBibleFileset(inp.typeCode, "text_format", inp.bibleId, inp.filesetId, bookIdSet)
 				#self.insertFilesetConnections(hashId, inp.bibleId)
