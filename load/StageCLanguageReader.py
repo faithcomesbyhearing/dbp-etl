@@ -2,18 +2,33 @@ from unittest import result
 from LanguageReader import LanguageReaderInterface
 from SQLUtility import *
 from Config import *
-from LPTSExtractReader import LPTSRecord;
-
+from StageCLanguageService import StageCLanguageService as LanguageService
+from StageCLanguageServiceParse import parseResult;
 
 class StageCLanguageReader (LanguageReaderInterface):
-    def getBibleIdMap(self):
-        raise Exception("Not implemented")
+    def __init__(self):
+        self.service = LanguageService()
 
-    def getByStockNumber(self, stockNumber):
-       raise Exception("Not implemented")
-    
+    def getBibleIdMap(self):
+        result = parseResult(self.service.getAllMediaRecords())
+
+        listRecords = {}
+
+        for rowTuple in result:
+            if listRecords.get(rowTuple.DBP_Equivalent()) == None:
+                newList = []
+                newList.append(rowTuple)
+                listRecords[rowTuple.DBP_Equivalent()] = newList
+            else:
+                listRecords[rowTuple.DBP_Equivalent()].append(rowTuple)
+        return listRecords
+
     def getLanguageRecord(self, typeCode, bibleId, filesetId):
        raise Exception("Not implemented")
+
+    def getByStockNumber(self, stockNumber):
+        result = parseResult(self.service.getMediaByStocknumber(stockNumber))
+        return result[0] if len(result) > 0 else None
 
     def getFilesetRecords(filesetId):
         raise Exception("Not implemented")
@@ -24,5 +39,14 @@ class StageCLanguageReader (LanguageReaderInterface):
     def reduceCopyrightToName(lptsCopyright):
         raise Exception("Not implemented")
 
-    def getFilesetRecords10(damId):
-        raise Exception("Not implemented")
+    def getFilesetRecords10(self, filesetId):
+        mediaId = self.service.getMediaIdFromFilesetId(filesetId)
+
+        if mediaId != None:
+            result = parseResult(self.service.getMediaById(mediaId))
+            languageRecord = result[0] if len(result) > 0 else None
+            response = set()
+            response.add((languageRecord, languageRecord.Status(), ''))
+            return response
+
+        return None

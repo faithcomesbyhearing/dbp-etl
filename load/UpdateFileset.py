@@ -38,7 +38,7 @@ class UpdateFileset:
                 print("FATAL: Unknown typeCode % in fileset: %s, hashId: %s" % (typeCode, filesetId, hashId))
                 sys.exit()
 
-            (lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecord(typeCode, bibleId, dbpFilesetId)
+            (lptsRecord, lptsIndex) = self.lptsReader.getLanguageRecord(typeCode, bibleId, dbpFilesetId)
             if lptsRecord != None:
                 lpts = lptsRecord.record
             else:
@@ -66,6 +66,24 @@ class UpdateFileset:
         pkeyNames = ("hash_id", "access_group_id")
         self.dbOut.insert(tableName, pkeyNames, (), insertRows)
         self.dbOut.delete(tableName, pkeyNames, deleteRows)
+
+    def _isPublicDomain(self, record):
+        if record != None:
+            pattern = re.compile(r"Public Domain", re.IGNORECASE)
+            if record.Licensor() != None and pattern.search(record.Licensor()):
+                return True
+            if record.Copyrightc() != None and pattern.search(record.Copyrightc()):
+                if len(record.Copyrightc()) < 20:
+                    return True
+                else:
+                    print("INFO Possible Public Domain Found in %s: %s" % (record.Reg_StockNumber(), record.Copyrightc()))
+        return False
+
+    def _isSILOnly(self, record):
+        if record != None:
+            return record.Licensor() == "SIL" and record.CoLicensor() == None
+        else:
+            return False
 
 if (__name__ == '__main__'):
     config = Config()

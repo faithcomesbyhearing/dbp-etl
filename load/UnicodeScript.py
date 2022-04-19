@@ -4,6 +4,7 @@
 import io
 import math
 import unicodedata
+import os
 
 class UnicodeScript:
 
