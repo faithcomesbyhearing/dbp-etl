@@ -25,6 +25,9 @@ class InputProcessor:
 		location = sys.argv[2][:-1] if sys.argv[2].endswith("/") else sys.argv[2]
 		paths = sys.argv[3:]
 
+		# LoadController is called with this: 2022-04-15-16-24-20/French_N1 & O1 FRABIB_USX
+		# location should be 2022-04-15-16-24-20/French_N1 & O1 FRABIB_USX
+
 		# the CLI allows a list of paths. The primary use case is to provide one path only
 		for path in paths:
 			# the CLI allows a path to contain multiple directories. The primary use case is for the path to contain a single directory
@@ -32,7 +35,7 @@ class InputProcessor:
 			directory = path.split("/")[-1]
 
 			# this call will return a list of PreValidateResult objects containing information on validated filesets
-			(dataList, messages) = PreValidate.validateDBPELT(lptsReader, s3Client, location, directory, path)
+			(dataList, messages) = PreValidate.validateDBPETL(lptsReader, s3Client, location, directory, path)
 			for data in dataList:
 				inp = InputFileset(config, location, data.filesetId, path, data.damId, 
 					data.typeCode, data.bibleId(), data.index, data.lptsRecord, data.fileList)

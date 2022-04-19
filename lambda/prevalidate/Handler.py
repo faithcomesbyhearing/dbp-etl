@@ -24,6 +24,6 @@ def handler(event, context):
 	s3Client.download_file(bucket, "lpts-dbp.xml", "/tmp/lpts-dbp.xml")
 	lptsReader = LPTSExtractReader("/tmp/lpts-dbp.xml")
 
-	preValidate = PreValidate(lptsReader, UnicodeScript(), s3Client, bucket)
-	messages = preValidate.validateLambda(lptsReader, directory, filenames, stocknumbersContents)
+	preValidate = PreValidate(lptsReader, s3Client, bucket)
+	messages = preValidate.validateLambda(directory, filenames, stocknumbersContents)
 	return messages
