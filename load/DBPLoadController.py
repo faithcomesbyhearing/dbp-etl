@@ -130,7 +130,9 @@ if (__name__ == '__main__'):
 
 #python3 load/DBPLoadController.py test s3://etl-development-input Spanish_N2SPNTLA_USX #works with refactor
 
-
+# python3 load/DBPLoadController.py test s3://etl-development-input "French_N1 & O1 FRABIB_USX"
+# python3 load/TestCleanup.py test FRABIBN_ET-usx
+# python3 load/TestCleanup.py test FRABIBO_ET-usx
 
 
 
