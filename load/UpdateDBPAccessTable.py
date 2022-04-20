@@ -2,7 +2,7 @@
 
 
 from Config import *
-from LPTSExtractReader import *
+from LanguageReader import *
 from SQLUtility import *
 from SQLBatchExec import *
 
@@ -97,6 +97,8 @@ class UpdateDBPAccessTable:
 
 
 if (__name__ == '__main__'):
+	from LanguageReaderCreator import LanguageReaderCreator	
+
 	config = Config()
 	languageReader = LanguageReaderCreator().create(config)
 	db = SQLUtility(config)

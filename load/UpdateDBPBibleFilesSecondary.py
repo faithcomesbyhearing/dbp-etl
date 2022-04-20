@@ -11,7 +11,6 @@ from Log import *
 from Config import *
 from SQLUtility import *
 from SQLBatchExec import *
-from LPTSExtractReader import *
 from AWSSession import *
 
 
@@ -96,6 +95,7 @@ class UpdateDBPBibleFilesSecondary:
 
 
 if (__name__ == '__main__'):
+	from LanguageReaderCreator import LanguageReaderCreator
 	from PreValidate import *
 	from InputFileset import *
 

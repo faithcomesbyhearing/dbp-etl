@@ -8,7 +8,7 @@
 
 import json
 from PreValidateResult import *
-from LPTSExtractReader import *
+from LanguageReader import *
 from TextStockNumberProcessor import *
 
 class PreValidate:
@@ -204,6 +204,7 @@ if (__name__ == "__main__"):
 	import boto3
 	from Config import *
 	from AWSSession import *
+	from LanguageReaderCreator import LanguageReaderCreator	
 
 	if len(sys.argv) < 2:
 		print("FATAL command line parameters: environment location prefix directoryName")

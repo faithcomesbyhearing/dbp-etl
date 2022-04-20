@@ -184,6 +184,7 @@ class UpdateDBPVideoTables:
 
 
 if (__name__ == '__main__'):
+	from LanguageReaderCreator import LanguageReaderCreator		
 	from LanguageReader import *
 	from InputFileset import *
 	from DBPLoadController import *

@@ -74,11 +74,14 @@ class S3Utility:
 
 if (__name__ == '__main__'):
 	from SQLUtility import *
+	from InputProcessor import *
 	from UpdateDBPTextFilesets import *
+	from LanguageReaderCreator import LanguageReaderCreator	
 
 	config = Config.shared()
 	languageReader = LanguageReaderCreator().create(config)
-	filesets = InputFileset.filesetCommandLineParser(config, AWSSession.shared().s3Client, languageReader)
+	filesets = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
+
 	s3 = S3Utility(config)
 
 	db = SQLUtility(config)

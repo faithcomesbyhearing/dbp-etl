@@ -322,7 +322,9 @@ class UpdateDBPBiblesTable:
 
 ## Unit Test
 if (__name__ == '__main__'):
-	from LanguageReader import *	
+	from LanguageReader import *
+	from LanguageReaderCreator import LanguageReaderCreator
+
 	config = Config()
 	db = SQLUtility(config)
 	dbOut = SQLBatchExec(config)

@@ -17,9 +17,7 @@
 
 import sys
 import subprocess
-#import boto3
 from Config import *
-from LPTSExtractReader import *
 
 class TestBiblePublisher:
 

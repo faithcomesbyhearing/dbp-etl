@@ -333,7 +333,8 @@ class UpdateDBPBooksTable:
 
 ## Unit Test
 if (__name__ == '__main__'):
-	from LPTSExtractReader import *
+	from LanguageReaderCreator import LanguageReaderCreator	
+	from LanguageReader import *
 	from InputFileset import *
 	from DBPLoadController import *
 

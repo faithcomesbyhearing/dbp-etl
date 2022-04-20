@@ -123,6 +123,7 @@ class Validate:
 
 if (__name__ == '__main__'):
 	from DBPLoadController import *
+	from LanguageReaderCreator import LanguageReaderCreator		
 	from LanguageReader import *
 	config = Config.shared()
 	db = SQLUtility(config)

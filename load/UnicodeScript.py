@@ -4,7 +4,6 @@
 import io
 import math
 import unicodedata
-from LPTSExtractReader import *
 
 class UnicodeScript:
 
@@ -157,6 +156,7 @@ if (__name__ == '__main__'):
 	from Config import *	
 	from AWSSession import *
 	from SQLUtility import *
+	from LanguageReaderCreator import LanguageReaderCreator	
 
 	config = Config.shared()
 	db = SQLUtility(config)
