@@ -1,7 +1,7 @@
 class PreValidateResult:
 
-	def __init__(self, lptsRecord, filesetId, damId, typeCode, index, fileList = None):
-		self.lptsRecord = lptsRecord
+	def __init__(self, languageRecord, filesetId, damId, typeCode, index, fileList = None):
+		self.languageRecord = languageRecord
 		self.filesetId = filesetId
 		self.damId = damId
 		self.typeCode = typeCode
@@ -9,13 +9,13 @@ class PreValidateResult:
 		self.fileList = fileList
 
 	def bibleId(self):
-		return self.lptsRecord.DBP_EquivalentByIndex(self.index)
+		return self.languageRecord.DBP_EquivalentByIndex(self.index)
 
 	def scope(self):
 		return self.damId[6]
 
 	def script(self):
-		return self.lptsRecord.Orthography(self.index)
+		return self.languageRecord.Orthography(self.index)
 
 	def toString(self):
 		results = []

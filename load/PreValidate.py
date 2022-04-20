@@ -26,7 +26,7 @@ class PreValidate:
 	def validateLambda(self, directoryName, filenames, stocknumberFileContentsString = None):
 		result = None
 		#print("validateLambda. directoryName [%s], filenames [%s]" % (directoryName, filenames))
-		textStockNumberProcessor = TextStockNumberProcessor(self.lptsReader)
+		textStockNumberProcessor = TextStockNumberProcessor(self.languageReader)
 		(stockNumberResultList, textProcessingErrors) = textStockNumberProcessor.validateTextStockNumbers(stocknumberFileContentsString, directoryName, filenames)
 		self.addErrorMessages("text-processing", textProcessingErrors)
 		if (self.hasErrors()):
@@ -140,22 +140,22 @@ class PreValidate:
 
 	def validateLPTS(self, preValidateResult):
 		pre = preValidateResult
-		stockNumber = pre.lptsRecord.Reg_StockNumber()
-		if pre.lptsRecord.Copyrightc() == None:
+		stockNumber = pre.languageRecord.Reg_StockNumber()
+		if pre.languageRecord.Copyrightc() == None:
 			self.requiredFields(pre.filesetId, stockNumber, "Copyrightc")
-		if pre.typeCode in {"audio", "video"} and pre.lptsRecord.Copyrightp() == None:
+		if pre.typeCode in {"audio", "video"} and pre.languageRecord.Copyrightp() == None:
 			self.requiredFields(pre.filesetId, stockNumber, "Copyrightp")
-		if pre.typeCode == "video" and pre.lptsRecord.Copyright_Video() == None:
+		if pre.typeCode == "video" and pre.languageRecord.Copyright_Video() == None:
 			self.requiredFields(pre.filesetId, stockNumber, "Copyright_Video")
-		if pre.lptsRecord.ISO() == None:
+		if pre.languageRecord.ISO() == None:
 			self.requiredFields(pre.filesetId, stockNumber, "ISO")
-		if pre.lptsRecord.LangName() == None:
+		if pre.languageRecord.LangName() == None:
 			self.requiredFields(pre.filesetId, stockNumber, "LangName")
-		if pre.lptsRecord.Licensor() == None:
+		if pre.languageRecord.Licensor() == None:
 			self.requiredFields(pre.filesetId, stockNumber, "Licensor")
-		if pre.lptsRecord.Reg_StockNumber() == None:
+		if pre.languageRecord.Reg_StockNumber() == None:
 			self.requiredFields(pre.filesetId, stockNumber, "Reg_StockNumber")
-		if pre.lptsRecord.Volumne_Name() == None:
+		if pre.languageRecord.Volumne_Name() == None:
 			self.requiredFields(pre.filesetId, stockNumber, "Volumne_Name")
 
 		if pre.typeCode == "text" and pre.languageRecord.Orthography(pre.index) == None:
