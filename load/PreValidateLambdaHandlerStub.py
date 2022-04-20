@@ -23,7 +23,7 @@ def handler(event, context):
 	 
     # print("Copying lpts-dbp.xml...")
     # s3Client.download_file(bucket, "lpts-dbp.xml", "/tmp/lpts-dbp.xml")  # commented out for efficiency
-    languageReader = LanguageReaderCreator().createWithPath("/tmp/lpts-dbp.xml")   
+    languageReader = LanguageReaderCreator().createWithPath(config.filename_lpts_xml)
 
     preValidate = PreValidate(languageReader, s3Client, bucket) ## removed UnicodeScript
     messages = preValidate.validateLambda(directory, filenames, stocknumbersContents)

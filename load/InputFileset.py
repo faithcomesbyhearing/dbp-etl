@@ -347,6 +347,7 @@ class InputFileset:
 
 if (__name__ == '__main__'):
 	from InputProcessor import *	
+	from LanguageReaderCreator import LanguageReaderCreator
 
 	config = Config()
 	s3Client = AWSSession.shared().s3Client
