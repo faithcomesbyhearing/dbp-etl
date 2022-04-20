@@ -35,7 +35,8 @@ class InputProcessor:
 			directory = path.split("/")[-1]
 
 			# this call will return a list of PreValidateResult objects containing information on validated filesets
-			(dataList, messages) = PreValidate.validateDBPETL(lptsReader, s3Client, location, directory, path)
+			preValidate = PreValidate(lptsReader, s3Client, location)
+			(dataList, messages) = preValidate.validateDBPETL(s3Client, location, directory, path)
 			for data in dataList:
 				inp = InputFileset(config, location, data.filesetId, path, data.damId, 
 					data.typeCode, data.bibleId(), data.index, data.lptsRecord, data.fileList)
