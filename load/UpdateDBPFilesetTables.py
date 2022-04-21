@@ -295,9 +295,7 @@ if (__name__ == '__main__'):
 
 	config = Config.shared()
 	languageReader = LanguageReaderCreator().create(config)
-	InputFileset.validate = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
-
-	filesets = InputFileset.filesetCommandLineParser(config, languageReader)
+	filesets = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
 	db = SQLUtility(config)
 	ctrl = DBPLoadController(config, db, languageReader)
 	ctrl.validate(filesets)
