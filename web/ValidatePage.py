@@ -70,11 +70,12 @@ class ValidatePage:
 			self.conn.close()
 			self.conn = None
 		self.output.file(tempfile.gettempdir() + "/sample.html")
+		# print("file written to %s" % (tempfile.gettempdir() + "/sample.html"))
 			
 		
 	def getHashIds(self, bibleId, filesetId):
 		if bibleId != None:
-			resultSet = self.query("SELECT hash_id FROM bible_fileset_connections WHERE bible_id = %s", (bibleId,))
+			resultSet = self.query("SELECT hash_id FROM bible_fileset_connections WHERE bible_id = %s",  (bibleId))
 		else:
 			resultSet = self.query("SELECT hash_id FROM bible_filesets WHERE id = %s", (filesetId))
 		results = []
@@ -96,7 +97,27 @@ class ValidatePage:
 		# COL2	"kml:Mangali" and Kalinga(3801)
 		# COL3  3801: Kalinga, Mangali, and 6414: Kalinga, Mangali
 		# COL4  eng: Wycliffe Bible Translators, Inc
-				
+		self.displayQuery("Bible Language", 
+			["bible_id", "language_id", "language_name", "iso", "glotto_id", "area", "population", "writing", "country_id", "created_at", "updated_at"],
+			("SELECT b.id, language_id, name, iso, glotto_id, area, population, writing, country_id, l.created_at, l.updated_at " + 
+				" FROM bibles b join languages l on l.id = b.language_id " + 
+				"WHERE b.id = %s"), (bibleId,))
+		
+		self.displayQuery("Language Translation", 
+			["bible_id", "language_source_id", "language_source_name", "language_translation_id", "translation_name", "priority", "created_at", "updated_at"],
+			("SELECT b.id, lt.language_source_id, l.name as 'language_name', lt.language_translation_id, lt.name as 'translation name', lt.priority, lt.created_at, lt.updated_at " + 
+				" FROM bibles b join languages l on l.id = b.language_id join language_translations lt on lt.language_source_id = l.id" + 
+				" WHERE b.id = %s and lt.priority=9"), (bibleId,))
+
+		self.displayQuery("Bible Translation", 
+			["id", "language_id", "bible_id", "vernacular", "vernacular_trade", "name", "created_at", "updated_at"],
+			("select id, language_id, bible_id, vernacular, vernacular_trade, name, bt.created_at, bt.updated_at " + 
+				" from bible_translations bt " + 
+				" WHERE bt.bible_id = %s"), (bibleId,))
+
+# select id, language_id, bible_id, vernacular, vernacular_trade, name, bt.created_at, bt.updated_at
+# from bible_translations bt
+# where bt.bible_id = 'KMLWBT'
 		self.displayQuery("Bible_Filesets",
 			["fileset_id", "hash_id", "asset_id", "set_type_code", "set_size_code", "hidden", "created_at", "updated_at"],
 			("SELECT f.id, f.hash_id, f.asset_id, f.set_type_code, f.set_size_code, f.hidden, f.created_at, f.updated_at" +
@@ -203,13 +224,13 @@ class ValidatePage:
 		
 			
 if __name__ == "__main__":
-	#os.environ["QUERY_STRING"] = "bibleid=ENGESV"
-	#bibleid = ValidatePage.parseQuery()
-	(bibleId, filesetId) = ValidatePage.parseCommand()
+	os.environ["QUERY_STRING"] = "bibleid=KMLWBT"
+	(bibleId, filesetId) = ValidatePage.parseQuery()
+	# (bibleId, filesetId) = ValidatePage.parseCommand()
 	#filesetId = None
 	print("bibleid", bibleId)
 	page = ValidatePage()
-	hashIdList = page.getHashIds(bibleId, filesetId)
+	hashIdList = page.getHashIds(bibleId, None)
 	page.process(bibleId, hashIdList)
 	page.close()
 	#page = ValidatePage()
