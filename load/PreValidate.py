@@ -8,13 +8,13 @@
 
 import json
 from PreValidateResult import *
-from LPTSExtractReader import *
+from LanguageReader import *
 from TextStockNumberProcessor import *
 
 class PreValidate:
 
-	def __init__(self, lptsReader, s3Client, bucket):
-		self.lptsReader = lptsReader
+	def __init__(self, languageReader, s3Client, bucket):
+		self.languageReader = languageReader
 		self.messages = {}	
 		self.s3Client = s3Client
 		self.bucket = bucket		
@@ -26,7 +26,7 @@ class PreValidate:
 	def validateLambda(self, directoryName, filenames, stocknumberFileContentsString = None):
 		result = None
 		#print("validateLambda. directoryName [%s], filenames [%s]" % (directoryName, filenames))
-		textStockNumberProcessor = TextStockNumberProcessor(self.lptsReader)
+		textStockNumberProcessor = TextStockNumberProcessor(self.languageReader)
 		(stockNumberResultList, textProcessingErrors) = textStockNumberProcessor.validateTextStockNumbers(stocknumberFileContentsString, directoryName, filenames)
 		self.addErrorMessages("text-processing", textProcessingErrors)
 		if (self.hasErrors()):
@@ -58,7 +58,7 @@ class PreValidate:
 
 		# note: s3Client and location are passed in to specific methods instead of to the constructor, since these
 		# objects are not relevant for the lambda entry point
-		textStockNumberProcessor = TextStockNumberProcessor(self.lptsReader)
+		textStockNumberProcessor = TextStockNumberProcessor(self.languageReader)
 		stocknumberString = textStockNumberProcessor.getStockNumberStringFromS3(s3Client, location, fullPath)
 		(filenames, actualScript) = textStockNumberProcessor.getSampleUnicodeTextFromS3(s3Client, location, fullPath)
 
@@ -88,21 +88,21 @@ class PreValidate:
 		filesetId = directoryName
 		filesetId1 = directoryName.split("-")[0]
 		damId = filesetId1.replace("_", "2")
-		results = self.lptsReader.getFilesetRecords10(damId) # This method expects 10 digit DamId's always
+		results = self.languageReader.getFilesetRecords10(damId) # This method expects 10 digit DamId's always
 		if results == None:
 			damId = filesetId1.replace("_", "1")
-			results = self.lptsReader.getFilesetRecords10(damId)
+			results = self.languageReader.getFilesetRecords10(damId)
 			if results == None:
 				self.errorMessage(filesetId1, "filesetId is not in LPTS")
 				return None
 		stockNumSet = set()
 		mediaSet = set()
 		bibleIdSet = set()
-		for (lptsRecord, status, fieldName) in results:
-			stockNum = lptsRecord.Reg_StockNumber()
+		for (languageRecord, status, fieldName) in results:
+			stockNum = languageRecord.Reg_StockNumber()
 			if stockNum != None:
 				stockNumSet.add(stockNum)
-			damId = lptsRecord.record.get(fieldName)
+			damId = languageRecord.record.get(fieldName)
 
 			dbpFilesetId = filesetId
 			if "Audio" in fieldName:
@@ -121,7 +121,7 @@ class PreValidate:
 			else:
 				index = 1
 
-			bibleId = lptsRecord.DBP_EquivalentByIndex(index)
+			bibleId = languageRecord.DBP_EquivalentByIndex(index)
 			if bibleId != None:
 				bibleIdSet.add(bibleId)
 		if len(stockNumSet) > 1:
@@ -134,31 +134,31 @@ class PreValidate:
 			self.errorMessage(filesetId, "in %s has more than one DBP_Equivalent: %s" % (", ".join(stockNumSet), ", ".join(bibleIdSet)))
 
 		if len(mediaSet) > 0 and len(bibleIdSet) > 0:
-			return PreValidateResult(lptsRecord, filesetId, damId, list(mediaSet)[0], index)
+			return PreValidateResult(languageRecord, filesetId, damId, list(mediaSet)[0], index)
 		else:
 			return None
 
 	def validateLPTS(self, preValidateResult):
 		pre = preValidateResult
-		stockNumber = pre.lptsRecord.Reg_StockNumber()
-		if pre.lptsRecord.Copyrightc() == None:
+		stockNumber = pre.languageRecord.Reg_StockNumber()
+		if pre.languageRecord.Copyrightc() == None:
 			self.requiredFields(pre.filesetId, stockNumber, "Copyrightc")
-		if pre.typeCode in {"audio", "video"} and pre.lptsRecord.Copyrightp() == None:
+		if pre.typeCode in {"audio", "video"} and pre.languageRecord.Copyrightp() == None:
 			self.requiredFields(pre.filesetId, stockNumber, "Copyrightp")
-		if pre.typeCode == "video" and pre.lptsRecord.Copyright_Video() == None:
+		if pre.typeCode == "video" and pre.languageRecord.Copyright_Video() == None:
 			self.requiredFields(pre.filesetId, stockNumber, "Copyright_Video")
-		if pre.lptsRecord.ISO() == None:
+		if pre.languageRecord.ISO() == None:
 			self.requiredFields(pre.filesetId, stockNumber, "ISO")
-		if pre.lptsRecord.LangName() == None:
+		if pre.languageRecord.LangName() == None:
 			self.requiredFields(pre.filesetId, stockNumber, "LangName")
-		if pre.lptsRecord.Licensor() == None:
+		if pre.languageRecord.Licensor() == None:
 			self.requiredFields(pre.filesetId, stockNumber, "Licensor")
-		if pre.lptsRecord.Reg_StockNumber() == None:
+		if pre.languageRecord.Reg_StockNumber() == None:
 			self.requiredFields(pre.filesetId, stockNumber, "Reg_StockNumber")
-		if pre.lptsRecord.Volumne_Name() == None:
+		if pre.languageRecord.Volumne_Name() == None:
 			self.requiredFields(pre.filesetId, stockNumber, "Volumne_Name")
 
-		if pre.typeCode == "text" and pre.lptsRecord.Orthography(pre.index) == None:
+		if pre.typeCode == "text" and pre.languageRecord.Orthography(pre.index) == None:
 			fieldName = "_x003%d_Orthography" % (pre.index)
 			self.requiredFields(pre.filesetId, stockNumber, fieldName)
 
@@ -204,6 +204,7 @@ if (__name__ == "__main__"):
 	import boto3
 	from Config import *
 	from AWSSession import *
+	from LanguageReaderCreator import LanguageReaderCreator	
 
 	if len(sys.argv) < 2:
 		print("FATAL command line parameters: environment location prefix directoryName")
@@ -226,12 +227,11 @@ if (__name__ == "__main__"):
 	fullPath = prefix + "/" + directoryName
 
 	config = Config.shared()
-	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
+	languageReader = LanguageReaderCreator().create(config)
 	session = boto3.Session(profile_name = config.s3_aws_profile)
 	s3Client = session.client('s3')
 
-	preValidate = PreValidate(lptsReader, s3Client, location) ## removed UnicodeScript
-	#def validateDBPETL(s3Client, location, directoryName, fullPath):
+	preValidate = PreValidate(languageReader, s3Client, location) 
 	(resultList, messages) = preValidate.validateDBPETL(s3Client, location, directoryName, fullPath)
 	if (len(messages) > 0):
 		print ("validate failed: %s" % (messages))

@@ -16,7 +16,7 @@ from UnicodeScript import *
 class InputProcessor:
 
 	## parse command line, and return [InputFileset]
-	def commandLineProcessor(config, s3Client, lptsReader):
+	def commandLineProcessor(config, s3Client, languageReader):
 		if len(sys.argv) < 4:
 			print("FATAL command line parameters: config_profile  s3://bucket|localPath  path_list ")
 			sys.exit()
@@ -35,11 +35,11 @@ class InputProcessor:
 			directory = path.split("/")[-1]
 
 			# this call will return a list of PreValidateResult objects containing information on validated filesets
-			preValidate = PreValidate(lptsReader, s3Client, location)
+			preValidate = PreValidate(languageReader, s3Client, location)
 			(dataList, messages) = preValidate.validateDBPETL(s3Client, location, directory, path)
 			for data in dataList:
 				inp = InputFileset(config, location, data.filesetId, path, data.damId, 
-					data.typeCode, data.bibleId(), data.index, data.lptsRecord, data.fileList)
+					data.typeCode, data.bibleId(), data.index, data.languageRecord, data.fileList)
 				#print("INPUT", inp.toString())
 				results.append(inp)
 			if messages != None and len(messages) > 0:
@@ -64,7 +64,7 @@ class InputProcessor:
 		results.append(" damId=" + self.lptsDamId)
 		results.append(" stockNum=" + self.stockNum())
 		results.append(" index=" + str(self.index))
-		results.append(" script=" + str(self.lptsRecord.Orthography(self.index)) + "\n") #?? probably overcopied
+		results.append(" script=" + str(self.languageRecord.Orthography(self.index)) + "\n") #?? probably overcopied
 		results.append("filesetPrefix=" + self.filesetPrefix + "\n")
 		results.append("csvFilename=" + self.csvFilename + "\n") #?? probably overcopied
 		for file in self.files:
@@ -72,7 +72,7 @@ class InputProcessor:
 		return " ".join(results)
 
 	def stockNum(self):
-		return self.lptsRecord.Reg_StockNumber()
+		return self.languageRecord.Reg_StockNumber()
 
 	def fullPath(self):
 		if self.locationType == InputFileset.LOCAL:
@@ -83,11 +83,13 @@ class InputProcessor:
 
 
 if (__name__ == '__main__'):
+	from LanguageReader import *
+
 	config = Config()
 	session = boto3.Session(profile_name = config.s3_aws_profile)
 	s3Client = session.client('s3')
-	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
-	InputFileset.validate = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, lptsReader)
+	languageReader = LanguageReaderCreator().create(config)
+	InputFileset.validate = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
 	for inp in InputFileset.validate:
 		print("INPUT", inp.toString())		
 	Log.writeLog(config)

@@ -11,7 +11,6 @@ from Log import *
 from Config import *
 from SQLUtility import *
 from SQLBatchExec import *
-from LPTSExtractReader import *
 from AWSSession import *
 
 
@@ -35,7 +34,7 @@ class UpdateDBPBibleFilesSecondary:
 			source = "s3://%s/%s/" % (self.config.s3_bucket, inp.filesetPrefix)
 			zipFilename = "%s.zip" % (inp.filesetId,)
 			target = "s3://%s/%s/%s" % (self.config.s3_bucket, inp.filesetPrefix, zipFilename)
-			zipDirectory = self.getZipInternalDir(inp.lptsDamId, inp.lptsRecord)
+			zipDirectory = self.getZipInternalDir(inp.lptsDamId, inp.languageRecord)
 			fileTypes = ["mp3"]
 			data = { "source": source, "target": target, "directoryName": zipDirectory, "fileTypes": fileTypes }
 			print(data)
@@ -59,10 +58,10 @@ class UpdateDBPBibleFilesSecondary:
 				Log.getLogger(inp.filesetId).message(Log.EROR, "Failure in zip file creation %s" % (err,))
 
 
-	def getZipInternalDir(self, damId, lptsRecord):
-		langName = lptsRecord.LangName()
-		iso3 = lptsRecord.ISO()
-		stockNo = lptsRecord.Reg_StockNumber()
+	def getZipInternalDir(self, damId, languageRecord):
+		langName = languageRecord.LangName()
+		iso3 = languageRecord.ISO()
+		stockNo = languageRecord.Reg_StockNumber()
 		versionCode = stockNo[-3:] if stockNo != None else ""
 		scope = damId[6]
 		if scope == "N" or scope == "O":
@@ -96,6 +95,7 @@ class UpdateDBPBibleFilesSecondary:
 
 
 if (__name__ == '__main__'):
+	from LanguageReaderCreator import LanguageReaderCreator
 	from PreValidate import *
 	from InputFileset import *
 
@@ -110,7 +110,7 @@ if (__name__ == '__main__'):
 	dbOut = SQLBatchExec(config)
 	update = UpdateDBPBibleFilesSecondary(config, db, dbOut)
 	s3Client = AWSSession.shared().s3Client
-	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
+	languageReader = LanguageReaderCreator().create(config)
 
 	sql = ("SELECT c.bible_id, f.id, f.hash_id FROM bible_filesets f, bible_fileset_connections c"
 			" WHERE f.hash_id = c.hash_id AND set_type_code in ('audio', 'audio_drama') AND length(f.id) = 10"
@@ -120,7 +120,7 @@ if (__name__ == '__main__'):
 		print(bibleId, filesetId, hashId)
 		location = "s3://%s" % (config.s3_bucket,)
 		filesetPath = "audio/%s/%s" % (bibleId, filesetId)
-		(dataList, messages) = PreValidate.validateDBPETL(lptsReader, s3Client, location, filesetId, filesetPath)
+		(dataList, messages) = PreValidate.validateDBPELT(languageReader, s3Client, location, filesetId, filesetPath)
 		if messages != None and len(messages) > 0:
 			Log.addPreValidationErrors(messages)
 			#print(filesetPath, messages)
@@ -130,7 +130,7 @@ if (__name__ == '__main__'):
 			for data in dataList:
 				#print(data.toString())
 				inp = InputFileset(config, location, data.filesetId, filesetPath, data.damId, 
-								data.typeCode, data.bibleId(), data.index, data.lptsRecord)
+								data.typeCode, data.bibleId(), data.index, data.languageRecord)
 				#print(inp.toString())
 				if inp.zipFile() == None:
 					print("must create zip file")

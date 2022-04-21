@@ -1,7 +1,7 @@
 # PreValidateHandlerStub.py
 # This is a test stub intended to provide the same interface as the AWS Lambda Handler
 import boto3
-from LPTSExtractReader import *
+from LanguageReaderCreator import LanguageReaderCreator
 from PreValidate import *
 from UnicodeScript import *
 from Config import *
@@ -23,9 +23,9 @@ def handler(event, context):
 	 
     # print("Copying lpts-dbp.xml...")
     # s3Client.download_file(bucket, "lpts-dbp.xml", "/tmp/lpts-dbp.xml")  # commented out for efficiency
-    lptsReader = LPTSExtractReader("/tmp/lpts-dbp.xml")
+    languageReader = LanguageReaderCreator().createWithPath(config.filename_lpts_xml)
 
-    preValidate = PreValidate(lptsReader, s3Client, bucket) ## removed UnicodeScript
+    preValidate = PreValidate(languageReader, s3Client, bucket) ## removed UnicodeScript
     messages = preValidate.validateLambda(directory, filenames, stocknumbersContents)
     return messages
 #### end of copy

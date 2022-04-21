@@ -2,7 +2,7 @@
 
 
 from Config import *
-from LPTSExtractReader import *
+from LanguageReader import *
 from SQLUtility import *
 from SQLBatchExec import *
 
@@ -10,11 +10,11 @@ from SQLBatchExec import *
 class UpdateDBPAccessTable:
 
 
-	def __init__(self, config, db, dbOut, lptsReader):
+	def __init__(self, config, db, dbOut, languageReader):
 		self.config = config
 		self.db = db
 		self.dbOut = dbOut
-		self.lptsReader = lptsReader
+		self.languageReader = languageReader
 
 
 	##
@@ -46,9 +46,9 @@ class UpdateDBPAccessTable:
 				print("FATAL: Unknown typeCode % in fileset: %s, hashId: %s" % (typeCode, filesetId, hashId))
 				sys.exit()
 
-			(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecord(typeCode, bibleId, dbpFilesetId)
-			if lptsRecord != None:
-				lpts = lptsRecord.record
+			(languageRecord, lptsIndex) = self.languageReader.getLanguageRecord(typeCode, bibleId, dbpFilesetId)
+			if languageRecord != None:
+				lpts = languageRecord.record
 			else:
 				lpts = {}
 
@@ -59,9 +59,9 @@ class UpdateDBPAccessTable:
 				elif accessId == 102: # allow_text_OT_DBP
 					accessIdInLPTS = lpts.get(accessDesc) == "-1" and "OT" in setSizeCode
 				elif accessId == 181: # allow_text_DOWNLOAD
-					accessIdInLPTS = self._isPublicDomain(lptsRecord)
+					accessIdInLPTS = self._isPublicDomain(languageRecord)
 				elif accessId in {191, 193}: # allow_text_APP_OFFLINE and allow_audio_APP_OFFLINE
-					accessIdInLPTS = self._isSILOnly(lptsRecord) or self._isPublicDomain(lptsRecord)
+					accessIdInLPTS = self._isSILOnly(languageRecord) or self._isPublicDomain(languageRecord)
 				else:
 					accessIdInLPTS = lpts.get(accessDesc) == "-1"
 
@@ -86,9 +86,9 @@ class UpdateDBPAccessTable:
 	def _isPublicDomain(self, record):
 		if record != None:
 			pattern = re.compile(r"Public Domain", re.IGNORECASE)
-			if pattern.search(record.Licensor()):
+			if record.Licensor() != None and pattern.search(record.Licensor()):
 				return True
-			if pattern.search(record.Copyrightc()):
+			if record.Copyrightc() != None and pattern.search(record.Copyrightc()):
 				if len(record.Copyrightc()) < 20:
 					return True
 				else:
@@ -97,11 +97,13 @@ class UpdateDBPAccessTable:
 
 
 if (__name__ == '__main__'):
+	from LanguageReaderCreator import LanguageReaderCreator	
+
 	config = Config()
-	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
+	languageReader = LanguageReaderCreator().create(config)
 	db = SQLUtility(config)
 	dbOut = SQLBatchExec(config)
-	filesets = UpdateDBPAccessTable(config, db, dbOut, lptsReader)
+	filesets = UpdateDBPAccessTable(config, db, dbOut, languageReader)
 	sql = ("SELECT b.bible_id, bf.id, bf.set_type_code, bf.set_size_code, bf.asset_id, bf.hash_id"
 			" FROM bible_filesets bf JOIN bible_fileset_connections b ON bf.hash_id = b.hash_id"
 			" ORDER BY b.bible_id, bf.id, bf.set_type_code")

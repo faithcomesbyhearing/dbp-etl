@@ -10,8 +10,7 @@
 
 import os
 from Config import *
-from RunStatus import *
-from LPTSExtractReader import *
+from LanguageReader import *
 from Log import *
 from InputFileset import *
 from InputProcessor import *
@@ -27,10 +26,10 @@ from UpdateDBPBibleFilesSecondary import *
 
 class DBPLoadController:
 
-	def __init__(self, config, db, lptsReader):
+	def __init__(self, config, db, languageReader):
 		self.config = config
 		self.db = db
-		self.lptsReader = lptsReader
+		self.languageReader = languageReader
 		self.s3Utility = S3Utility(config)
 		self.stockNumRegex = re.compile("__[A-Z0-9]{8}")
 
@@ -59,7 +58,7 @@ class DBPLoadController:
 
 	def updateBibles(self):
 		dbOut = SQLBatchExec(self.config)
-		bibles = UpdateDBPBiblesTable(self.config, self.db, dbOut, self.lptsReader)
+		bibles = UpdateDBPBiblesTable(self.config, self.db, dbOut, self.languageReader)
 		bibles.process()
 		#dbOut.displayStatements()
 		dbOut.displayCounts()
@@ -95,7 +94,7 @@ class DBPLoadController:
 
 	def updateLPTSTables(self):
 		dbOut = SQLBatchExec(self.config)
-		lptsDBP = UpdateDBPLPTSTable(self.config, dbOut, self.lptsReader)
+		lptsDBP = UpdateDBPLPTSTable(self.config, dbOut, self.languageReader)
 		lptsDBP.process()
 		#dbOut.displayStatements()
 		dbOut.displayCounts()
@@ -105,13 +104,14 @@ class DBPLoadController:
 
 
 if (__name__ == '__main__'):
+	from LanguageReaderCreator import *
 	config = Config()
 	AWSSession.shared() # ensure AWSSession init
 	db = SQLUtility(config)
-	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
-	ctrl = DBPLoadController(config, db, lptsReader)
+	languageReader = LanguageReaderCreator().create(config)
+	ctrl = DBPLoadController(config, db, languageReader)
 	if len(sys.argv) != 2:
-		InputFileset.validate = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, lptsReader)
+		InputFileset.validate = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
 		ctrl.repairAudioFileNames(InputFileset.validate)
 		ctrl.validate(InputFileset.validate)
 		if ctrl.updateBibles():

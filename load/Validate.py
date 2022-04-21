@@ -41,7 +41,7 @@ class Validate:
 
 			if inp.typeCode == "text":
 				unicodeScript = UnicodeScript()
-				errors = unicodeScript.validateStockNoRecord(inp.lptsRecord, self.db)
+				errors = unicodeScript.validateStockNoRecord(inp.languageRecord, self.db)
 				for error in errors:
 					logger.message(Log.EROR, error)
 
@@ -54,7 +54,7 @@ class Validate:
 					filePath = inp.downloadFiles()
 				else:
 					filePath = inp.fullPath()
-				errorTuple = texts.validateFileset("text_plain", inp.bibleId, inp.filesetId, inp.lptsRecord, inp.index, filePath)
+				errorTuple = texts.validateFileset("text_plain", inp.bibleId, inp.filesetId, inp.languageRecord, inp.index, filePath)
 				if errorTuple != None:
 					logger = Log.getLogger(inp.filesetId)
 					logger.messageTuple(errorTuple)
@@ -112,23 +112,24 @@ class Validate:
 			logger = Log.getLogger(inp.filesetId)
 			if inp.typeCode == "text":
 
-				scriptName = inp.lptsRecord.Orthography(inp.index)
+				scriptName = inp.languageRecord.Orthography(inp.index)
 				if scriptName != None and scriptName not in self.scriptNameSet:
 					logger.invalidValues(inp.stockNum(), "_x003n_Orthography", scriptName)
 
-				numeralsName = inp.lptsRecord.Numerals()
+				numeralsName = inp.languageRecord.Numerals()
 				if numeralsName != None and numeralsName not in self.numeralsSet:
 					logger.invalidValues(inp.stockNum(), "Numerals", numeralsName)
 
 
 if (__name__ == '__main__'):
 	from DBPLoadController import *
-	from LPTSExtractReader import *
+	from LanguageReaderCreator import LanguageReaderCreator		
+	from LanguageReader import *
 	config = Config.shared()
 	db = SQLUtility(config)
-	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
-	filesets = InputFileset.filesetCommandLineParser(config, lptsReader)
-	ctrl = DBPLoadController(config, db, lptsReader)
+	languageReader = LanguageReaderCreator().create(config)
+	filesets = InputFileset.filesetCommandLineParser(config, languageReader)
+	ctrl = DBPLoadController(config, db, languageReader)
 	ctrl.validate(filesets)
 
 # Successful tests with source on s3

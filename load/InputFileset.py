@@ -14,7 +14,7 @@ from datetime import datetime
 from Log import *
 from Config import *
 from RunStatus import *
-from LPTSExtractReader import *
+from LanguageReader import *
 from SqliteUtility import *
 from PreValidate import *
 from AWSSession import *
@@ -55,7 +55,7 @@ class InputFileset:
 
 	
 
-	def __init__(self, config, location, filesetId, filesetPath, damId, typeCode, bibleId, index, lptsRecord, fileList = None):
+	def __init__(self, config, location, filesetId, filesetPath, damId, typeCode, bibleId, index, languageRecord, fileList = None):
 		self.config = config
 		if location.startswith("s3://"):
 			self.locationType = InputFileset.BUCKET
@@ -69,7 +69,7 @@ class InputFileset:
 		self.typeCode = typeCode
 		self.bibleId = bibleId
 		self.index = index
-		self.lptsRecord = lptsRecord
+		self.languageRecord = languageRecord
 		self.filesetPrefix = "%s/%s/%s" % (self.typeCode, self.bibleId, self.filesetId)
 		if self.typeCode == "text":
 			self.databasePath = "%s%s.db" % (config.directory_accepted, damId[:7] + "_" + damId[8:])
@@ -101,7 +101,7 @@ class InputFileset:
 		results.append(" damId=" + self.lptsDamId)
 		results.append(" stockNum=" + self.stockNum())
 		results.append(" index=" + str(self.index))
-		results.append(" script=" + str(self.lptsRecord.Orthography(self.index)) + "\n")
+		results.append(" script=" + str(self.languageRecord.Orthography(self.index)) + "\n")
 		results.append("filesetPrefix=" + self.filesetPrefix + "\n")
 		results.append("csvFilename=" + self.csvFilename + "\n")
 		for file in self.files:
@@ -212,7 +212,7 @@ class InputFileset:
 
 
 	def stockNum(self):
-		return self.lptsRecord.Reg_StockNumber()
+		return self.languageRecord.Reg_StockNumber()
 
 
 	def locationForS3(self):
@@ -347,13 +347,14 @@ class InputFileset:
 
 if (__name__ == '__main__'):
 	from InputProcessor import *	
+	from LanguageReaderCreator import LanguageReaderCreator
 
 	config = Config()
 	s3Client = AWSSession.shared().s3Client
 	session = boto3.Session(profile_name = config.s3_aws_profile)
 	s3Client = session.client('s3')
-	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
-	InputFileset.validate = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, lptsReader)
+	languageReader = LanguageReaderCreator().create(config)
+	InputFileset.validate = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
 	for inp in InputFileset.validate:
 		if inp.typeCode == "text" and inp.locationType == InputFileset.BUCKET:
 			inp.downloadFiles()

@@ -74,11 +74,14 @@ class S3Utility:
 
 if (__name__ == '__main__'):
 	from SQLUtility import *
+	from InputProcessor import *
 	from UpdateDBPTextFilesets import *
+	from LanguageReaderCreator import LanguageReaderCreator	
 
 	config = Config.shared()
-	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
-	filesets = InputFileset.filesetCommandLineParser(config, AWSSession.shared().s3Client, lptsReader)
+	languageReader = LanguageReaderCreator().create(config)
+	filesets = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
+
 	s3 = S3Utility(config)
 
 	db = SQLUtility(config)
@@ -90,7 +93,7 @@ if (__name__ == '__main__'):
 				filePath = inp.downloadFiles()
 			else:
 				filePath = inp.fullPath()
-			errorTuple = texts.validateFileset("text_plain", inp.bibleId, inp.filesetId, inp.lptsRecord, inp.index, filePath)
+			errorTuple = texts.validateFileset("text_plain", inp.bibleId, inp.filesetId, inp.languageRecord, inp.index, filePath)
 			if errorTuple != None:
 				logger = Log.getLogger(inp.filesetId)
 				logger.messageTuple(errorTuple)

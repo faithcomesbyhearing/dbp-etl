@@ -8,7 +8,7 @@ import re
 import sqlite3
 from Config import *
 from Log import *
-from LPTSExtractReader import *
+from LanguageReader import *
 from SQLUtility import *
 from SQLBatchExec import *
 from S3Utility import *
@@ -25,16 +25,16 @@ class UpdateDBPTextFilesets:
 
 
 	## This is called one fileset at a time by Validate.process
-	def validateFileset(self, subTypeCode, bibleId, filesetId, lptsRecord, lptsIndex, fullFilesetPath):
-		if lptsRecord == None or lptsIndex == None:
+	def validateFileset(self, subTypeCode, bibleId, filesetId, languageRecord, lptsIndex, fullFilesetPath):
+		if languageRecord == None or lptsIndex == None:
 			return((Log.EROR, "has no LPTS record."))
-		iso3 = lptsRecord.ISO()
+		iso3 = languageRecord.ISO()
 		if iso3 == None:
 			return((Log.EROR, "has no iso language code."))
 		iso1 = self.db.selectScalar("SELECT iso1 FROM languages WHERE iso = %s AND iso1 IS NOT NULL", (iso3,))
 		if iso1 == None:
 			iso1 = "null"
-		scriptName = lptsRecord.Orthography(lptsIndex)
+		scriptName = languageRecord.Orthography(lptsIndex)
 		if scriptName == None:
 			return((Log.EROR, "has no Orthography."))
 		scriptId = self.db.selectScalar("SELECT script_id FROM lpts_script_codes WHERE lpts_name = %s", (scriptName,))
@@ -66,7 +66,7 @@ class UpdateDBPTextFilesets:
 
 	def createTextFileset(self, inputFileset):
 		inp = inputFileset
-		textFileset = InputFileset(self.config, inp.location, self.newFilesetId, inp.filesetPath, inp.lptsDamId, inp.typeCode, inp.bibleId, inp.index, inp.lptsRecord)
+		textFileset = InputFileset(self.config, inp.location, self.newFilesetId, inp.filesetPath, inp.lptsDamId, inp.typeCode, inp.bibleId, inp.index, inp.languageRecord)
 		inp.numberUSXFileset(textFileset) 
 		return textFileset
 
@@ -164,15 +164,16 @@ class UpdateDBPTextFilesets:
 
 
 if (__name__ == '__main__'):
-	from LPTSExtractReader import *
+	from LanguageReaderCreator import LanguageReaderCreator
+	from LanguageReader import *
 	from InputFileset import *
 	from DBPLoadController import *
 
 	config = Config.shared()
-	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
-	filesets = InputFileset.filesetCommandLineParser(config, lptsReader)
+	languageReader = LanguageReaderCreator().create(config)
+	filesets = InputFileset.filesetCommandLineParser(config, languageReader)
 	db = SQLUtility(config)
-	ctrl = DBPLoadController(config, db, lptsReader)
+	ctrl = DBPLoadController(config, db, languageReader)
 	ctrl.validate(filesets)
 
 	dbOut = SQLBatchExec(config)

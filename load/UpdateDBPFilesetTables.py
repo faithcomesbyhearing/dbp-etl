@@ -289,15 +289,15 @@ class UpdateDBPFilesetTables:
 
 ## Unit Test
 if (__name__ == '__main__'):
-	from LPTSExtractReader import *
+	from LanguageReaderCreator import LanguageReaderCreator	
 	from InputFileset import *
 	from DBPLoadController import *
 
 	config = Config.shared()
-	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
-	filesets = InputFileset.filesetCommandLineParser(config, lptsReader)
+	languageReader = LanguageReaderCreator().create(config)
+	filesets = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
 	db = SQLUtility(config)
-	ctrl = DBPLoadController(config, db, lptsReader)
+	ctrl = DBPLoadController(config, db, languageReader)
 	ctrl.validate(filesets)
 
 	dbOut = SQLBatchExec(config)

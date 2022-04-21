@@ -7,9 +7,10 @@ import io
 import sys
 import os
 from xml.dom import minidom
+from LanguageReader import LanguageReaderInterface, LanguageRecordInterface
 
 
-class LPTSExtractReader:
+class LPTSExtractReader (LanguageReaderInterface):
 
 	def __init__(self, lptsExtractPath):
 		self.lptsExtractPath = lptsExtractPath
@@ -36,8 +37,8 @@ class LPTSExtractReader:
 							if fldNode.nodeType == 1:
 								#print(fldNode.nodeName + " = " + fldNode.firstChild.nodeValue)
 								resultRow[fldNode.nodeName] = fldNode.firstChild.nodeValue
-
-						self.resultSet.append(LPTSRecord(resultRow))
+						#print("\n\n\n *** creating an languageRecord object ***\n\n\n")
+						self.resultSet.append(LanguageRecord(resultRow))
 		self.checkRecordCount()
 		self.bibleIdMap = self.getBibleIdMap()
 		self.filesetIdMap = None
@@ -71,7 +72,7 @@ class LPTSExtractReader:
 		except FileNotFoundError:
 			print("Exception: first run of LPTS Reader -- did not find %s" % (filename))
 
-    ## Generates Map bibleId: [(index, LPTSRecord)], called by class init
+    ## Generates Map bibleId: [(index, languageRecord)], called by class init
 	def getBibleIdMap(self):
 		bibleIdMap = {}
 		for rec in self.resultSet:
@@ -111,11 +112,11 @@ class LPTSExtractReader:
 
 	## Returns one (record, index) for typeCode, bibleId, filesetId
 	## This is a strict method that only returns when BibleId matches and status is Live
-	def getLPTSRecord(self, typeCode, bibleId, filesetId):
+	def getLanguageRecord(self, typeCode, bibleId, filesetId):
 		normFilesetId = filesetId[:10]
-		lptsRecords = self.bibleIdMap.get(bibleId)
-		if lptsRecords != None:
-			for (index, record) in lptsRecords:
+		languageRecords = self.bibleIdMap.get(bibleId)
+		if languageRecords != None:
+			for (index, record) in languageRecords:
 				damIdSet = record.DamIds(typeCode, index)
 				if normFilesetId in damIdSet:
 					return (record, index)
@@ -126,8 +127,8 @@ class LPTSExtractReader:
 	## but in DBP it is 6 char, when searching LPTS the same text damid
 	## can be found in multiple record, but there is no way to know
 	## which is correct.
-	def getLPTSRecordLoose(self, typeCode, bibleId, filesetId):
-		result = self.getLPTSRecord(typeCode, bibleId, filesetId)
+	def getLanguageRecordLoose(self, typeCode, bibleId, filesetId):
+		result = self.getLanguageRecord(typeCode, bibleId, filesetId)
 		if result[0] != None:
 			return result
 		result = self.getFilesetRecords(filesetId)
@@ -142,14 +143,14 @@ class LPTSExtractReader:
 
 
 	## This method returns all LPTS records regardless of the status
-	## Otherwise it is exactly like getLPTSRecord
+	## Otherwise it is exactly like getLanguageRecord
 	## Return [(record, index)]
-	def getLPTSRecordsAll(self, typeCode, bibleId, filesetId):
+	def getLanguageRecordsAll(self, typeCode, bibleId, filesetId):
 		results = []
 		normFilesetId = filesetId[:10]
-		lptsRecords = self.bibleIdMap.get(bibleId)
-		if lptsRecords != None:
-			for (index, record) in lptsRecords:
+		languageRecords = self.bibleIdMap.get(bibleId)
+		if languageRecords != None:
+			for (index, record) in languageRecords:
 				damIdList = record.DamIdMap(typeCode, index)
 				if normFilesetId in damIdList:
 					#return(record, index)
@@ -160,19 +161,23 @@ class LPTSExtractReader:
 
 	## This is a more permissive way to get LPTS Records, it does not require
 	## a type or bibleId.  So, it can only be used for non-index fields
-	## It returns an array of statuses and records, i.e. [(status, lptsRecord)]
+	## It returns an array of statuses and records, i.e. [(status, languageRecord)]
 	def getFilesetRecords(self, filesetId):
 		if self.filesetIdMap == None:
 			self.filesetIdMap = {}
-			damIdDict = {**LPTSRecord.audio1DamIdDict,
-						**LPTSRecord.audio2DamIdDict,
-						**LPTSRecord.audio3DamIdDict,
-						**LPTSRecord.text1DamIdDict,
-						**LPTSRecord.text2DamIdDict,
-						**LPTSRecord.text3DamIdDict,
-						**LPTSRecord.videoDamIdDict}
-			for lptsRecord in self.resultSet:
-				record = lptsRecord.record
+
+
+			for languageRecord in self.resultSet:
+				record = languageRecord.record
+				damIdDict = dict(
+					list(LanguageRecord.audio1DamIdDict.items()) + 
+					list(LanguageRecord.audio2DamIdDict.items()) + 
+					list(LanguageRecord.audio3DamIdDict.items()) +
+					list(LanguageRecord.text1DamIdDict.items()) + 
+					list(LanguageRecord.text2DamIdDict.items()) + 
+					list(LanguageRecord.text3DamIdDict.items()) +
+					list(LanguageRecord.videoDamIdDict.items()) 
+					)
 				hasKeys = set(damIdDict.keys()).intersection(set(record.keys()))
 				for key in hasKeys:
 					statusKey = damIdDict[key]
@@ -181,13 +186,13 @@ class LPTSExtractReader:
 						damId = damId[:6]
 					status = record.get(statusKey)
 					statuses = self.filesetIdMap.get(damId, [])
-					statuses.append((status, lptsRecord))
+					statuses.append((status, languageRecord))
 					self.filesetIdMap[damId] = statuses
 					if "Text" in key: # Put in second key for Text filesets with underscore
 						damId = record[key]
 						damId = damId[:7] + "_" + damId[8:]
 						statuses = self.filesetIdMap.get(damId, [])
-						statuses.append((status, lptsRecord))
+						statuses.append((status, languageRecord))
 						self.filesetIdMap[damId] = statuses
 		return self.filesetIdMap.get(filesetId[:10], None)
 
@@ -195,26 +200,28 @@ class LPTSExtractReader:
 	## This method is different than getFilesetRecords in that it expects an entire 10 digit text filesetId
 	## It also removes excess characters for filesets and corrects for SA types.
 	## This method does not return the 1, 2, 3 index
-	## It returns an array of statuses and records, i.e. Set((lptsRecord, status, fieldName))
+	## It returns an array of statuses and records, i.e. Set((languageRecord, status, fieldName))
 	def getFilesetRecords10(self, filesetId):	
 		if self.filesetIdMap10 == None:
 			self.filesetIdMap10 = {}
-			damIdDict = {**LPTSRecord.audio1DamIdDict,
-						**LPTSRecord.audio2DamIdDict,
-						**LPTSRecord.audio3DamIdDict,
-						**LPTSRecord.text1DamIdDict,
-						**LPTSRecord.text2DamIdDict,
-						**LPTSRecord.text3DamIdDict,
-						**LPTSRecord.videoDamIdDict}
-			for lptsRecord in self.resultSet:
-				record = lptsRecord.record
+			damIdDict = dict(
+					list(LanguageRecord.audio1DamIdDict.items()) + 
+					list(LanguageRecord.audio2DamIdDict.items()) + 
+					list(LanguageRecord.audio3DamIdDict.items()) + 
+					list(LanguageRecord.text1DamIdDict.items()) + 
+					list(LanguageRecord.text2DamIdDict.items()) +
+					list(LanguageRecord.text3DamIdDict.items()) +
+					list(LanguageRecord.videoDamIdDict.items())
+					)
+			for languageRecord in self.resultSet:
+				record = languageRecord.record
 				hasKeys = set(damIdDict.keys()).intersection(set(record.keys()))
 				for key in hasKeys:
 					statusKey = damIdDict[key]
 					damId = record[key]
 					status = record.get(statusKey)
 					statuses = self.filesetIdMap10.get(damId, set())
-					statuses.add((lptsRecord, status, key))
+					statuses.add((languageRecord, status, key))
 					self.filesetIdMap10[damId] = statuses
 		damId = filesetId[:10]
 		if len(damId) == 10 and damId[-2:] == "SA":
@@ -258,7 +265,7 @@ class LPTSExtractReader:
 		return name.strip()
 
 
-class LPTSRecord:
+class LanguageRecord (LanguageRecordInterface):
 
 	audio1DamIdDict = {
 		"ND_CAudioDAMID1": 		"ND_CAudioDAMStatus",
@@ -336,20 +343,20 @@ class LPTSRecord:
 			sys.exit()
 		if typeCode == "audio":
 			if index == 1:
-				damIdDict = LPTSRecord.audio1DamIdDict
+				damIdDict = LanguageRecord.audio1DamIdDict
 			elif index == 2:
-				damIdDict = LPTSRecord.audio2DamIdDict
+				damIdDict = LanguageRecord.audio2DamIdDict
 			elif index == 3:
-				damIdDict = LPTSRecord.audio3DamIdDict
+				damIdDict = LanguageRecord.audio3DamIdDict
 		elif typeCode == "text":
 			if index == 1:
-				damIdDict = LPTSRecord.text1DamIdDict
+				damIdDict = LanguageRecord.text1DamIdDict
 			elif index == 2:
-				damIdDict = LPTSRecord.text2DamIdDict
+				damIdDict = LanguageRecord.text2DamIdDict
 			elif index == 3:
-				damIdDict = LPTSRecord.text3DamIdDict
+				damIdDict = LanguageRecord.text3DamIdDict
 		elif typeCode == "video":
-			damIdDict = LPTSRecord.videoDamIdDict
+			damIdDict = LanguageRecord.videoDamIdDict
 		else:
 			damIdDict = {}
 		hasKeys = set(damIdDict.keys()).intersection(set(self.record.keys()))
@@ -371,19 +378,24 @@ class LPTSRecord:
 
 	## This method is used to discover DamIds in a record when it is the stockNo that is known
 	## It returns a list of tuples (DamId, index, status, fieldName)
+	# BWF -part of LanguageRecord interface
 	def DamIdList(self, typeCode):
 		if not typeCode in {"audio", "text", "video"}:
 			print("ERROR: Unknown typeCode '%s', audio, text, or video is expected." % (typeCode))
 		if typeCode == "audio":
-			damIdDict = {**LPTSRecord.audio1DamIdDict,
-						**LPTSRecord.audio2DamIdDict,
-						**LPTSRecord.audio3DamIdDict}
+			damIdDict = dict(
+					list(LanguageRecord.audio1DamIdDict.items()) + 
+					list(LanguageRecord.audio2DamIdDict.items()) + 
+					list(LanguageRecord.audio3DamIdDict.items()) 
+					)						
 		elif typeCode == "text":
-			damIdDict = {**LPTSRecord.text1DamIdDict,
-						**LPTSRecord.text2DamIdDict,
-						**LPTSRecord.text3DamIdDict}
+			damIdDict = dict(
+					list(LanguageRecord.text1DamIdDict.items()) + 
+					list(LanguageRecord.text2DamIdDict.items()) + 
+					list(LanguageRecord.text3DamIdDict.items()) 
+					)						
 		elif typeCode == "video":
-			damIdDict = LPTSRecord.videoDamIdDict
+			damIdDict = LanguageRecord.videoDamIdDict
 		else:
 			damIdDict = {}
 		hasKeys = set(damIdDict.keys()).intersection(set(self.record.keys()))
@@ -403,6 +415,7 @@ class LPTSRecord:
 
 
 	## This method reduces text fileset tuples that are produced by DamIdList by removing the 8th char
+	## BWF - part of LanguageRecord interface. may be a common base class method
 	def ReduceTextList(self, damIdList):
 		damIdSet = set()
 		for (damId, index, status, fieldName) in damIdList:
@@ -717,14 +730,14 @@ class LPTSRecord:
 # Get listing of damIds, per stock no
 if __name__ == '__main__':
 	config = Config.shared()
-	reader = LPTSExtractReader(config.filename_lpts_xml)
-	for lptsRecord in reader.resultSet:
-		stockNo = lptsRecord.Reg_StockNumber()
+	reader = LanguageReaderCreator().create(config)
+	for languageRecord in reader.resultSet:
+		stockNo = languageRecord.Reg_StockNumber()
 		for typeCode in ["audio", "text", "video"]:
 			mediaDamIds = []
 			indexes = [1] if typeCode == "video" else [1,2,3]
 			for index in indexes:
-				damIds = lptsRecord.DamIdMap(typeCode, index)
+				damIds = languageRecord.DamIdMap(typeCode, index)
 				if len(damIds) > 0:
 					print(stockNo, typeCode, index, damIds.keys())
 """
@@ -735,8 +748,8 @@ if (__name__ == '__main__'):
 	fieldCount = {}
 	config = Config()
 	reader = LPTSExtractReader(config)
-	for lptsRecord in reader.resultSet:
-		record = lptsRecord.record
+	for languageRecord in reader.resultSet:
+		record = languageRecord.record
 		for fieldName in record.keys():
 			#print(fieldName)
 			count = fieldCount.get(fieldName, 0)
@@ -802,9 +815,10 @@ if (__name__ == '__main__'):
 
 if (__name__ == '__main__'):
 	from Config import *
+	from LanguageReaderCreator import *	
 	result = {}
 	config = Config()
-	reader = LPTSExtractReader(config.filename_lpts_xml)
+	reader = LanguageReaderCreator().create(config)
 	for rec in reader.resultSet:
 		textDamIds = rec.DamIdList("text")
 		textDamIds = rec.ReduceTextList(textDamIds)

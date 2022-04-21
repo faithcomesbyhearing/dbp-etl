@@ -13,17 +13,16 @@ import sys
 from Config import *
 from SQLUtility import *
 from SQLBatchExec import *
-from LPTSExtractReader import *
 
 
 class UpdateDBPBiblesTable:
 
 
-	def __init__(self, config, db, dbOut, lptsReader):
+	def __init__(self, config, db, dbOut, languageReader):
 		self.config = config
 		self.db = db
 		self.dbOut = dbOut
-		self.lptsReader = lptsReader
+		self.languageReader = languageReader
 		self.filesetConnectionSet = self.db.selectSet("SELECT distinct bible_id FROM bible_fileset_connections", ())
 		sql = ("SELECT l.iso, a.script_id FROM alphabet_language a"
 				" JOIN languages l ON a.language_id = l.id"
@@ -65,7 +64,7 @@ class UpdateDBPBiblesTable:
 			dbpBibleMap[row[0]] = row[1:]
 
 		## retrieve bibles from LPTS
-		lptsBibleMap = self.lptsReader.getBibleIdMap()
+		lptsBibleMap = self.languageReader.getBibleIdMap()
 		lptsBibleMap.pop("JESUS FILM", None) # delete JESUS FILM
 
 		for dbpBibleId in sorted(dbpBibleMap.keys()):
@@ -76,13 +75,13 @@ class UpdateDBPBiblesTable:
 					deleteRows.append(dbpBibleId)
 
 		for bibleId in sorted(lptsBibleMap.keys()):
-			lptsRecords = lptsBibleMap[bibleId]
-			languageId = self.biblesLanguageId(bibleId, lptsRecords)
-			#versification = self.biblesVersification(bibleId, lptsRecords)
-			script = self.biblesScript(bibleId, lptsRecords)
-			numerals = self.biblesNumeralId2(bibleId, lptsRecords)
-			scope = self.biblesSizeCode(bibleId, lptsRecords)
-			copyright = self.bibleTextCopyright(bibleId, lptsRecords)
+			languageRecords = lptsBibleMap[bibleId]
+			languageId = self.biblesLanguageId(bibleId, languageRecords)
+			#versification = self.biblesVersification(bibleId, languageRecords)
+			script = self.biblesScript(bibleId, languageRecords)
+			numerals = self.biblesNumeralId2(bibleId, languageRecords)
+			scope = self.biblesSizeCode(bibleId, languageRecords)
+			copyright = self.bibleTextCopyright(bibleId, languageRecords)
 			date = self.biblesDate(copyright)
 
 			if bibleId not in dbpBibleMap.keys():
@@ -116,30 +115,30 @@ class UpdateDBPBiblesTable:
 		self.dbOut.delete(tableName, pkeyNames, deleteRows)
 
 
-	def biblesLanguageId(self, bibleId, lptsRecords):
+	def biblesLanguageId(self, bibleId, languageRecords):
 		final = set()
-		for (lptsIndex, lptsRecord) in lptsRecords:
-			iso = lptsRecord.ISO()
+		for (lptsIndex, languageRecord) in languageRecords:
+			iso = languageRecord.ISO()
 			iso = iso.lower() if iso != None else None
-			langName = lptsRecord.LangName()
+			langName = languageRecord.LangName()
 			langName = langName.lower() if langName != None else None
 			result = self.languageMap1.get((iso, langName))
 			#print("languageMap1", bibleId, iso, langName, result)
 			if result != None:
 				final.add(result)
 		if len(final) == 0:
-			for (lptsIndex, lptsRecord) in lptsRecords:
-				iso = lptsRecord.ISO()
+			for (lptsIndex, languageRecord) in languageRecords:
+				iso = languageRecord.ISO()
 				iso = iso.lower() if iso != None else None
-				langName = lptsRecord.LangName()
+				langName = languageRecord.LangName()
 				langName = langName.lower() if langName != None else None
 				result = self.languageMap2.get((iso, langName))
 				#print("languageMap2", bibleId, iso, langName, result)
 				if result != None:
 					final.add(result)
 		if len(final) == 0:
-			for (lptsIndex, lptsRecord) in lptsRecords:
-				iso = lptsRecord.ISO()
+			for (lptsIndex, languageRecord) in languageRecords:
+				iso = languageRecord.ISO()
 				iso = iso.lower() if iso != None else None
 				result = self.languageMap3.get(iso)
 				#print("languageMap3", bibleId, iso, result)
@@ -153,10 +152,10 @@ class UpdateDBPBiblesTable:
 		return list(final)[0]
 
 
-	def biblesScript(self, bibleId, lptsRecords):
+	def biblesScript(self, bibleId, languageRecords):
 		final = set()
-		for (lptsIndex, lptsRecord) in lptsRecords:
-			script = lptsRecord.Orthography(lptsIndex)
+		for (lptsIndex, languageRecord) in languageRecords:
+			script = languageRecord.Orthography(lptsIndex)
 			if script != None:
 				result = self.scriptNameMap.get(script)
 				if result != None:
@@ -164,8 +163,8 @@ class UpdateDBPBiblesTable:
 				else:
 					print("ERROR_05 unknown script_id for name %s in bible_id %s" % (script, bibleId))
 		if len(final) == 0:
-			for (lptsIndex, lptsRecord) in lptsRecords:
-				result = self.scriptCodeMap.get(lptsRecord.ISO())
+			for (lptsIndex, languageRecord) in languageRecords:
+				result = self.scriptCodeMap.get(languageRecord.ISO())
 				if result != None:
 					final.add(result)
 		if len(final) == 0:
@@ -182,10 +181,10 @@ class UpdateDBPBiblesTable:
 				return list(final)[0]
 
 
-	def biblesNumeralId2(self, bibleId, lptsRecords):
+	def biblesNumeralId2(self, bibleId, languageRecords):
 		final = set()
-		for (lptsIndex, lptsRecord) in lptsRecords:
-			numerals = lptsRecord.Numerals()
+		for (lptsIndex, languageRecord) in languageRecords:
+			numerals = languageRecord.Numerals()
 			if numerals != None:
 				numerals = numerals.strip().lower().replace(" ", "-")
 				if numerals == "latin":
@@ -195,7 +194,7 @@ class UpdateDBPBiblesTable:
 				elif numerals == "arabic-/-khmer":
 					numerals = "khmer"
 				if numerals not in self.numeralIdSet:
-					print("ERROR_03 Unknown Numeral System '%s' for %s" % (numerals, lptsRecord.Reg_StockNumber()))
+					print("ERROR_03 Unknown Numeral System '%s' for %s" % (numerals, languageRecord.Reg_StockNumber()))
 				final.add(numerals)
 		if len(final) == 0:
 			return None
@@ -213,11 +212,11 @@ class UpdateDBPBiblesTable:
 			return None
 
 
-	def biblesSizeCode(self, bibleId, lptsRecords):
+	def biblesSizeCode(self, bibleId, languageRecords):
 		final = set()
-		for (lptsIndex, lptsRecord) in lptsRecords:
+		for (lptsIndex, languageRecord) in languageRecords:
 			for typeCode in ["audio", "text", "video"]:
-				damIds = lptsRecord.DamIdMap(typeCode, lptsIndex)
+				damIds = languageRecord.DamIdMap(typeCode, lptsIndex)
 				for damId in damIds.keys():
 					sizeCodes = self.sizeCodeMap.get(damId, [])
 					for sizeCode in sizeCodes:
@@ -259,10 +258,10 @@ class UpdateDBPBiblesTable:
 			return result
 
 
-	def bibleTextCopyright(self, bibleId, lptsRecords):
+	def bibleTextCopyright(self, bibleId, languageRecords):
 		final = set()
-		for (lptsIndex, lptsRecord) in lptsRecords:
-			copyright = lptsRecord.Copyrightc()
+		for (lptsIndex, languageRecord) in languageRecords:
+			copyright = languageRecord.Copyrightc()
 			if copyright != None:
 				if "©" in copyright:
 					pos = copyright.index("©")
@@ -323,11 +322,14 @@ class UpdateDBPBiblesTable:
 
 ## Unit Test
 if (__name__ == '__main__'):
+	from LanguageReader import *
+	from LanguageReaderCreator import LanguageReaderCreator
+
 	config = Config()
 	db = SQLUtility(config)
 	dbOut = SQLBatchExec(config)
-	lptsReader = LPTSExtractReader(config)
-	bibles = UpdateDBPBiblesTable(config, db, dbOut, lptsReader)
+	languageReader = LanguageReaderCreator().create(config)
+	bibles = UpdateDBPBiblesTable(config, db, dbOut, languageReader)
 	bibles.process()
 	db.close()
 
