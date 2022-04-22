@@ -328,7 +328,7 @@ if (__name__ == '__main__'):
 	config = Config()
 	db = SQLUtility(config)
 	dbOut = SQLBatchExec(config)
-	languageReader = LanguageReaderCreator().create(config)
+	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
 	bibles = UpdateDBPBiblesTable(config, db, dbOut, languageReader)
 	bibles.process()
 	db.close()

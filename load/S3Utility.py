@@ -79,7 +79,7 @@ if (__name__ == '__main__'):
 	from LanguageReaderCreator import LanguageReaderCreator	
 
 	config = Config.shared()
-	languageReader = LanguageReaderCreator().create(config)
+	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
 	filesets = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
 
 	s3 = S3Utility(config)

@@ -160,7 +160,7 @@ class AWSTranscoder:
 
 if (__name__ == '__main__'):
 	config = Config.shared()
-	languageReader = LanguageReaderCreator().create(config)
+	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
 	inpFilesets = InputFileset.filesetCommandLineParser(config, languageReader)
 	inpFileset = inpFilesets[0]
 	transcoder = AWSTranscoder(config)

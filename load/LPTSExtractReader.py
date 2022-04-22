@@ -818,7 +818,7 @@ if (__name__ == '__main__'):
 	from LanguageReaderCreator import *	
 	result = {}
 	config = Config()
-	reader = LanguageReaderCreator().create(config)
+	reader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
 	for rec in reader.resultSet:
 		textDamIds = rec.DamIdList("text")
 		textDamIds = rec.ReduceTextList(textDamIds)

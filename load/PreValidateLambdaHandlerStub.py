@@ -8,6 +8,7 @@ from Config import *
 
 ### copied from lambda/prevalidate/Handler.py, except for s3Client
 def handler(event, context):
+    migration_stage = event["DATA_MODEL_MIGRATION_STAGE"] # Should be "B" or "C"
     directory = event["prefix"] # can be filesetId or lang_stockno_USX
     filenames = event["files"] # Should be object keys
 
@@ -23,7 +24,7 @@ def handler(event, context):
 	 
     # print("Copying lpts-dbp.xml...")
     # s3Client.download_file(bucket, "lpts-dbp.xml", "/tmp/lpts-dbp.xml")  # commented out for efficiency
-    languageReader = LanguageReaderCreator().createWithPath(config.filename_lpts_xml)
+    languageReader = LanguageReaderCreator(migration_stage).create(config.filename_lpts_xml)
 
     preValidate = PreValidate(languageReader, s3Client, bucket) ## removed UnicodeScript
     messages = preValidate.validateLambda(directory, filenames, stocknumbersContents)
@@ -53,12 +54,14 @@ if (__name__ == '__main__'):
     textPrefix_withFile = "Kannada_N1 & O1 KANDPI_USX"
     textOTStockNumber = "O1KANDPI"
     textOTEvent_withFile = {
+        "DATA_MODEL_MIGRATION_STAGE": "B",
         "prefix": textPrefix_withFile,
         "files": textOTFiles,
         "stocknumbers": textOTStockNumber
     }
     # textOTEvent_withFile_Fail
     textOTEvent_withFile_Fail = {
+        "DATA_MODEL_MIGRATION_STAGE": "B",
         "prefix": textPrefix_withFile,
         "files": textOTFiles,
         "stocknumbers": textOTStockNumber+"foo"
@@ -66,6 +69,7 @@ if (__name__ == '__main__'):
     # textNTEvent_withFile
     textNTStockNumber = "N1KANDPI"
     textNTEvent_withFile = {
+        "DATA_MODEL_MIGRATION_STAGE": "B",
         "prefix": textPrefix_withFile,
         "files": textNTFiles,
         "stocknumbers": textNTStockNumber
@@ -73,12 +77,14 @@ if (__name__ == '__main__'):
     # textNTEvent_withFile_Fail
     textNTStockNumber = "N1KANDPI"
     textNTEvent_withFile_Fail = {
+        "DATA_MODEL_MIGRATION_STAGE": "B",
         "prefix": textPrefix_withFile,
         "files": textNTFiles,
         "stocknumbers": textNTStockNumber+"foo"
     } 
     # textBOTHEvent_withFile
     textBOTHEvent_withFile = {
+        "DATA_MODEL_MIGRATION_STAGE": "B",
         "prefix": textPrefix_withFile,
         "files": textOTFiles + textNTFiles,
         "stocknumbers": textOTStockNumber + "\r"+textNTStockNumber
@@ -88,6 +94,7 @@ if (__name__ == '__main__'):
     # textNTEvent_withoutFile (note: this event is contrived - the files do not match the stocknumber. just fyi)
     textPrefixNT_withoutFile = "Abidji_N2ABIWBT_USX" # this configuration is contrived
     textNTEvent_withoutFile = {
+        "DATA_MODEL_MIGRATION_STAGE": "B",
         "prefix": textPrefixNT_withoutFile,
         "files": textNTFiles,
         "stocknumbers": ""
@@ -97,6 +104,7 @@ if (__name__ == '__main__'):
     audioPrefix = "ENGESVN1DA"
     audioFiles = ""
     audioEvent = {
+        "DATA_MODEL_MIGRATION_STAGE": "B",
         "prefix": audioPrefix,
         "files": audioFiles,
         "stocknumbers": ""
@@ -105,6 +113,7 @@ if (__name__ == '__main__'):
     audioPrefix = "foo4567890"
     audioFiles = ""
     audioEvent_Fail = {
+        "DATA_MODEL_MIGRATION_STAGE": "B",
         "prefix": audioPrefix,
         "files": audioFiles,
         "stocknumbers": ""

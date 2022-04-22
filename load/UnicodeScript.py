@@ -161,7 +161,7 @@ if (__name__ == '__main__'):
 	config = Config.shared()
 	db = SQLUtility(config)
 	s3Client = AWSSession.shared().s3Client
-	languageReader = LanguageReaderCreator().create(config)
+	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
 	unicodeScript = UnicodeScript()
 	setTypeCode = 'text_plain'
 	#setTypeCode = 'text_format'

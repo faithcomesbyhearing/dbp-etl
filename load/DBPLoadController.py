@@ -108,7 +108,7 @@ if (__name__ == '__main__'):
 	config = Config()
 	AWSSession.shared() # ensure AWSSession init
 	db = SQLUtility(config)
-	languageReader = LanguageReaderCreator().create(config)
+	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
 	ctrl = DBPLoadController(config, db, languageReader)
 	if len(sys.argv) != 2:
 		InputFileset.validate = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)

@@ -75,7 +75,7 @@ if (__name__ == '__main__'):
 	config = Config()
 	db = SQLUtility(config)
 	dbOut = SQLBatchExec(config)
-	languageReader = LanguageReaderCreator().create(config)
+	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
 	bibles = UpdateDBPBibleTranslations(config, db, dbOut, languageReader)
 	bibles.insertEngVolumeName()
 	db.close()

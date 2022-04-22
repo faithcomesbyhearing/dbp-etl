@@ -110,7 +110,7 @@ if (__name__ == '__main__'):
 	dbOut = SQLBatchExec(config)
 	update = UpdateDBPBibleFilesSecondary(config, db, dbOut)
 	s3Client = AWSSession.shared().s3Client
-	languageReader = LanguageReaderCreator().create(config)
+	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
 
 	sql = ("SELECT c.bible_id, f.id, f.hash_id FROM bible_filesets f, bible_fileset_connections c"
 			" WHERE f.hash_id = c.hash_id AND set_type_code in ('audio', 'audio_drama') AND length(f.id) = 10"
