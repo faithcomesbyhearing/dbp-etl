@@ -9,6 +9,11 @@ from SQLBatchExec import *
 
 class UpdateDBPAccessTable:
 
+	PERMISSION_PARTNER_USE_ONLY = 3
+	PERMISSION_NEEDS_PRE_APPROVAL = 2
+	PERMISSION_NOT_OFFERING = 1
+	PERMISSION_NOT_LICENSED = 0 
+	PERMISSION_LICENSED = -1
 
 	def __init__(self, config, db, dbOut, languageReader):
 		self.config = config
@@ -52,10 +57,12 @@ class UpdateDBPAccessTable:
 			else:
 				lpts = {}
 
+
+
 			for (accessId, accessName, accessDesc) in accessTypes:
 				accessIdInDBP = accessId in dbpAccessSet;
 				if accessId == 101: # allow_text_NT_DBP
-					accessIdInLPTS = lpts.get(accessDesc) == "-1" and "NT" in setSizeCode
+					accessIdInLPTS = lpts.get(accessDesc) == self.PERMISSION_LICENSED and "NT" in setSizeCode
 				elif accessId == 102: # allow_text_OT_DBP
 					accessIdInLPTS = lpts.get(accessDesc) == "-1" and "OT" in setSizeCode
 				elif accessId == 181: # allow_text_DOWNLOAD
