@@ -1,27 +1,28 @@
-import os
 from LPTSExtractReader import LPTSExtractReader
 from StageCLanguageReader import *
 
 
 class LanguageReaderCreator:
-    # for backward compat on Stage B only    
-    def createWithPath(self, path):
-        return LPTSExtractReader(path)
 
-    def create(self, config):
-        stage = os.environ.get('DATA_MODEL_MIGRATION_STAGE', "B")   
-        print("migration stage: [%s]" % stage)
+    def __init__(self, stage = "B"):
+        self.stage = stage
+    
 
-        if (stage == "B"):
-            return LPTSExtractReader(config.filename_lpts_xml)
-        elif (stage == "C"):
+    def create(self, lpts_xml_path = None):
+        print("migration stage: [%s]" % self.stage)
+
+        if (self.stage == "B"):
+            return LPTSExtractReader(lpts_xml_path)
+        elif (self.stage == "C"):
             return StageCLanguageReader()
         else:
-            print ("unrecognized stage: ", stage)
+            print ("unrecognized stage: ", self.stage)
 
 
 if (__name__ == '__main__'):
-    from Config import *
-    # export DATA_MODEL_MIGRATION_STAGE="C"
-    languageReader = LanguageReaderCreator().create(Config())
+    from Config import *    
+    languageReader = LanguageReaderCreator("B").create(Config().filename_lpts_xml)
+    #languageReader = LanguageReaderCreator("C").create()
     languageReader.getByStockNumber("abd")
+
+# python3 load/LanguageReaderCreator.py test

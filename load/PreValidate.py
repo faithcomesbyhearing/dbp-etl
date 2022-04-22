@@ -227,7 +227,7 @@ if (__name__ == "__main__"):
 	fullPath = prefix + "/" + directoryName
 
 	config = Config.shared()
-	languageReader = LanguageReaderCreator().create(config)
+	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
 	session = boto3.Session(profile_name = config.s3_aws_profile)
 	s3Client = session.client('s3')
 

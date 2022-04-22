@@ -328,7 +328,7 @@ class UpdateDBPLPTSTable:
 
 if (__name__ == '__main__'):
 	config = Config()
-	languageReader = LanguageReaderCreator().create(config)
+	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
 	dbOut = SQLBatchExec(config)
 	filesets = UpdateDBPLPTSTable(config, dbOut, languageReader)
 	filesets.process()

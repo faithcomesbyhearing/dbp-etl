@@ -100,7 +100,7 @@ if (__name__ == '__main__'):
 	from LanguageReaderCreator import LanguageReaderCreator	
 
 	config = Config()
-	languageReader = LanguageReaderCreator().create(config)
+	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
 	db = SQLUtility(config)
 	dbOut = SQLBatchExec(config)
 	filesets = UpdateDBPAccessTable(config, db, dbOut, languageReader)

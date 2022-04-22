@@ -117,7 +117,7 @@ class CompleteCheck:
 		resultSet = self.db.select("SELECT id, hash_id FROM bible_filesets WHERE hidden = 0 and hash_id NOT IN" +
 			" (SELECT hash_id FROM access_group_filesets) ORDER BY id", ())
 
-		languageReader = LanguageReaderCreator().create(config)
+		languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
 
 		finalResultSet = []
 		for fileset in resultSet:
@@ -318,7 +318,7 @@ if (__name__ == '__main__'):
 	else:
 		print("Usage: python3 load/CompleteCheck.py  config_profile  full|fast|restart")
 		sys.exit()
-	languageReader = LanguageReaderCreator().create(config)
+	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
 	db = SQLUtility(config)
 	check = CompleteCheck(config, db, languageReader)
 	check.totalLanguageCount()

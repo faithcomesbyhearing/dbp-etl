@@ -127,7 +127,7 @@ if (__name__ == '__main__'):
 	from LanguageReader import *
 	config = Config.shared()
 	db = SQLUtility(config)
-	languageReader = LanguageReaderCreator().create(config)
+	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
 	filesets = InputFileset.filesetCommandLineParser(config, languageReader)
 	ctrl = DBPLoadController(config, db, languageReader)
 	ctrl.validate(filesets)
