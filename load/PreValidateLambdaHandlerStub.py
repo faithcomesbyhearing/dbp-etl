@@ -8,22 +8,25 @@ from Config import *
 
 ### copied from lambda/prevalidate/Handler.py, except for s3Client
 def handler(event, context):
-    migration_stage = event["DATA_MODEL_MIGRATION_STAGE"] # Should be "B" or "C"
+
+
+    bucket    = os.getenv("UPLOAD_BUCKET")
+    migration_stage = os.getenv("DATA_MODEL_MIGRATION_STAGE") # Should be "B" or "C"
+
     directory = event["prefix"] # can be filesetId or lang_stockno_USX
     filenames = event["files"] # Should be object keys
-
     # Should be a string if user has uploaded a file.
     # e.g. "N1KANDPI\r\nO1KANDPI"
     # each stocknumber will be separated by a line break.
     stocknumbersContents = event["stocknumbers"]
-    bucket    = os.getenv("UPLOAD_BUCKET")
 
     # session = boto3.Session() # this is in prod handler since the lambda has only one session profile 
+    config = Config.shared()
     session = boto3.Session(profile_name = config.s3_aws_profile)    
     s3Client = session.client("s3")
 	 
     # print("Copying lpts-dbp.xml...")
-    # s3Client.download_file(bucket, "lpts-dbp.xml", "/tmp/lpts-dbp.xml")  # commented out for efficiency
+    # s3Client.download_file(bucket, "lpts-dbp.xml", "/tmp/lpts-dbp.xml")  # commented out for efficiency during testing
     languageReader = LanguageReaderCreator(migration_stage).create(config.filename_lpts_xml)
 
     preValidate = PreValidate(languageReader, s3Client, bucket) ## removed UnicodeScript
@@ -34,15 +37,9 @@ def handler(event, context):
 
 if (__name__ == '__main__'):
 
-    config = Config.shared()
     os.environ["UPLOAD_BUCKET"] = "dbp-etl-upload-dev-ya1mbvdty8tlq15r"
+    os.environ["DATA_MODEL_MIGRATION_STAGE"] = "B"
 
-    #  typical event object{
-    #   "prefix": "Kondaporja_P1KFCWFW_USX",
-    #   "files": [
-    #     "041MRK.usx"
-    #   ]
-    # }
     # general
     textOTFiles = ["xxxGEN.usx", "xxxEXO.usx", "xxxLEV.usx", "xxxNUM.usx", "xxxDEU.usx", "xxxJOS.usx", "xxxJDG.usx", "xxxRUT.usx", "xxx1SA.usx", "xxx2SA.usx", "xxx1KI.usx", "xxx2KI.usx", "xxx1CH.usx", "xxx2CH.usx", 
 			   "xxxEZR.usx", "xxxNEH.usx", "xxxEST.usx", "xxxJOB.usx", "xxxPSA.usx", "xxxPRO.usx", "xxxECC.usx", "xxxSNG.usx", "xxxISA.usx", "xxxJER.usx", "xxxLAM.usx", "xxxEZK.usx", "xxxDAN.usx", "xxxHOS.usx", 
@@ -54,14 +51,12 @@ if (__name__ == '__main__'):
     textPrefix_withFile = "Kannada_N1 & O1 KANDPI_USX"
     textOTStockNumber = "O1KANDPI"
     textOTEvent_withFile = {
-        "DATA_MODEL_MIGRATION_STAGE": "B",
         "prefix": textPrefix_withFile,
         "files": textOTFiles,
         "stocknumbers": textOTStockNumber
     }
     # textOTEvent_withFile_Fail
     textOTEvent_withFile_Fail = {
-        "DATA_MODEL_MIGRATION_STAGE": "B",
         "prefix": textPrefix_withFile,
         "files": textOTFiles,
         "stocknumbers": textOTStockNumber+"foo"
@@ -69,7 +64,6 @@ if (__name__ == '__main__'):
     # textNTEvent_withFile
     textNTStockNumber = "N1KANDPI"
     textNTEvent_withFile = {
-        "DATA_MODEL_MIGRATION_STAGE": "B",
         "prefix": textPrefix_withFile,
         "files": textNTFiles,
         "stocknumbers": textNTStockNumber
@@ -77,14 +71,12 @@ if (__name__ == '__main__'):
     # textNTEvent_withFile_Fail
     textNTStockNumber = "N1KANDPI"
     textNTEvent_withFile_Fail = {
-        "DATA_MODEL_MIGRATION_STAGE": "B",
         "prefix": textPrefix_withFile,
         "files": textNTFiles,
         "stocknumbers": textNTStockNumber+"foo"
     } 
     # textBOTHEvent_withFile
     textBOTHEvent_withFile = {
-        "DATA_MODEL_MIGRATION_STAGE": "B",
         "prefix": textPrefix_withFile,
         "files": textOTFiles + textNTFiles,
         "stocknumbers": textOTStockNumber + "\r"+textNTStockNumber
@@ -94,7 +86,6 @@ if (__name__ == '__main__'):
     # textNTEvent_withoutFile (note: this event is contrived - the files do not match the stocknumber. just fyi)
     textPrefixNT_withoutFile = "Abidji_N2ABIWBT_USX" # this configuration is contrived
     textNTEvent_withoutFile = {
-        "DATA_MODEL_MIGRATION_STAGE": "B",
         "prefix": textPrefixNT_withoutFile,
         "files": textNTFiles,
         "stocknumbers": ""
@@ -104,7 +95,6 @@ if (__name__ == '__main__'):
     audioPrefix = "ENGESVN1DA"
     audioFiles = ""
     audioEvent = {
-        "DATA_MODEL_MIGRATION_STAGE": "B",
         "prefix": audioPrefix,
         "files": audioFiles,
         "stocknumbers": ""
@@ -113,7 +103,6 @@ if (__name__ == '__main__'):
     audioPrefix = "foo4567890"
     audioFiles = ""
     audioEvent_Fail = {
-        "DATA_MODEL_MIGRATION_STAGE": "B",
         "prefix": audioPrefix,
         "files": audioFiles,
         "stocknumbers": ""
