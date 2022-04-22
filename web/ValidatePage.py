@@ -74,7 +74,9 @@ class ValidatePage:
 			
 	def getBibleId(self, filesetId):
 		resultSet = self.query("SELECT bible_id FROM bibles_view WHERE fileset_id = %s", (filesetId))
-		return resultSet[0]
+		bibleId = resultSet[0][0]
+		#print("filesetId [%s] yields bibleId [%s]" % (filesetId, bibleId))
+		return bibleId
 
 	def getHashIds(self, filesetId):
 		resultSet = self.query("SELECT hash_id FROM bible_filesets WHERE id = %s", (filesetId))
