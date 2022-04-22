@@ -33,18 +33,6 @@ class OutputHTML:
 			"}",
 			"-->",
 			"</style>" ]
-		form = [ '<form action="sample.html">',
-			'<p><input type="radio" name="ident" value="bibleid" checked>BibleId</input>',
-			'<input type="radio" name="ident" value="filesetid">FilesetId</input>',
-			'<input type="text" name="type" /></p>',
-			'<p><br/><label>Detail:</label>',
-			'<input type="radio" name="detail" value="no" checked>No</input>',
-			'<input type="radio" name="detail" value="yes">Yes</input></p>',
-			'<p><br/><label>Output:</label>',
-			'<input type="radio" name="output" value="html" checked>HTML</input>',
-			'<input type="radio" name="output" value="json">JSON</input></p>',
-			'<p><br/><input type="submit"></p>',
-			'</form>' ]
 
 		self.output = []
 		self.output.append("<html>\n")
@@ -52,7 +40,6 @@ class OutputHTML:
 		self.output.append("\n".join(styles))
 		self.output.append("</head>\n")
 		self.output.append("<body>\n")
-		self.output.append("\n".join(form))
 		
 		
 	def title(self, level, text):
@@ -118,7 +105,6 @@ class OutputHTML:
 
 if __name__ == "__main__":
 	html = OutputHTML()
-	#html.title(1, "What?")
 	html.table("caption", ["col1", "col2", "col3"], [[1, 2, 3], ["a", "b", "c"]])
 	html.table("caption2", ["col4", "col5", "col6"], [[1, 2, 3], ["a", "b", "c"]])
 	html.close()

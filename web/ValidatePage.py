@@ -70,14 +70,14 @@ class ValidatePage:
 			self.conn.close()
 			self.conn = None
 		self.output.file(tempfile.gettempdir() + "/sample.html")
-		# print("file written to %s" % (tempfile.gettempdir() + "/sample.html"))
+		print("file written to %s" % (tempfile.gettempdir() + "/sample.html"))
 			
-		
-	def getHashIds(self, bibleId, filesetId):
-		if bibleId != None:
-			resultSet = self.query("SELECT hash_id FROM bible_fileset_connections WHERE bible_id = %s",  (bibleId))
-		else:
-			resultSet = self.query("SELECT hash_id FROM bible_filesets WHERE id = %s", (filesetId))
+	def getBibleId(self, filesetId):
+		resultSet = self.query("SELECT bible_id FROM bibles_view WHERE fileset_id = %s", (filesetId))
+		return resultSet[0]
+
+	def getHashIds(self, filesetId):
+		resultSet = self.query("SELECT hash_id FROM bible_filesets WHERE id = %s", (filesetId))
 		results = []
 		for row in resultSet:
 			results.append(row[0])
@@ -85,18 +85,15 @@ class ValidatePage:
 		print(hashIdList)
 		return hashIdList
 		
-	
-	def process(self, bibleId, hashIdList):	
+	def process(self, filesetId):	
+		bibleId = self.getBibleId(filesetId)
+		hashIdList = self.getHashIds(filesetId)
+
 		self.displayQuery("Bibles", 
 			["bible_id", "language_id", "versification", "numeral_system_id", "date", "scope", "script", "derived", "copyright", "priority", "reviewed", 
 			"notes", "created_at", "updated_at"],
 			("SELECT id, language_id, versification, numeral_system_id, date, scope, script, derived, copyright, priority, reviewed," +
 				" notes, created_at, updated_at FROM bibles WHERE id = %s"), (bibleId,))
-		# add language_id, language_name, iso from language_info table.
-		# for KMLWBT, want 
-		# COL2	"kml:Mangali" and Kalinga(3801)
-		# COL3  3801: Kalinga, Mangali, and 6414: Kalinga, Mangali
-		# COL4  eng: Wycliffe Bible Translators, Inc
 		self.displayQuery("Bible Language", 
 			["bible_id", "language_id", "language_name", "iso", "glotto_id", "area", "population", "writing", "country_id", "created_at", "updated_at"],
 			("SELECT b.id, language_id, name, iso, glotto_id, area, population, writing, country_id, l.created_at, l.updated_at " + 
@@ -200,10 +197,6 @@ class ValidatePage:
 		#print(resultSet)
 		if self.format == "html":
 			self.output.table(title, columns, resultSet)
-			
-			
-		
-		
 		
 	def query(self, statement, values):
 		cursor = self.conn.cursor()
@@ -217,23 +210,15 @@ class ValidatePage:
 			print("ERROR executing SQL %s on '%s'" % (error, statement))
 			self.conn.rollback()
 			sys.exit()
-			
-			
-
-		
 		
 			
 if __name__ == "__main__":
-	os.environ["QUERY_STRING"] = "bibleid=KMLWBT"
-	(bibleId, filesetId) = ValidatePage.parseQuery()
-	# (bibleId, filesetId) = ValidatePage.parseCommand()
-	#filesetId = None
-	print("bibleid", bibleId)
+	filesetId = "ENGESVN1DA"
 	page = ValidatePage()
-	hashIdList = page.getHashIds(bibleId, None)
-	page.process(bibleId, hashIdList)
+	page.process(filesetId)
 	page.close()
-	#page = ValidatePage()
+
+# python3 load/ValidatePage.py 
 	
 """
 	
