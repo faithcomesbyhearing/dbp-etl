@@ -1,6 +1,6 @@
 import os
 from LPTSExtractReader import LPTSExtractReader
-from StageCLanguageReader import StageCLanguageReader
+from stagec.StageCLanguageReader import StageCLanguageReader
 
 
 class LanguageReaderStageTest:

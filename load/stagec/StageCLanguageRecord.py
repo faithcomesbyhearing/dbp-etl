@@ -1,9 +1,9 @@
 from Config import *
 from LanguageReader import LanguageRecordInterface
 from SQLUtility import *
-from StageCLanguageService import getMediaByIdAndFormat 
+from stagec.StageCLanguageService import getMediaByIdAndFormat 
 
-class LanguageRecordStageC (LanguageRecordInterface):
+class StageCLanguageRecord (LanguageRecordInterface):
     propertiesName = {
         "id": "Id",
         "regStockNumber": "Reg_StockNumber",
@@ -49,34 +49,34 @@ class LanguageRecordStageC (LanguageRecordInterface):
         raise Exception("Not implemented")
 
     def Status(self):
-        return 'Live' if self.record.get(LanguageRecordStageC.propertiesName['status']) == 'Complete' else self.record.get(LanguageRecordStageC.propertiesName['status'])
+        return 'Live' if self.record.get(StageCLanguageRecord.propertiesName['status']) == 'Complete' else self.record.get(StageCLanguageRecord.propertiesName['status'])
 
     def Id(self):
-        return self.record.get(LanguageRecordStageC.propertiesName['id'])
+        return self.record.get(StageCLanguageRecord.propertiesName['id'])
 
     def Reg_StockNumber(self):
-        return self.record.get(LanguageRecordStageC.propertiesName['regStockNumber'])
+        return self.record.get(StageCLanguageRecord.propertiesName['regStockNumber'])
 
     def derivativeOf(self):
-        return self.record.get(LanguageRecordStageC.propertiesName['derivativeOf'])
+        return self.record.get(StageCLanguageRecord.propertiesName['derivativeOf'])
 
     def LangName(self):
-        return self.record.get(LanguageRecordStageC.propertiesName['langName'])
+        return self.record.get(StageCLanguageRecord.propertiesName['langName'])
 
     def ISO(self):
-        return self.record.get(LanguageRecordStageC.propertiesName['iso'])
+        return self.record.get(StageCLanguageRecord.propertiesName['iso'])
 
     def Country(self):
-        return self.record.get(LanguageRecordStageC.propertiesName['country'])
+        return self.record.get(StageCLanguageRecord.propertiesName['country'])
 
     def DBP_Equivalent(self):
-        return self.record.get(LanguageRecordStageC.propertiesName['dbpEquivalent'])
+        return self.record.get(StageCLanguageRecord.propertiesName['dbpEquivalent'])
 
     def Volumne_Name(self):
-        return self.record.get(LanguageRecordStageC.propertiesName['volumneName'])
+        return self.record.get(StageCLanguageRecord.propertiesName['volumneName'])
 
     def Orthography(self, index):
-        return self.record.get(LanguageRecordStageC.propertiesName['orthography'])
+        return self.record.get(StageCLanguageRecord.propertiesName['orthography'])
 
     def Licensor(self):
         pass
