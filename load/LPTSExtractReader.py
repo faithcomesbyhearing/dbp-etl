@@ -9,7 +9,6 @@ import os
 from xml.dom import minidom
 from LanguageReader import LanguageReaderInterface, LanguageRecordInterface
 
-
 class LPTSExtractReader (LanguageReaderInterface):
 
 	def __init__(self, lptsExtractPath):
@@ -33,9 +32,10 @@ class LPTSExtractReader (LanguageReaderInterface):
 						sys.exit()
 					else:
 						resultRow = {}
+
 						for fldNode in recNode.childNodes:
 							if fldNode.nodeType == 1:
-								#print(fldNode.nodeName + " = " + fldNode.firstChild.nodeValue)
+								# print(fldNode.nodeName + " = " + fldNode.firstChild.nodeValue)
 								resultRow[fldNode.nodeName] = fldNode.firstChild.nodeValue
 						#print("\n\n\n *** creating an languageRecord object ***\n\n\n")
 						self.resultSet.append(LanguageRecord(resultRow))
@@ -264,7 +264,6 @@ class LPTSExtractReader (LanguageReaderInterface):
 		name = name[:64]
 		return name.strip()
 
-
 class LanguageRecord (LanguageRecordInterface):
 
 	audio1DamIdDict = {
@@ -284,7 +283,7 @@ class LanguageRecord (LanguageRecordInterface):
 		"Reg_CAudioDamID2": 	"Reg_CAudioDamIDStatus2", # No occurrances 2/20/2020
 		"Reg_NTAudioDamID2": 	"Reg_NTAudioDamIDStatus2",
 		"Reg_OTAudioDamID2": 	"Reg_OTAudioDamIDStatus2"
-	}	
+	}
 	audio3DamIdDict = { # No occurrances 2/20/2020
 		"ND_CAudioDamID3": 		"ND_CAudioDamIDStatus3",
 		"ND_NTAudioDamID3": 	"ND_NTAudioDamIDStatus3",
@@ -301,14 +300,14 @@ class LanguageRecord (LanguageRecordInterface):
 	}
 	text2DamIdDict = {
 		"ND_NTTextDamID2": 		"ND_NTTextDamIDStatus2",
-		"ND_OTTextDamID2": 		"ND_OTTextDamIDStatus2", 
+		"ND_OTTextDamID2": 		"ND_OTTextDamIDStatus2",
 		"Reg_NTTextDamID2": 	"Reg_NTTextDamIDStatus2",
 		"Reg_OTTextDamID2": 	"Reg_OTTextDamIDStatus2"
 	}
 	text3DamIdDict = {
 		"ND_NTTextDamID3": 		"ND_NTTextDamIDStatus3",
 		"ND_OTTextDamID3": 		"ND_OTTextDamIDStatus3",
-		"Reg_NTTextDamID3": 	"Reg_NTTextDamIDStatus3", 
+		"Reg_NTTextDamID3": 	"Reg_NTTextDamIDStatus3",
 		"Reg_OTTextDamID3": 	"Reg_OTTextDamIDStatus3"
 	}
 	videoDamIdDict = {
@@ -318,7 +317,7 @@ class LanguageRecord (LanguageRecordInterface):
 		"Video_Matt_DamStockNo": "Video_Matt_DamStatus",
 		"Video_DamStockNo2": "Video_DamStatus2"
 	}
-	
+
 	def __init__(self, record):
 		self.record = record
 
@@ -384,16 +383,16 @@ class LanguageRecord (LanguageRecordInterface):
 			print("ERROR: Unknown typeCode '%s', audio, text, or video is expected." % (typeCode))
 		if typeCode == "audio":
 			damIdDict = dict(
-					list(LanguageRecord.audio1DamIdDict.items()) + 
-					list(LanguageRecord.audio2DamIdDict.items()) + 
-					list(LanguageRecord.audio3DamIdDict.items()) 
-					)						
+					list(LanguageRecord.audio1DamIdDict.items()) +
+					list(LanguageRecord.audio2DamIdDict.items()) +
+					list(languageRecord.audio3DamIdDict.items())
+					)
 		elif typeCode == "text":
 			damIdDict = dict(
-					list(LanguageRecord.text1DamIdDict.items()) + 
-					list(LanguageRecord.text2DamIdDict.items()) + 
-					list(LanguageRecord.text3DamIdDict.items()) 
-					)						
+					list(LanguageRecord.text1DamIdDict.items()) +
+					list(LanguageRecord.text2DamIdDict.items()) +
+					list(LanguageRecord.text3DamIdDict.items())
+					)
 		elif typeCode == "video":
 			damIdDict = LanguageRecord.videoDamIdDict
 		else:
@@ -539,7 +538,7 @@ class LanguageRecord (LanguageRecordInterface):
 			return self.DBP_Equivalent3()
 		else:
 			print("ERROR: DBP_Equivalent index must be 1, 2, or 3.")
-			sys.exit()			
+			sys.exit()
 
 	def Download(self):
 		return self.record.get("Download")

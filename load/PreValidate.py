@@ -88,6 +88,7 @@ class PreValidate:
 		filesetId = directoryName
 		filesetId1 = directoryName.split("-")[0]
 		damId = filesetId1.replace("_", "2")
+
 		results = self.languageReader.getFilesetRecords10(damId) # This method expects 10 digit DamId's always
 		if results == None:
 			damId = filesetId1.replace("_", "1")
@@ -213,6 +214,7 @@ if (__name__ == "__main__"):
 	location = "s3://dbp-etl-upload-dev-ya1mbvdty8tlq15r"
 	prefix = "2022-03-25-16-14-34"
 	directoryName = "Abidji_N2ABIWBT_USX"
+	migration_stage = os.getenv("DATA_MODEL_MIGRATION_STAGE") # Should be "B" or "C"
 
 	if len(sys.argv) > 2:
 		location = sys.argv[2][:-1] if sys.argv[2].endswith("/") else sys.argv[2]
@@ -223,13 +225,16 @@ if (__name__ == "__main__"):
 	if len(sys.argv) > 4:
 		directoryName = sys.argv[4]
 
-	print ("location [%s], prefix [%s], directoryName [%s]" % (location, prefix, directoryName))
-	fullPath = prefix + "/" + directoryName
+	if len(sys.argv) > 5:
+		migration_stage = sys.argv[5]
 
-	config = Config.shared()
-	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
-	session = boto3.Session(profile_name = config.s3_aws_profile)
-	s3Client = session.client('s3')
+	print ("location [%s], prefix [%s], directoryName [%s] migration [%s]" % (location, prefix, directoryName, migration_stage))
+	fullPath = prefix + "/" + directoryName if prefix != "" else directoryName
+
+	config = Config()
+	AWSSession.shared()
+	languageReader = LanguageReaderCreator(migration_stage).create(config.filename_lpts_xml)
+	s3Client = AWSSession.shared().s3Client
 
 	preValidate = PreValidate(languageReader, s3Client, location) 
 	(resultList, messages) = preValidate.validateDBPETL(s3Client, location, directoryName, fullPath)

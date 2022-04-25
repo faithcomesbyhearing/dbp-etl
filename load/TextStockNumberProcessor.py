@@ -5,8 +5,8 @@ from UnicodeScript import *
 
 class TextStockNumberProcessor:
 
-	def __init__(self, lptsReader):
-		self.lptsReader = lptsReader
+	def __init__(self, languageReader):
+		self.languageReader = languageReader
 		self.unicodeScript = UnicodeScript()
 		self.errors = [] # array of strings
 		self.OT = { "GEN", "EXO", "LEV", "NUM", "DEU", "JOS", "JDG", "RUT", "1SA", "2SA", "1KI", "2KI", "1CH", "2CH", 
@@ -38,7 +38,7 @@ class TextStockNumberProcessor:
 	def validateUSXStockList(self, stockList, filenames, actualScript = None):
 		resultList = []
 		for stockNumber in stockList:
-			#print("text processor.validateUSXStockList, in loop.. stockNumber [%s]" %stockNumber)
+			print("text processor.validateUSXStockList, in loop.. stockNumber [%s] actualScript [%s]" % (stockNumber, actualScript))
 			result = self.validateUSXstockNumber(stockNumber, filenames, actualScript)
 			resultList.extend(result)
 
@@ -46,8 +46,8 @@ class TextStockNumberProcessor:
 
 	# returns an array of PreValidateResult objects
 	def validateUSXstockNumber(self, stockNumber, filenames, actualScript = None):
-		# print("text processor:validateUSXStockNumber. stockNumber [%s], count of filenames [%s], actualScript [%s] " % (stockNumber, len(filenames), actualScript))
-		lptsRecord = self.lptsReader.getByStockNumber(stockNumber)
+		print("text processor:validateUSXStockNumber. stockNumber [%s], count of filenames [%s], actualScript [%s] " % (stockNumber, len(filenames), actualScript))
+		lptsRecord = self.languageReader.getByStockNumber(stockNumber)
 		if lptsRecord == None:
 			self.errors.append("stockNumber [%s] is not in LPTS" % (stockNumber))
 			return []
@@ -86,6 +86,7 @@ class TextStockNumberProcessor:
 		for (damId, index, status) in textDamIds:
 			scope = damId[6]
 			script = lptsRecord.Orthography(index)
+
 			damIdList = result.get(scope, [])
 			damIdList.append((damId, index, script))
 			result[scope] = damIdList

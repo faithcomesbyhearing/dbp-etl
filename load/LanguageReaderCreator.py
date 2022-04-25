@@ -1,5 +1,5 @@
 from LPTSExtractReader import LPTSExtractReader
-from StageCLanguageReader import *
+from stagec.StageCLanguageReader import *
 
 
 class LanguageReaderCreator:
@@ -21,8 +21,9 @@ class LanguageReaderCreator:
 
 if (__name__ == '__main__'):
     from Config import *    
-    languageReader = LanguageReaderCreator("B").create(Config().filename_lpts_xml)
-    #languageReader = LanguageReaderCreator("C").create()
-    languageReader.getByStockNumber("abd")
-
-# python3 load/LanguageReaderCreator.py test
+    config = Config()
+    migration_stage = os.getenv("DATA_MODEL_MIGRATION_STAGE") # Should be "B" or "C"
+    migration_stage = migration_stage if migration_stage != None else "B"
+    languageReader = LanguageReaderCreator(migration_stage).create(config.filename_lpts_xml)
+    results = languageReader.getByStockNumber("N1SPA/PDT")
+    print("Reg_StockNumber [%s]" % results.Reg_StockNumber())

@@ -40,6 +40,8 @@ class LanguageReaderInterface(ABC):
     def getFilesetRecords10(damId):
         pass
 
+    def getStocknumberWithFormat(self, stockNumberItem):
+        return stockNumberItem[:-3] + "/" + stockNumberItem[-3:]
 
     # @property?
     # maybe this is a property?
