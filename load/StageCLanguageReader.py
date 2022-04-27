@@ -1,6 +1,6 @@
 from LanguageReader import LanguageReaderInterface
 from StageCLanguageService import StageCLanguageService as LanguageService
-from StageCLanguageServiceParse import parseResult;
+from StageCLanguageServiceParse import parseResult
 
 class StageCLanguageReader (LanguageReaderInterface):
     def __init__(self):
