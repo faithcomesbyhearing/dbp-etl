@@ -1,6 +1,4 @@
-from Config import *
 from LanguageReader import LanguageRecordInterface
-from SQLUtility import *
 from StageCLanguageService import getMediaByIdAndFormat 
 
 class StageCLanguageRecord (LanguageRecordInterface):
@@ -77,6 +75,12 @@ class StageCLanguageRecord (LanguageRecordInterface):
 
     def Orthography(self, index):
         return self.record.get(StageCLanguageRecord.propertiesName['orthography'])
+
+    def EthName(self):
+        return self.record.get(StageCLanguageRecord.propertiesName['ethName'])
+
+    def AltName(self):
+        return self.record.get(StageCLanguageRecord.propertiesName['altName'])
 
     def Licensor(self):
         pass
