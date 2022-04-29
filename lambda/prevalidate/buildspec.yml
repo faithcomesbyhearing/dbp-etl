@@ -6,7 +6,7 @@ phases:
       - echo Build started on `date`
       - pwd
       - cd lambda/prevalidate
-      - zip -j lambda Handler.py ../../load/PreValidate.py ../../load/LPTSExtractReader.py ../../load/PreValidateResult.py ../../load/UnicodeScript.py   ../../load/TextStockNumberProcessor.py ../../load/LanguageReaderCreator.py  ../../load/LanguageReader.py ../../load/stagec/*.py
+      - zip -j lambda Handler.py ../../load/PreValidate.py ../../load/LPTSExtractReader.py ../../load/PreValidateResult.py ../../load/UnicodeScript.py   ../../load/TextStockNumberProcessor.py ../../load/LanguageReaderCreator.py  ../../load/LanguageReader.py ../../load/StageC*.py
   post_build:
     commands:
       - echo Build completed on `date`
