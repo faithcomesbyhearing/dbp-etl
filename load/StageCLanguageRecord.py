@@ -23,6 +23,7 @@ class StageCLanguageRecord (LanguageRecordInterface):
         "ethName": "EthName",
         "altName": "AltName",
         "webHubVideo": "WebHubVideo",
+        "mobileVideo": "MobileVideo",
         "copyrightVideo": "Copyright_Video",
         "apiDevVideo": "APIDevVideo",
         "status": "status",
@@ -31,7 +32,19 @@ class StageCLanguageRecord (LanguageRecordInterface):
     }
 
     def __init__(self, record):
-        self.record = record
+        self.record = {
+            self.propertiesName['apiDevAudio']: "-1",
+            self.propertiesName['dbpMobile']: "-1",
+            self.propertiesName['dbpWebHub']: "-1",
+            self.propertiesName['apiDevText']: "-1",
+            self.propertiesName['mobileText']: "-1",
+            self.propertiesName['hubText']: "-1",
+            self.propertiesName['apiDevVideo']: "-1",
+            self.propertiesName['mobileVideo']: "-1",
+            self.propertiesName['webHubVideo']: "-1"
+        }
+
+        self.record.update(record)
     
     def DamIdList(self, typeCode):
         return getMediaByIdAndFormat(self.derivativeOf(), typeCode)
@@ -44,7 +57,9 @@ class StageCLanguageRecord (LanguageRecordInterface):
         return damIdSet
 
     def DamIdMap(self, typeCode, index):
-        raise Exception("Not implemented")
+        return {
+            self.Id(): self.Status()
+        }
 
     def Status(self):
         return 'Live' if self.record.get(StageCLanguageRecord.propertiesName['status']) == 'Complete' else self.record.get(StageCLanguageRecord.propertiesName['status'])
@@ -70,6 +85,13 @@ class StageCLanguageRecord (LanguageRecordInterface):
     def DBP_Equivalent(self):
         return self.record.get(StageCLanguageRecord.propertiesName['dbpEquivalent'])
 
+    def DBP_EquivalentByIndex(self, index):
+        if index == 1:
+            return self.DBP_Equivalent()
+        else:
+            print("ERROR: DBP_Equivalent index must be 1, 2, or 3.")
+            sys.exit()
+
     def Volumne_Name(self):
         return self.record.get(StageCLanguageRecord.propertiesName['volumneName'])
 
@@ -81,6 +103,33 @@ class StageCLanguageRecord (LanguageRecordInterface):
 
     def AltName(self):
         return self.record.get(StageCLanguageRecord.propertiesName['altName'])
+
+    def APIDevAudio(self):
+        return self.record.get(StageCLanguageRecord.propertiesName['apiDevAudio'])
+
+    def DBPMobile(self):
+        return self.record.get(StageCLanguageRecord.propertiesName['dbpMobile'])
+
+    def DBPWebHub(self):
+        return self.record.get(StageCLanguageRecord.propertiesName['dbpWebHub'])
+
+    def APIDevText(self):
+        return self.record.get(StageCLanguageRecord.propertiesName['apiDevText'])
+
+    def MobileText(self):
+        return self.record.get(StageCLanguageRecord.propertiesName['mobileText'])
+
+    def HubText(self):
+        return self.record.get(StageCLanguageRecord.propertiesName['hubText'])
+
+    def APIDevVideo(self):
+        return self.record.get(StageCLanguageRecord.propertiesName['apiDevVideo'])
+
+    def MobileVideo(self):
+        return self.record.get(StageCLanguageRecord.propertiesName['mobileVideo'])
+
+    def WebHubVideo(self):
+        return self.record.get(StageCLanguageRecord.propertiesName['webHubVideo'])
 
     def Licensor(self):
         pass

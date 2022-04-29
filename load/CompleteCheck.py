@@ -117,7 +117,8 @@ class CompleteCheck:
 		resultSet = self.db.select("SELECT id, hash_id FROM bible_filesets WHERE hidden = 0 and hash_id NOT IN" +
 			" (SELECT hash_id FROM access_group_filesets) ORDER BY id", ())
 
-		languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
+		migration_stage = "B" if os.getenv("DATA_MODEL_MIGRATION_STAGE") == None else os.getenv("DATA_MODEL_MIGRATION_STAGE")
+		languageReader = LanguageReaderCreator(migration_stage).create(config.filename_lpts_xml)
 
 		finalResultSet = []
 		for fileset in resultSet:
@@ -296,6 +297,8 @@ class CompleteCheck:
 
 
 if (__name__ == '__main__'):
+	from LanguageReaderCreator import *
+
 	config = Config()
 	if len(sys.argv) > 2 and sys.argv[2].lower() == "full":
 		bucket = DownloadBucketList(config)
@@ -318,7 +321,9 @@ if (__name__ == '__main__'):
 	else:
 		print("Usage: python3 load/CompleteCheck.py  config_profile  full|fast|restart")
 		sys.exit()
-	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
+	migration_stage = "B" if os.getenv("DATA_MODEL_MIGRATION_STAGE") == None else os.getenv("DATA_MODEL_MIGRATION_STAGE")
+	languageReader = LanguageReaderCreator(migration_stage).create(config.filename_lpts_xml)
+
 	db = SQLUtility(config)
 	check = CompleteCheck(config, db, languageReader)
 	check.totalLanguageCount()

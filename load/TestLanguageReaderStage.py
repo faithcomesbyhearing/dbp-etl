@@ -16,7 +16,7 @@ class TestLanguageReaderStage(unittest.TestCase):
         self.assertEqual(stageCResult.DBP_Equivalent(), stageBResult.DBP_Equivalent(), "DBP_Equivalent for N1SPAPDT should be [%s]" % stageBResult.DBP_Equivalent())
         self.assertEqual(stageCResult.Volumne_Name(), stageBResult.Volumne_Name(), "Volumne_Name for N1SPAPDT should be [%s]" % stageBResult.Volumne_Name())
         self.assertEqual(stageCResult.EthName(), stageBResult.EthName(), "EthName for N1SPAPDT should be [%s]" % stageBResult.EthName())
-        
+
         ## For now, the next tests will be commented until the missing data in the agreements databaseìssue is solved
 
         # self.assertEqual(stageCResult.LangName(), stageBResult.LangName(), "LangName for N1SPAPDT should be [%s]" % stageBResult.LangName())
@@ -33,20 +33,23 @@ class TestLanguageReaderStage(unittest.TestCase):
         # self.assertEqual(stageCResult.APIDevVideo(), stageBResult.APIDevVideo(), "APIDevVideo for N1SPAPDT should be [%s]" % stageBResult.APIDevVideo())
 
     # Test the getBibleIdMap method using length of bible list
-    # @unittest.skip("skipping Total BIBLES using getBibleIdMap")
+    @unittest.skip("skipping Total BIBLES using getBibleIdMap")
     def test_get_bible_id_map_total_media(self):
         listStageC = self.languageReader.getBibleIdMap()
         listStageB = self.LPTSReader.getBibleIdMap()
 
         self.assertEqual(len(listStageC), len(listStageB), "Total BIBLES: stage B [%s] and stage C [%s] " % (len(listStageB), len(listStageC)))
 
-    # Test the getBibleIdMap method using a specific bible
+    # Test the getBibleIdMap method using a specific bible (SPAPDT)
+    @unittest.skip("Total media records for the Bible ID SPAPDT")
     def test_get_bible_id_map_by_specific_bible(self):
         listStageC = self.languageReader.getBibleIdMap()
         listStageB = self.LPTSReader.getBibleIdMap()
 
         self.assertEqual(len(listStageC.get('SPAPDT')), len(listStageB.get('SPAPDT')), "Total media records for the Bible ID SPAPDT Name [La Palabra de Dios para Todos]: stage B [%s] and stage C [%s]" % (len(listStageB.get('SPAPDT')), len(listStageC.get('SPAPDT'))))
 
+    # Test the getBibleIdMap method using a specific bible (EN1ESV)
+    @unittest.skip("Total media records for the Bible ID EN1ESV")
     def test_get_bible_id_map_by_specific_english_standard_version_bible(self):
         listStageC = self.languageReader.getBibleIdMap()
         listStageB = self.LPTSReader.getBibleIdMap()
@@ -54,6 +57,7 @@ class TestLanguageReaderStage(unittest.TestCase):
         self.assertEqual(len(listStageC.get('EN1ESV')), len(listStageB.get('EN1ESV')), "Total media records for the Bible ID EN1ESV Name [English Standard Version]: stage B [%s] and stage C [%s]" % (len(listStageB.get('EN1ESV')), len(listStageC.get('EN1ESV'))))
 
     # Test the getByStockNumber method using a specific stocknumber
+    @unittest.skip("Specific media N1SPAPDT")
     def test_get_by_stocknumber_by_specific_media(self):
         stockNumber = 'N1SPAPDT'
         stageBNumWithFormat = self.LPTSReader.getStocknumberWithFormat(stockNumber)
@@ -64,6 +68,7 @@ class TestLanguageReaderStage(unittest.TestCase):
         self.assert_by_specific_media(stageCResult, stageBResult)
 
     # Test the getByStockNumber method using a specific stocknumber with audio format
+    @unittest.skip("Specific media N2ACDWBT")
     def test_get_by_stocknumber_by_specific_media_audio(self):
         stockNumber = 'N2ACDWBT'
         stageBNumWithFormat = self.LPTSReader.getStocknumberWithFormat(stockNumber)
@@ -86,8 +91,34 @@ class TestLanguageReaderStage(unittest.TestCase):
             languageRecordB = languageRecord
         for (languageRecord, status, key) in stageCResult:
             languageRecordC = languageRecord
-        
+
         self.assert_by_specific_media(languageRecordC, languageRecordB)
+
+    # Test about getFilesetRecords method
+    def test_get_fileset_records(self):
+        filesetId = 'GNDWYIN2DA'
+        stageBResult = self.LPTSReader.getFilesetRecords(filesetId)
+        stageCResult = self.languageReader.getFilesetRecords(filesetId)
+
+        languageRecordB = None
+        languageRecordC = None
+
+        for (status, languageRecord) in stageBResult:
+            languageRecordB = languageRecord
+        for (status, languageRecord) in stageCResult:
+            languageRecordC = languageRecord
+
+        self.assert_by_specific_media(languageRecordC, languageRecordB)
+
+    # Test the resultSet property tha belongs languageReader
+    def test_get_result_set_media(self):
+        stageCAllMediaRecords = self.languageReader.resultSet
+        stageBAllMediaRecords = self.LPTSReader.resultSet
+
+        stageCAllMediaRecordsLen = len(stageCAllMediaRecords)
+        stageBAllMediaRecordsLen = len(stageBAllMediaRecords)
+
+        self.assertEqual(stageCAllMediaRecordsLen, stageBAllMediaRecordsLen, "Total media records stage C [%s] and stage B [%s]" % (stageCAllMediaRecordsLen, stageBAllMediaRecordsLen))
 
     def printResultStageC(self, stageCResult):
         print("")
@@ -127,7 +158,6 @@ class TestLanguageReaderStage(unittest.TestCase):
         print("WebHubVideo: %s" % stageBResult.WebHubVideo())
         print("Copyright_Video: %s" % stageBResult.Copyright_Video())
         print("APIDevVideo: %s" % stageBResult.APIDevVideo())
-
         print("==================================================================================")
         print("")
 
