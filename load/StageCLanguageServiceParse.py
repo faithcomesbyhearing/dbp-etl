@@ -1,4 +1,4 @@
-from stagec.StageCLanguageRecord import StageCLanguageRecord as LanguageRecord;
+from StageCLanguageRecord import StageCLanguageRecord as LanguageRecord;
 
 def parseMediaRow(rowTuple):
     return {

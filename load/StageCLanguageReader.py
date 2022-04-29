@@ -2,8 +2,8 @@ from unittest import result
 from LanguageReader import LanguageReaderInterface
 from SQLUtility import *
 from Config import *
-from stagec.StageCLanguageService import StageCLanguageService as LanguageService
-from stagec.StageCLanguageServiceParse import parseResult;
+from StageCLanguageService import StageCLanguageService as LanguageService
+from StageCLanguageServiceParse import parseResult;
 
 class StageCLanguageReader (LanguageReaderInterface):
     def __init__(self):

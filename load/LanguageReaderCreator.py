@@ -1,5 +1,5 @@
 from LPTSExtractReader import LPTSExtractReader
-from stagec.StageCLanguageReader import *
+from StageCLanguageReader import *
 
 
 class LanguageReaderCreator:

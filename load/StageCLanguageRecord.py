@@ -1,7 +1,7 @@
 from Config import *
 from LanguageReader import LanguageRecordInterface
 from SQLUtility import *
-from stagec.StageCLanguageService import getMediaByIdAndFormat 
+from StageCLanguageService import getMediaByIdAndFormat 
 
 class StageCLanguageRecord (LanguageRecordInterface):
     propertiesName = {
