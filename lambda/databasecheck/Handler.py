@@ -1,6 +1,8 @@
 # Handler.py
 
 # AWS Lambda Handler for DatabaseCheck
+# Note that this is for DATA_MODEL_MIGRATION_STAGE "B" only. So instead of using the LanguageReaderCreator, we will directly 
+# create the LPTSExractReader
 
 
 import os
@@ -10,12 +12,11 @@ from SQLUtility import *
 from DatabaseCheck import *
 
 def handler(event, context):
-	#migration_stage = os.getenv("DATA_MODEL_MIGRATION_STAGE") # Should be "B" or "C"
 
 #	directory = event["prefix"] # can be filesetId or lang_stockno_USX
 
 	config = Config()
-	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
+	languageReader = LPTSExtractReader(config.filename_lpts_xml)
 	db = SQLUtility(config)	
 	check = DatabaseCheck(config, db, languageReader)
 	check.process()
