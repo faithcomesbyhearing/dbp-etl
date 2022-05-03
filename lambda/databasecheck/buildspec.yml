@@ -5,9 +5,9 @@ phases:
     commands:
       - echo Build started on `date`
       - pwd
-      - cd lambda/prevalidate
+      - cd lambda/databasecheck
       - sh ../generate-dbp-etl-cfg.sh
-      - zip -j lambda Handler.py dbp-etl.cfg ../../load/PreValidate.py ../../load/LPTSExtractReader.py ../../load/PreValidateResult.py ../../load/UnicodeScript.py   ../../load/TextStockNumberProcessor.py ../../load/LanguageReaderCreator.py  ../../load/LanguageReader.py ../../load/StageC*.py
+      - zip -j lambda dbp-etl.cfg Handler.py ../../load/DatabaseCheck.py 
   post_build:
     commands:
       - echo Build completed on `date`
