@@ -9,7 +9,6 @@ from Config import *
 from SQLUtility import *
 from LanguageReaderCreator import *
 from LanguageReader import *
-from Config import *
 
 class DatabaseCheck:
 
@@ -53,6 +52,25 @@ class DatabaseCheck:
 		now = datetime.now()
 		self.htmlOut.write("<h3>" + now.strftime("%A, %d %b %Y %-I:%-M %p") + "</h3>\n")
 
+	def process(self):
+		self.totalLanguageCount()
+		self.totalFilesetCount()
+		self.totalBiblesWithFilesets()
+		self.filesetsWithoutConnects()
+		self.filesetsWithoutFiles()
+		self.filesetsWithoutVerses()
+		self.biblesWithoutTitles()
+		self.biblesWithoutBooks()
+		self.filesetsWithoutCopyrights()
+		self.filesetsWithoutOrganizations()
+		self.filesetsWithoutAccessGroups()
+		# check.bibleFilesToS3(dbpProdModified)
+		self.bibleFilesetsToLPTS()
+		self.checkForMissingTS()
+		self.checkForMissingBandwidth()
+		self.bibleIdCheck()
+		self.biblesWithoutConnects()
+		self.booksWithPlaceholders()
 
 	def close(self):
 		self.htmlOut.write("</table></body></html>")
@@ -245,24 +263,7 @@ if (__name__ == '__main__'):
 	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
 	db = SQLUtility(config)
 	check = DatabaseCheck(config, db, languageReader)
-	check.totalLanguageCount()
-	check.totalFilesetCount()
-	check.totalBiblesWithFilesets()
-	check.filesetsWithoutConnects()
-	check.filesetsWithoutFiles()
-	check.filesetsWithoutVerses()
-	check.biblesWithoutTitles()
-	check.biblesWithoutBooks()
-	check.filesetsWithoutCopyrights()
-	check.filesetsWithoutOrganizations()
-	check.filesetsWithoutAccessGroups()
-	# check.bibleFilesToS3(dbpProdModified)
-	check.bibleFilesetsToLPTS()
-	check.checkForMissingTS()
-	check.checkForMissingBandwidth()
-	check.bibleIdCheck()
-	check.biblesWithoutConnects()
-	check.booksWithPlaceholders()
+	check.process()
 	check.close()
 	db.close()
 	DBPRunFilesS3.simpleUpload(config, DatabaseCheck.HTML_FILE, "text/html")

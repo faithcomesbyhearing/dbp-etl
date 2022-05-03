@@ -5,6 +5,8 @@
 
 import os
 import boto3
+from Config import *
+from SQLUtility import *
 from DatabaseCheck import *
 
 def handler(event, context):
@@ -12,7 +14,10 @@ def handler(event, context):
 
 #	directory = event["prefix"] # can be filesetId or lang_stockno_USX
 
-	
-	databaseCheck = DatabaseCheck()
-	messages = databaseCheck.process()
-	return messages
+	config = Config()
+	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
+	db = SQLUtility(config)	
+	check = DatabaseCheck(config, db, languageReader)
+	check.process()
+	check.close()
+	db.close()
