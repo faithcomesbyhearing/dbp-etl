@@ -7,7 +7,7 @@ phases:
       - pwd
       - cd lambda/databasecheck
       - sh ../generate-dbp-etl-cfg.sh
-      - zip -j lambda dbp-etl.cfg Handler.py ../../load/Config.py ../../load/DatabaseCheck.py ../../load/LPTSExtractReader.py  ../../load/LanguageReaderCreator.py  ../../load/LanguageReader.py ../../load/SQLUtility.py
+      - zip -j lambda dbp-etl.cfg Handler.py ../../load/Config.py ../../load/DatabaseCheck.py ../../load/LPTSExtractReader.py  ../../load/LanguageReader.py ../../load/SQLUtility.py
   post_build:
     commands:
       - echo Build completed on `date`
