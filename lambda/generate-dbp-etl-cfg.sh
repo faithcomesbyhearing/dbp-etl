@@ -8,26 +8,24 @@ finish() {
 }
 trap finish EXIT
 
+# properties not needed for lambda, but required by Config
+export DATABASE_USER_DB_NAME=foo
 export S3_BUCKET=foo
+export S3_VID_BUCKET=foo
 export S3_KEY_PREFIX=foo
 
-export DATABASE_HOST=foo
-export DATABASE_PORT=foo
-export DATABASE_DB_NAME=foo
-export DATABASE_USER=foo
-export DATABASE_PASSWD=foo
 
 cat > dbp-etl.cfg <<EOF
 [DEFAULT]
 database.user = ${DATABASE_USER}
 database.passwd = ${DATABASE_PASSWD}
-database.user_db_name = foo
+database.user_db_name = ${DATABASE_USER_DB_NAME}
 mysql.exe = /usr/bin/mysql
 node.exe = /usr/bin/node
 publisher.js = /app/BiblePublisher/publish/Publisher.js
-s3.bucket = foo
-s3.vid_bucket = foo
-s3.artifacts_bucket = foo
+s3.bucket = ${S3_BUCKET}
+s3.vid_bucket = ${S3_VID_BUCKET}
+s3.artifacts_bucket = ${S3_ARTIFACTS_BUCKET}
 directory.upload_aws = /efs/${S3_KEY_PREFIX}/etl_uploader/upload_aws/
 directory.upload = /efs/${S3_KEY_PREFIX}/etl_uploader/upload/
 directory.database = /efs/${S3_KEY_PREFIX}/etl_uploader/database/
