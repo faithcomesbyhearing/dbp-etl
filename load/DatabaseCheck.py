@@ -7,18 +7,18 @@ import io
 from datetime import datetime
 from Config import *
 from SQLUtility import *
-from LPTSExtractReader import *
-from DBPRunFilesS3 import *
+from LanguageReaderCreator import *
+from LanguageReader import *
 from Config import *
 
 class DatabaseCheck:
 
 	HTML_FILE = "database-check.html"
 
-	def __init__(self, config, db, lptsExtractReader):
+	def __init__(self, config, db, languageReader):
 		self.config = config
 		self.db = db
-		self.lptsExtractReader = lptsExtractReader
+		self.languageReader = languageReader
 		self.htmlOut = open(DatabaseCheck.HTML_FILE, "w")
 		self.htmlOut.write("<html><head>")
 		styles = [ "<style>",
@@ -113,13 +113,11 @@ class DatabaseCheck:
 		resultSet = self.db.select("SELECT id, hash_id FROM bible_filesets WHERE hidden = 0 and hash_id NOT IN" +
 			" (SELECT hash_id FROM access_group_filesets) ORDER BY id", ())
 
-		#languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
-
 		finalResultSet = []
 		for fileset in resultSet:
 			(filesetId, hashId) = fileset
 
-			filesetFromReader = self.lptsExtractReader.getFilesetRecords(filesetId)
+			filesetFromReader = self.languageReader.getFilesetRecords(filesetId)
 			if filesetFromReader != None:
 				for (status, record) in filesetFromReader:
 					if status == "Live":
@@ -146,60 +144,11 @@ class DatabaseCheck:
 		resultSet = self.db.select("SELECT count(distinct hash_id) FROM bible_fileset_connections", ())
 		self.outputTable("Total Filesets:", ["count"], resultSet)
 
-
-	# # Check for each file in bible_files to insure that it exists in the DBP
-	# def bibleFilesToS3(self, dbpProdModified):
-	# 	files = set()
-	# 	filesets = set()
-	# 	missingFilesetIds = set()
-	# 	absentFilesetIds = set()
-	# 	dbProd = io.open(self.config.directory_bucket_list + self.config.s3_bucket +".txt", mode="r", encoding="utf-8")
-	# 	for line in dbProd:
-	# 		if "delete" not in line:
-	# 			fullFilename = line.split("\t")[0]
-	# 			files.add(fullFilename)
-	# 			parts = fullFilename.split("/")
-	# 			if len(parts) > 3:
-	# 				fileset = "%s/%s/%s/" % (parts[0], parts[1], parts[2])
-	# 				filesets.add(fileset)
-	# 	dbProd.close()
-	# 	print(len(files), self.config.s3_bucket +" records")
-	# 	dbVid = io.open(self.config.directory_bucket_list + self.config.s3_vid_bucket +".txt", mode="r", encoding="utf-8")
-	# 	for line in dbVid:
-	# 		fullFilename = line.split("\t")[0]
-	# 		if fullFilename.endswith(".m3u8"):
-	# 			files.add(fullFilename)
-	# 			parts = fullFilename.split("/")
-	# 			if len(parts) > 3:
-	# 				fileset = "%s/%s/%s/" % (parts[0], parts[1], parts[2])
-	# 				filesets.add(fileset)
-	# 	dbVid.close()
-	# 	print(len(files), self.config.s3_bucket + " + " + self.config.s3_vid_bucket + " records")
-	# 	sql = ("SELECT f.set_type_code, c.bible_id, f.id, bf.file_name"
-	# 		" FROM bible_filesets f, bible_files bf, bible_fileset_connections c"
-	# 		" WHERE f.hash_id = bf.hash_id AND f.hash_id = c.hash_id"
-	# 		" AND bf.updated_at < %s"
-	# 		" ORDER BY f.id, c.bible_id")
-	# 	resultSet = self.db.select(sql, (dbpProdModified))
-	# 	for (typeCode, bibleId, filesetId, filename) in resultSet:
-	# 		typeCd = typeCode.split("_")[0]
-	# 		if len(filesetId) < 10 or filesetId[-2:] != "SA":
-	# 			fullKey = "%s/%s/%s/%s" % (typeCd, bibleId, filesetId, filename)
-	# 			if fullKey not in files:
-	# 				self.missingS3Objects.append((fullKey,))
-	# 				missingFilesetIds.add((typeCd, bibleId, filesetId))
-	# 			prefixKey = "%s/%s/%s/" % (typeCd, bibleId, filesetId)
-	# 			if prefixKey not in filesets:
-	# 				absentFilesetIds.add((typeCd, bibleId, filesetId))
-	# 	self.outputTable("Filesets with all files missing from s3 bucket.", ["type", "bibleId", "filesetId"], sorted(absentFilesetIds))
-	# 	self.outputTable("Filesets with some files missing from s3 bucket.", ["type", "bibleId", "filesetId"], sorted(missingFilesetIds))
-
-
 	# Check each DamId in LPTS to see if it has been loaded into DBP
 	def bibleFilesetsToLPTS(self):
 		missing = []
 		filesetIds = self.db.selectSet("SELECT id FROM bible_filesets", ())
-		for rec in self.lptsExtractReader.resultSet:
+		for rec in self.languageReader.resultSet:
 			for typeCode in ["audio", "text", "video"]:
 				apiPermiss = None
 				appPermiss = None
@@ -249,7 +198,7 @@ class DatabaseCheck:
 		bibleIdMismatch = []
 		sql = "SELECT f.id, c.bible_id FROM bible_filesets f, bible_fileset_connections c WHERE f.hash_id=c.hash_id"
 		filesetMap = db.selectMap(sql, ())
-		for record in self.lptsExtractReader.resultSet:
+		for record in self.languageReader.resultSet:
 			stockNo = record.Reg_StockNumber()
 			text = record.DamIdList("text")
 			audio = record.DamIdList("audio")
@@ -293,31 +242,9 @@ class DatabaseCheck:
 
 if (__name__ == '__main__'):
 	config = Config()
-	# if len(sys.argv) > 2 and sys.argv[2].lower() == "full":
-	# 	bucket = DownloadBucketList(config)
-	# 	pathname = bucket.listBucket(config.s3_bucket)
-	# 	DBPRunFilesS3.simpleUpload(config, pathname, "text/plain")
-	# 	dbpProdModified = datetime.utcnow()
-	# 	pathname = bucket.listBucket(config.s3_vid_bucket)
-	# 	DBPRunFilesS3.simpleUpload(config, pathname, "text/plain")
-	# 	dbpVidModified = dbpProdModified
-	# elif len(sys.argv) > 2 and sys.argv[2].lower() == "fast":
-	# 	pathname = config.directory_bucket_list + config.s3_bucket +".txt"
-	# 	DBPRunFilesS3.simpleDownload(config, pathname)
-	# 	dbpProdModified = DBPRunFilesS3.simpleLastModified(config, config.s3_bucket +".txt")
-	# 	pathname = config.directory_bucket_list + config.s3_vid_bucket +".txt"
-	# 	DBPRunFilesS3.simpleDownload(config, pathname)
-	# 	dbpVidModified = DBPRunFilesS3.simpleLastModified(config, config.s3_vid_bucket +".txt")
-	# elif len(sys.argv) > 2 and sys.argv[2].lower() == "restart":
-	# 	dbpProdModified = DBPRunFilesS3.simpleLastModified(config, config.s3_bucket +".txt")
-	# 	dbpVidModified = DBPRunFilesS3.simpleLastModified(config, config.s3_vid_bucket +".txt")
-	# else:
-	# 	print("Usage: python3 load/CompleteCheck.py  config_profile  full|fast|restart")
-	# 	sys.exit()
-	#languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
-	lptsExtractReader = LPTSExtractReader(config.filename_lpts_xml)
+	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
 	db = SQLUtility(config)
-	check = DatabaseCheck(config, db, lptsExtractReader)
+	check = DatabaseCheck(config, db, languageReader)
 	check.totalLanguageCount()
 	check.totalFilesetCount()
 	check.totalBiblesWithFilesets()
