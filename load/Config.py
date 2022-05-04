@@ -141,7 +141,7 @@ class Config:
 			self.directory_audio_hls = self._getPath("directory.audio_hls") #"%s/FCBH/files/tmp" % (self.home)
 			self.audio_hls_duration_limit = self._getInt("audio.hls.duration.limit") #10  #### Must become command line param
 
-		if profile == 'test':
+		if profile in {'test', 'dev'}:
 			self.database_names['dbp'] = self.hashMap.get("database.db_name")
 			self.database_names['user_dbp'] = self.hashMap.get("database.user_db_name")
 			self.database_host = self._get("database.host")
