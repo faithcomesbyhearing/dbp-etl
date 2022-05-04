@@ -104,7 +104,7 @@ class Config:
 		self.s3_aws_profile = self._getOptional("s3.aws_profile") 
 		self.s3_aws_role_arn = self._getOptional("s3.aws_role_arn") 
 		self.s3_aws_role_profile = self._getOptional("s3.aws_role_profile") # this is temporary
-		self.filename_lpts_xml = self._getPath("filename.lpts_xml")
+		self.filename_lpts_xml = self._getOptional("filename.lpts_xml")
 
 		# TODO these dependencies need to be sorted out
 		if programRunning in {"DBPLoadController.py"}:

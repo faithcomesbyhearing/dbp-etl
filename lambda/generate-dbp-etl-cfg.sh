@@ -23,6 +23,8 @@ export S3_BUCKET=foo
 export S3_VID_BUCKET=foo
 export S3_KEY_PREFIX=foo
 
+#Note: the config profile values are dev and newdata
+
 cat > dbp-etl.cfg <<EOF
 [DEFAULT]
 database.user = ${DATABASE_USER}
@@ -68,10 +70,11 @@ lambda.zip.function = arn:aws:lambda:us-west-2:078432969830:function:transcoding
 lambda.zip.region = us-west-2
 lambda.zip.timeout = 900
 
-[data]
+[${PROFILE}]
 database.host = ${DATABASE_HOST}
 database.port = ${DATABASE_PORT}
 database.db_name = ${DATABASE_DB_NAME}
+
 EOF
 
 #echo "contents of dbp-etl.cfg: "
