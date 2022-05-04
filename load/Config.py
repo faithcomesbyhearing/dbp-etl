@@ -28,18 +28,19 @@ class Config:
 		if self.home == None:
 			self.home = os.environ.get('HOMEPATH') # windows
 		if self.home == None:
-			print("ERROR: Environment variable HOME or HOMEPATH must be set to a directory.")
-			sys.exit()
+			self.home = os.getcwd()
 
 		configFile = os.path.join(self.home, "dbp-etl.cfg")
 		if not os.path.exists(configFile):
 			print("ERROR: Config file '%s' does not exist." % (configFile))
 			sys.exit()
 
-		if len(sys.argv) < 2:
-			print("ERROR: config profile, such as 'dev,test,prod' is first required parameter.")
-			sys.exit()
-		profile = sys.argv[1]
+		profile = os.environ.get('PROFILE', "")
+		if (len(profile)) ==0:
+			if len(sys.argv) < 2:
+				print("ERROR: config profile, such as 'dev,test,prod' is first required parameter.")
+				sys.exit()
+			profile = sys.argv[1]
 
 		config = configparser.ConfigParser(interpolation = None)
 		config.read(configFile)
@@ -60,9 +61,6 @@ class Config:
 		splitPattern = re.compile("\\\\|/") # I have no idea why \\\\ escapes to one \
 		programRunning = splitPattern.split(sys.argv[0])[-1]
 
-		self.node_exe = self._getPath("node.exe")
-		self.publisher_js = self._getPath("publisher.js")
-		self.mysql_exe = self._getPath("mysql.exe")
 		self.database_names = {}
 		self.current_database_name = None
 		self.setConfigParametersFromProfile(profile, programRunning)
@@ -102,17 +100,19 @@ class Config:
 		return self.database_names
 
 	def setConfigParametersFromProfile(self, profile, programRunning):
-		self.s3_bucket = self._get("s3.bucket")
-		self.s3_vid_bucket = self._get("s3.vid_bucket")
 		self.s3_artifacts_bucket = self._get("s3.artifacts_bucket")
 		self.s3_aws_profile = self._getOptional("s3.aws_profile") 
 		self.s3_aws_role_arn = self._getOptional("s3.aws_role_arn") 
 		self.s3_aws_role_profile = self._getOptional("s3.aws_role_profile") # this is temporary
+		self.filename_lpts_xml = self._getPath("filename.lpts_xml")
 
-		if programRunning in {"AudioHLS.py"}:
-			self.directory_audio_hls = self._getPath("directory.audio_hls") #"%s/FCBH/files/tmp" % (self.home)
-			self.audio_hls_duration_limit = self._getInt("audio.hls.duration.limit") #10  #### Must become command line param
-		else:
+		# TODO these dependencies need to be sorted out
+		if programRunning in {"DBPLoadController.py"}:
+			self.node_exe = self._getPath("node.exe")
+			self.publisher_js = self._getPath("publisher.js")
+			self.mysql_exe = self._getPath("mysql.exe")
+			self.s3_bucket = self._get("s3.bucket")
+			self.s3_vid_bucket = self._get("s3.vid_bucket")
 			self.audio_transcoder_url = self._get("audio.transcoder.url")
 			self.audio_transcoder_key = self._get("audio.transcoder.key")
 			self.audio_transcoder_sleep_sec = self._getInt("audio.transcoder.sleep.sec")
@@ -128,19 +128,18 @@ class Config:
 			self.video_preset_hls_480p = self._get("video.preset.hls.480p")
 			self.video_preset_hls_360p = self._get("video.preset.hls.360p")
 			self.video_preset_web = self._get("video.preset.web")
-
 			self.directory_bucket_list = self._getPath("directory.bucket_list")
 			self.filename_lpts_xml = self._getPath("filename.lpts_xml")
-
 			self.directory_upload_aws = self._getPath("directory.upload_aws")
 			self.directory_quarantine = self._getPath("directory.quarantine")
 			self.directory_duplicate = self._getPath("directory.duplicate")
 			self.directory_accepted = self._getPath("directory.accepted")
-
 			self.directory_errors = self._getPath("directory.errors")
 			self.filename_accept_errors = self._getPath("filename.accept.errors")
-
 			self.filename_datetime = self._get("filename.datetime")
+		elif programRunning in {"AudioHLS.py"}:
+			self.directory_audio_hls = self._getPath("directory.audio_hls") #"%s/FCBH/files/tmp" % (self.home)
+			self.audio_hls_duration_limit = self._getInt("audio.hls.duration.limit") #10  #### Must become command line param
 
 		if profile == 'test':
 			self.database_names['dbp'] = self.hashMap.get("database.db_name")

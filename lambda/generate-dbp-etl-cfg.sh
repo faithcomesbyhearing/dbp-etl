@@ -12,7 +12,7 @@ trap finish EXIT
 export DATABASE_USER_DB_NAME=foo
 export S3_BUCKET=foo
 export S3_VID_BUCKET=foo
-export S3_KEY_PREFIX=foo
+
 
 
 cat > dbp-etl.cfg <<EOF

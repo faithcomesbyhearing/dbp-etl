@@ -10,6 +10,7 @@ import boto3
 from Config import *
 from SQLUtility import *
 from DatabaseCheck import *
+from LPTSExtractReader import *
 
 def handler(event, context):
 
