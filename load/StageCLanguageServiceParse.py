@@ -19,14 +19,14 @@ def parseMediaRow(rowTuple):
         LanguageRecord.propertiesName['hubText']: '',
         LanguageRecord.propertiesName['apiDevText']: '',
         LanguageRecord.propertiesName['apiDevAudio']: '',
-        LanguageRecord.propertiesName['ethName']: '',
-        LanguageRecord.propertiesName['altName']: '',
         LanguageRecord.propertiesName['webHubVideo']: '',
         LanguageRecord.propertiesName['copyrightVideo']: '',
         LanguageRecord.propertiesName['apiDevVideo']: '',
         LanguageRecord.propertiesName['status']: rowTuple[9],
         LanguageRecord.propertiesName['derivativeOf']: rowTuple[10],
         LanguageRecord.propertiesName['orthography']: rowTuple[11],
+        LanguageRecord.propertiesName['ethName']: rowTuple[12],
+        LanguageRecord.propertiesName['altName']: rowTuple[13],
     }
 
 def parseResult(result):

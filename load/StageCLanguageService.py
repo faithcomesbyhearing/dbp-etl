@@ -21,7 +21,9 @@ class StageCLanguageService:
                     fl.name,\
                     ls.statusName,\
                     md.derivativeOf,\
-                    scod.english_name AS orthography\
+                    scod.english_name AS orthography,\
+                    (select fln.name from fcbhLanguageName fln WHERE fln.languageId = fl.id and fln.type = 'ethname' limit 1) as lang_ethname,\
+                    (select fln.name from fcbhLanguageName fln WHERE fln.languageId = fl.id and fln.type = 'alternate' limit 1) as lang_alternate\
             FROM media md\
             INNER JOIN bible_media bm ON md.id = bm.mediaId\
             INNER JOIN bibleTranslation bt ON md.translationId = bt.Id\
@@ -49,7 +51,9 @@ class StageCLanguageService:
                     fl.name,\
                     ls.statusName,\
                     md.derivativeOf,\
-                    scod.english_name AS orthography\
+                    scod.english_name AS orthography,\
+                    (select fln.name from fcbhLanguageName fln WHERE fln.languageId = fl.id and fln.type = 'ethname' limit 1) as lang_ethname,\
+                    (select fln.name from fcbhLanguageName fln WHERE fln.languageId = fl.id and fln.type = 'alternate' limit 1) as lang_alternate\
             FROM media md\
             INNER JOIN bible_media bm ON md.id = bm.mediaId\
             INNER JOIN bibleTranslation bt ON md.translationId = bt.Id\
@@ -78,7 +82,9 @@ class StageCLanguageService:
                     fl.name,\
                     ls.statusName,\
                     md.derivativeOf,\
-                    scod.english_name AS orthography\
+                    scod.english_name AS orthography,\
+                    (select fln.name from fcbhLanguageName fln WHERE fln.languageId = fl.id and fln.type = 'ethname' limit 1) as lang_ethname,\
+                    (select fln.name from fcbhLanguageName fln WHERE fln.languageId = fl.id and fln.type = 'alternate' limit 1) as lang_alternate\
             FROM media md\
             INNER JOIN bible_media bm ON md.id = bm.mediaId\
             INNER JOIN bibleTranslation bt ON md.translationId = bt.Id\

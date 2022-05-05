@@ -108,7 +108,10 @@ if (__name__ == '__main__'):
 	config = Config()
 	AWSSession.shared() # ensure AWSSession init
 	db = SQLUtility(config)
-	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
+	# DATA_MODEL_MIGRATION_STAGE should be "B" or "C"
+	print("DATA_MODEL_MIGRATION_STAGE DBPLoadController ==> [%s]" % os.getenv("DATA_MODEL_MIGRATION_STAGE"))
+	migration_stage = "B" if os.getenv("DATA_MODEL_MIGRATION_STAGE") == None else os.getenv("DATA_MODEL_MIGRATION_STAGE")
+	languageReader = LanguageReaderCreator(migration_stage).create(config.filename_lpts_xml)
 	ctrl = DBPLoadController(config, db, languageReader)
 	if len(sys.argv) != 2:
 		InputFileset.validate = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
