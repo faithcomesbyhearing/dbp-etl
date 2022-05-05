@@ -137,6 +137,16 @@ class Config:
 			self.directory_errors = self._getPath("directory.errors")
 			self.filename_accept_errors = self._getPath("filename.accept.errors")
 			self.filename_datetime = self._get("filename.datetime")
+			self.database_names['dbp'] = self.hashMap.get("database.db_name")
+			self.database_names['user_dbp'] = self.hashMap.get("database.user_db_name")
+			self.database_host = self._get("database.host")
+			self.database_user = self._get("database.user")
+			self.database_passwd = self._get("database.passwd")
+			self.database_db_name = self._get("database.db_name")
+			self.database_user_db_name = self._get("database.user_db_name")
+			self.database_port = self._getInt("database.port")
+			self.database_tunnel = self._getOptional("database.tunnel")
+
 		elif programRunning in {"AudioHLS.py"}:
 			self.directory_audio_hls = self._getPath("directory.audio_hls") #"%s/FCBH/files/tmp" % (self.home)
 			self.audio_hls_duration_limit = self._getInt("audio.hls.duration.limit") #10  #### Must become command line param
