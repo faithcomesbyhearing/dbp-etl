@@ -25,9 +25,8 @@ class PreValidate:
 	# there is no bucket involved, since the code has not been uploaded yet
 	def validateLambda(self, directoryName, filenames, stocknumberFileContentsString = None):
 		result = None
-		#print("validateLambda. directoryName [%s], filenames [%s]" % (directoryName, filenames))
 		textStockNumberProcessor = TextStockNumberProcessor(self.languageReader)
-		(stockNumberResultList, textProcessingErrors) = textStockNumberProcessor.validateTextStockNumbers(stocknumberFileContentsString, directoryName, filenames)
+		(stockNumberResultList, textProcessingErrors) = textStockNumberProcessor.validateTextStockNumbersFromLambda(stocknumberFileContentsString, directoryName, filenames)
 		self.addErrorMessages("text-processing", textProcessingErrors)
 		if (self.hasErrors()):
 			return self.formatMessages()
@@ -45,24 +44,15 @@ class PreValidate:
 
 	# ENTRY POINT for DBPLoadController processing - 
 	def validateDBPETL(self, s3Client, location, directoryName, fullPath):
-		print("entry to validateDBPETL.. location [%s], directory [%s], fullPath [%s]" % (location, directoryName, fullPath))
-		## LoadController is called with this: 2022-04-15-16-24-20/French_N1 & O1 FRABIB_USX
 		# entry to validateDBPETL.. location [s3://dbp-etl-upload-dev-ya1mbvdty8tlq15r], directory [French_N1 & O1 FRABIB_USX], fullPath [2022-04-15-17-03-50/French_N1 & O1 FRABIB_USX]
-
-		# For audio and video, the directory name contains an embedded fileset id (eg ENGESVN2DA)
-		# For text, stocknumber is used instead of filesetid. Usually, the directory name contains an embedded stocknumber (Abidji_N2ABIWBT_USX). 
-		# But in some cases, the same USX applies to multiple stocknumbers. When this occurs, the directory contains a file
-		# called stocknumber.txt, which lists each associated stocknumber.
-
 		resultList = []
 
 		# note: s3Client and location are passed in to specific methods instead of to the constructor, since these
 		# objects are not relevant for the lambda entry point
 		textStockNumberProcessor = TextStockNumberProcessor(self.languageReader)
 		stocknumberString = textStockNumberProcessor.getStockNumberStringFromS3(s3Client, location, fullPath)
-		(filenames, actualScript) = textStockNumberProcessor.getSampleUnicodeTextFromS3(s3Client, location, fullPath)
 
-		(stockNumberResultList, textProcessingMessages) = textStockNumberProcessor.validateTextStockNumbers(stocknumberString, directoryName, filenames, actualScript)
+		(stockNumberResultList, textProcessingMessages) = textStockNumberProcessor.validateTextStockNumbersFromController(stocknumberString, directoryName, s3Client, location, fullPath)
 		self.addErrorMessages("text-processing", textProcessingMessages)
 		if (self.hasErrors()):
 			return ([], self.messages)

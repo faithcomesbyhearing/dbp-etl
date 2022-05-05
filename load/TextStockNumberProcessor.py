@@ -15,30 +15,58 @@ class TextStockNumberProcessor:
 		self.NT = { "MAT", "MRK", "LUK", "JHN", "ACT", "ROM", "1CO", "2CO", "GAL", "EPH", "PHP", "COL", "1TH", "2TH", 
 					"1TI", "2TI", "TIT", "PHM", "HEB", "JAS", "1PE", "2PE", "1JN", "2JN", "3JN", "JUD", "REV" }			
 
-	# this is the main validation method for both lambda and ETL, after factoring out the differences in how to read the stocknumber.txt file.
-	# the stocknumber[s] are in a string
-	# returns: 1) array of PreValidateResult objects; (2) errors
-	def validateTextStockNumbers(self, stocknumberFileContentsString, directoryName, filenames, actualScript = None):
+	def validateTextStockNumbersFromLambda(self, stocknumberFileContentsString, directoryName, filenames):
 		resultList = []
-		#print ("validateTextStockNumbers... stocknumberFileContentsString ..%s.., directoryName [%s]" %(stocknumberFileContentsString, directoryName))
-		# stocknumberString is set by frontend dropzone, only if a stocknumber.txt file exists. Stocknumber string is the contents of that file
+		stockNumberList = self.getStockNumberList(stocknumberFileContentsString, directoryName)
+		if stockNumberList != None and len(stockNumberList) > 0:
+			stockNumberResultList = self.validateUSXStockList(stockNumberList, filenames)
+			resultList.extend(stockNumberResultList)
+		return (resultList, self.errors)
+
+
+	def validateTextStockNumbersFromController(self, stocknumberFileContentsString, directoryName, s3Client, location, fullPath):
+		resultList = []
+		stockNumberList = self.getStockNumberList(stocknumberFileContentsString, directoryName)
+		if stockNumberList != None and len(stockNumberList) > 0:
+			(filenames, actualScript) = self.getSampleUnicodeTextFromS3(s3Client, location, fullPath)
+			stockNumberResultList = self.validateUSXStockList(stockNumberList, filenames, actualScript)
+			resultList.extend(stockNumberResultList)
+		return (resultList, self.errors)
+
+
+	def getStockNumberList(self,stocknumberFileContentsString, directoryName):
 		if (stocknumberFileContentsString != None and stocknumberFileContentsString != ""):
 			stockNumberList = self.parseStockNumberString(stocknumberFileContentsString)
 		else:
 			stockNumberList = self.parseStockNumberFromDirectoryName(directoryName)
+		return stockNumberList
+		
 
-		if stockNumberList != None and len(stockNumberList) > 0:
-			stockNumberResultList = self.validateUSXStockList(stockNumberList, filenames, actualScript)
+	# this is the main validation method for both lambda and ETL, after factoring out the differences in how to read the stocknumber.txt file.
+	# the stocknumber[s] are in a string
+	# returns: 1) array of PreValidateResult objects; (2) errors
+	# def validateTextStockNumbers(self, stocknumberFileContentsString, directoryName, s3Client, location, fullPath):
+	# 	resultList = []
+	# 	#print ("validateTextStockNumbers... stocknumberFileContentsString ..%s.., directoryName [%s]" %(stocknumberFileContentsString, directoryName))
+	# 	# stocknumberString is set by frontend dropzone, only if a stocknumber.txt file exists. Stocknumber string is the contents of that file
+	# 	if (stocknumberFileContentsString != None and stocknumberFileContentsString != ""):
+	# 		stockNumberList = self.parseStockNumberString(stocknumberFileContentsString)
+	# 	else:
+	# 		stockNumberList = self.parseStockNumberFromDirectoryName(directoryName)
 
-			resultList.extend(stockNumberResultList)
+	# 	if stockNumberList != None and len(stockNumberList) > 0:
+	# 		(filenames, actualScript) = self.getSampleUnicodeTextFromS3(s3Client, location, fullPath)
 
-		return (resultList, self.errors)
+	# 		stockNumberResultList = self.validateUSXStockList(stockNumberList, filenames, actualScript)
+
+	# 		resultList.extend(stockNumberResultList)
+
+	# 	return (resultList, self.errors)
 
 	# returns an array of PreValidateResult objects
 	def validateUSXStockList(self, stockList, filenames, actualScript = None):
 		resultList = []
 		for stockNumber in stockList:
-			print("text processor.validateUSXStockList, in loop.. stockNumber [%s] actualScript [%s]" % (stockNumber, actualScript))
 			result = self.validateUSXstockNumber(stockNumber, filenames, actualScript)
 			resultList.extend(result)
 
@@ -46,7 +74,7 @@ class TextStockNumberProcessor:
 
 	# returns an array of PreValidateResult objects
 	def validateUSXstockNumber(self, stockNumber, filenames, actualScript = None):
-		print("text processor:validateUSXStockNumber. stockNumber [%s], count of filenames [%s], actualScript [%s] " % (stockNumber, len(filenames), actualScript))
+		# print("text processor:validateUSXStockNumber. stockNumber [%s], count of filenames [%s], actualScript [%s] " % (stockNumber, len(filenames), actualScript))
 		lptsRecord = self.languageReader.getByStockNumber(stockNumber)
 		if lptsRecord == None:
 			self.errors.append("stockNumber [%s] is not in LPTS" % (stockNumber))

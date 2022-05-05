@@ -16,25 +16,22 @@ class UnicodeScript:
 	## Returns a list of files in a bucket or on a local disk.
 	def getFilenames(self, s3Client, location, filesetPath):
 		results = []
-		ignoreSet = {"Thumbs.db", "stocknumber.txt", "._stocknumber.txt"}
 		if not location.startswith("s3://"):
 			pathname = location + os.sep + filesetPath
 			if os.path.isdir(pathname):
 				for filename in [f for f in os.listdir(pathname) if not f.startswith('.')]:
-#					if filename not in ignoreSet:# and os.path.isfile(pathname + os.sep + filename):
-					if (filename.endsWith(".usx") and not filename.startswith(".")):
+					if (filename.endswith(".usx") and not filename.startswith(".")):
 						results.append(filename)
 			else:
 				self.errors.append("ERROR: Invalid pathname %s" % (pathname,))
 		else:
 			bucket = location[5:]
-			#print("bucket", bucket)
 			request = { 'Bucket': bucket, 'MaxKeys': 1000, 'Prefix': filesetPath + "/" }
 			response = s3Client.list_objects_v2(**request)
 			for item in response.get('Contents', []):
 				objKey = item.get('Key')
 				filename = objKey[len(filesetPath) + 1:]
-				if (filename.endsWith(".usx") and not filename.startswith(".")):
+				if (filename.endswith(".usx") and not filename.startswith(".")):
 					results.append(filename)				
 			if len(results) == 0:
 				self.errors.append("ERROR: Invalid bucket %s or prefix %s/" % (bucket, filesetPath))
