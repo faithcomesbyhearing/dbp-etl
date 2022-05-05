@@ -131,9 +131,11 @@ if (__name__ == '__main__'):
 #python3 load/DBPLoadController.py test s3://etl-development-input Spanish_N2SPNTLA_USX #works with refactor
 
 # python3 load/DBPLoadController.py test s3://etl-development-input "French_N1 & O1 FRABIB_USX"
+# for filesetid in FRNPDCN_ET-usx FRNPDFN_ET-usx FRNPDVN_ET-usx FRNPDCN_ET FRNPDFN_ET FRNPDVN_ET; do  python3 load/TestCleanup.py test $filesetid; done
+# for filesetid in KANDPIN_ET-usx KANDPIO_ET-usx KANDPIN_ET KANDPIO_ET; do  python3 load/TestCleanup.py test $filesetid; done
 # python3 load/TestCleanup.py test FRABIBN_ET-usx
-# python3 load/TestCleanup.py test FRABIBO_ET-usx
-
+# python3 load/TestCleanup.py test SPNTLAN_ET
+# python3 load/TestCleanup.py test ABIWBTN_ET-usx
 
 
 
