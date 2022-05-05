@@ -139,6 +139,6 @@ def getMediaByIdAndFormat(mediaId, format):
         damId = row[0]
         status = row[1]
         status = 'Live' if status == 'Complete' else '' 
-        record.append((damId, 1, status))
+        record.append((damId, 1, status, 'No Fieldname'))
 
     return record
