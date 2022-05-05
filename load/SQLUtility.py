@@ -21,15 +21,16 @@ class SQLUtility:
 			results1 = os.popen(config.database_tunnel).read()
 			print("tunnel opened:", results1)
 
+		database = config.getCurrentDatabaseDBName() if config.getCurrentDatabaseDBName() != None else config.database_db_name
 		self.conn = pymysql.connect(
 			host = config.database_host,
 			user = config.database_user,
 			password = config.database_passwd,
-			db = config.getCurrentDatabaseDBName(),
+			db = database,
 			port = config.database_port,
 			charset = 'utf8mb4',
 			cursorclass = pycursor)
-		print("Database '%s' is opened." % (config.getCurrentDatabaseDBName()))
+		print("Database '%s' is opened." % (database))
 
 	def close(self):
 		if self.conn != None:
