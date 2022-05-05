@@ -1,10 +1,18 @@
 from LanguageReader import LanguageReaderInterface
 from StageCLanguageService import StageCLanguageService as LanguageService
-from StageCLanguageServiceParse import parseResult;
+from StageCLanguageServiceParse import parseResult
 
 class StageCLanguageReader (LanguageReaderInterface):
     def __init__(self):
         self.service = LanguageService()
+
+    @property
+    def resultSet(self):
+        try:
+            return self.value
+        except AttributeError:
+            self.value = parseResult(self.service.getAllMediaRecords())
+            return self.value
 
     def getBibleIdMap(self):
         result = parseResult(self.service.getAllMediaRecords())
@@ -27,9 +35,6 @@ class StageCLanguageReader (LanguageReaderInterface):
         result = parseResult(self.service.getMediaByStocknumber(stockNumber))
         return result[0] if len(result) > 0 else None
 
-    def getFilesetRecords(filesetId):
-        raise Exception("Not implemented")
-
     def getLanguageRecordLoose(typeCode, bibleId, dbpFilesetId):
        raise Exception("Not implemented")
 
@@ -37,6 +42,11 @@ class StageCLanguageReader (LanguageReaderInterface):
         raise Exception("Not implemented")
 
     def getFilesetRecords10(self, filesetId):
+        damId = filesetId[:10]
+
+        if len(damId) == 10 and damId[-2:] == "SA":
+            damId = damId[:8] + "DA"
+
         mediaId = self.service.getMediaIdFromFilesetId(filesetId)
 
         if mediaId != None:
@@ -49,4 +59,13 @@ class StageCLanguageReader (LanguageReaderInterface):
         return None
 
     def getFilesetRecords(self, filesetId):
-        raise Exception("Not implemented")
+        mediaId = self.service.getMediaIdFromFilesetId(filesetId[:10])
+
+        if mediaId != None:
+            result = parseResult(self.service.getMediaById(mediaId))
+            languageRecord = result[0] if len(result) > 0 else None
+            response = set()
+            response.add((languageRecord.Status(), languageRecord))
+            return response
+
+        return None

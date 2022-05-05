@@ -385,7 +385,7 @@ class LanguageRecord (LanguageRecordInterface):
 			damIdDict = dict(
 					list(LanguageRecord.audio1DamIdDict.items()) +
 					list(LanguageRecord.audio2DamIdDict.items()) +
-					list(languageRecord.audio3DamIdDict.items())
+					list(LanguageRecord.audio3DamIdDict.items())
 					)
 		elif typeCode == "text":
 			damIdDict = dict(
