@@ -8,7 +8,7 @@ from datetime import datetime
 from Config import *
 from SQLUtility import *
 from LanguageReaderCreator import *
-from LanguageReader import *
+from DBPRunFilesS3 import *
 
 class DatabaseCheck:
 
@@ -255,7 +255,7 @@ class DatabaseCheck:
 				self.htmlOut.write("<td></td>")
 			self.htmlOut.write("</tr>")
 		self.htmlOut.write("</table>\n")
-		self.htmlOut.write("<p>Error count: %d</p>\n" % (len(results)))
+		self.htmlOut.write("<p>Count: %d</p>\n" % (len(results)))
 
 
 if (__name__ == '__main__'):
