@@ -7,6 +7,7 @@ import io
 from datetime import datetime
 from Config import *
 from SQLUtility import *
+import tempfile
 from LPTSExtractReader import *
 from DBPRunFilesS3 import *
 
@@ -18,7 +19,8 @@ class DatabaseCheck:
 		self.config = config
 		self.db = db
 		self.languageReader = languageReader
-		self.htmlOut = open(DatabaseCheck.HTML_FILE, "w")
+		self.outfile = tempfile.gettempdir() + DatabaseCheck.HTML_FILE
+		self.htmlOut = open(self.outfile, "w")
 		self.htmlOut.write("<html><head>")
 		styles = [ "<style>",
 			"<!--",
@@ -215,7 +217,7 @@ class DatabaseCheck:
 		noFilesetInDBP = []
 		bibleIdMismatch = []
 		sql = "SELECT f.id, c.bible_id FROM bible_filesets f, bible_fileset_connections c WHERE f.hash_id=c.hash_id"
-		filesetMap = db.selectMap(sql, ())
+		filesetMap = self.db.selectMap(sql, ())
 		for record in self.languageReader.resultSet:
 			stockNo = record.Reg_StockNumber()
 			text = record.DamIdList("text")
@@ -266,7 +268,7 @@ if (__name__ == '__main__'):
 	check.process()
 	check.close()
 	db.close()
-	DBPRunFilesS3.simpleUpload(config, DatabaseCheck.HTML_FILE, "text/html")
+	DBPRunFilesS3.simpleUpload(config, check.outfile, "text/html")
 
 
 #python3 load/DatabaseCheck.py test
