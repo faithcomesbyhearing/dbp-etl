@@ -19,7 +19,7 @@ class DatabaseCheck:
 		self.config = config
 		self.db = db
 		self.languageReader = languageReader
-		self.outfile = tempfile.gettempdir() + DatabaseCheck.HTML_FILE
+		self.outfile = tempfile.gettempdir() + "/" + DatabaseCheck.HTML_FILE
 		self.htmlOut = open(self.outfile, "w")
 		self.htmlOut.write("<html><head>")
 		styles = [ "<style>",
