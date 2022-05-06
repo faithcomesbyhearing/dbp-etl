@@ -7,7 +7,7 @@ import io
 from datetime import datetime
 from Config import *
 from SQLUtility import *
-from LanguageReaderCreator import *
+from LPTSExtractReader import *
 from DBPRunFilesS3 import *
 
 class DatabaseCheck:
