@@ -14,10 +14,14 @@ from LPTSExtractReader import *
 
 def handler(event, context):
 
-#	directory = event["prefix"] # can be filesetId or lang_stockno_USX
+	bucket    = os.getenv("UPLOAD_BUCKET")
 
+	print("Copying lpts-dbp.xml...")
+	session = boto3.Session()
+	s3Client = session.client("s3")
+	s3Client.download_file(bucket, "lpts-dbp.xml", "/tmp/lpts-dbp.xml")
+	languageReader = LPTSExtractReader("/tmp/lpts-dbp.xml")
 	config = Config()
-	languageReader = LPTSExtractReader(config.filename_lpts_xml)
 	db = SQLUtility(config)	
 	check = DatabaseCheck(config, db, languageReader)
 	check.process()
