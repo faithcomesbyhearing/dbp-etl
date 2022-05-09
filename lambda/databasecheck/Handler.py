@@ -11,6 +11,7 @@ from Config import *
 from SQLUtility import *
 from DatabaseCheck import *
 from LPTSExtractReader import *
+from DBPRunFilesS3 import *
 
 def handler(event, context):
 
@@ -27,3 +28,6 @@ def handler(event, context):
 	check.process()
 	check.close()
 	db.close()
+	DBPRunFilesS3.simpleUpload(config, check.outfile, "text/html")
+	with open(check.outfile) as f:
+	    return f.read()	
