@@ -28,6 +28,6 @@ def handler(event, context):
 	check.process()
 	check.close()
 	db.close()
-	DBPRunFilesS3.simpleUpload(config, check.outfile, "text/html")
+	#DBPRunFilesS3.simpleUpload(config, check.outfile, "text/html")
 	with open(check.outfile) as f:
 	    return f.read()	
