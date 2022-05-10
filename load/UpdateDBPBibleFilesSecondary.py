@@ -88,6 +88,12 @@ class UpdateDBPBibleFilesSecondary:
 				if not zipFile.name in dbpZipSet:
 					insertRows.append(('zip', hashId, zipFile.name))
 
+			dbpThumbnailSet = self.db.selectSet(sql, (hashId, 'thumbnail'))
+			for thumbnailFile in inp.thumbnailFiles():
+				if not thumbnailFile in dbpThumbnailSet:
+					insertRows.append(('thumbnail', hashId, thumbnailFile))
+
+
 		tableName = "bible_files_secondary"
 		pkeyNames = ("hash_id", "file_name")
 		attrNames = ("file_type",)
@@ -138,7 +144,7 @@ if (__name__ == '__main__'):
 				update.updateBibleFilesSecondary(hashId, inp)
 				dbOut.displayStatements()
 				dbOut.displayCounts()
-				dbOut.execute("zip_art_" + filesetId)
+				dbOut.execute("zip_art_thumbnail_" + filesetId)
 	Log.writeLog(config)
 
 # python3 load/UpdateDBPBibleFilesSecondary.py test starting_bible_id  ending_bible_id

@@ -279,6 +279,8 @@ class InputFileset:
 	def artFiles(self):
 		results = []
 		for file in self.files:
+			if (file.startswith("gf")):
+				continue
 			ext = file.name.split(".")[-1]
 			if ext in { "jpg", "tif", "png" }:
 				results.append(file.name)
@@ -291,7 +293,15 @@ class InputFileset:
 			if ext == "zip":
 				return file
 		return None
-
+	
+	def thumbnailFiles(self):
+		results = []
+		for file in self.files:
+			if (file.startswith("gf")):
+				ext = file.name.split(".")[-1]
+				if ext in { "jpg", "tif", "png" }:
+					results.append(file.name)
+		return results
 
 	## This method is used to download files to local disk when needed for processing, such as BiblePublisher
 	def downloadFiles(self):
