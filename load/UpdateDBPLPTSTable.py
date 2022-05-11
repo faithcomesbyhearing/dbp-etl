@@ -18,6 +18,7 @@ from SQLBatchExec import *
 from LoadOrganizations import *
 from UpdateDBPAccessTable import *
 from UpdateDBPBibleTranslations import *
+from UpdateDBPLanguageTranslation import *
 
 class UpdateDBPLPTSTable:
 
@@ -43,8 +44,10 @@ class UpdateDBPLPTSTable:
 		self.updateBibleFilesetTags(filesetList)
 		self.updateBibleFilesetCopyrights(filesetList)
 		self.updateBibleFilesetCopyrightOrganizations(filesetList)
-		translations = UpdateDBPBibleTranslations(self.config, self.db, self.dbOut, self.languageReader)
-		translations.insertEngVolumeName()
+		bibletranslations = UpdateDBPBibleTranslations(self.config, self.db, self.dbOut, self.languageReader)
+		languageTranslations = UpdateDBPLanguageTranslation(self.config, self.db, self.dbOut, self.languageReader)
+		bibletranslations.insertEngVolumeName()
+		languageTranslations.updateOrInsertlanguageTranslation()
 		self.db.close()
 
 	##
