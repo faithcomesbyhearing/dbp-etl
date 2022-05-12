@@ -78,8 +78,8 @@ class ValidatePage:
 		#print("filesetId [%s] yields bibleId [%s]" % (filesetId, bibleId))
 		return bibleId
 
-	def getHashIds(self, filesetId):
-		resultSet = self.query("SELECT hash_id FROM bible_filesets WHERE id = %s", (filesetId))
+	def getHashIds(self, bibleId):
+		resultSet = self.query("SELECT hash_id FROM bible_fileset_lookup bfl WHERE bfl.bibleid = %s", (bibleId))
 		results = []
 		for row in resultSet:
 			results.append(row[0])
@@ -89,7 +89,7 @@ class ValidatePage:
 		
 	def process(self, filesetId):	
 		bibleId = self.getBibleId(filesetId)
-		hashIdList = self.getHashIds(filesetId)
+		hashIdList = self.getHashIds(bibleId)
 
 		self.displayQuery("Bibles", 
 			["bible_id", "language_id", "versification", "numeral_system_id", "date", "scope", "script", "derived", "copyright", "priority", "reviewed", 
@@ -215,7 +215,7 @@ class ValidatePage:
 		
 			
 if __name__ == "__main__":
-	filesetId = "ENGESVN1DA"
+	filesetId = "GAZBSEO_ET-usx"
 	page = ValidatePage()
 	page.process(filesetId)
 	page.close()
