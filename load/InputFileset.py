@@ -40,6 +40,8 @@ class InputFile:
 			results.append("duration={:.{}f}".format(self.duration, 3))
 		return " ".join(results)
 
+	def startswith(self, text):
+		return self.name.startswith(text)
 
 class InputFileset:
 
@@ -123,7 +125,7 @@ class InputFileset:
 			objectKey = self.filesetPath + "/" + filename
 			filepath = directory + os.sep + filename
 			try:
-				#print("Download s3://%s/%s to %s" % (self.location, objectKey, filepath))
+				# print("Download s3://%s/%s to %s" % (self.location, objectKey, filepath))
 				s3Client.download_file(self.location, objectKey, filepath)
 				filesize = os.path.getsize(filepath)
 				modifiedTS = os.path.getmtime(filepath)
@@ -302,6 +304,44 @@ class InputFileset:
 				if ext in { "jpg", "tif", "png" }:
 					results.append(file.name)
 		return results
+
+	def getListFilesFromBucket(self, location, filesetPath, lenFilesetPatch, invokedBy = "General"):
+		resultList = []
+		request = { 'Bucket': location, 'MaxKeys': 1000, 'Prefix': filesetPath }
+		hasMore = True
+		while hasMore:
+			response = AWSSession.shared().s3Client.list_objects_v2(**request)
+			for item in response.get('Contents', []):
+				objKey = item.get('Key')
+				filename = objKey[lenFilesetPatch:]
+				if not self.ignoreFilename(filename):
+					size = item.get('Size')
+					lastModified = str(item.get('LastModified'))
+					lastModified = lastModified.split("+")[0]
+					resultList.append(InputFile(filename, size, lastModified))
+			hasMore = response['IsTruncated']
+			if hasMore:
+				request['ContinuationToken'] = response['NextContinuationToken']
+		if len(resultList) == 0:
+			Log.getLogger(self.filesetId).message(Log.EROR, "%s: Invalid bucket %s or prefix %s" % (invokeBy, location, gfFilesetPath))
+
+		return resultList
+
+	def gfThumbnailFiles(self):
+		# s3 listobjects from s3://dbp-vid/video/thumbnails
+		gfFilesetPath = "video/thumbnails/"
+		gfThumbnailFilesArray = self.getListFilesFromBucket(self.location, gfFilesetPath, len(gfFilesetPath), "Get GF ThumbnailFiles")
+
+		s3Thumbnails = []
+
+		for thumbnailFile in gfThumbnailFilesArray:
+			if (thumbnailFile.startswith("gf")):
+				ext = thumbnailFile.name.split(".")[-1]
+
+				if ext in { "jpg", "tif", "png" }:
+					s3Thumbnails.append(thumbnailFile.name)
+
+		return s3Thumbnails
 
 	## This method is used to download files to local disk when needed for processing, such as BiblePublisher
 	def downloadFiles(self):

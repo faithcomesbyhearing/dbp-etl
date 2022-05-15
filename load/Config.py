@@ -105,6 +105,10 @@ class Config:
 		self.s3_aws_role_arn = self._getOptional("s3.aws_role_arn") 
 		self.s3_aws_role_profile = self._getOptional("s3.aws_role_profile") # this is temporary
 		self.filename_lpts_xml = self._getOptional("filename.lpts_xml")
+		self.s3_bucket = self._get("s3.bucket")
+		self.s3_vid_bucket = self._get("s3.vid_bucket")
+		self.directory_accepted = self._getPath("directory.accepted")
+		self.directory_errors = self._getPath("directory.errors")
 		self.filename_datetime = self._get("filename.datetime")
 		self.mysql_exe = self._getPath("mysql.exe")
 
@@ -112,8 +116,6 @@ class Config:
 		if programRunning in {"DBPLoadController.py"}:
 			self.node_exe = self._getPath("node.exe")
 			self.publisher_js = self._getPath("publisher.js")
-			self.s3_bucket = self._get("s3.bucket")
-			self.s3_vid_bucket = self._get("s3.vid_bucket")
 			self.audio_transcoder_url = self._get("audio.transcoder.url")
 			self.audio_transcoder_key = self._get("audio.transcoder.key")
 			self.audio_transcoder_sleep_sec = self._getInt("audio.transcoder.sleep.sec")
@@ -134,8 +136,6 @@ class Config:
 			self.directory_upload_aws = self._getPath("directory.upload_aws")
 			self.directory_quarantine = self._getPath("directory.quarantine")
 			self.directory_duplicate = self._getPath("directory.duplicate")
-			self.directory_accepted = self._getPath("directory.accepted")
-			self.directory_errors = self._getPath("directory.errors")
 			self.filename_accept_errors = self._getPath("filename.accept.errors")
 			self.database_names['dbp'] = self.hashMap.get("database.db_name")
 			self.database_names['user_dbp'] = self.hashMap.get("database.user_db_name")
