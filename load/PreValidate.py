@@ -98,11 +98,13 @@ class PreValidate:
 			dbpFilesetId = filesetId
 			if "Audio" in fieldName:
 				media = "audio"
+			elif "Text" in fieldName:
+				media = "text"			
 			elif "Video" in fieldName:
 				media = "video"
 			else:
 				media = "unknown"
-				self.errorMessage(filesetId, "in %s does not have Audio or Video in DamId fieldname." % (stockNum,))
+				self.errorMessage(filesetId, "in %s does not have Audio, Text or Video in DamId fieldname." % (stockNum,))
 			mediaSet.add(media)
 
 			if "3" in fieldName:
