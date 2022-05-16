@@ -160,7 +160,7 @@ class ValidatePage:
 		
 		self.displayQuery("Bible_File_Tags",
 			["fileset_id", "file_name", "tag", "value", "created_at", "updated_at"],
-			("SELECT s.id, bf.file_name, f.tag, f.value, f.admin_only, f.created_at, f.updated_at" +
+			("SELECT s.id, bf.file_name, f.tag, f.value, f.created_at, f.updated_at" +
 				" FROM bible_file_tags f" +
 				" JOIN bible_files bf ON f.file_id = bf.id" +
 				" JOIN bible_filesets s ON s.hash_id = bf.hash_id" +
