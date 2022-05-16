@@ -173,6 +173,8 @@ class Config:
 			self.database_names['language'] = self.hashMap.get("database.language_db_name")
 			self.database_names['biblebrain'] = self.hashMap.get("database.biblebrain_db_name")
 			self.setCurrentDatabaseDBName(self.hashMap.get("database.language_db_name"))
+		elif profile == 'newdata':
+			self.database_tunnel = self._getOptional("database.tunnel")
 
 	def setCurrentDatabaseDBName(self, name):
 		self.current_database_name = name
