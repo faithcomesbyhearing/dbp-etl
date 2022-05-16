@@ -96,23 +96,23 @@ class RunStatus:
 		RunStatus.start = now
 
 
-if __name__ == "__main__":
-	from LPTSExtractReader import *
-	from InputFileset import *
+# if __name__ == "__main__":
+#   from LanguageReader import *
+# 	from InputFileset import *
 
-	config = Config.shared()
-	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
-	s3Client = AWSSession.shared().s3Client
-	filesets = InputFileset.filesetCommandLineParser(config, s3Client, lptsReader)
-	time.sleep(1)
-	RunStatus.set(RunStatus.BIBLE, False)
-	time.sleep(2)
-	for fileset in filesets:
-		Log.getLogger(fileset.filesetId).message(Log.EROR, "This is a test error")
-		RunStatus.set(fileset.filesetId, False)
-		time.sleep(2)
-	RunStatus.set(RunStatus.LPTS, False)
-	RunStatus.exit()
+# 	config = Config.shared()
+# 	languageReader = LanguageReaderCreator().create(config)
+# 	s3Client = AWSSession.shared().s3Client
+# 	filesets = InputFileset.filesetCommandLineParser(config, s3Client, languageReader)
+# 	time.sleep(1)
+# 	RunStatus.set(RunStatus.BIBLE, False)
+# 	time.sleep(2)
+# 	for fileset in filesets:
+# 		Log.getLogger(fileset.filesetId).message(Log.EROR, "This is a test error")
+# 		RunStatus.set(fileset.filesetId, False)
+# 		time.sleep(2)
+# 	RunStatus.set(RunStatus.LPTS, False)
+# 	RunStatus.exit()
 
 # python3 load/RunStatus.py test s3://dbp-etl-artifacts-dev audio/ENGESV/ENGESVN2DA ENGESVO2DA
 

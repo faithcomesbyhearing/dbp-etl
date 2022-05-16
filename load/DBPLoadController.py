@@ -10,10 +10,10 @@
 
 import os
 from Config import *
-from RunStatus import *
-from LPTSExtractReader import *
+from LanguageReader import *
 from Log import *
 from InputFileset import *
+from InputProcessor import *
 from Validate import *
 from S3Utility import *
 from SQLBatchExec import *
@@ -26,10 +26,10 @@ from UpdateDBPBibleFilesSecondary import *
 
 class DBPLoadController:
 
-	def __init__(self, config, db, lptsReader):
+	def __init__(self, config, db, languageReader):
 		self.config = config
 		self.db = db
-		self.lptsReader = lptsReader
+		self.languageReader = languageReader
 		self.s3Utility = S3Utility(config)
 		self.stockNumRegex = re.compile("__[A-Z0-9]{8}")
 
@@ -58,7 +58,7 @@ class DBPLoadController:
 
 	def updateBibles(self):
 		dbOut = SQLBatchExec(self.config)
-		bibles = UpdateDBPBiblesTable(self.config, self.db, dbOut, self.lptsReader)
+		bibles = UpdateDBPBiblesTable(self.config, self.db, dbOut, self.languageReader)
 		bibles.process()
 		#dbOut.displayStatements()
 		dbOut.displayCounts()
@@ -94,7 +94,7 @@ class DBPLoadController:
 
 	def updateLPTSTables(self):
 		dbOut = SQLBatchExec(self.config)
-		lptsDBP = UpdateDBPLPTSTable(self.config, dbOut, self.lptsReader)
+		lptsDBP = UpdateDBPLPTSTable(self.config, dbOut, self.languageReader)
 		lptsDBP.process()
 		#dbOut.displayStatements()
 		dbOut.displayCounts()
@@ -104,13 +104,17 @@ class DBPLoadController:
 
 
 if (__name__ == '__main__'):
+	from LanguageReaderCreator import *
 	config = Config()
 	AWSSession.shared() # ensure AWSSession init
 	db = SQLUtility(config)
-	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
-	ctrl = DBPLoadController(config, db, lptsReader)
+	# DATA_MODEL_MIGRATION_STAGE should be "B" or "C"
+	print("DATA_MODEL_MIGRATION_STAGE DBPLoadController ==> [%s]" % os.getenv("DATA_MODEL_MIGRATION_STAGE"))
+	migration_stage = "B" if os.getenv("DATA_MODEL_MIGRATION_STAGE") == None else os.getenv("DATA_MODEL_MIGRATION_STAGE")
+	languageReader = LanguageReaderCreator(migration_stage).create(config.filename_lpts_xml)
+	ctrl = DBPLoadController(config, db, languageReader)
 	if len(sys.argv) != 2:
-		InputFileset.validate = InputFileset.filesetCommandLineParser(config, AWSSession.shared().s3Client, lptsReader)
+		InputFileset.validate = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
 		ctrl.repairAudioFileNames(InputFileset.validate)
 		ctrl.validate(InputFileset.validate)
 		if ctrl.updateBibles():
@@ -124,10 +128,22 @@ if (__name__ == '__main__'):
 		ctrl.updateLPTSTables()
 	RunStatus.exit()
 
-# Get currrent lpts-dbp.xml
+# Get current lpts-dbp.xml
 # aws --profile DBP_DEV s3 cp s3://dbp-etl-upload-newdata-fiu49s0cnup1yr0q/lpts-dbp.xml /Volumes/FCBH/bucket_data/lpts-dbp.xml
 
-# Clean up filesets in dbp-stating and dbp-vid-staging
+#python3 load/DBPLoadController.py test s3://etl-development-input Spanish_N2SPNTLA_USX #works with refactor
+
+# python3 load/DBPLoadController.py test s3://etl-development-input "French_N1 & O1 FRABIB_USX"
+# for filesetid in FRNPDCN_ET-usx FRNPDFN_ET-usx FRNPDVN_ET-usx FRNPDCN_ET FRNPDFN_ET FRNPDVN_ET; do  python3 load/TestCleanup.py test $filesetid; done
+# for filesetid in KANDPIN_ET-usx KANDPIO_ET-usx KANDPIN_ET KANDPIO_ET; do  python3 load/TestCleanup.py test $filesetid; done
+# python3 load/TestCleanup.py test FRABIBN_ET-usx
+# python3 load/TestCleanup.py test SPNTLAN_ET
+# python3 load/TestCleanup.py test ABIWBTN_ET-usx
+
+
+
+
+# Clean up filesets in dbp-staging and dbp-vid-staging
 
 # Prepare by getting some local data into a test bucket
 # aws s3 --profile dbp-etl-dev sync --acl bucket-owner-full-control /Volumes/FCBH/all-dbp-etl-test/audio/UNRWFW/UNRWFWP1DA s3://dbp-etl-upload-dev-zrg0q2rhv7shv7hr/UNRWFWP1DA

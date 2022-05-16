@@ -6,10 +6,8 @@ import urllib
 import json
 import os
 from Config import *
-from LPTSExtractReader import *
+from LanguageReader import *
 from InputFileset import *
-
-
 class AWSTranscoder:
 
 	## Debug response result
@@ -128,7 +126,7 @@ class AWSTranscoder:
 			bitrate = output.get("bitrate")
 
 			outFileset = InputFileset(self.config, bucket, filesetId, filesetPath, damId, "audio", 
-				inpFileset.bibleId, inpFileset.index, inpFileset.lptsRecord)
+				inpFileset.bibleId, inpFileset.index, inpFileset.languageRecord)
 			outFileset.files = [] # Erase files, because they will be overwritten by transcoding
 			outFileset.setAudio(container, codec, bitrate)
 			outFilesets[filesetPath] = outFileset
@@ -162,8 +160,8 @@ class AWSTranscoder:
 
 if (__name__ == '__main__'):
 	config = Config.shared()
-	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
-	inpFilesets = InputFileset.filesetCommandLineParser(config, lptsReader)
+	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
+	inpFilesets = InputFileset.filesetCommandLineParser(config, languageReader)
 	inpFileset = inpFilesets[0]
 	transcoder = AWSTranscoder(config)
 	outFilesets = transcoder.transcodeAudio(inpFileset)

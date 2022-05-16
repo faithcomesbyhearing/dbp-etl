@@ -70,13 +70,16 @@ class ValidatePage:
 			self.conn.close()
 			self.conn = None
 		self.output.file(tempfile.gettempdir() + "/sample.html")
+		print("file written to %s" % (tempfile.gettempdir() + "/sample.html"))
 			
-		
-	def getHashIds(self, bibleId, filesetId):
-		if bibleId != None:
-			resultSet = self.query("SELECT hash_id FROM bible_fileset_connections WHERE bible_id = %s", (bibleId,))
-		else:
-			resultSet = self.query("SELECT hash_id FROM bible_filesets WHERE id = %s", (filesetId))
+	def getBibleId(self, filesetId):
+		resultSet = self.query("SELECT bible_id FROM bibles_view WHERE fileset_id = %s", (filesetId))
+		bibleId = resultSet[0][0]
+		#print("filesetId [%s] yields bibleId [%s]" % (filesetId, bibleId))
+		return bibleId
+
+	def getHashIds(self, bibleId):
+		resultSet = self.query("SELECT hash_id FROM bible_fileset_lookup bfl WHERE bfl.bibleid = %s", (bibleId))
 		results = []
 		for row in resultSet:
 			results.append(row[0])
@@ -84,14 +87,36 @@ class ValidatePage:
 		print(hashIdList)
 		return hashIdList
 		
-	
-	def process(self, bibleId, hashIdList):	
+	def process(self, filesetId):	
+		bibleId = self.getBibleId(filesetId)
+		hashIdList = self.getHashIds(bibleId)
+
 		self.displayQuery("Bibles", 
 			["bible_id", "language_id", "versification", "numeral_system_id", "date", "scope", "script", "derived", "copyright", "priority", "reviewed", 
 			"notes", "created_at", "updated_at"],
 			("SELECT id, language_id, versification, numeral_system_id, date, scope, script, derived, copyright, priority, reviewed," +
 				" notes, created_at, updated_at FROM bibles WHERE id = %s"), (bibleId,))
-				
+		self.displayQuery("Bible Language", 
+			["bible_id", "language_id", "language_name", "iso", "glotto_id", "area", "population", "writing", "country_id", "created_at", "updated_at"],
+			("SELECT b.id, language_id, name, iso, glotto_id, area, population, writing, country_id, l.created_at, l.updated_at " + 
+				" FROM bibles b join languages l on l.id = b.language_id " + 
+				"WHERE b.id = %s"), (bibleId,))
+		
+		self.displayQuery("Language Translation", 
+			["bible_id", "language_source_id", "language_source_name", "language_translation_id", "translation_name", "priority", "created_at", "updated_at"],
+			("SELECT b.id, lt.language_source_id, l.name as 'language_name', lt.language_translation_id, lt.name as 'translation name', lt.priority, lt.created_at, lt.updated_at " + 
+				" FROM bibles b join languages l on l.id = b.language_id join language_translations lt on lt.language_source_id = l.id" + 
+				" WHERE b.id = %s and lt.priority=9"), (bibleId,))
+
+		self.displayQuery("Bible Translation", 
+			["id", "language_id", "bible_id", "vernacular", "vernacular_trade", "name", "created_at", "updated_at"],
+			("select id, language_id, bible_id, vernacular, vernacular_trade, name, bt.created_at, bt.updated_at " + 
+				" from bible_translations bt " + 
+				" WHERE bt.bible_id = %s"), (bibleId,))
+
+# select id, language_id, bible_id, vernacular, vernacular_trade, name, bt.created_at, bt.updated_at
+# from bible_translations bt
+# where bt.bible_id = 'KMLWBT'
 		self.displayQuery("Bible_Filesets",
 			["fileset_id", "hash_id", "asset_id", "set_type_code", "set_size_code", "hidden", "created_at", "updated_at"],
 			("SELECT f.id, f.hash_id, f.asset_id, f.set_type_code, f.set_size_code, f.hidden, f.created_at, f.updated_at" +
@@ -135,7 +160,7 @@ class ValidatePage:
 		
 		self.displayQuery("Bible_File_Tags",
 			["fileset_id", "file_name", "tag", "value", "created_at", "updated_at"],
-			("SELECT s.id, bf.file_name, f.tag, f.value, f.admin_only, f.created_at, f.updated_at" +
+			("SELECT s.id, bf.file_name, f.tag, f.value, f.created_at, f.updated_at" +
 				" FROM bible_file_tags f" +
 				" JOIN bible_files bf ON f.file_id = bf.id" +
 				" JOIN bible_filesets s ON s.hash_id = bf.hash_id" +
@@ -174,10 +199,6 @@ class ValidatePage:
 		#print(resultSet)
 		if self.format == "html":
 			self.output.table(title, columns, resultSet)
-			
-			
-		
-		
 		
 	def query(self, statement, values):
 		cursor = self.conn.cursor()
@@ -191,23 +212,15 @@ class ValidatePage:
 			print("ERROR executing SQL %s on '%s'" % (error, statement))
 			self.conn.rollback()
 			sys.exit()
-			
-			
-
-		
 		
 			
 if __name__ == "__main__":
-	#os.environ["QUERY_STRING"] = "bibleid=ENGESV"
-	#bibleid = ValidatePage.parseQuery()
-	(bibleId, filesetId) = ValidatePage.parseCommand()
-	#filesetId = None
-	print("bibleid", bibleId)
+	filesetId = "GAZBSEO_ET-usx"
 	page = ValidatePage()
-	hashIdList = page.getHashIds(bibleId, filesetId)
-	page.process(bibleId, hashIdList)
+	page.process(filesetId)
 	page.close()
-	#page = ValidatePage()
+
+# python3 load/ValidatePage.py 
 	
 """
 	

@@ -184,15 +184,16 @@ class UpdateDBPVideoTables:
 
 
 if (__name__ == '__main__'):
-	from LPTSExtractReader import *
+	from LanguageReaderCreator import LanguageReaderCreator		
+	from LanguageReader import *
 	from InputFileset import *
 	from DBPLoadController import *
 
 	config = Config.shared()
-	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
-	filesets = InputFileset.filesetCommandLineParser(config, lptsReader)
+	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
+	filesets = InputFileset.filesetCommandLineParser(config, languageReader)
 	db = SQLUtility(config)
-	ctrl = DBPLoadController(config, db, lptsReader)
+	ctrl = DBPLoadController(config, db, languageReader)
 	ctrl.validate(filesets)
 
 	dbOut = SQLBatchExec(config)

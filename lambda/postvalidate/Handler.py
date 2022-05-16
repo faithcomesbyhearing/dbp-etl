@@ -3,8 +3,8 @@ from ValidatePage import *
 
 def handler(event, context):
 	page = ValidatePage()
-	hashIdList = page.getHashIds(None, event["filesetId"])
-	page.process(None, hashIdList)
+	filesetId =  event["filesetId"]
+	page.process(filesetId)
 	page.close()
 	with open(tempfile.gettempdir() + "/sample.html") as f:
 	    return f.read()

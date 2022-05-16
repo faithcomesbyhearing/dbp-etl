@@ -3,17 +3,15 @@
 from Config import *
 from SQLUtility import *
 from SQLBatchExec import *
-from LPTSExtractReader import *
-
 
 class UpdateDBPBibleTranslations:
 
 
-	def __init__(self, config, db, dbOut, lptsReader):
+	def __init__(self, config, db, dbOut, languageReader):
 		self.config = config
 		self.db = db
 		self.dbOut = dbOut
-		self.lptsReader = lptsReader
+		self.languageReader = languageReader
 
 
 	def insertEngVolumeName(self):
@@ -30,12 +28,12 @@ class UpdateDBPBibleTranslations:
 			dbpMap[dbpBibleId] = (dbpName, dbpVernacular)
 
 		## retrieve bibles from LPTS
-		lptsBibleMap = self.lptsReader.getBibleIdMap()
+		lptsBibleMap = self.languageReader.getBibleIdMap()
 		lptsBibleMap.pop("JESUS FILM", None) # delete JESUS FILM
 
 		for bibleId in sorted(lptsBibleMap.keys()):
-			lptsRecords = lptsBibleMap[bibleId]
-			volumeName = self.biblesVolumneName(bibleId, lptsRecords)
+			languageRecords = lptsBibleMap[bibleId]
+			volumeName = self.biblesVolumneName(bibleId, languageRecords)
 
 			dbpNameCols = dbpMap.get(bibleId)
 
@@ -57,10 +55,10 @@ class UpdateDBPBibleTranslations:
 		self.dbOut.delete(tableName, pkeyNames, deleteRows)
 
 
-	def biblesVolumneName(self, bibleId, lptsRecords):
+	def biblesVolumneName(self, bibleId, languageRecords):
 		final = set()
-		for (lptsIndex, lptsRecord) in lptsRecords:
-			volName = lptsRecord.Volumne_Name()
+		for (lptsIndex, languageRecord) in languageRecords:
+			volName = languageRecord.Volumne_Name()
 			if volName != None:
 				final.add(volName)
 		if len(final) == 0:
@@ -73,11 +71,12 @@ class UpdateDBPBibleTranslations:
 
 ## Unit Test
 if (__name__ == '__main__'):
+	from LanguageReader import *	
 	config = Config()
 	db = SQLUtility(config)
 	dbOut = SQLBatchExec(config)
-	lptsReader = LPTSExtractReader(config)
-	bibles = UpdateDBPBibleTranslations(config, db, dbOut, lptsReader)
+	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
+	bibles = UpdateDBPBibleTranslations(config, db, dbOut, languageReader)
 	bibles.insertEngVolumeName()
 	db.close()
 

@@ -14,7 +14,7 @@ from datetime import datetime
 from Log import *
 from Config import *
 from RunStatus import *
-from LPTSExtractReader import *
+from LanguageReader import *
 from SqliteUtility import *
 from PreValidate import *
 from AWSSession import *
@@ -53,52 +53,9 @@ class InputFileset:
 	database = []
 	complete = []
 
-	def parseFilesetId(directory) :
-		return directory[:7] + "_" + directory[8:] + "-usx" if directory[8:10] == "ET" else directory
+	
 
-	## parse command line, and return [InputFileset]
-	def filesetCommandLineParser(config, s3Client, lptsReader):
-		if len(sys.argv) < 4:
-			print("FATAL command line parameters: config_profile  s3://bucket|localPath  filesetPath_list ")
-			sys.exit()
-
-		results = []
-		location = sys.argv[2][:-1] if sys.argv[2].endswith("/") else sys.argv[2]
-		filesetPaths = sys.argv[3:]
-
-		unicodeScript = UnicodeScript()
-		preValidate = PreValidate(lptsReader, unicodeScript, s3Client, location)
-
-		for filesetPath in filesetPaths:
-			stocknumbers = preValidate.getStockNumbersFromFile(filesetPath, location.replace("s3://", ""))
-			hasStocknumbersFile = True if len(stocknumbers) > 0 else False
-			filesetPath = filesetPath[:-1] if filesetPath.endswith("/") else filesetPath
-			directory = filesetPath.split("/")[-1]
-			filesetId = directory
-
-			# the variable filesetId refers to a directory name. Originally, the directory name was an actual fileset id. Now,
-			# the directory name can be either (a) a fileset id; or (b) the name of a directory which contains a file called
-			# stocknumber.txt, which contains one or more stocknumbers associated with the content in that directory
-			if hasStocknumbersFile == False:
-				filesetId = InputFileset.parseFilesetId(directory)
-
-			(dataList, messages) = PreValidate.validateDBPELT(lptsReader, s3Client, location, filesetId, filesetPath)
-			for data in dataList:
-				inp = InputFileset(config, location, data.filesetId, filesetPath, data.damId, 
-					data.typeCode, data.bibleId(), data.index, data.lptsRecord, data.fileList)
-				#print("INPUT", inp.toString())
-				results.append(inp)
-			if messages != None and len(messages) > 0:
-				RunStatus.set(filesetId, False)
-				Log.addPreValidationErrors(messages)
-			if (dataList == None or len(dataList) == 0) and (messages == None or len(messages) == 0):
-				Log.getLogger(filesetPath).message(Log.FATAL, "Unknown Error in InputFileset.filesetCommandLineParser()")
-				Log.writeLog(config)
-				sys.exit()
-		return results
-
-
-	def __init__(self, config, location, filesetId, filesetPath, damId, typeCode, bibleId, index, lptsRecord, fileList = None):
+	def __init__(self, config, location, filesetId, filesetPath, damId, typeCode, bibleId, index, languageRecord, fileList = None):
 		self.config = config
 		if location.startswith("s3://"):
 			self.locationType = InputFileset.BUCKET
@@ -112,13 +69,15 @@ class InputFileset:
 		self.typeCode = typeCode
 		self.bibleId = bibleId
 		self.index = index
-		self.lptsRecord = lptsRecord
+		self.languageRecord = languageRecord
 		self.filesetPrefix = "%s/%s/%s" % (self.typeCode, self.bibleId, self.filesetId)
 		if self.typeCode == "text":
 			self.databasePath = "%s%s.db" % (config.directory_accepted, damId[:7] + "_" + damId[8:])
 		else:
 			self.databasePath = None
 		if self.typeCode == "text" and len(self.filesetId) < 10:
+			# BWF. if we encounter this error message, go upstream and change filesetId to 10 chars
+			print("*** !!! text fileset with less than 10 characters !!! ***")
 			self.csvFilename = "%s%s_%s_%s.csv" % (config.directory_accepted, self.typeCode, self.bibleId, damId[:7] + "_" + damId[8:])
 		else:
 			self.csvFilename = "%s%s_%s_%s.csv" % (config.directory_accepted, self.typeCode, self.bibleId, self.filesetId)
@@ -142,7 +101,7 @@ class InputFileset:
 		results.append(" damId=" + self.lptsDamId)
 		results.append(" stockNum=" + self.stockNum())
 		results.append(" index=" + str(self.index))
-		results.append(" script=" + str(self.lptsRecord.Orthography(self.index)) + "\n")
+		results.append(" script=" + str(self.languageRecord.Orthography(self.index)) + "\n")
 		results.append("filesetPrefix=" + self.filesetPrefix + "\n")
 		results.append("csvFilename=" + self.csvFilename + "\n")
 		for file in self.files:
@@ -164,12 +123,13 @@ class InputFileset:
 			objectKey = self.filesetPath + "/" + filename
 			filepath = directory + os.sep + filename
 			try:
-				print("Download s3://%s/%s to %s" % (self.location, objectKey, filepath))
+				#print("Download s3://%s/%s to %s" % (self.location, objectKey, filepath))
 				s3Client.download_file(self.location, objectKey, filepath)
 				filesize = os.path.getsize(filepath)
 				modifiedTS = os.path.getmtime(filepath)
 				lastModified = str(datetime.fromtimestamp(modifiedTS)).split(".")[0]
-				results.append(InputFile(filename, filesize, lastModified))				
+				if filename != 'stocknumber.txt':
+					results.append(InputFile(filename, filesize, lastModified))
 			except Exception as err:
 				print("ERROR: Download s3://%s/%s failed with error %s" % (self.location, objectKey, err))
 		self.locationType = InputFileset.LOCAL
@@ -193,7 +153,8 @@ class InputFileset:
 						filesize = os.path.getsize(filepath)
 						modifiedTS = os.path.getmtime(filepath)
 						lastModified = str(datetime.fromtimestamp(modifiedTS)).split(".")[0]
-						results.append(InputFile(filename, filesize, lastModified))
+						if filename != 'stocknumber.txt':
+							results.append(InputFile(filename, filesize, lastModified))
 			else:
 				Log.getLogger(self.filesetId).message(Log.EROR, "Invalid pathname %s" % (pathname))
 		else:
@@ -204,11 +165,12 @@ class InputFileset:
 				for item in response.get('Contents', []):
 					objKey = item.get('Key')
 					filename = objKey[len(self.filesetPath) + 1:]
-					if not filename.startswith("."):
+					if not self.ignoreFilename(filename):
 						size = item.get('Size')
 						lastModified = str(item.get('LastModified'))
 						lastModified = lastModified.split("+")[0]
-						results.append(InputFile(filename, size, lastModified))
+						if filename != 'stocknumber.txt':
+							results.append(InputFile(filename, size, lastModified))
 				hasMore = response['IsTruncated']
 				if hasMore:
 					request['ContinuationToken'] = response['NextContinuationToken']
@@ -216,6 +178,8 @@ class InputFileset:
 				Log.getLogger(self.filesetId).message(Log.EROR, "Invalid bucket %s or prefix %s" % (self.location, self.filesetPath))
 		return results
 
+	def ignoreFilename(self, filename):
+		return filename.startswith(".") or len(filename) == 0
 
 	def addInputFile(self, filename, filesize):
 		self.files.append(InputFile(filename, filesize, None))
@@ -248,7 +212,7 @@ class InputFileset:
 
 
 	def stockNum(self):
-		return self.lptsRecord.Reg_StockNumber()
+		return self.languageRecord.Reg_StockNumber()
 
 
 	def locationForS3(self):
@@ -272,7 +236,7 @@ class InputFileset:
 			elif self.filesetId.endswith("-html"):
 				return "text_html"
 			else:
-				return "text_format"
+				return "text_plain"
 		else:
 			return None
 
@@ -298,7 +262,7 @@ class InputFileset:
 		results = []
 		for file in self.files:
 			ext = file.name.split(".")[-1]
-			if not ext in { "xml", "jpg", "tif", "png", "zip" }:
+			if not ext in { "xml", "jpg", "tif", "png", "zip", "txt" }:
 				results.append(file.filenameTuple())
 		return results
 
@@ -315,6 +279,8 @@ class InputFileset:
 	def artFiles(self):
 		results = []
 		for file in self.files:
+			if (file.startswith("gf")):
+				continue
 			ext = file.name.split(".")[-1]
 			if ext in { "jpg", "tif", "png" }:
 				results.append(file.name)
@@ -327,7 +293,15 @@ class InputFileset:
 			if ext == "zip":
 				return file
 		return None
-
+	
+	def thumbnailFiles(self):
+		results = []
+		for file in self.files:
+			if (file.startswith("gf")):
+				ext = file.name.split(".")[-1]
+				if ext in { "jpg", "tif", "png" }:
+					results.append(file.name)
+		return results
 
 	## This method is used to download files to local disk when needed for processing, such as BiblePublisher
 	def downloadFiles(self):
@@ -343,7 +317,7 @@ class InputFileset:
 				objectKey = self.filesetPath + "/" + file.name
 				filepath = directory + os.sep + file.name
 				try:
-					print("Download s3://%s/%s to %s" % (self.location, objectKey, filepath))
+					#print("Download s3://%s/%s to %s" % (self.location, objectKey, filepath))
 					AWSSession.shared().s3Client.download_file(self.location, objectKey, filepath)
 				except Exception as err:
 					print("ERROR: Download s3://%s/%s failed with error %s" % (self.location, objectKey, err))
@@ -382,12 +356,15 @@ class InputFileset:
 
 
 if (__name__ == '__main__'):
+	from InputProcessor import *	
+	from LanguageReaderCreator import LanguageReaderCreator
+
 	config = Config()
 	s3Client = AWSSession.shared().s3Client
 	session = boto3.Session(profile_name = config.s3_aws_profile)
 	s3Client = session.client('s3')
-	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
-	InputFileset.validate = InputFileset.filesetCommandLineParser(config, s3Client, lptsReader)
+	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
+	InputFileset.validate = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
 	for inp in InputFileset.validate:
 		if inp.typeCode == "text" and inp.locationType == InputFileset.BUCKET:
 			inp.downloadFiles()
@@ -405,7 +382,10 @@ if (__name__ == '__main__'):
 		#print("subtype", inp.subTypeCode())
 	Log.writeLog(config)
 
-# python3 load/InputFileset.py test s3://etl-development-input Spanish_N2SPNTLA_USX
+# python3 load/InputFileset.py test s3://etl-development-input Spanish_N2SPNTLA_USX # works after refactor
+# python3 load/InputFileset.py test s3://etl-development-input ENGESVN2DA # works after refactor
+# python3 load/InputFileset.py test s3://etl-development-input SLUYPMP2DV # works after refactor
+
 
 # python3 load/InputFileset.py test /Volumes/FCBH/files/complete/audio/ENGESV/ ENGESVN2DA ENGESVN2DA16
 

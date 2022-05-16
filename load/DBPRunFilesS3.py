@@ -2,7 +2,6 @@
 
 import os
 from datetime import datetime
-import pytz
 import boto3
 from Config import *
 from AWSSession import *

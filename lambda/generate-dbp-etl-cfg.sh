@@ -8,17 +8,39 @@ finish() {
 }
 trap finish EXIT
 
-cat > /root/dbp-etl.cfg <<EOF
+
+# properties which must be set externally
+# DATABASE_HOST 
+# DATABASE_PORT
+# DATABASE_DB_NAME
+# DATABASE_USER
+# DATABASE_PASSWD
+# S3_ARTIFACTS_BUCKET
+
+# properties not needed for lambda, but required by Config. This will eventually be cleaned up in Config.setConfigParametersFromProfile
+export DATABASE_USER_DB_NAME=foo
+export S3_BUCKET=foo
+export S3_VID_BUCKET=foo
+export S3_KEY_PREFIX=foo
+
+#Note: the config profile values are dev and newdata
+
+cat > dbp-etl.cfg <<EOF
 [DEFAULT]
 database.user = ${DATABASE_USER}
 database.passwd = ${DATABASE_PASSWD}
 database.user_db_name = ${DATABASE_USER_DB_NAME}
-mysql.exe = /usr/bin/mysql
-node.exe = /usr/bin/node
-publisher.js = /app/BiblePublisher/publish/Publisher.js
 s3.bucket = ${S3_BUCKET}
 s3.vid_bucket = ${S3_VID_BUCKET}
 s3.artifacts_bucket = ${S3_ARTIFACTS_BUCKET}
+filename.lpts_xml = lpts-dbp.xml
+
+# DBPLoadController
+mysql.exe = /usr/bin/mysql
+node.exe = /usr/bin/node
+publisher.js = /app/BiblePublisher/publish/Publisher.js
+
+# docker filesystem
 directory.upload_aws = /efs/${S3_KEY_PREFIX}/etl_uploader/upload_aws/
 directory.upload = /efs/${S3_KEY_PREFIX}/etl_uploader/upload/
 directory.database = /efs/${S3_KEY_PREFIX}/etl_uploader/database/
@@ -30,7 +52,6 @@ directory.transcoded = /efs/${S3_KEY_PREFIX}/etl_uploader/transcoded/
 directory.errors = /efs/${S3_KEY_PREFIX}/etl_uploader/errors/
 error.limit.pct = 1.0
 directory.bucket_list = /efs/${S3_KEY_PREFIX}/etl_uploader/
-filename.lpts_xml = /efs/${S3_KEY_PREFIX}/etl_uploader/lpts-dbp.xml
 filename.accept.errors = /efs/${S3_KEY_PREFIX}/etl_uploader/AcceptErrors.txt
 filename.datetime = %y-%m-%d-%H-%M-%S
 video.transcoder.region = us-west-2
@@ -49,39 +70,13 @@ lambda.zip.function = arn:aws:lambda:us-west-2:078432969830:function:transcoding
 lambda.zip.region = us-west-2
 lambda.zip.timeout = 900
 
-[data]
+[${PROFILE}]
 database.host = ${DATABASE_HOST}
 database.port = ${DATABASE_PORT}
 database.db_name = ${DATABASE_DB_NAME}
+
 EOF
 
 #echo "contents of dbp-etl.cfg: "
 #cat /root/dbp-etl.cfg
 
-# audio.transcoder.output.1 = { "bucket": "${S3_BUCKET}", "key": "\$prefix-opus32", "bitrate": 32, "container": "webm", "codec": "opus" }
-# audio.transcoder.output.2 = { "bucket": "${S3_BUCKET}", "key": "\$prefix-mp3-32", "bitrate": 32, "container": "mp3", "codec": "mp3" }
-# audio.transcoder.output.3 = { "bucket": "${S3_BUCKET}", "key": "\$prefix-mp3-64", "bitrate": 64, "container": "mp3", "codec": "mp3" }
-
-eval "$(aws sts assume-role --role-arn "${ASSUME_ROLE_ARN}" --role-session-name session | jq -r '.Credentials | "export AWS_ACCESS_KEY_ID=\(.AccessKeyId)\nexport AWS_SECRET_ACCESS_KEY=\(.SecretAccessKey)\nexport AWS_SESSION_TOKEN=\(.SessionToken)"')"
-
-rm -rf "/efs/${S3_KEY_PREFIX}"
-mkdir -p "/efs/${S3_KEY_PREFIX}/etl_uploader"
-for d in accepted complete database duplicate errors quarantine transcoded upload upload_aws; do mkdir "/efs/${S3_KEY_PREFIX}/etl_uploader/$d"; done
-touch "/efs/${S3_KEY_PREFIX}/etl_uploader/AcceptErrors.txt"
-
-if [ -n "${LPTS_UPLOAD:-}" ]; then
-  aws s3 cp "s3://${UPLOAD_BUCKET}/${S3_KEY_PREFIX}/lpts-dbp.xml" "/efs/${S3_KEY_PREFIX}/etl_uploader/"
-
-  if python3 load/DBPLoadController.py data; then
-    echo "DBP-ETL Succeeded. Overwriting existing LPTS file..."
-    aws s3 cp --no-progress "/efs/${S3_KEY_PREFIX}/etl_uploader/lpts-dbp.xml" "s3://${UPLOAD_BUCKET}/lpts-dbp.xml" --acl bucket-owner-full-control
-  else
-    echo "DBP-ETL Failed. The uploaded LPTS file will NOT be used."
-  fi
-else
-  aws s3 cp --no-progress "s3://${UPLOAD_BUCKET}/lpts-dbp.xml" "/efs/${S3_KEY_PREFIX}/etl_uploader/"
-  FILESET_ID="$(aws s3api list-objects-v2 --bucket "${UPLOAD_BUCKET}" --prefix "${S3_KEY_PREFIX}/" --delimiter / | jq -r '.CommonPrefixes[0].Prefix | split("/")[1]')"
-
-  echo "Running load/DBPLoadController.py against s3://${UPLOAD_BUCKET} and ${S3_KEY_PREFIX}/${FILESET_ID}"
-  python3 load/DBPLoadController.py data "s3://${UPLOAD_BUCKET}" "${S3_KEY_PREFIX}/${FILESET_ID}"
-fi

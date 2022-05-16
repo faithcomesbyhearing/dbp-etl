@@ -31,6 +31,7 @@ class AWSSession:
 
 		# for docker execution, assume_role_arn is provided by ECS task configuration
 		if self.config.s3_aws_role_arn == None:
+			print ("AWSSession...assume role arn is not provided. If this is not a docker execution, check dbp-etl.cfg and verify there is a value for s3.aws_role_arn (previously, it was s3.aws_role)")
 			if timeout != None:
 				botoConfig = BotoConfig(retries={'max_attempts': 0}, read_timeout = timeout, connect_timeout = timeout)
 				client = session.client(clientType, config = botoConfig)
@@ -40,6 +41,7 @@ class AWSSession:
 			
 		# assume_role_arn explicitely provided
 		stsClient = session.client('sts')
+		print ("AWSSession. assume role arn: %s" % (self.config.s3_aws_role_arn) )
 		assumedRoleObject = stsClient.assume_role(
 			RoleArn = self.config.s3_aws_role_arn,
 		    RoleSessionName = roleSessionName,

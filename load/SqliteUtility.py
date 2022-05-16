@@ -12,6 +12,7 @@ from Config import *
 class SqliteUtility:
 
 	def __init__(self, databasePath):
+		print("SqliteUtility.. databasePath: %s" % (databasePath))
 		self.conn = sqlite3.connect(databasePath)
 		self.setForeignKeyConstraint(True)
 

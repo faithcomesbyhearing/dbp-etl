@@ -12,20 +12,21 @@ import re
 from datetime import datetime
 from Config import *
 from RunStatus import *
-from LPTSExtractReader import *
+from LanguageReader import *
 from SQLUtility import *
 from SQLBatchExec import *
 from LoadOrganizations import *
 from UpdateDBPAccessTable import *
 from UpdateDBPBibleTranslations import *
+from UpdateDBPLanguageTranslation import *
 
 class UpdateDBPLPTSTable:
 
-	def __init__(self, config, dbOut, lptsReader):
+	def __init__(self, config, dbOut, languageReader):
 		self.config = config
 		self.db = SQLUtility(config)
 		self.dbOut = dbOut
-		self.lptsReader = lptsReader
+		self.languageReader = languageReader
 		self.updateCounts = {}
 		self.hashIdMap = None
 		self.sqlLog = []
@@ -38,13 +39,15 @@ class UpdateDBPLPTSTable:
 			" FROM bible_filesets bf JOIN bible_fileset_connections b ON bf.hash_id = b.hash_id"
 			" ORDER BY b.bible_id, bf.id, bf.set_type_code")
 		filesetList = self.db.select(sql, ())
-		access = UpdateDBPAccessTable(self.config, self.db, self.dbOut, self.lptsReader)
+		access = UpdateDBPAccessTable(self.config, self.db, self.dbOut, self.languageReader)
 		access.process(filesetList)
 		self.updateBibleFilesetTags(filesetList)
 		self.updateBibleFilesetCopyrights(filesetList)
 		self.updateBibleFilesetCopyrightOrganizations(filesetList)
-		translations = UpdateDBPBibleTranslations(self.config, self.db, self.dbOut, self.lptsReader)
-		translations.insertEngVolumeName()
+		bibletranslations = UpdateDBPBibleTranslations(self.config, self.db, self.dbOut, self.languageReader)
+		bibletranslations.insertEngVolumeName()
+		# languageTranslations = UpdateDBPLanguageTranslation(self.config, self.db, self.dbOut, self.languageReader)
+		# languageTranslations.updateOrInsertlanguageTranslation()
 		self.db.close()
 
 	##
@@ -96,13 +99,13 @@ class UpdateDBPLPTSTable:
 				else:
 					tagNameList = ["stock_no", "volume"]
 
-				(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecordLoose(typeCode, bibleId, dbpFilesetId)
+				(languageRecord, lptsIndex) = self.languageReader.getLanguageRecordLoose(typeCode, bibleId, dbpFilesetId)
 
 				tagMap = tagHashIdMap.get(hashId, {})
 				for name in tagNameList:
 					oldDescription = tagMap.get(name)
 
-					if lptsRecord != None:
+					if languageRecord != None:
 						if name == "container":
 							if codec == "aac":
 								description = "mp4"
@@ -117,9 +120,9 @@ class UpdateDBPLPTSTable:
 						elif name == "bitrate":
 							description = bitrate
 						elif name == "stock_no":
-							description = lptsRecord.Reg_StockNumber()
+							description = languageRecord.Reg_StockNumber()
 						elif name == "volume":
-							description = lptsRecord.Volumne_Name()
+							description = languageRecord.Volumne_Name()
 						else:
 							print("ERROR: unknown bible_fileset_tags name %s" % (name))
 							sys.exit()
@@ -169,15 +172,15 @@ class UpdateDBPLPTSTable:
 				dbpFilesetId = filesetId[:8] + "DA" + filesetId[10:]
 			else:
 				dbpFilesetId = filesetId
-			#lptsRecords = self.lptsReader.getFilesetRecords(dbpFilesetId)
+			#languageRecords = self.languageReader.getFilesetRecords(dbpFilesetId)
 			row = copyrightHashIdMap.get(hashId, None)
 
 			if typeCode != "app":
-				(lptsRecord, lptsIndex) = self.lptsReader.getLPTSRecordLoose(typeCode, bibleId, dbpFilesetId)
-				if lptsRecord != None:
-					copyrightText = self.escapeChars(lptsRecord.Copyrightc())
-					copyrightAudio = self.escapeChars(lptsRecord.Copyrightp())
-					copyrightVideo = self.escapeChars(lptsRecord.Copyright_Video())
+				(languageRecord, lptsIndex) = self.languageReader.getLanguageRecordLoose(typeCode, bibleId, dbpFilesetId)
+				if languageRecord != None:
+					copyrightText = self.escapeChars(languageRecord.Copyrightc())
+					copyrightAudio = self.escapeChars(languageRecord.Copyrightp())
+					copyrightVideo = self.escapeChars(languageRecord.Copyright_Video())
 
 					if typeCode == "text":
 						copyright = copyrightText
@@ -196,10 +199,10 @@ class UpdateDBPLPTSTable:
 						if year != None:
 							copyrightDate = year.group(1)
 
-				if row != None and lptsRecord == None:
+				if row != None and languageRecord == None:
 					deleteRows.append((hashId,))
 
-				elif lptsRecord != None and row == None:
+				elif languageRecord != None and row == None:
 					copyrightMsg = copyrightMsg.replace("'", "\\'")
 					insertRows.append((copyrightDate, copyrightMsg, copyrightMsg, 1, hashId))
 
@@ -220,7 +223,7 @@ class UpdateDBPLPTSTable:
 
 
 	def updateBibleFilesetCopyrightOrganizations(self, filesetList):
-		orgs = LoadOrganizations(self.config, self.db, self.dbOut, self.lptsReader)
+		orgs = LoadOrganizations(self.config, self.db, self.dbOut, self.languageReader)
 		# These methods should be called by Validate
 		#unknownLicensors = orgs.validateLicensors()
 		#unknownCopyrights = orgs.validateCopyrights()
@@ -328,9 +331,9 @@ class UpdateDBPLPTSTable:
 
 if (__name__ == '__main__'):
 	config = Config()
-	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
+	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
 	dbOut = SQLBatchExec(config)
-	filesets = UpdateDBPLPTSTable(config, dbOut, lptsReader)
+	filesets = UpdateDBPLPTSTable(config, dbOut, languageReader)
 	filesets.process()
 	dbOut.displayStatements()
 	dbOut.displayCounts()

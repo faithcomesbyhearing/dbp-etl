@@ -4,7 +4,7 @@
 import io
 import math
 import unicodedata
-from LPTSExtractReader import *
+import os
 
 class UnicodeScript:
 
@@ -13,27 +13,26 @@ class UnicodeScript:
 		self.errors = []
 
 
-	## Returns a list of files in a bucket of on a local disk.
+	## Returns a list of files in a bucket or on a local disk.
 	def getFilenames(self, s3Client, location, filesetPath):
 		results = []
-		ignoreSet = {"Thumbs.db"}
 		if not location.startswith("s3://"):
 			pathname = location + os.sep + filesetPath
 			if os.path.isdir(pathname):
 				for filename in [f for f in os.listdir(pathname) if not f.startswith('.')]:
-					if filename not in ignoreSet:# and os.path.isfile(pathname + os.sep + filename):
+					if (filename.endswith(".usx") and not filename.startswith(".")):
 						results.append(filename)
 			else:
 				self.errors.append("ERROR: Invalid pathname %s" % (pathname,))
 		else:
 			bucket = location[5:]
-			#print("bucket", bucket)
 			request = { 'Bucket': bucket, 'MaxKeys': 1000, 'Prefix': filesetPath + "/" }
 			response = s3Client.list_objects_v2(**request)
 			for item in response.get('Contents', []):
 				objKey = item.get('Key')
 				filename = objKey[len(filesetPath) + 1:]
-				results.append(filename)
+				if (filename.endswith(".usx") and not filename.startswith(".")):
+					results.append(filename)				
 			if len(results) == 0:
 				self.errors.append("ERROR: Invalid bucket %s or prefix %s/" % (bucket, filesetPath))
 		return results
@@ -127,13 +126,13 @@ class UnicodeScript:
 
 
 	## Used from inside Validate to that existing damId's in stockNo have the correct script
-	def validateStockNoRecord(self, lptsRecord, db):
-		stockNo = lptsRecord.Reg_StockNumber()
-		damIdList = lptsRecord.DamIdList("text")
+	def validateStockNoRecord(self, languageRecord, db):
+		stockNo = languageRecord.Reg_StockNumber()
+		damIdList = languageRecord.DamIdList("text")
 		#print(damIdList)
-		damIdList = lptsRecord.ReduceTextList(damIdList)
+		damIdList = languageRecord.ReduceTextList(damIdList)
 		for (damId, index, status) in damIdList:
-			lptsScript = lptsRecord.Orthography(index)
+			lptsScript = languageRecord.Orthography(index)
 			sql = "SELECT verse_text FROM bible_verses WHERE hash_id IN (SELECT hash_id FROM bible_filesets WHERE id = %s) limit 10"
 			sampleText = db.selectList(sql, (damId[:6],))
 			if sampleText != None and len(sampleText) > 0:
@@ -156,11 +155,12 @@ if (__name__ == '__main__'):
 	from Config import *	
 	from AWSSession import *
 	from SQLUtility import *
+	from LanguageReaderCreator import LanguageReaderCreator	
 
 	config = Config.shared()
 	db = SQLUtility(config)
 	s3Client = AWSSession.shared().s3Client
-	lptsReader = LPTSExtractReader(config.filename_lpts_xml)
+	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
 	unicodeScript = UnicodeScript()
 	setTypeCode = 'text_plain'
 	#setTypeCode = 'text_format'
@@ -169,15 +169,15 @@ if (__name__ == '__main__'):
 		writer = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
 		writer.writerow(("OK/NOT", "stockNo", "bibleId", "filesetId6", "index", "sample text", "actual script", "pct match", "lpts script", "message"))
 
-		for lptsRecord in lptsReader.resultSet:
-			stockNo = lptsRecord.Reg_StockNumber()
-			damIdList = lptsRecord.DamIdList("text")
+		for languageRecord in languageReader.resultSet:
+			stockNo = languageRecord.Reg_StockNumber()
+			damIdList = languageRecord.DamIdList("text")
 			#print(damIdList)
-			damIdList = lptsRecord.ReduceTextList(damIdList)
+			damIdList = languageRecord.ReduceTextList(damIdList)
 			for (damId, index, status) in damIdList:
 				if status in { "Live", "live" }:
-					bibleId = lptsRecord.DBP_EquivalentByIndex(index)
-					lptsScript = lptsRecord.Orthography(index)
+					bibleId = languageRecord.DBP_EquivalentByIndex(index)
+					lptsScript = languageRecord.Orthography(index)
 					print(stockNo, damId, index, bibleId)
 					message = None
 					if lptsScript == None:
@@ -213,7 +213,7 @@ if (__name__ == '__main__'):
 
 					(fileScript, pctMatch) = unicodeScript.findScript(textList)
 					print("fileScript", fileScript, pctMatch)
-					lptsScript = lptsRecord.Orthography(index)
+					lptsScript = languageRecord.Orthography(index)
 					if lptsScript == None:
 						message = "No LPTS Script"
 

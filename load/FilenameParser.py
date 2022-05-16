@@ -516,8 +516,8 @@ class FilenameParser:
 					if bitrateSuffix != '' and not bitrateSuffix.isdigit():
 						logger.message(Log.EROR, "filesetId positions 11,12 must be a bitrate number if present.")
 
-			self.otOrder = self.OTOrderTemp(inp.filesetId, inp.lptsRecord)
-			self.ntOrder = self.NTOrderTemp(inp.filesetId, inp.lptsRecord)
+			self.otOrder = self.OTOrderTemp(inp.filesetId, inp.languageRecord)
+			self.ntOrder = self.NTOrderTemp(inp.filesetId, inp.languageRecord)
 
 			(numErrors, files) = self.parseOneFileset3(templates, prefix, inp.filenamesTuple())
 			if numErrors == 0:
@@ -545,7 +545,7 @@ class FilenameParser:
 			files.append(file)
 			if file.numErrors() > 0:
 				numErrors += 1
-				#print(file.template.name, prefix, file.file, ", ".join(file.errors))
+				# print(file.template.name, prefix, file.file, ", ".join(file.errors))
 			else:
 				self.successCount[file.template.name] = self.successCount.get(file.template.name, 0) + 1
 		return (numErrors, files)
@@ -623,7 +623,7 @@ class FilenameParser:
 		return (extraChapters, missingChapters, missingVerses)
 
 
-	def NTOrderTemp(self, filesetId, lptsRecord):
+	def NTOrderTemp(self, filesetId, languageRecord):
 		# This fileset is missing any NTOrder
 		#if filesetId in {"AZEIBTN2DA", "BLGAMBN1DA"}:
 		#	return "Russian"
@@ -636,13 +636,13 @@ class FilenameParser:
 			return "Traditional"
 		if filesetId in {"RU1IBSN2DA", "RUSSVRN1DA"}:
 			return "Russian"
-		if lptsRecord != None and lptsRecord.NTOrder() != None:
-			return lptsRecord.NTOrder()
+		if languageRecord != None and languageRecord.NTOrder() != None:
+			return languageRecord.NTOrder()
 		else:
 			return "Traditional"
 
 
-	def OTOrderTemp(self, filesetId, lptsRecord):
+	def OTOrderTemp(self, filesetId, languageRecord):
 		if filesetId in {"CASNTMP1DA"}:
 			return "Hebrew"
 		# These ENGESV filesets are labeled OTOrder = Hebrew
@@ -658,8 +658,8 @@ class FilenameParser:
 			return "Hebrew"
 		if filesetId in {"TRNNTMP1DA"}:
 			return "TRNNTM"
-		if lptsRecord != None and lptsRecord.OTOrder() != None:
-			return lptsRecord.OTOrder()
+		if languageRecord != None and languageRecord.OTOrder() != None:
+			return languageRecord.OTOrder()
 		else:
 			return "Traditional"
 
