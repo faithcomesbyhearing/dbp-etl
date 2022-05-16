@@ -279,7 +279,7 @@ class InputFileset:
 	def artFiles(self):
 		results = []
 		for file in self.files:
-			if (file.startswith("gf")):
+			if (file.name.startswith("gf")):
 				continue
 			ext = file.name.split(".")[-1]
 			if ext in { "jpg", "tif", "png" }:
@@ -297,7 +297,7 @@ class InputFileset:
 	def thumbnailFiles(self):
 		results = []
 		for file in self.files:
-			if (file.startswith("gf")):
+			if (file.name.startswith("gf")):
 				ext = file.name.split(".")[-1]
 				if ext in { "jpg", "tif", "png" }:
 					results.append(file.name)
