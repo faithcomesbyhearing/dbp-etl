@@ -174,7 +174,16 @@ class Config:
 			self.database_names['biblebrain'] = self.hashMap.get("database.biblebrain_db_name")
 			self.setCurrentDatabaseDBName(self.hashMap.get("database.language_db_name"))
 		elif profile == 'newdata':
+			self.database_names['dbp'] = self.hashMap.get("database.db_name")
+			self.database_names['user_dbp'] = self.hashMap.get("database.user_db_name")
+			self.database_host = self._get("database.host")
+			self.database_user = self._get("database.user")
+			self.database_passwd = self._get("database.passwd")
+			self.database_db_name = self._get("database.db_name")
+			self.database_user_db_name = self._get("database.user_db_name")
+			self.database_port = self._getInt("database.port")
 			self.database_tunnel = self._getOptional("database.tunnel")
+			self.setCurrentDatabaseDBName(self.hashMap.get("database.db_name"))
 
 	def setCurrentDatabaseDBName(self, name):
 		self.current_database_name = name
