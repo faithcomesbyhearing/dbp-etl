@@ -106,7 +106,7 @@ class Config:
 		self.s3_aws_role_profile = self._getOptional("s3.aws_role_profile") # this is temporary
 		self.filename_lpts_xml = self._getOptional("filename.lpts_xml")
 		self.filename_datetime = self._get("filename.datetime")
-		self.mysql_exe = self._getPath("mysql.exe")
+		self.mysql_exe = self._getOptional("mysql.exe")
 
 		# TODO these dependencies need to be sorted out
 		if programRunning in {"DBPLoadController.py"}:
