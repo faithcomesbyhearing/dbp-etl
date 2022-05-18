@@ -285,7 +285,7 @@ class UpdateDBPBooksTable:
 				insertRows.append((toc.bookSeq, name, nameShort, toc.chapters, bibleId, toc.bookId))
 
 			elif typeCode == "text":
-				print("inside for loop.. 2")
+				print("inside for loop.. toc.bookSeq: %s, dbpBookSeq: %s" % (toc.bookSeq, dbpBookSeq))
 				(dbpBookId, dbpBookSeq, dbpName, dbpNameShort, dbpChapters) = bibleBookMap[toc.bookId]
 				if toc.name != dbpName:
 					name = toc.name.replace("'", "\\'")
@@ -293,6 +293,8 @@ class UpdateDBPBooksTable:
 				if toc.nameShort != dbpNameShort:
 					nameShort = toc.nameShort.replace("'", "\\'")
 					updateRows.append(("name_short", nameShort, dbpNameShort, bibleId, toc.bookId))
+				if toc.bookSeq != None and toc.bookSeq != dbpBookSeq:
+					updateRows.append(("book_seq", toc.bookSeq, dbpBookSeq, bibleId, toc.bookId))
 				if len(toc.chapters) > len(dbpChapters):
 					updateRows.append(("chapters", toc.chapters, dbpChapters, bibleId, toc.bookId))
 
