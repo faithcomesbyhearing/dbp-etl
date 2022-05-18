@@ -136,8 +136,10 @@ class UpdateDBPFilesetTables:
 
 		# BWF - temporary, I think we need to update bible_books even if text_usx. commenting out the check to see if it fails
 		#if inp.subTypeCode() != "text_usx":
+		print("************ test code *********************.. calling self.booksUpdater ")
 		tocBooks = self.booksUpdater.getTableOfContents(inp.typeCode, inp.bibleId, inp.filesetId, inp.csvFilename, inp.databasePath)
 		self.booksUpdater.updateBibleBooks(inp.typeCode, inp.bibleId, tocBooks)
+		print("************ test code *********************.. returned from self.booksUpdater ")
 		
 		dbConn.close()
 		return hashId

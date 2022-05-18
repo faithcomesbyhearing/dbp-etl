@@ -175,6 +175,7 @@ class UpdateDBPBooksTable:
 	## extract a book level table of contents for this fileset we are updating in DBP
 	def getTableOfContents(self, typeCode, bibleId, filesetId, csvFilename, databasePath):
 		tocBooks = []
+		print("getTableOfContents.. typeCode %s" % (typeCode))
 		if typeCode == "text":
 			firstOTBook = True
 			firstNTBook = True
@@ -182,7 +183,9 @@ class UpdateDBPBooksTable:
 			priorBookSeq = None
 			bibleDB = SqliteUtility(databasePath)
 			resultSet = bibleDB.select("SELECT code, heading, title, name, chapters FROM tableContents ORDER BY rowId", ())
+			print("getTableOfContents.. resultSet: %s" % (resultSet))
 			for (bookId, heading, title, name, chapters) in resultSet:
+				print("processed row from resultset")
 				if name == None and heading != None:
 					name = heading
 				if title == None and name != None:
@@ -207,6 +210,7 @@ class UpdateDBPBooksTable:
 					bookSeq = prefix + str(number) if number > 9 else prefix + "0" + str(number)
 				priorBookSeq = bookSeq
 				tocBook = TOCBook(bookId, bookSeq, title, name, chapters)
+				print("append tocBook: %s" % (tocBook))
 				tocBooks.append(tocBook)
 			bibleDB.close()
 
@@ -234,7 +238,9 @@ class UpdateDBPBooksTable:
 					priorBookId = bookId
 					priorChapter = chapter
 
+			print("for tocBook in tocBooks..")
 			for tocBook in tocBooks:
+				print("tocBook: %s " % (tocBook))
 				tocBook.chapters = ",".join(bookChapterMap[tocBook.bookId])
 
 			if typeCode == "video":
@@ -258,6 +264,7 @@ class UpdateDBPBooksTable:
 
 	## extract sequence of the current bible books table, and merge to tocBooks
 	def updateBibleBooks(self, typeCode, bibleId, tocBooks):
+		print("updateBibleBooks.. entering. tocBooks: %s" % (tocBooks))
 		db = SQLUtility(self.config)
 		insertRows = []
 		updateRows = []
@@ -270,12 +277,15 @@ class UpdateDBPBooksTable:
 			bibleBookMap[row[0]] = row
 
 		for toc in tocBooks:
+			print("inside for loop.. toc: %s" % (toc))
 			if toc.bookId not in bibleBookMap.keys():
+				print("inside for loop.. 1")
 				name = toc.name.replace("'", "\\'")
 				nameShort = toc.nameShort.replace("'", "\\'")
 				insertRows.append((toc.bookSeq, name, nameShort, toc.chapters, bibleId, toc.bookId))
 
 			elif typeCode == "text":
+				print("inside for loop.. 2")
 				(dbpBookId, dbpBookSeq, dbpName, dbpNameShort, dbpChapters) = bibleBookMap[toc.bookId]
 				if toc.name != dbpName:
 					name = toc.name.replace("'", "\\'")
