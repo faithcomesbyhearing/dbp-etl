@@ -107,8 +107,8 @@ class Config:
 		self.filename_lpts_xml = self._getOptional("filename.lpts_xml")
 		self.s3_bucket = self._get("s3.bucket")
 		self.s3_vid_bucket = self._get("s3.vid_bucket")
-		self.directory_accepted = self._getPath("directory.accepted")
-		self.directory_errors = self._getPath("directory.errors")
+		self.directory_accepted = self._getOptional("directory.accepted")
+		self.directory_errors = self._getOptional("directory.errors")
 		self.filename_datetime = self._get("filename.datetime")
 		self.mysql_exe = self._getOptional("mysql.exe")
 
