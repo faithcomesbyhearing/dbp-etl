@@ -283,6 +283,8 @@ class UpdateDBPBooksTable:
 				if toc.nameShort != dbpNameShort:
 					nameShort = toc.nameShort.replace("'", "\\'")
 					updateRows.append(("name_short", nameShort, dbpNameShort, bibleId, toc.bookId))
+				if toc.bookSeq != None and toc.bookSeq != dbpBookSeq:
+					updateRows.append(("book_seq", toc.bookSeq, dbpBookSeq, bibleId, toc.bookId))
 				if len(toc.chapters) > len(dbpChapters):
 					updateRows.append(("chapters", toc.chapters, dbpChapters, bibleId, toc.bookId))
 

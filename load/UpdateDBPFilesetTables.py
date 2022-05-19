@@ -134,9 +134,9 @@ class UpdateDBPFilesetTables:
 			else:
 				print("typeCode is text, but subTypeCode is not text_usx or text_plain. No hashId available to return, so it's going to fail next")
 
-		if inp.subTypeCode() != "text_usx":
-			tocBooks = self.booksUpdater.getTableOfContents(inp.typeCode, inp.bibleId, inp.filesetId, inp.csvFilename, inp.databasePath)
-			self.booksUpdater.updateBibleBooks(inp.typeCode, inp.bibleId, tocBooks)
+		tocBooks = self.booksUpdater.getTableOfContents(inp.typeCode, inp.bibleId, inp.filesetId, inp.csvFilename, inp.databasePath)
+		self.booksUpdater.updateBibleBooks(inp.typeCode, inp.bibleId, tocBooks)
+		
 		dbConn.close()
 		return hashId
 
