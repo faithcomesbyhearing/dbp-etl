@@ -49,7 +49,7 @@ class AWSTranscoder:
 				# fileset DBQWYIN2DA-mp3-64. The ten character fileset id is deprecated, but there are no current plans to remove it.
 				# With the introduction of 128kbps as the golden copy, the input fileset id will be DBQWYIN2DA-mp3-64. So we can no longer just append to the end of the input fileset; we need to use only the first 
 				# ten characters.
-				out = out.replace("$prefix", inputFileset.filesetPrefix[:11])
+				out = out.replace("$prefix", inputFileset.filesetPrefix[:10])
 				outputs.append(out)
 		outputStr = '"output": [' + ", ".join(outputs) + ']'
 		request = '{' + inp + ", " + outputStr + '}'
