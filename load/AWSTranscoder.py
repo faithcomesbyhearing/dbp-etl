@@ -43,7 +43,13 @@ class AWSTranscoder:
 			configKey = "audio.transcoder.output." + num
 			out = self.config.getOptional(configKey)
 			if out != None:
-				out = out.replace("$prefix", inputFileset.filesetPrefix)
+				# prior to July 2022, filesetPrefix was always a ten character id such as DBQWYIN2DA, which was 64kbps mp3.
+				# When creating deriviate filesets from transcoding, it was correct to use the entire filesetPrefix as the base folder name and add whatever extension was necessary (eg "-opus16") 
+				# A new fileset / media naming schema has been introduced that allows for many derivatives, all of which are longer than ten characters.  Using the new naming scheme, 64kbps mp3 has a 
+				# fileset DBQWYIN2DA-mp3-64. The ten character fileset id is deprecated, but there are no current plans to remove it.
+				# With the introduction of 128kbps as the golden copy, the input fileset id will be DBQWYIN2DA-mp3-64. So we can no longer just append to the end of the input fileset; we need to use only the first 
+				# ten characters.
+				out = out.replace("$prefix", inputFileset.filesetPrefix[:11])
 				outputs.append(out)
 		outputStr = '"output": [' + ", ".join(outputs) + ']'
 		request = '{' + inp + ", " + outputStr + '}'
