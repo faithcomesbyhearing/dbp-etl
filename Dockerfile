@@ -3,7 +3,7 @@ FROM public.ecr.aws/docker/library/alpine:latest AS BiblePublisher
 WORKDIR /app
 
 RUN apk update
-RUN apk add g++ gcc git make musl-dev npm python2
+RUN apk add g++ gcc git make musl-dev npm python3
 RUN git clone https://github.com/garygriswold/BiblePublisher
 RUN cd BiblePublisher; npm i sqlite3
 
