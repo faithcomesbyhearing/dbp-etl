@@ -51,14 +51,14 @@ class DBPLoadController:
 		validate = Validate(self.config, self.db)
 		validate.process(inputFilesets)
 		for inp in inputFilesets:
-			print("DBPLoadController:validate. processing fileset: %s " %(inp.filesetId))
+			print("DBPLoadController:validate. fileset: %s, csvFilename: %s " %(inp.filesetId, inp.csvFilename))
 			if os.path.isfile(inp.csvFilename):
 				print("DBPLoadController:validate. fileset: %s added to upload list" %(inp.filesetId))
 				InputFileset.upload.append(inp)
 			else:
 				print("DBPLoadController:validate. fileset: %s not added added to upload list" %(inp.filesetId))
 				RunStatus.set(inp.filesetId, False)
-
+		Log.writeLog(self.config)
 
 	def updateBibles(self):
 		print("\n*** DBPLoadController:updateBibles ***")
@@ -137,6 +137,7 @@ if (__name__ == '__main__'):
 	else:
 		ctrl.updateBibles()
 		ctrl.updateLPTSTables()
+	Log.writeLog(config)
 	RunStatus.exit()
 
 # Get current lpts-dbp.xml
