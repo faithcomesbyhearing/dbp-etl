@@ -40,9 +40,13 @@ class S3Utility:
 				outFilesets = transcoder.transcodeAudio(inp)
 				parser = FilenameParser(self.config)
 				parser.process3(outFilesets) # create accepted.csv
+				print("uploadAllFilesets. returned from parser.process3")
 				for outFileset in outFilesets:
 					if os.path.isfile(outFileset.csvFilename): # test if it was accepted
-						InputFileset.database.append(outFileset)			 		
+						print("uploadAllFilesets. outFileset added to database list: %s" % (outFileset.csvFilename))
+						InputFileset.database.append(outFileset)
+					else:
+						print("uploadAllFilesets. outFileset NOT added to database list: %s" % (outFileset.csvFilename))
 			elif inp.typeCode == "text":
 				subTypeCode = inp.subTypeCode()
 				if inp.subTypeCode() == "text_plain":
