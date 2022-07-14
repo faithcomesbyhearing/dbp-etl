@@ -39,22 +39,30 @@ class AWSTranscoder:
 		inp = inp.replace("$bucket", inputFileset.location)
 		inp = inp.replace("$prefix", inputFileset.filesetPath)
 		outputs = []
+		# prior to July 2022, filesetPrefix was always a ten character id such as DBQWYIN2DA, which was 64kbps mp3.
+		# When creating deriviate filesets from transcoding, it was correct to use the entire filesetPrefix as the base folder name and add whatever extension was necessary (eg "-opus16") 
+		# A new fileset / media naming schema has been introduced that allows for many derivatives, all of which are longer than ten characters.  Using the new naming scheme, 64kbps mp3 has a 
+		# fileset DBQWYIN2DA-mp3-64. The ten character fileset id is deprecated, but there are no current plans to remove it.
+		# With the introduction of 128kbps as the golden copy, the input fileset id will be DBQWYIN2DA-mp3-64. So we can no longer just append to the end of the input fileset; we need to use only the first 
+		# ten characters.
+		#inputFileset.filesetPrefix is of the form "audio/DBQ015/DBQWYIN2DA-mp3-128". We need "audio/DBQ015/DBQWYIN2DA"
+		lastSlash = inputFileset.filesetPrefix.rindex("/")
+		outFilesetBase = inputFileset.filesetPrefix[:lastSlash+11]
+
+		# audio.transcoder.output.0 = { "bucket": "${S3_BUCKET}", "key": "\$prefix-opus16", "bitrate": 16, "container": "webm", "codec": "opus" }
+		# audio.transcoder.output.1 = { "bucket": "${S3_BUCKET}", "key": "\$prefix-mp3-64", "bitrate": 64, "container": "mp3", "codec": "mp3" }
+
 		for num in ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]:
 			configKey = "audio.transcoder.output." + num
 			out = self.config.getOptional(configKey)
 			if out != None:
-				# prior to July 2022, filesetPrefix was always a ten character id such as DBQWYIN2DA, which was 64kbps mp3.
-				# When creating deriviate filesets from transcoding, it was correct to use the entire filesetPrefix as the base folder name and add whatever extension was necessary (eg "-opus16") 
-				# A new fileset / media naming schema has been introduced that allows for many derivatives, all of which are longer than ten characters.  Using the new naming scheme, 64kbps mp3 has a 
-				# fileset DBQWYIN2DA-mp3-64. The ten character fileset id is deprecated, but there are no current plans to remove it.
-				# With the introduction of 128kbps as the golden copy, the input fileset id will be DBQWYIN2DA-mp3-64. So we can no longer just append to the end of the input fileset; we need to use only the first 
-				# ten characters.
-				#inputFileset.filesetPrefix is of the form "audio/DBQ015/DBQWYIN2DA-mp3-128". We need "audio/DBQ015/DBQWYIN2DA"
-				lastSlash = inputFileset.filesetPrefix.rindex("/")
-				out = out.replace("$prefix", inputFileset.filesetPrefix[:lastSlash+11])
+				out = out.replace("$prefix", outFilesetBase)
+				print("AWSTranscoder:transcodeAudio... new output format (probably an error here): %s" %(out))
 				outputs.append(out)
+				print("AWSTranscoder:transcodeAudio... after adding new output format. outputs size is : %d" %(len(outputs)))
 		outputStr = '"output": [' + ", ".join(outputs) + ']'
 		request = '{' + inp + ", " + outputStr + '}'
+		print("AWSTranscoder:transcodeAudio... request to be sent to lambda:%s" %(request))
 		try:
 			test = json.loads(request)
 		except Exception as err:
@@ -63,6 +71,7 @@ class AWSTranscoder:
 		result = self.transcode(url, key, request)
 		outFilesets = self.parseAudioResponse(inputFileset, result)
 		for fileset in outFilesets:
+			print("AWSTranscoder:transcodeAudio... outfileset: %s" %(fileset))
 			fileset.setFileSizes()
 		return outFilesets
 
@@ -72,6 +81,7 @@ class AWSTranscoder:
 
 
 	def transcode(self, url, key, data):
+		print("AWSTranscoder:transcode....url: %s, key: %s, request: %s" % (url, key, data))
 		result = self.httpPost(url, key, data)
 		#print(result)
 		if result == None:
@@ -90,6 +100,8 @@ class AWSTranscoder:
 				status = result.get("status")
 				if status == "FAILED":
 					raise Exception("Transcoding Job Failed: %s" %(result))
+
+			print("AWSTranscoder:transcode. result from the transcoder lambda: %s" %(result))
 			return result
 
 
@@ -121,9 +133,11 @@ class AWSTranscoder:
 
 
 	def parseAudioResponse(self, inpFileset, response):
+		print("AWSTranscoder:parseAudioResponse. inpFileset: %s, response: %s" %(inpFileset, response))
 		outFilesets = {}
 
 		outputs = response.get("output", [])
+		print("AWSTranscoder:parseAudioResponse. count of outputs: %d" %(len(outputs)))
 		for output in outputs:
 			bucket = "s3://" + output.get("bucket")
 			filesetPath = output.get("key")
@@ -140,6 +154,7 @@ class AWSTranscoder:
 			outFilesets[filesetPath] = outFileset
 
 		files = response.get("files", [])
+		print("AWSTranscoder:parseAudioResponse. count of files: %d" %(len(files)))
 		for file in files:
 			inpJson = file.get("input")
 			inpDuration = inpJson.get("duration")

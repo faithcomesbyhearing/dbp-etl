@@ -31,6 +31,7 @@ class S3Utility:
 
 	def uploadAllFilesets(self, filesets):
 		for inp in filesets:
+			print("DBPLoadController:uploadAllFilesets.. inp.typeCode: %s" %(inp.typeCode))
 			s3Bucket = self.config.s3_vid_bucket if inp.typeCode == "video" else self.config.s3_bucket
 			if inp.typeCode == "video":
 				self.uploadFileset(s3Bucket, inp)
