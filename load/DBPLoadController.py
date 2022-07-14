@@ -47,16 +47,22 @@ class DBPLoadController:
 
 
 	def validate(self, inputFilesets):
+		print("\n*** DBPLoadController:validate ***")
 		validate = Validate(self.config, self.db)
 		validate.process(inputFilesets)
 		for inp in inputFilesets:
+			print("DBPLoadController:validate. processing fileset: %s " %(inp.filesetId))
 			if os.path.isfile(inp.csvFilename):
+				print("DBPLoadController:validate. fileset: %s added to upload list" %(inp.filesetId))
 				InputFileset.upload.append(inp)
 			else:
+				print("DBPLoadController:validate. fileset: %s not added added to upload list" %(inp.filesetId))
 				RunStatus.set(inp.filesetId, False)
 
 
 	def updateBibles(self):
+		print("\n*** DBPLoadController:updateBibles ***")
+
 		dbOut = SQLBatchExec(self.config)
 		bibles = UpdateDBPBiblesTable(self.config, self.db, dbOut, self.languageReader)
 		bibles.process()
@@ -68,6 +74,7 @@ class DBPLoadController:
 
 
 	def upload(self, inputFilesets):
+		print("\n*** DBPLoadController:upload ***")
 		self.s3Utility.uploadAllFilesets(inputFilesets)
 		secondary = UpdateDBPBibleFilesSecondary(self.config, None, None)
 		secondary.createAllZipFiles(inputFilesets)
@@ -75,11 +82,13 @@ class DBPLoadController:
 
 
 	def updateFilesetTables(self, inputFilesets):
+		print("\n*** DBPLoadController:updateFilesetTables ***")
 		inp = inputFilesets
 		dbOut = SQLBatchExec(self.config)
 		update = UpdateDBPFilesetTables(self.config, self.db, dbOut)
 		video = UpdateDBPVideoTables(self.config, self.db, dbOut)
 		for inp in inputFilesets:
+			print("DBPLoadController:updateFilesetTables. processing fileset: %s" % (inp.filesetId))
 			hashId = update.processFileset(inp)
 			if inp.typeCode == "video":
 				video.processFileset(inp.filesetPrefix, inp.filenames(), hashId)
@@ -93,6 +102,7 @@ class DBPLoadController:
 
 
 	def updateLPTSTables(self):
+		print("\n*** DBPLoadController:updateLPTSTables ***")
 		dbOut = SQLBatchExec(self.config)
 		lptsDBP = UpdateDBPLPTSTable(self.config, dbOut, self.languageReader)
 		lptsDBP.process()
@@ -104,12 +114,13 @@ class DBPLoadController:
 
 
 if (__name__ == '__main__'):
+	print("*** DBPLoadController *** ")
 	from LanguageReaderCreator import *
 	config = Config()
 	AWSSession.shared() # ensure AWSSession init
 	db = SQLUtility(config)
 	# DATA_MODEL_MIGRATION_STAGE should be "B" or "C"
-	print("DATA_MODEL_MIGRATION_STAGE DBPLoadController ==> [%s]" % os.getenv("DATA_MODEL_MIGRATION_STAGE"))
+	#print("DATA_MODEL_MIGRATION_STAGE DBPLoadController ==> [%s]" % os.getenv("DATA_MODEL_MIGRATION_STAGE"))
 	migration_stage = "B" if os.getenv("DATA_MODEL_MIGRATION_STAGE") == None else os.getenv("DATA_MODEL_MIGRATION_STAGE")
 	languageReader = LanguageReaderCreator(migration_stage).create(config.filename_lpts_xml)
 	ctrl = DBPLoadController(config, db, languageReader)
