@@ -63,7 +63,7 @@ class DatabaseCheck:
 		self.filesetsWithoutVerses()
 		self.biblesWithoutTitles()
 		self.biblesWithoutBooks()
-		self.filesetsWithoutCopyrights()
+		self.filesetsNotInLookupTable()
 		self.filesetsWithoutOrganizations()
 		self.filesetsWithoutAccessGroups()
 		# check.bibleFilesToS3(dbpProdModified)
@@ -117,17 +117,16 @@ class DatabaseCheck:
 		self.outputTable("Bibles without Books (and have filesets).", ["filesetId", "hashId"], resultSet)
 
 
-	def filesetsWithoutCopyrights(self):
-		resultSet = self.db.select("SELECT id, hash_id FROM bible_filesets WHERE hash_id NOT IN" +
-			" (SELECT hash_id FROM bible_fileset_copyrights) ORDER by id", ())
-		self.outputTable("Filesets without Copyrights.", ["filesetId", "hashId"], resultSet)
+	def filesetsNotInLookupTable(self):
+		resultSet = self.db.select("SELECT bfs.id FROM bible_filesets WHERE bfs.id NOT IN" +
+			" (SELECT filesetid FROM bible_fileset_lookup) ORDER by id", ())
+		self.outputTable("(MUST BE EMPTY for data push). Filesets not in Lookup Table ", ["filesetId"], resultSet)
 
 
 	def filesetsWithoutOrganizations(self):
 		resultSet = self.db.select("SELECT id, hash_id FROM bible_filesets WHERE hash_id NOT IN" +
 			" (SELECT hash_id FROM bible_fileset_copyrights) ORDER by id", ())
 		self.outputTable("Filesets without Organizations.", ["filesetId", "hashId"], resultSet)
-
 
 	def filesetsWithoutAccessGroups(self):
 		resultSet = self.db.select("SELECT id, hash_id FROM bible_filesets WHERE hidden = 0 and hash_id NOT IN" +
