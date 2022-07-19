@@ -118,7 +118,7 @@ class DatabaseCheck:
 
 
 	def filesetsNotInLookupTable(self):
-		resultSet = self.db.select("SELECT bfs.id FROM bible_filesets WHERE bfs.id NOT IN" +
+		resultSet = self.db.select("SELECT bfs.id FROM bible_filesets bfs WHERE bfs.id NOT IN" +
 			" (SELECT filesetid FROM bible_fileset_lookup) ORDER by id", ())
 		self.outputTable("(MUST BE EMPTY for data push). Filesets not in Lookup Table ", ["filesetId"], resultSet)
 
