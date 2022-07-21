@@ -61,7 +61,7 @@ class UpdateDBPAccessTable:
 				elif accessId == 181: # allow_text_DOWNLOAD
 					accessIdInLPTS = self._isPublicDomain(languageRecord)
 				elif accessId in {191, 193}: # allow_text_APP_OFFLINE and allow_audio_APP_OFFLINE
-					accessIdInLPTS = self._isSILOnly(languageRecord) or self._isPublicDomain(languageRecord)
+					accessIdInLPTS = self._isSILOnly(languageRecord) or self._isPioneerBibleTranslatorsOnly or self._isPublicDomain(languageRecord)
 				else:
 					accessIdInLPTS = lpts.get(accessDesc) == "-1"
 
@@ -82,6 +82,11 @@ class UpdateDBPAccessTable:
 		else:
 			return False
 
+	def _isPioneerBibleTranslatorsOnly(self, record):
+		if record != None:
+			return record.Licensor() == "Pioneer Bible Translators" and record.CoLicensor() == None
+		else:
+			return False
 
 	def _isPublicDomain(self, record):
 		if record != None:
