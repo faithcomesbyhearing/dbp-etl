@@ -61,7 +61,9 @@ class UpdateDBPAccessTable:
 				elif accessId == 181: # allow_text_DOWNLOAD
 					accessIdInLPTS = self._isPublicDomain(languageRecord)
 				elif accessId in {191, 193}: # allow_text_APP_OFFLINE and allow_audio_APP_OFFLINE
-					accessIdInLPTS = self._isSILOnly(languageRecord) or self._isPublicDomain(languageRecord)
+					accessIdInLPTS = self._isSILOnly(languageRecord) or self._isPioneerBibleTranslatorsOnly(languageRecord) or self._isPublicDomain(languageRecord) or self._isCreativeCommons(languageRecord)
+					# if (accessIdInLPTS):
+					# 	print("*** 191/193... SIL: %s, PBT: %s, Public Domain: %s, CC: %s, hashId: %s, filesetId: %s" % (self._isSILOnly(languageRecord), self._isPioneerBibleTranslatorsOnly(languageRecord), self._isPublicDomain(languageRecord),self._isCreativeCommons(languageRecord), hashId, filesetId))
 				else:
 					accessIdInLPTS = lpts.get(accessDesc) == "-1"
 
@@ -82,6 +84,11 @@ class UpdateDBPAccessTable:
 		else:
 			return False
 
+	def _isPioneerBibleTranslatorsOnly(self, record):
+		if record != None:
+			return record.Licensor() == "Pioneer Bible Translators" and record.CoLicensor() == None
+		else:
+			return False
 
 	def _isPublicDomain(self, record):
 		if record != None:
@@ -94,7 +101,23 @@ class UpdateDBPAccessTable:
 				else:
 					print("INFO Possible Public Domain Found in %s: %s" % (record.Reg_StockNumber(), record.Copyrightc()))
 		return False
+	
+	def _isCreativeCommonsText(self, record):
+		if record != None:
+			pattern = re.compile(r"BY-SA|BY-NC|BY-NC-ND|BY-ND|PD", re.IGNORECASE)
+			if record.CreativeCommonsText() != None and pattern.search(record.CreativeCommonsText()):
+				return True
+		return False
 
+	def _isCreativeCommonsAudio(self, record):
+		if record != None:
+			pattern = re.compile(r"BY-SA|BY-NC|BY-NC-ND|BY-ND|PD", re.IGNORECASE)
+			if record.CreativeCommonsAudio() != None and pattern.search(record.CreativeCommonsAudio()):
+				return True
+		return False		
+
+	def _isCreativeCommons(self, record):		
+		return self._isCreativeCommonsText(record) or self._isCreativeCommonsAudio(record)
 
 if (__name__ == '__main__'):
 	from LanguageReaderCreator import LanguageReaderCreator	
@@ -130,4 +153,5 @@ order by id
 """
 
 
+#python3 load/UpdateDBPAccessTable.py test 
 

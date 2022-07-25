@@ -417,8 +417,8 @@ class FilenameParser:
 		self.audioTemplates = (
 			## New audio format
 			## {filesetid}_{A/B}{ordering}_{USFM}_{chap_start}[_{verse_start}-{chapter_end}_{verse_end}].mp3
-			FilenameRegex("audio99", r"([A-Z0-9]+)_([AB][0-9]+)_([A-Z]+)_([0-9]+).(mp3|opus|webm)"),
-			FilenameRegex("audio100", r"([A-Z0-9]+)_([AB][0-9]+)_([A-Z]+)_([0-9]+)_([0-9]+)-([0-9]+)_([0-9]+).(mp3|opus|webm)"),
+			FilenameRegex("audio99", r"([A-Z0-9]+)_([AB][0-9]+)_([1-4]?[A-Z]+)_([0-9]+).(mp3|opus|webm)"),
+			FilenameRegex("audio100", r"([A-Z0-9]+)_([AB][0-9]+)_([1-4]?[A-Z]+)_([0-9]+)_([0-9]+)-([0-9]+)_([0-9]+).(mp3|opus|webm)"),
 			## using three did not pick up more than 2, but I think it will.
 			## {bookseq}___{chap}_{bookname}____{damid}.mp3   B01___01_Matthew_____ENGGIDN2DA.mp3
 			FilenameRegex("audio101", r"([AB][0-9]{2})_+([0-9]{2,3})_+([1-4]?[A-Za-z\-]+)_+([A-Z0-9]+).(mp3|opus|webm)"),
