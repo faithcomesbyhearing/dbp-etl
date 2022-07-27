@@ -20,7 +20,7 @@ class UpdateDBPBibleTranslations:
 		deleteRows = []
 		engLanguageId = 6414
 
-		bibleIdSet = self.db.select("SELECT id FROM bibles", ())
+		bibleIdList = self.db.selectList("SELECT id FROM bibles", ())
 		dbpMap = {}
 		sql = "SELECT bible_id, name, vernacular FROM bible_translations WHERE language_id = %s"
 		resultSet = self.db.select(sql, (engLanguageId,))
@@ -38,7 +38,7 @@ class UpdateDBPBibleTranslations:
 			dbpNameCols = dbpMap.get(bibleId)
 
 			if dbpNameCols == None and volumeName != None:
-				if bibleId in bibleIdSet:
+				if bibleId in bibleIdList : 
 					insertRows.append((volumeName.replace("'", "\\'"), 0, bibleId, engLanguageId))
 			elif dbpNameCols != None and volumeName == None:
 				deleteRows.append((bibleId, engLanguageId))
@@ -64,7 +64,7 @@ class UpdateDBPBibleTranslations:
 		if len(final) == 0:
 			return None
 		elif len(final) > 1:
-			#print("WARN: bible_id %s has multiple volumne_name |%s|" % (bibleId, "|".join(final)))
+			print("WARN: bible_id %s has multiple volumne_name |%s|" % (bibleId, "|".join(final)))
 			return max(final, key=len)
 		return list(final)[0]
 
@@ -72,6 +72,7 @@ class UpdateDBPBibleTranslations:
 ## Unit Test
 if (__name__ == '__main__'):
 	from LanguageReader import *	
+	from LanguageReaderCreator import LanguageReaderCreator		
 	config = Config()
 	db = SQLUtility(config)
 	dbOut = SQLBatchExec(config)
@@ -84,4 +85,4 @@ if (__name__ == '__main__'):
 	dbOut.displayCounts()
 	#dbOut.execute("test-bibles")
 
-
+#python3 load/UpdateDBPBibleTranslations.py test 
