@@ -16,7 +16,7 @@ Sample Quality codes:
 9 = automated unverified (probably would never put these into the DB, but if I did at least I’d have this indicator of non-confidence)
 
 Under the path_to_verse_timings_dir/ENGWEBN2DA, we have 260 timing files for each chapter in the NT. Example below:
-C01-01-MAT-01-timing.txt
+**C01-01-MAT-01-timing.txt
 7.17	16.02	1
 16.02	52.82	6
 52.82	92.53	11
@@ -29,7 +29,7 @@ C01-01-MAT-01-timing.txt
 208.73	216.62	22
 216.62	229.58	23
 229.58	241.63	24
-241.63	253.3	25
+241.63	253.3	25**
 
 For OT, 
 python3 py/BibleFileTimestamps_Insert_aeneas_OT.py -aeneas_timing_dir path_to_verse_timings_dir/ENGWEBO2DA -aeneas_timing_err 4
@@ -37,6 +37,7 @@ The code can be combined into one under BibleFileTimestamps_Insert_aeneas.py, bu
 
 2) Create corresponding HLS filesets in DB (no extra files in S3 are needed) for given filesetid
 Sample run: python3 py/AudioHLS.py newdata SPNWTCN2DA
+
 The following insert operations are done.
       INSERT INTO bible_filesets (eg ENGESVN2SA)
       stream_hashid = SELECT FROM bible_filesets WHERE id = ENGESVN2SA
