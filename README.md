@@ -17,19 +17,19 @@
   
   Under the path_to_verse_timings_dir/ENGWEBN2DA, we have 260 timing files for each chapter in the NT. Example below:
   C01-01-MAT-01-timing.txt
-  7.17	16.02	1
-  16.02	52.82	6
-  52.82	92.53	11
-  92.53	128.14	16
-  128.13	150.85	17
-  150.85	165.25	18
-  165.25	176.27	19
-  176.27	198.18	20
-  198.19	208.73	21
-  208.73	216.62	22
-  216.62	229.58	23
-  229.58	241.63	24
-  241.63	253.3	25
+    7.17	16.02	1
+    16.02	52.82	6
+    52.82	92.53	11
+    92.53	128.14	16
+    128.13	150.85	17
+    150.85	165.25	18
+    165.25	176.27	19
+    176.27	198.18	20
+    198.19	208.73	21
+    208.73	216.62	22
+    216.62	229.58	23
+    229.58	241.63	24
+    241.63	253.3	25
   
   For OT, 
   python3 py/BibleFileTimestamps_Insert_aeneas_OT.py -aeneas_timing_dir path_to_verse_timings_dir/ENGWEBO2DA -aeneas_timing_err 4
