@@ -45,7 +45,6 @@ audio.transcoder.key = 1b5dc5708ae8d0335afdf94e421ae5f7d772e8f13b003c9d9733bce5c
 audio.transcoder.sleep.sec = 10
 audio.transcoder.input = { "bucket": "\$bucket", "key": "\$prefix" }
 audio.transcoder.output.0 = { "bucket": "${S3_BUCKET}", "key": "\$prefix-opus16", "bitrate": 16, "container": "webm", "codec": "opus" }
-audio.transcoder.output.1 = { "bucket": "${S3_BUCKET}", "key": "\$prefix-mp3-64", "bitrate": 64, "container": "mp3", "codec": "mp3" }
 lambda.zip.function = arn:aws:lambda:us-west-2:078432969830:function:transcoding-api-create-zip-w9gxhplj7q9mju3h
 lambda.zip.region = us-west-2
 lambda.zip.timeout = 900
@@ -55,6 +54,8 @@ database.host = ${DATABASE_HOST}
 database.port = ${DATABASE_PORT}
 database.db_name = ${DATABASE_DB_NAME}
 EOF
+
+#audio.transcoder.output.1 = { "bucket": "${S3_BUCKET}", "key": "\$prefix-mp3-64", "bitrate": 64, "container": "mp3", "codec": "mp3" }
 
 #echo "contents of dbp-etl.cfg: "
 #cat /root/dbp-etl.cfg

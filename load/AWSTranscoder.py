@@ -57,7 +57,7 @@ class AWSTranscoder:
 			out = self.config.getOptional(configKey)
 			if out != None:
 				out = out.replace("$prefix", outFilesetBase)
-				print("AWSTranscoder:transcodeAudio... new output format (probably an error here): %s" %(out))
+				print("AWSTranscoder:transcodeAudio... new output format: %s" %(out))
 				outputs.append(out)
 				print("AWSTranscoder:transcodeAudio... after adding new output format. outputs size is : %d" %(len(outputs)))
 		outputStr = '"output": [' + ", ".join(outputs) + ']'
