@@ -51,6 +51,10 @@ class UpdateDBPTextFilesets:
 			self.newFilesetId = filesetId.split("-")[0]
 		elif subTypeCode == "text_html":
 			self.newFilesetId = filesetId.split("-")[0] + "-html"
+		elif subTypeCode == "text_json":
+			self.newFilesetId = filesetId.split("-")[0] + "-json"	
+
+		# invoke Bible Publisher		
 		databaseName = filesetId.split("-")[0]
 		cmd = [self.config.node_exe,
 			self.config.publisher_js,
@@ -61,6 +65,19 @@ class UpdateDBPTextFilesets:
 		if response == None or response.returncode != 0:
 			return((Log.EROR, "BiblePublisher: " + str(response.stderr.decode("utf-8"))))
 		print("BiblePublisher:", str(response.stdout.decode("utf-8")))	
+
+		# invoke sofria		
+		# this is the invocation of the sofria-cli. It should be similar to the invocation of BiblePublisher
+		# note to victor: this is probably not correct - placeholder only
+		cmd = [self.config.node_exe,
+			self.config.sofria_js, # this will need to be added to configuration, similar to how publisher_js is configured
+			fullFilesetPath
+			]
+		response = subprocess.run(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=120)
+		if response == None or response.returncode != 0:
+			return((Log.EROR, "Sofria: " + str(response.stderr.decode("utf-8"))))
+		print("Sofria:", str(response.stdout.decode("utf-8")))	
+
 		return None
 
 
@@ -71,7 +88,7 @@ class UpdateDBPTextFilesets:
 		return textFileset
 
 
-	def updateFileset(self, bibleId, filesetId, hashId, bookIdSet, databasePath):
+	def updateFilesetTextPlain(self, bibleId, filesetId, hashId, bookIdSet, databasePath):
 		insertRows = []
 		updateRows = []
 		deleteRows = []

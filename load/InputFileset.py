@@ -147,6 +147,7 @@ class InputFileset:
 		### Future NOTE: If typeCode == text and subTypeCode in {text_html, text_format}
 		### Get the filenames by a select from self.databasePath
 		### This must be coded when we generate text_html or text_format filesets
+		## BWF 9/7/2022: I believe the above note is not relevant if using proskomma to generate the json files
 		if self.locationType == InputFileset.LOCAL:
 			pathname = self.fullPath()
 			if os.path.isdir(pathname):
@@ -238,6 +239,8 @@ class InputFileset:
 				return "text_usx"
 			elif self.filesetId.endswith("-html"):
 				return "text_html"
+			elif self.filesetId.endswith("-json"):
+				return "text_json"				
 			else:
 				return "text_plain"
 		else:
@@ -368,6 +371,9 @@ class InputFileset:
 
 
 	def numberUSXFileset(self, processedFileset):
+		# BWF 9/7/22 this assumes BiblePublisher has been called
+		# is there some renumbering that will be needed for json?
+		print("******************************************** calling numberUSXFileset. is it appropriate for text-json?")
 		if len(self.files[0].name) < 9:
 			if self.locationType == InputFileset.LOCAL:
 				directory = self.fullPath() + os.sep

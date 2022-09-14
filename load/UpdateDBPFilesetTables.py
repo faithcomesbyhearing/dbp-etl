@@ -125,14 +125,17 @@ class UpdateDBPFilesetTables:
 			elif inp.subTypeCode() == "text_plain":
 				hashId = self.insertBibleFileset(dbConn, inp.typeCode, "text_plain", inp.bibleId, inp.filesetId, bookIdSet)
 				self.insertFilesetConnections(dbConn, hashId, inp.bibleId)			
-				self.textUpdater.updateFileset(inp.bibleId, inp.filesetId, hashId, bookIdSet, inp.databasePath)
+				self.textUpdater.updateFilesetTextPlain(inp.bibleId, inp.filesetId, hashId, bookIdSet, inp.databasePath)
 
-				## Future code for text_html
-				#hashId = self.insertBibleFileset(inp.typeCode, "text_format", inp.bibleId, inp.filesetId, bookIdSet)
-				#self.insertFilesetConnections(hashId, inp.bibleId)
-				#self.textUpdater.updateFileset(inp.bibleId, inp.filesetId, hashId, bookIdSet, inp.databasePath)
+			elif inp.subTypeCode() == "text_json":
+				## Future code for text_html (note: text_html is now renamed as text_json)
+				## BWF 9/7/2022: the below code assumes BiblePublisher has run. bookIdSet comes from BiblePublisher. 
+				#  for the initial introduction of proskomma/sofria, we will not be removing BiblePublisher, so this is still valid
+				hashId = self.insertBibleFileset(dbConn, inp.typeCode, "text_json", inp.bibleId, inp.filesetId, bookIdSet)
+				self.insertFilesetConnections(dbConn, hashId, inp.bibleId)			
+
 			else:
-				print("typeCode is text, but subTypeCode is not text_usx or text_plain. No hashId available to return, so it's going to fail next")
+				print("typeCode is text, but subTypeCode (%s) is not recognized. No hashId available to return, so it's going to fail next" % (inp.subTypeCode()))
 
 		tocBooks = self.booksUpdater.getTableOfContents(inp.typeCode, inp.bibleId, inp.filesetId, inp.csvFilename, inp.databasePath)
 		self.booksUpdater.updateBibleBooks(inp.typeCode, inp.bibleId, tocBooks)
