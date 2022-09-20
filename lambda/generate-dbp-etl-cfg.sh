@@ -39,6 +39,7 @@ filename.lpts_xml = lpts-dbp.xml
 mysql.exe = /usr/bin/mysql
 node.exe = /usr/bin/node
 publisher.js = /app/BiblePublisher/publish/Publisher.js
+sofria_client.js =  /app/sofria-cli/sofria_mediaId.js
 
 # docker filesystem
 directory.upload_aws = /efs/${S3_KEY_PREFIX}/etl_uploader/upload_aws/
