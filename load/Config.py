@@ -109,13 +109,19 @@ class Config:
 		self.s3_vid_bucket = self._get("s3.vid_bucket")
 		self.directory_accepted = self._getOptional("directory.accepted")
 		self.directory_errors = self._getOptional("directory.errors")
+		self.directory_upload_aws = self._getPath("directory.upload_aws")
+		self.directory_quarantine = self._getPath("directory.quarantine")
+		self.directory_duplicate = self._getPath("directory.duplicate")
+		self.node_exe = self._getPath("node.exe")
+		self.publisher_js = self._getPath("publisher.js")
+		self.sofria_client_js = self._getPath("sofria_client.js")
+		self.filename_accept_errors = self._getPath("filename.accept.errors")
+
 		self.filename_datetime = self._get("filename.datetime")
 		self.mysql_exe = self._getOptional("mysql.exe")
 
 		# TODO these dependencies need to be sorted out
 		if programRunning in {"DBPLoadController.py"}:
-			self.node_exe = self._getPath("node.exe")
-			self.publisher_js = self._getPath("publisher.js")
 			self.audio_transcoder_url = self._get("audio.transcoder.url")
 			self.audio_transcoder_key = self._get("audio.transcoder.key")
 			self.audio_transcoder_sleep_sec = self._getInt("audio.transcoder.sleep.sec")
@@ -133,10 +139,6 @@ class Config:
 			self.video_preset_web = self._get("video.preset.web")
 			self.directory_bucket_list = self._getPath("directory.bucket_list")
 			self.filename_lpts_xml = self._getPath("filename.lpts_xml")
-			self.directory_upload_aws = self._getPath("directory.upload_aws")
-			self.directory_quarantine = self._getPath("directory.quarantine")
-			self.directory_duplicate = self._getPath("directory.duplicate")
-			self.filename_accept_errors = self._getPath("filename.accept.errors")
 			self.database_names['dbp'] = self.hashMap.get("database.db_name")
 			self.database_names['user_dbp'] = self.hashMap.get("database.user_db_name")
 			self.database_host = self._get("database.host")

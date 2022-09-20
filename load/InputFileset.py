@@ -147,6 +147,7 @@ class InputFileset:
 		### Future NOTE: If typeCode == text and subTypeCode in {text_html, text_format}
 		### Get the filenames by a select from self.databasePath
 		### This must be coded when we generate text_html or text_format filesets
+		## BWF 9/7/2022: I believe the above note is not relevant if using proskomma to generate the json files
 		if self.locationType == InputFileset.LOCAL:
 			pathname = self.fullPath()
 			if os.path.isdir(pathname):
@@ -226,10 +227,14 @@ class InputFileset:
 
 
 	def fullPath(self):
-		if self.locationType == InputFileset.LOCAL:
-			return self.location + os.sep + self.filesetPath
+		#  This must be added to generate text_json filesets
+		if self.subTypeCode() == "text_json":
+			return "%s%s-usx-json/" % (self.config.directory_accepted, self.lptsDamId[:7] + "_" + self.lptsDamId[8:])
 		else:
-			return self.location + "/" + self.filesetPath
+			if self.locationType == InputFileset.LOCAL:
+				return self.location + os.sep + self.filesetPath
+			else:
+				return self.location + "/" + self.filesetPath
 
 
 	def subTypeCode(self):
@@ -238,6 +243,8 @@ class InputFileset:
 				return "text_usx"
 			elif self.filesetId.endswith("-html"):
 				return "text_html"
+			elif self.filesetId.endswith("-json"):
+				return "text_json"				
 			else:
 				return "text_plain"
 		else:
@@ -368,6 +375,9 @@ class InputFileset:
 
 
 	def numberUSXFileset(self, processedFileset):
+		# BWF 9/7/22 this assumes BiblePublisher has been called
+		# is there some renumbering that will be needed for json?
+		print("******************************************** calling numberUSXFileset. is it appropriate for text-json?")
 		if len(self.files[0].name) < 9:
 			if self.locationType == InputFileset.LOCAL:
 				directory = self.fullPath() + os.sep
@@ -419,8 +429,8 @@ if (__name__ == '__main__'):
 				if file.name.endswith(".usx"):
 					bibleDB.execute("INSERT INTO tableContents (code) VALUES (?)", (file.name.split(".")[0],))
 			inp.numberUSXFileset(inp)
-		#print(inp.toString())
-		#print("subtype", inp.subTypeCode())
+		# print(inp.toString())
+		# print("subtype", inp.subTypeCode())
 	Log.writeLog(config)
 
 # python3 load/InputFileset.py test s3://etl-development-input Spanish_N2SPNTLA_USX # works after refactor
