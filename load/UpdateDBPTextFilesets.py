@@ -73,7 +73,7 @@ class UpdateDBPTextFilesets:
 				self.config.sofria_client_js,
 				fullFilesetPath,
 				self.config.directory_accepted]
-			response = subprocess.run(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=120)
+			response = subprocess.run(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=900)
 			if response == None or response.returncode != 0:
 				return((Log.EROR, "Sofria: " + str(response.stderr.decode("utf-8"))))
 			print("Sofria:", str(response.stdout.decode("utf-8")))
