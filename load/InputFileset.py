@@ -75,7 +75,7 @@ class InputFileset:
 		self.languageRecord = languageRecord
 		self.filesetPrefix = "%s/%s/%s" % (self.typeCode, self.bibleId, self.filesetId)
 		if self.typeCode == "text":
-			self.databasePath = "%s%s.db" % (config.directory_accepted, damId[:7] + "_" + damId[8:])
+			self.databasePath = "%s%s.db" % (config.directory_accepted, damId)
 		else:
 			self.databasePath = None
 		if self.typeCode == "text" and len(self.filesetId) < 10:
@@ -229,7 +229,7 @@ class InputFileset:
 	def fullPath(self):
 		#  This must be added to generate text_json filesets
 		if self.subTypeCode() == "text_json":
-			return "%s%s-usx-json/" % (self.config.directory_accepted, self.lptsDamId[:7] + "_" + self.lptsDamId[8:])
+			return "%s%s-json/" % (self.config.directory_accepted, self.filesetPath)
 		else:
 			if self.locationType == InputFileset.LOCAL:
 				return self.location + os.sep + self.filesetPath
@@ -434,6 +434,7 @@ if (__name__ == '__main__'):
 	Log.writeLog(config)
 
 # python3 load/InputFileset.py test s3://etl-development-input Spanish_N2SPNTLA_USX # works after refactor
+# python3 load/InputFileset.py test s3://etl-development-input ENGESVO2ET # works after refactor
 # python3 load/InputFileset.py test s3://etl-development-input ENGESVN2DA # works after refactor
 # python3 load/InputFileset.py test s3://etl-development-input SLUYPMP2DV # works after refactor
 
@@ -451,10 +452,3 @@ if (__name__ == '__main__'):
 # python3 load/InputFileset.py test s3://dbp-etl-mass-batch "Agni Sanvi N2ANYWBT/05 DBP & GBA/Agni Sanvi_N2ANYWBT/Agni Sanvi_N2ANYWBT_USX"
 # python3 load/InputFileset.py test s3://dbp-etl-mass-batch "Agta, Pahanan N2APFCMU/05 DBP & GBA/Agta, Pahanan_N2APFCMU/Agta, Pahanan_N2APFCMU_USX"
 # python3 load/InputFileset.py test s3://dbp-etl-mass-batch "Akan [AKA]/N1AKABIB (Asante)/05 DBP & GBA/Akan, Asante_N1AKABIB/Akan, Asante_N1AKABIB_USX"
-
-
-
-
-
-
-
