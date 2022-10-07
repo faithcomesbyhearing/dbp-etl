@@ -225,11 +225,13 @@ class InputFileset:
 		else:
 			return self.location
 
+	def textFilesetId(self):
+		return self.lptsDamId[:7] + "_" + self.lptsDamId[8:]
 
 	def fullPath(self):
 		#  This must be added to generate text_json filesets
 		if self.subTypeCode() == "text_json":
-			return "%s%s-json/" % (self.config.directory_accepted, self.filesetPath)
+			return "%s%s-json/" % (self.config.directory_accepted, self.textFilesetId())
 		else:
 			if self.locationType == InputFileset.LOCAL:
 				return self.location + os.sep + self.filesetPath
@@ -401,7 +403,7 @@ class InputFileset:
 
 	def batchName(self):
 		if self.typeCode == "text" and len(self.filesetId) < 10:
-			return self.lptsDamId[:7] + "_" + self.lptsDamId[8:]
+			return textFilesetId()
 		else:
 			return self.filesetId
 
