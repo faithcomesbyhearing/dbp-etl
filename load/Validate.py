@@ -34,7 +34,7 @@ class Validate:
 				ext = os.path.splitext(file.name)[-1]
 				if inp.typeCode == "audio" and ext not in {".mp3", ".opus", ".webm", ".m4a", ".jpg", ".tif", ".png", ".zip"}:
 					logger.invalidFileExt(file.name)
-				elif inp.typeCode == "text" and not ext in {".html", ".usx", ".xml", ".json"}:
+				elif inp.typeCode == "text" and not ext in {".html", ".usx", ".xml"}:
 					logger.invalidFileExt(file.name)
 				elif inp.typeCode == "video" and ext != ".mp4":
 					logger.invalidFileExt(file.name)
@@ -54,15 +54,13 @@ class Validate:
 					filePath = inp.downloadFiles()
 				else:
 					filePath = inp.fullPath()
-				for subTypeCode in ["text_plain", "text_json"]:
-					errorTuple = texts.validateFileset(subTypeCode, inp.bibleId, inp.filesetId, inp.languageRecord, inp.index, filePath, inp.textFilesetId())
-					if errorTuple != None:
-						logger = Log.getLogger(inp.filesetId)
-						logger.messageTuple(errorTuple)
-					else:
-						derivativeFileset = texts.createTextFileset(inp)
-						results.append(derivativeFileset)
-
+				errorTuple = texts.validateFileset("text_plain", inp.bibleId, inp.filesetId, inp.languageRecord, inp.index, filePath)
+				if errorTuple != None:
+					logger = Log.getLogger(inp.filesetId)
+					logger.messageTuple(errorTuple)
+				else:
+					derivativeFileset = texts.createTextFileset(inp)
+					results.append(derivativeFileset)
 		filesets += results
 
 		self.validateLPTS(filesets)
@@ -125,16 +123,14 @@ class Validate:
 
 if (__name__ == '__main__'):
 	from DBPLoadController import *
-	from LanguageReaderCreator import *
-	config = Config()
-	AWSSession.shared() # ensure AWSSession init
+	from LanguageReaderCreator import LanguageReaderCreator		
+	from LanguageReader import *
+	config = Config.shared()
 	db = SQLUtility(config)
 	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
-	filesets = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
-
+	filesets = InputFileset.filesetCommandLineParser(config, languageReader)
 	ctrl = DBPLoadController(config, db, languageReader)
 	ctrl.validate(filesets)
-
 
 # Successful tests with source on s3
 # time python3 load/Validate.py test s3://test-dbp-etl ENGESVN2DA
@@ -142,4 +138,4 @@ if (__name__ == '__main__'):
 # time python3 load/Validate.py test s3://test-dbp-etl HYWWAVN2ET
 # time python3 load/Validate.py test s3://test-dbp-etl ENGESVP2DV
 
-# python3 load/Validate.py test s3://etl-development-input Spanish_N2SPNTLA_USX
+

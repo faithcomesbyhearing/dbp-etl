@@ -84,7 +84,6 @@ class InputProcessor:
 
 if (__name__ == '__main__'):
 	from LanguageReader import *
-	from LanguageReaderCreator import *
 
 	config = Config()
 	session = boto3.Session(profile_name = config.s3_aws_profile)
