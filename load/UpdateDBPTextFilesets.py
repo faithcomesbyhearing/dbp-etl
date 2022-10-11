@@ -25,7 +25,7 @@ class UpdateDBPTextFilesets:
 
 
 	## This is called one fileset at a time by Validate.process
-	def validateFileset(self, subTypeCode, bibleId, filesetId, languageRecord, lptsIndex, fullFilesetPath):
+	def validateFileset(self, subTypeCode, bibleId, filesetId, languageRecord, lptsIndex, fullFilesetPath, filesetLptsName):
 		if languageRecord == None or lptsIndex == None:
 			return((Log.EROR, "has no LPTS record."))
 		iso3 = languageRecord.ISO()
@@ -72,7 +72,8 @@ class UpdateDBPTextFilesets:
 			cmd = [self.config.node_exe,
 				self.config.sofria_client_js,
 				fullFilesetPath,
-				self.config.directory_accepted]
+				self.config.directory_accepted,
+				filesetLptsName]
 			response = subprocess.run(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=900)
 			if response == None or response.returncode != 0:
 				return((Log.EROR, "Sofria: " + str(response.stderr.decode("utf-8"))))

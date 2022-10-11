@@ -55,7 +55,7 @@ class Validate:
 				else:
 					filePath = inp.fullPath()
 				for subTypeCode in ["text_plain", "text_json"]:
-					errorTuple = texts.validateFileset(subTypeCode, inp.bibleId, inp.filesetId, inp.languageRecord, inp.index, filePath)
+					errorTuple = texts.validateFileset(subTypeCode, inp.bibleId, inp.filesetId, inp.languageRecord, inp.index, filePath, inp.textFilesetId())
 					if errorTuple != None:
 						logger = Log.getLogger(inp.filesetId)
 						logger.messageTuple(errorTuple)
