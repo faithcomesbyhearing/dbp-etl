@@ -241,6 +241,3 @@ if (__name__ == "__main__"):
 # python3 load/PreValidate.py test s3://dbp-etl-upload-dev-ya1mbvdty8tlq15r 2022-03-25-16-14-34 Abidji_N2ABIWxx_USX
 # python3 load/PreValidate.py test s3://dbp-etl-upload-dev-ya1mbvdty8tlq15r 2022-04-14-21-05-56 "Kannada_N1 & O1 KANDPI_USX"
 # python3 load/PreValidate.py test s3://dbp-etl-upload-dev-ya1mbvdty8tlq15r 2022-04-14-21-05-56 ENGESVN1DA
-
-# python3 load/PreValidate.py test s3://dbp-etl-upload-dev-ya1mbvdty8tlq15r 2022-03-25-16-14-34 Spanish_N2SPNTLA_USX
-# python3 load/PreValidate.py test s3://dbp-etl-upload-dev-ya1mbvdty8tlq15r 2022-09-27-13-48-13 ENGESVO2ET

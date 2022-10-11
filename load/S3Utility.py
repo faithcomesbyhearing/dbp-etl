@@ -31,7 +31,7 @@ class S3Utility:
 
 	def uploadAllFilesets(self, filesets):
 		for inp in filesets:
-			print("DBPLoadController:uploadAllFilesets.. inp.typeCode: %s subTypeCode: %s" %(inp.typeCode,  inp.subTypeCode()))
+			print("DBPLoadController:uploadAllFilesets.. inp.typeCode: %s" %(inp.typeCode))
 			s3Bucket = self.config.s3_vid_bucket if inp.typeCode == "video" else self.config.s3_bucket
 			if inp.typeCode == "video":
 				self.uploadFileset(s3Bucket, inp)
@@ -98,7 +98,7 @@ if (__name__ == '__main__'):
 				filePath = inp.downloadFiles()
 			else:
 				filePath = inp.fullPath()
-			errorTuple = texts.validateFileset("text_plain", inp.bibleId, inp.filesetId, inp.languageRecord, inp.index, filePath, inp.textFilesetId())
+			errorTuple = texts.validateFileset("text_plain", inp.bibleId, inp.filesetId, inp.languageRecord, inp.index, filePath)
 			if errorTuple != None:
 				logger = Log.getLogger(inp.filesetId)
 				logger.messageTuple(errorTuple)
