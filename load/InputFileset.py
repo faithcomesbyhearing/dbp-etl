@@ -75,7 +75,7 @@ class InputFileset:
 		self.languageRecord = languageRecord
 		self.filesetPrefix = "%s/%s/%s" % (self.typeCode, self.bibleId, self.filesetId)
 		if self.typeCode == "text":
-			self.databasePath = "%s%s.db" % (config.directory_accepted, damId[:7] + "_" + damId[8:])
+			self.databasePath = "%s%s.db" % (config.directory_accepted, damId)
 		else:
 			self.databasePath = None
 		if self.typeCode == "text" and len(self.filesetId) < 10:
@@ -147,6 +147,7 @@ class InputFileset:
 		### Future NOTE: If typeCode == text and subTypeCode in {text_html, text_format}
 		### Get the filenames by a select from self.databasePath
 		### This must be coded when we generate text_html or text_format filesets
+		## BWF 9/7/2022: I believe the above note is not relevant if using proskomma to generate the json files
 		if self.locationType == InputFileset.LOCAL:
 			pathname = self.fullPath()
 			if os.path.isdir(pathname):
@@ -224,12 +225,18 @@ class InputFileset:
 		else:
 			return self.location
 
+	def textFilesetId(self):
+		return self.lptsDamId[:7] + "_" + self.lptsDamId[8:]
 
 	def fullPath(self):
-		if self.locationType == InputFileset.LOCAL:
-			return self.location + os.sep + self.filesetPath
+		#  This must be added to generate text_json filesets
+		if self.subTypeCode() == "text_json":
+			return "%s%s-json/" % (self.config.directory_accepted, self.textFilesetId())
 		else:
-			return self.location + "/" + self.filesetPath
+			if self.locationType == InputFileset.LOCAL:
+				return self.location + os.sep + self.filesetPath
+			else:
+				return self.location + "/" + self.filesetPath
 
 
 	def subTypeCode(self):
@@ -238,6 +245,8 @@ class InputFileset:
 				return "text_usx"
 			elif self.filesetId.endswith("-html"):
 				return "text_html"
+			elif self.filesetId.endswith("-json"):
+				return "text_json"				
 			else:
 				return "text_plain"
 		else:
@@ -368,6 +377,9 @@ class InputFileset:
 
 
 	def numberUSXFileset(self, processedFileset):
+		# BWF 9/7/22 this assumes BiblePublisher has been called
+		# is there some renumbering that will be needed for json?
+		print("******************************************** calling numberUSXFileset. is it appropriate for text-json?")
 		if len(self.files[0].name) < 9:
 			if self.locationType == InputFileset.LOCAL:
 				directory = self.fullPath() + os.sep
@@ -391,7 +403,7 @@ class InputFileset:
 
 	def batchName(self):
 		if self.typeCode == "text" and len(self.filesetId) < 10:
-			return self.lptsDamId[:7] + "_" + self.lptsDamId[8:]
+			return textFilesetId()
 		else:
 			return self.filesetId
 
@@ -419,11 +431,12 @@ if (__name__ == '__main__'):
 				if file.name.endswith(".usx"):
 					bibleDB.execute("INSERT INTO tableContents (code) VALUES (?)", (file.name.split(".")[0],))
 			inp.numberUSXFileset(inp)
-		#print(inp.toString())
-		#print("subtype", inp.subTypeCode())
+		# print(inp.toString())
+		# print("subtype", inp.subTypeCode())
 	Log.writeLog(config)
 
 # python3 load/InputFileset.py test s3://etl-development-input Spanish_N2SPNTLA_USX # works after refactor
+# python3 load/InputFileset.py test s3://etl-development-input ENGESVO2ET # works after refactor
 # python3 load/InputFileset.py test s3://etl-development-input ENGESVN2DA # works after refactor
 # python3 load/InputFileset.py test s3://etl-development-input SLUYPMP2DV # works after refactor
 
@@ -441,10 +454,3 @@ if (__name__ == '__main__'):
 # python3 load/InputFileset.py test s3://dbp-etl-mass-batch "Agni Sanvi N2ANYWBT/05 DBP & GBA/Agni Sanvi_N2ANYWBT/Agni Sanvi_N2ANYWBT_USX"
 # python3 load/InputFileset.py test s3://dbp-etl-mass-batch "Agta, Pahanan N2APFCMU/05 DBP & GBA/Agta, Pahanan_N2APFCMU/Agta, Pahanan_N2APFCMU_USX"
 # python3 load/InputFileset.py test s3://dbp-etl-mass-batch "Akan [AKA]/N1AKABIB (Asante)/05 DBP & GBA/Akan, Asante_N1AKABIB/Akan, Asante_N1AKABIB_USX"
-
-
-
-
-
-
-

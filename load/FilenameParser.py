@@ -179,7 +179,7 @@ class Filename:
 
 	def setType(self, typ):
 		self.type = typ
-		if typ not in {"mp3", "opus", "webm", "html", "mp4", "usx"}:
+		if typ not in {"mp3", "opus", "webm", "html", "mp4", "usx", "json"}:
 			self.errors.append("unknown type .%s" % (typ))
 
 
@@ -258,6 +258,11 @@ class FilenameRegex:
 				chapter = str(parser.maxChapterMap.get(match.group(2)))
 				file.setChapterEnd(chapter, parser.maxChapterMap)
 				file.setType(match.group(3))
+			elif self.name == "text4":
+				file.setBookSeq(match.group(1))
+				file.setBookId(match.group(2), parser.chapterMap)
+				file.setChapter(match.group(3), parser.maxChapterMap)
+				file.setType(match.group(4))
 
 			elif self.name == "audio99":
 				file.setDamid(match.group(1))
@@ -412,7 +417,9 @@ class FilenameParser:
 			## {usfx2}{optionalchap}.html  AC12.html
 			FilenameRegex("text2", r"([A-Z][A-Z0-9])([0-9]{0,3}).(html)"),
 			## {seq}{bookid}.usx
-			FilenameRegex("text3", r"([0-9]{3})?([A-Z0-9]{3}).(usx)")
+			FilenameRegex("text3", r"([0-9]{3})?([A-Z0-9]{3}).(usx)"),
+			## {seq}{bookid}_{chap}.json 041MRK_012.json
+			FilenameRegex("text4", r"([0-9]{3})?([A-Z0-9]{3})_([0-9]{3})?.(json)")
 		)
 		self.audioTemplates = (
 			## New audio format

@@ -92,6 +92,8 @@ class DBPLoadController:
 			hashId = update.processFileset(inp)
 			if inp.typeCode == "video":
 				video.processFileset(inp.filesetPrefix, inp.filenames(), hashId)
+			if inp.typeCode == "text" and inp.subTypeCode() == "text_json":
+				self.validateJSONFilesets(inp)
 			dbOut.displayCounts()
 			success = dbOut.execute(inp.batchName())
 			RunStatus.set(inp.filesetId, success)
@@ -112,6 +114,15 @@ class DBPLoadController:
 		RunStatus.set(RunStatus.LPTS, success)
 		return success
 
+	def validateJSONFilesets(self, inp):
+		result = self.db.selectSet("select filesetid, SUBSTR(filesetid, 8,1) as sub " +
+			"from bible_fileset_lookup " +
+			"WHERE type like %s " +
+			"and length (filesetid) > 6 " +
+			"and SUBSTR(filesetid, 8,1) != '_'", ('text%'))
+
+		if len(result) > 0:
+			logger.invalidValues(inp.stockNum(), "text_json", len(result))
 
 if (__name__ == '__main__'):
 	print("*** DBPLoadController *** ")
