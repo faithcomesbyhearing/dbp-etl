@@ -378,8 +378,6 @@ class InputFileset:
 
 	def numberUSXFileset(self, processedFileset):
 		# BWF 9/7/22 this assumes BiblePublisher has been called
-		# is there some renumbering that will be needed for json?
-		print("******************************************** calling numberUSXFileset. is it appropriate for text-json?")
 		if len(self.files[0].name) < 9:
 			if self.locationType == InputFileset.LOCAL:
 				directory = self.fullPath() + os.sep
