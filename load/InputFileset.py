@@ -368,6 +368,7 @@ class InputFileset:
 
 
 	def numberUSXFileset(self, processedFileset):
+		# BWF 9/7/22 this assumes BiblePublisher has been called
 		if len(self.files[0].name) < 9:
 			if self.locationType == InputFileset.LOCAL:
 				directory = self.fullPath() + os.sep

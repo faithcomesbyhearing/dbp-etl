@@ -139,7 +139,8 @@ class UpdateDBPTextFilesets:
 				priorBookId = bookId
 				priorChapter = chapterNum
 				priorVerseEnd = 0
-			parts = re.split("[-,]", verseNum)
+			verseNumInput = self.removeSpecialChar(verseNum)
+			parts = re.split("[-,]", verseNumInput)
 			verseStart = self.verseString2Int(bookId, chapter, parts[0])
 			verseEnd = self.verseString2Int(bookId, chapter, parts[len(parts) -1])
 			verseText = verseText.replace('\r', '')
@@ -154,6 +155,12 @@ class UpdateDBPTextFilesets:
 		bibleDB.close()
 		return results
 
+	def removeSpecialChar(self, verse):
+		listCharacters = ['\u200f', '\u200c']
+		newVerse = verse
+		for character in listCharacters:
+			newVerse = newVerse.replace(character, '')
+		return newVerse
 
 	def verseString2Int(self, bookId, chapter, verse):
 		if verse.isdigit():
