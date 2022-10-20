@@ -58,7 +58,7 @@ class InputFileset:
 	
 
 	def __init__(self, config, location, filesetId, filesetPath, damId, typeCode, bibleId, index, languageRecord, fileList = None):
-		print("InputFileset construction. filesetId: %s" % (filesetId))
+		print("InputFileset construction. filesetId: %s location: %s" % (filesetId, location))
 		self.config = config
 		if location.startswith("s3://"):
 			self.locationType = InputFileset.BUCKET

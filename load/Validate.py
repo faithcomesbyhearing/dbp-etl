@@ -54,13 +54,16 @@ class Validate:
 					filePath = inp.downloadFiles()
 				else:
 					filePath = inp.fullPath()
-				errorTuple = texts.validateFileset("text_plain", inp.bibleId, inp.filesetId, inp.languageRecord, inp.index, filePath)
-				if errorTuple != None:
-					logger = Log.getLogger(inp.filesetId)
-					logger.messageTuple(errorTuple)
-				else:
-					derivativeFileset = texts.createTextFileset(inp)
+
+				derivativeFileset = self.validateTextPlainFilesets(texts, inp, filePath)
+
+				if derivativeFileset != None:
 					results.append(derivativeFileset)
+					derivativeJSONFileset = self.validateTextJsonFilesets(texts, inp, filePath)
+
+					if derivativeJSONFileset != None:
+						results.append(derivativeJSONFileset)
+
 		filesets += results
 
 		self.validateLPTS(filesets)
@@ -74,6 +77,33 @@ class Validate:
 		#duplicates = find.findDuplicates()
 		#find.moveDuplicates(duplicates)
 
+	def validateTextPlainFilesets(self, texts, inp, filePath):
+		errorTuple = texts.validateFileset("text_plain", inp.bibleId, inp.filesetId, inp.languageRecord, inp.index, filePath)
+
+		if errorTuple == None:
+			errorTuple = texts.invokeBiblePublisher(inp, filePath)
+
+			if errorTuple == None:
+				return texts.createTextFileset(inp)
+
+		logger = Log.getLogger(inp.filesetId)
+		logger.messageTuple(errorTuple)
+
+		return None
+
+	def validateTextJsonFilesets(self, texts, inp, filePath):
+		errorTuple = texts.validateFileset("text_json", inp.bibleId, inp.filesetId, inp.languageRecord, inp.index, filePath)
+
+		if errorTuple == None:
+			errorTuple = texts.invokeSofriaCli(filePath, inp.textFilesetId())
+
+			if errorTuple == None:
+				return texts.createJSONFileset(inp)
+
+		logger = Log.getLogger(inp.filesetId)
+		logger.messageTuple(errorTuple)
+
+		return None
 
 	## prepareDirectory 1. Makes sure a directory exists. 2. If it contains .csv files,
 	## they are packaged up into a zip file using the timestamp of the first csv file.

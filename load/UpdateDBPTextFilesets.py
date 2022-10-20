@@ -31,9 +31,6 @@ class UpdateDBPTextFilesets:
 		iso3 = languageRecord.ISO()
 		if iso3 == None:
 			return((Log.EROR, "has no iso language code."))
-		iso1 = self.db.selectScalar("SELECT iso1 FROM languages WHERE iso = %s AND iso1 IS NOT NULL", (iso3,))
-		if iso1 == None:
-			iso1 = "null"
 		scriptName = languageRecord.Orthography(lptsIndex)
 		if scriptName == None:
 			return((Log.EROR, "has no Orthography."))
@@ -51,23 +48,65 @@ class UpdateDBPTextFilesets:
 			self.newFilesetId = filesetId.split("-")[0]
 		elif subTypeCode == "text_html":
 			self.newFilesetId = filesetId.split("-")[0] + "-html"
-		databaseName = filesetId.split("-")[0]
+		elif subTypeCode == "text_json":
+			self.newFilesetId = filesetId.split("-")[0] + "-json"	
+
+		return None
+
+	def invokeBiblePublisher(self, inp, fullFilesetPath):
+		iso3 = inp.languageRecord.ISO()
+		iso1 = self.db.selectScalar("SELECT iso1 FROM languages WHERE iso = %s AND iso1 IS NOT NULL", (inp.languageRecord.ISO(),))
+		if iso1 == None:
+			iso1 = "null"
+
+		scriptId = self.db.selectScalar("SELECT script_id FROM lpts_script_codes WHERE lpts_name = %s", (inp.languageRecord.Orthography(inp.index),))
+
+		direction = self.db.selectScalar("SELECT direction FROM alphabets WHERE script = %s", (scriptId,))
+
+		# invoke Bible Publisher		
+		databaseName = inp.filesetId.split("-")[0]
 		cmd = [self.config.node_exe,
 			self.config.publisher_js,
 			fullFilesetPath,
 			self.config.directory_accepted,
 			databaseName, iso3, iso1, direction]
+		print("================= Invoke BiblePublisher ========================")
+		print("cmd: ", cmd)
+		print("=========================================")
 		response = subprocess.run(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=120)
 		if response == None or response.returncode != 0:
-			return((Log.EROR, "BiblePublisher: " + str(response.stderr.decode("utf-8"))))
-		print("BiblePublisher:", str(response.stdout.decode("utf-8")))	
+			return((Log.EROR, "BiblePublisher error: " + str(response.stderr.decode("utf-8"))))
+		print("BiblePublisher invocation successful:", str(response.stdout.decode("utf-8")))	
+
 		return None
 
+	def invokeSofriaCli(self, fullFilesetPath, filesetLptsName):
+		# invoke sofria
+		# this is the invocation of the sofria-cli. It should be similar to the invocation of BiblePublisher
+		cmd = [self.config.node_exe,
+			self.config.sofria_client_js,
+			fullFilesetPath,
+			self.config.directory_accepted,
+			filesetLptsName]
+		print("================= Invoke Sofria Cli ========================")
+		print("cmd: ", cmd)
+		print("=========================================")
+		response = subprocess.run(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=900)
+		if response == None or response.returncode != 0:
+			return((Log.EROR, "Sofria error: " + str(response.stderr.decode("utf-8"))))
+		print("Sofria invocation successful:", str(response.stdout.decode("utf-8")))
+
+		return None
 
 	def createTextFileset(self, inputFileset):
 		inp = inputFileset
 		textFileset = InputFileset(self.config, inp.location, self.newFilesetId, inp.filesetPath, inp.lptsDamId, inp.typeCode, inp.bibleId, inp.index, inp.languageRecord)
 		inp.numberUSXFileset(textFileset) 
+		return textFileset
+	
+	def createJSONFileset(self, inputFileset):
+		inp = inputFileset
+		textFileset = InputFileset(self.config, inp.location, self.newFilesetId, inp.filesetPath, inp.lptsDamId, inp.typeCode, inp.bibleId, inp.index, inp.languageRecord)
 		return textFileset
 
 
