@@ -367,7 +367,7 @@ class InputFileset:
 				objectKey = self.filesetPath + "/" + file.name
 				filepath = directory + os.sep + file.name
 				try:
-					#print("Download s3://%s/%s to %s" % (self.location, objectKey, filepath))
+					print("Download s3://%s/%s to %s" % (self.location, objectKey, filepath))
 					AWSSession.shared().s3Client.download_file(self.location, objectKey, filepath)
 				except Exception as err:
 					print("ERROR: Download s3://%s/%s failed with error %s" % (self.location, objectKey, err))
