@@ -75,7 +75,7 @@ class UpdateDBPTextFilesets:
 		print("=========================================")
 		response = subprocess.run(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=120)
 		if response == None or response.returncode != 0:
-			return((Log.EROR, "BiblePublisher error.. code: %d, stdout: [%s], stderr: [%s] " % (response.returncode, str(response.stdout.decode("utf-8"))), str(response.stderr.decode("utf-8"))))
+			return((Log.EROR, "BiblePublisher error.. code: %d, stdout: [%s], stderr: [%s] " % (response.returncode, str(response.stdout.decode("utf-8")), str(response.stderr.decode("utf-8")))))
 		print("BiblePublisher invocation successful:", str(response.stdout.decode("utf-8")))	
 
 		return None
@@ -93,7 +93,7 @@ class UpdateDBPTextFilesets:
 		print("=========================================")
 		response = subprocess.run(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=900)
 		if response == None or response.returncode != 0:
-			return((Log.EROR, "Sofria error.. code: %d, stdout: [%s], stderr: [%s] " % (response.returncode, str(response.stdout.decode("utf-8"))), str(response.stderr.decode("utf-8"))))
+			return((Log.EROR, "Sofria error.. code: %d, stdout: [%s], stderr: [%s] " % (response.returncode, str(response.stdout.decode("utf-8")), str(response.stderr.decode("utf-8")))))
 		print("Sofria invocation successful:", str(response.stdout.decode("utf-8")))
 
 		return None
