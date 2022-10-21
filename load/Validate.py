@@ -78,28 +78,40 @@ class Validate:
 		#find.moveDuplicates(duplicates)
 
 	def validateTextPlainFilesets(self, texts, inp, filePath):
+		print("validateTextPlainFilesets. 1")
 		errorTuple = texts.validateFileset("text_plain", inp.bibleId, inp.filesetId, inp.languageRecord, inp.index, filePath)
+		print("validateTextPlainFilesets. 1a")
 
 		if errorTuple == None:
+			print("validateTextPlainFilesets. 2")		
 			errorTuple = texts.invokeBiblePublisher(inp, filePath)
+			print("validateTextPlainFilesets. 2a")		
 
 			if errorTuple == None:
+				print("validateTextPlainFilesets. 3")		
 				return texts.createTextFileset(inp)
 
+		print("validateTextPlainFilesets. 4")		
 		logger = Log.getLogger(inp.filesetId)
 		logger.messageTuple(errorTuple)
 
 		return None
 
 	def validateTextJsonFilesets(self, texts, inp, filePath):
+		print("validateTextJsonFilesets. 1")
 		errorTuple = texts.validateFileset("text_json", inp.bibleId, inp.filesetId, inp.languageRecord, inp.index, filePath)
+		print("validateTextJsonFilesets. 1a")
 
 		if errorTuple == None:
+			print("validateTextJsonFilesets. 2")
 			errorTuple = texts.invokeSofriaCli(filePath, inp.textFilesetId())
+			print("validateTextJsonFilesets. 2a")
 
 			if errorTuple == None:
+				print("validateTextJsonFilesets. 3")
 				return texts.createJSONFileset(inp)
 
+		print("validateTextJsonFilesets. 4")
 		logger = Log.getLogger(inp.filesetId)
 		logger.messageTuple(errorTuple)
 
