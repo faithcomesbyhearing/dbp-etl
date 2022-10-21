@@ -110,7 +110,7 @@ class UpdateDBPTextFilesets:
 		return textFileset
 
 
-	def updateFilesetTextPlain(self, bibleId, filesetId, hashId, bookIdSet, databasePath):
+	def updateFileset(self, bibleId, filesetId, hashId, bookIdSet, databasePath):
 		insertRows = []
 		updateRows = []
 		deleteRows = []
