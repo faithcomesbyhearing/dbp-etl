@@ -137,6 +137,7 @@ class FilenameReducer:
 			file.setSortSequence()
 
 		filename = path + os.path.basename(self.csvFilename)
+		print("FilenameReducer. Create file: ", filename)
 		with open(filename, 'w', newline='\n') as csvfile:
 			writer = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
 			writer.writerow(("type_code", "bible_id", "fileset_id", "sequence", "file_name", "book_id", "book_name",

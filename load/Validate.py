@@ -34,7 +34,7 @@ class Validate:
 				ext = os.path.splitext(file.name)[-1]
 				if inp.typeCode == "audio" and ext not in {".mp3", ".opus", ".webm", ".m4a", ".jpg", ".tif", ".png", ".zip"}:
 					logger.invalidFileExt(file.name)
-				elif inp.typeCode == "text" and not ext in {".html", ".usx", ".xml"}:
+				elif inp.typeCode == "text" and not ext in {".html", ".usx", ".xml", ".json"}:
 					logger.invalidFileExt(file.name)
 				elif inp.typeCode == "video" and ext != ".mp4":
 					logger.invalidFileExt(file.name)
@@ -54,13 +54,16 @@ class Validate:
 					filePath = inp.downloadFiles()
 				else:
 					filePath = inp.fullPath()
-				errorTuple = texts.validateFileset("text_plain", inp.bibleId, inp.filesetId, inp.languageRecord, inp.index, filePath)
-				if errorTuple != None:
-					logger = Log.getLogger(inp.filesetId)
-					logger.messageTuple(errorTuple)
-				else:
-					derivativeFileset = texts.createTextFileset(inp)
-					results.append(derivativeFileset)
+
+				textplainFileset = self.validateTextPlainFilesets(texts, inp, filePath)
+
+				if textplainFileset != None:
+					results.append(textplainFileset)
+					jsonFileset = self.validateTextJsonFilesets(texts, inp, filePath)
+
+					if jsonFileset != None:
+						results.append(jsonFileset)
+
 		filesets += results
 
 		self.validateLPTS(filesets)
@@ -74,6 +77,33 @@ class Validate:
 		#duplicates = find.findDuplicates()
 		#find.moveDuplicates(duplicates)
 
+	def validateTextPlainFilesets(self, texts, inp, filePath):
+		errorTuple = texts.validateFileset("text_plain", inp.bibleId, inp.filesetId, inp.languageRecord, inp.index, filePath)
+
+		if errorTuple == None:
+			errorTuple = texts.invokeBiblePublisher(inp, filePath)
+
+			if errorTuple == None:
+				return texts.createTextFileset(inp)
+
+		logger = Log.getLogger(inp.filesetId)
+		logger.messageTuple(errorTuple)
+
+		return None
+
+	def validateTextJsonFilesets(self, texts, inp, filePath):
+		errorTuple = texts.validateFileset("text_json", inp.bibleId, inp.filesetId, inp.languageRecord, inp.index, filePath)
+
+		if errorTuple == None:
+			errorTuple = texts.invokeSofriaCli(filePath, inp.textFilesetId())
+
+			if errorTuple == None:
+				return texts.createJSONFileset(inp)
+
+		logger = Log.getLogger(inp.filesetId)
+		logger.messageTuple(errorTuple)
+
+		return None
 
 	## prepareDirectory 1. Makes sure a directory exists. 2. If it contains .csv files,
 	## they are packaged up into a zip file using the timestamp of the first csv file.
@@ -123,12 +153,12 @@ class Validate:
 
 if (__name__ == '__main__'):
 	from DBPLoadController import *
-	from LanguageReaderCreator import LanguageReaderCreator		
-	from LanguageReader import *
-	config = Config.shared()
+	from LanguageReaderCreator import *
+	config = Config()
+	AWSSession.shared() # ensure AWSSession init
 	db = SQLUtility(config)
 	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
-	filesets = InputFileset.filesetCommandLineParser(config, languageReader)
+	filesets = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
 	ctrl = DBPLoadController(config, db, languageReader)
 	ctrl.validate(filesets)
 
@@ -138,4 +168,4 @@ if (__name__ == '__main__'):
 # time python3 load/Validate.py test s3://test-dbp-etl HYWWAVN2ET
 # time python3 load/Validate.py test s3://test-dbp-etl ENGESVP2DV
 
-
+# python3 load/Validate.py test s3://etl-development-input Spanish_N2SPNTLA_USX

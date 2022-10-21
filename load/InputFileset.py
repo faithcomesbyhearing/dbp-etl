@@ -58,7 +58,7 @@ class InputFileset:
 	
 
 	def __init__(self, config, location, filesetId, filesetPath, damId, typeCode, bibleId, index, languageRecord, fileList = None):
-		print("InputFileset construction. filesetId: %s" % (filesetId))
+		print("InputFileset construction. filesetId: %s location: %s" % (filesetId, location))
 		self.config = config
 		if location.startswith("s3://"):
 			self.locationType = InputFileset.BUCKET
@@ -75,7 +75,7 @@ class InputFileset:
 		self.languageRecord = languageRecord
 		self.filesetPrefix = "%s/%s/%s" % (self.typeCode, self.bibleId, self.filesetId)
 		if self.typeCode == "text":
-			self.databasePath = "%s%s.db" % (config.directory_accepted, damId[:7] + "_" + damId[8:])
+			self.databasePath = "%s%s.db" % (config.directory_accepted, damId)
 		else:
 			self.databasePath = None
 		if self.typeCode == "text" and len(self.filesetId) < 10:
@@ -225,12 +225,18 @@ class InputFileset:
 			return self.location
 
 
-	def fullPath(self):
-		if self.locationType == InputFileset.LOCAL:
-			return self.location + os.sep + self.filesetPath
-		else:
-			return self.location + "/" + self.filesetPath
+	def textFilesetId(self):
+		return self.lptsDamId[:7] + "_" + self.lptsDamId[8:]
 
+	def fullPath(self):
+		#  This must be added to generate text_json filesets
+		if self.subTypeCode() == "text_json":
+			return "%s%s-json/" % (self.config.directory_accepted, self.textFilesetId())
+		else:
+			if self.locationType == InputFileset.LOCAL:
+				return self.location + os.sep + self.filesetPath
+			else:
+				return self.location + "/" + self.filesetPath
 
 	def subTypeCode(self):
 		if self.typeCode == "text":
@@ -238,6 +244,8 @@ class InputFileset:
 				return "text_usx"
 			elif self.filesetId.endswith("-html"):
 				return "text_html"
+			elif self.filesetId.endswith("-json"):
+				return "text_json"
 			else:
 				return "text_plain"
 		else:
@@ -358,7 +366,7 @@ class InputFileset:
 				objectKey = self.filesetPath + "/" + file.name
 				filepath = directory + os.sep + file.name
 				try:
-					#print("Download s3://%s/%s to %s" % (self.location, objectKey, filepath))
+					print("Download s3://%s/%s to %s" % (self.location, objectKey, filepath))
 					AWSSession.shared().s3Client.download_file(self.location, objectKey, filepath)
 				except Exception as err:
 					print("ERROR: Download s3://%s/%s failed with error %s" % (self.location, objectKey, err))
@@ -368,6 +376,7 @@ class InputFileset:
 
 
 	def numberUSXFileset(self, processedFileset):
+		# BWF 9/7/22 this assumes BiblePublisher has been called
 		if len(self.files[0].name) < 9:
 			if self.locationType == InputFileset.LOCAL:
 				directory = self.fullPath() + os.sep
@@ -391,7 +400,7 @@ class InputFileset:
 
 	def batchName(self):
 		if self.typeCode == "text" and len(self.filesetId) < 10:
-			return self.lptsDamId[:7] + "_" + self.lptsDamId[8:]
+			return textFilesetId()
 		else:
 			return self.filesetId
 
