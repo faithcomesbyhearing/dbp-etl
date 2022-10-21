@@ -75,7 +75,7 @@ class InputFileset:
 		self.languageRecord = languageRecord
 		self.filesetPrefix = "%s/%s/%s" % (self.typeCode, self.bibleId, self.filesetId)
 		if self.typeCode == "text":
-			self.databasePath = "%s%s.db" % (config.directory_accepted, damId[:7] + "_" + damId[8:])
+			self.databasePath = "%s%s.db" % (config.directory_accepted, damId)
 		else:
 			self.databasePath = None
 		if self.typeCode == "text" and len(self.filesetId) < 10:
@@ -225,12 +225,18 @@ class InputFileset:
 			return self.location
 
 
-	def fullPath(self):
-		if self.locationType == InputFileset.LOCAL:
-			return self.location + os.sep + self.filesetPath
-		else:
-			return self.location + "/" + self.filesetPath
+	def textFilesetId(self):
+		return self.lptsDamId[:7] + "_" + self.lptsDamId[8:]
 
+	def fullPath(self):
+		#  This must be added to generate text_json filesets
+		if self.subTypeCode() == "text_json":
+			return "%s%s-json/" % (self.config.directory_accepted, self.textFilesetId())
+		else:
+			if self.locationType == InputFileset.LOCAL:
+				return self.location + os.sep + self.filesetPath
+			else:
+				return self.location + "/" + self.filesetPath
 
 	def subTypeCode(self):
 		if self.typeCode == "text":
@@ -238,6 +244,8 @@ class InputFileset:
 				return "text_usx"
 			elif self.filesetId.endswith("-html"):
 				return "text_html"
+			elif self.filesetId.endswith("-json"):
+				return "text_json"
 			else:
 				return "text_plain"
 		else:
@@ -361,7 +369,7 @@ class InputFileset:
 					print("Download s3://%s/%s to %s" % (self.location, objectKey, filepath))
 					AWSSession.shared().s3Client.download_file(self.location, objectKey, filepath)
 				except Exception as err:
-					# print("ERROR: Download s3://%s/%s failed with error %s" % (self.location, objectKey, err))
+					print("ERROR: Download s3://%s/%s failed with error %s" % (self.location, objectKey, err))
 		self.locationType = InputFileset.LOCAL
 		self.location = self.config.directory_upload_aws		
 		return directory
@@ -392,7 +400,7 @@ class InputFileset:
 
 	def batchName(self):
 		if self.typeCode == "text" and len(self.filesetId) < 10:
-			return self.lptsDamId[:7] + "_" + self.lptsDamId[8:]
+			return textFilesetId()
 		else:
 			return self.filesetId
 

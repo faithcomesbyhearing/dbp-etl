@@ -16,6 +16,7 @@ database.user_db_name = ${DATABASE_USER_DB_NAME}
 mysql.exe = /usr/bin/mysql
 node.exe = /usr/bin/node
 publisher.js = /app/BiblePublisher/publish/Publisher.js
+sofria_client.js =  /app/sofria-cli/sofria_mediaId.js
 s3.bucket = ${S3_BUCKET}
 s3.vid_bucket = ${S3_VID_BUCKET}
 s3.artifacts_bucket = ${S3_ARTIFACTS_BUCKET}
