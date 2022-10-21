@@ -361,7 +361,7 @@ class InputFileset:
 					print("Download s3://%s/%s to %s" % (self.location, objectKey, filepath))
 					AWSSession.shared().s3Client.download_file(self.location, objectKey, filepath)
 				except Exception as err:
-					print("ERROR: Download s3://%s/%s failed with error %s" % (self.location, objectKey, err))
+					# print("ERROR: Download s3://%s/%s failed with error %s" % (self.location, objectKey, err))
 		self.locationType = InputFileset.LOCAL
 		self.location = self.config.directory_upload_aws		
 		return directory
