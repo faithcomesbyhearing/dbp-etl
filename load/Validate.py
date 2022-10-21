@@ -55,14 +55,14 @@ class Validate:
 				else:
 					filePath = inp.fullPath()
 
-				derivativeFileset = self.validateTextPlainFilesets(texts, inp, filePath)
+				textplainFileset = self.validateTextPlainFilesets(texts, inp, filePath)
 
-				if derivativeFileset != None:
-					results.append(derivativeFileset)
-					derivativeJSONFileset = self.validateTextJsonFilesets(texts, inp, filePath)
+				if textplainFileset != None:
+					results.append(textplainFileset)
+					jsonFileset = self.validateTextJsonFilesets(texts, inp, filePath)
 
-					if derivativeJSONFileset != None:
-						results.append(derivativeJSONFileset)
+					if jsonFileset != None:
+						results.append(jsonFileset)
 
 		filesets += results
 
