@@ -73,21 +73,24 @@ class InputFileset:
 		self.bibleId = bibleId
 		self.index = index
 		self.languageRecord = languageRecord
-		self.filesetPrefix = "%s/%s/%s" % (self.typeCode, self.bibleId, self.filesetId)
 		if self.typeCode == "text":
-			self.databasePath = "%s%s.db" % (config.directory_accepted, damId)
+			self.databasePath = "%s%s.db" % (config.directory_accepted, self.textFilesetId())
+			# if filesetId is of type text and it formatted as a stocknumber, we can replaced 2 peer "_".
+			self.filesetId = self.filesetId.replace("2", "_")
 		else:
 			self.databasePath = None
 		if self.typeCode == "text" and len(self.filesetId) < 10:
 			# BWF. if we encounter this error message, go upstream and change filesetId to 10 chars
 			print("*** !!! text fileset with less than 10 characters !!! ***")
-			self.csvFilename = "%s%s_%s_%s.csv" % (config.directory_accepted, self.typeCode, self.bibleId, damId[:7] + "_" + damId[8:])
+			self.csvFilename = "%s%s_%s_%s.csv" % (config.directory_accepted, self.typeCode, self.bibleId, self.textFilesetId())
 		else:
 			self.csvFilename = "%s%s_%s_%s.csv" % (config.directory_accepted, self.typeCode, self.bibleId, self.filesetId)
 		if fileList != None:
 			self.files = self._downloadSelectedFiles(fileList)
 		else:
 			self.files = self._setFilenames()
+		self.filesetPrefix = "%s/%s/%s" % (self.typeCode, self.bibleId, self.filesetId)
+
 		self.filesMap = None
 		self.mediaContainer = None
 		self.mediaCodec = None
@@ -400,7 +403,7 @@ class InputFileset:
 
 	def batchName(self):
 		if self.typeCode == "text" and len(self.filesetId) < 10:
-			return textFilesetId()
+			return self.textFilesetId()
 		else:
 			return self.filesetId
 
