@@ -70,9 +70,6 @@ class PreValidate:
 		return (resultList, self.messages)
 
 
-	def parseFilesetIdFromDirectoryName(self, directory):
-		return directory[:7] + "_" + directory[8:] + "-usx" if directory[8:10] == "ET" else directory
-
 	## Validate filesetId and return PreValidateResult
 	def validateFilesetId(self, directoryName):
 		filesetId = directoryName
