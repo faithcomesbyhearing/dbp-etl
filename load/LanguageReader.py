@@ -82,6 +82,9 @@ class LanguageRecordInterface(ABC):
     def Copyrightc():
         pass
 
+    @staticmethod
+    def transformToTextFilesetId(damId):
+        return damId[:7] + "_" + damId[8:]
 
     ## BWF - part of LanguageRecord interface. may be a common base class method
     def ReduceTextList(self, damIdList):

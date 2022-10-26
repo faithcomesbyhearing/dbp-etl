@@ -8,7 +8,6 @@ import sys
 import os
 from xml.dom import minidom
 from LanguageReader import LanguageReaderInterface, LanguageRecordInterface
-from InputFileset import *
 
 class LPTSExtractReader (LanguageReaderInterface):
 
@@ -191,7 +190,7 @@ class LPTSExtractReader (LanguageReaderInterface):
 					self.filesetIdMap[damId] = statuses
 					if "Text" in key: # Put in second key for Text filesets with underscore
 						damId = record[key]
-						damId = InputFileset.transformToTextFilesetId(damId)
+						damId = LanguageRecordInterface.transformToTextFilesetId(damId)
 						statuses = self.filesetIdMap.get(damId, [])
 						statuses.append((status, languageRecord))
 						self.filesetIdMap[damId] = statuses
@@ -419,7 +418,7 @@ class LanguageRecord (LanguageRecordInterface):
 	def ReduceTextList(self, damIdList):
 		damIdSet = set()
 		for (damId, index, status, fieldName) in damIdList:
-			damIdOut = InputFileset.transformToTextFilesetId(damId)
+			damIdOut = LanguageRecordInterface.transformToTextFilesetId(damId)
 			damIdSet.add((damIdOut, index, status))
 		return damIdSet
 
