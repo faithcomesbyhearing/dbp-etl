@@ -227,9 +227,12 @@ class InputFileset:
 		else:
 			return self.location
 
+	@staticmethod
+	def transformToTextFilesetId(damId):
+		return damId[:7] + "_" + damId[8:]
 
 	def textFilesetId(self):
-		return self.lptsDamId[:7] + "_" + self.lptsDamId[8:]
+		return InputFileset.transformToTextFilesetId(self.lptsDamId)
 
 	def fullPath(self):
 		#  This must be added to generate text_json filesets
@@ -402,7 +405,10 @@ class InputFileset:
 
 
 	def batchName(self):
-		if self.typeCode == "text" and len(self.filesetId) < 10:
+		if self.typeCode == "text":
+			if len(self.filesetId) < 10:
+				print ("DEBUG: text filesetid less than 10 characters long: " + self.filesetId)
+
 			return self.textFilesetId()
 		else:
 			return self.filesetId
@@ -431,8 +437,8 @@ if (__name__ == '__main__'):
 				if file.name.endswith(".usx"):
 					bibleDB.execute("INSERT INTO tableContents (code) VALUES (?)", (file.name.split(".")[0],))
 			inp.numberUSXFileset(inp)
-		#print(inp.toString())
-		#print("subtype", inp.subTypeCode())
+		# print(inp.toString())
+		# print("subtype", inp.subTypeCode())
 	Log.writeLog(config)
 
 # python3 load/InputFileset.py test s3://etl-development-input Spanish_N2SPNTLA_USX # works after refactor
