@@ -227,12 +227,8 @@ class InputFileset:
 		else:
 			return self.location
 
-	@staticmethod
-	def transformToTextFilesetId(damId):
-		return damId[:7] + "_" + damId[8:]
-
 	def textFilesetId(self):
-		return InputFileset.transformToTextFilesetId(self.lptsDamId)
+		return LanguageRecordInterface.transformToTextFilesetId(self.lptsDamId)
 
 	def fullPath(self):
 		#  This must be added to generate text_json filesets
