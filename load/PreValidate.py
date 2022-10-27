@@ -96,9 +96,10 @@ class PreValidate:
 				media = "audio"
 			elif "Text" in fieldName:
 				media = "text"	
-				# for the case when text (which is usx) is loaded from a directory containing the filesetid:
-				# we know the text is actually usx, so here is where we want to change the filesetid to include the suffix -usx
-				# FIXME: add -usx to filesetid, but only if not already present		
+				# for the case when text (which is usx) is loaded from a directory containing the filesetid,
+				# we know the text is actually usx, so, we should make sure that filesetid includes the suffix -usx
+				if not filesetId.endswith("-usx"):
+					filesetId = filesetId + "-usx"
 			elif "Video" in fieldName:
 				media = "video"
 			else:

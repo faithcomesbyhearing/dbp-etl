@@ -102,11 +102,14 @@ class InputFileset:
 		results = []
 		results.append("InputFileset\n")
 		results.append("location=" + self.location + "\n")
+		results.append("filesetPath=" + self.filesetPath + "\n")
+		results.append("fullPath=" + self.fullPath() + "\n")
 		results.append("locationType=" + self.locationType)
 		results.append("prefix=%s/%s/%s" % (self.typeCode, self.bibleId, self.filesetId))
 		results.append(" damId=" + self.lptsDamId)
 		results.append(" stockNum=" + self.stockNum())
 		results.append(" index=" + str(self.index))
+		results.append(" subTypeCode=" + str(self.subTypeCode()))
 		results.append(" script=" + str(self.languageRecord.Orthography(self.index)) + "\n")
 		results.append("filesetPrefix=" + self.filesetPrefix + "\n")
 		results.append("csvFilename=" + self.csvFilename + "\n")
@@ -230,19 +233,10 @@ class InputFileset:
 	def textFilesetId(self):
 		return LanguageRecordInterface.transformToTextFilesetId(self.lptsDamId)
 
-	# note: this is only used for InputFileset.LOCAL
 	def fullPath(self):
-		# if self.subTypeCode() == "text_json":
-		# 	return "%s%s-json/" % (self.config.directory_accepted, self.textFilesetId())
-		# else:
-		# 	if self.locationType == InputFileset.LOCAL:
-		# 		return self.location + os.sep + self.filesetPath
-		# 	else:
-		# 		return self.location + "/" + self.filesetPath
 		if self.locationType == InputFileset.LOCAL:
 			return self.location + os.sep + self.filesetPath
 		else:
-			# make sure the filesetPath contains -json (or whatever)
 			return self.location + "/" + self.filesetPath
 
 
@@ -411,9 +405,7 @@ class InputFileset:
 			if len(self.filesetId) < 10:
 				print ("DEBUG: text filesetid less than 10 characters long: " + self.filesetId)
 
-			return self.textFilesetId()
-		else:
-			return self.filesetId
+		return self.filesetId
 
 
 if (__name__ == '__main__'):
@@ -439,8 +431,8 @@ if (__name__ == '__main__'):
 				if file.name.endswith(".usx"):
 					bibleDB.execute("INSERT INTO tableContents (code) VALUES (?)", (file.name.split(".")[0],))
 			inp.numberUSXFileset(inp)
-		# print(inp.toString())
-		# print("subtype", inp.subTypeCode())
+		print(inp.toString())
+		print("subtype", inp.subTypeCode())
 	Log.writeLog(config)
 
 # python3 load/InputFileset.py test s3://etl-development-input Spanish_N2SPNTLA_USX # works after refactor
