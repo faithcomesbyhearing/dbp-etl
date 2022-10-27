@@ -230,15 +230,21 @@ class InputFileset:
 	def textFilesetId(self):
 		return LanguageRecordInterface.transformToTextFilesetId(self.lptsDamId)
 
+	# note: this is only used for InputFileset.LOCAL
 	def fullPath(self):
-		#  This must be added to generate text_json filesets
-		if self.subTypeCode() == "text_json":
-			return "%s%s-json/" % (self.config.directory_accepted, self.textFilesetId())
+		# if self.subTypeCode() == "text_json":
+		# 	return "%s%s-json/" % (self.config.directory_accepted, self.textFilesetId())
+		# else:
+		# 	if self.locationType == InputFileset.LOCAL:
+		# 		return self.location + os.sep + self.filesetPath
+		# 	else:
+		# 		return self.location + "/" + self.filesetPath
+		if self.locationType == InputFileset.LOCAL:
+			return self.location + os.sep + self.filesetPath
 		else:
-			if self.locationType == InputFileset.LOCAL:
-				return self.location + os.sep + self.filesetPath
-			else:
-				return self.location + "/" + self.filesetPath
+			# make sure the filesetPath contains -json (or whatever)
+			return self.location + "/" + self.filesetPath
+
 
 	def subTypeCode(self):
 		if self.typeCode == "text":

@@ -61,7 +61,6 @@ class PreValidate:
 			self.validateLPTS(stockNumberResultList[0])
 			resultList.extend(stockNumberResultList)
 		else:
-			# the input is not text; it's audio or video, which is provided as a single fileset
 			result = self.validateFilesetId(directoryName)
 			if (result != None):
 				self.validateLPTS(result)
@@ -96,7 +95,10 @@ class PreValidate:
 			if "Audio" in fieldName:
 				media = "audio"
 			elif "Text" in fieldName:
-				media = "text"			
+				media = "text"	
+				# for the case when text (which is usx) is loaded from a directory containing the filesetid:
+				# we know the text is actually usx, so here is where we want to change the filesetid to include the suffix -usx
+				# FIXME: add -usx to filesetid, but only if not already present		
 			elif "Video" in fieldName:
 				media = "video"
 			else:

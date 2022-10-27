@@ -117,24 +117,17 @@ class UpdateDBPFilesetTables:
 			self.insertBibleFiles(dbConn, hashId, inputFileset, bookIdSet)
 			updateBibleFilesSecondary.updateBibleFilesSecondary(hashId, inp)
 		elif inp.typeCode == "text":
-			if inp.subTypeCode() == "text_usx":
-				hashId = self.insertBibleFileset(dbConn, inp.typeCode, "text_usx", inp.bibleId, inp.filesetId, bookIdSet)
-				self.insertFilesetConnections(dbConn, hashId, inp.bibleId)
-				self.insertBibleFiles(dbConn, hashId, inputFileset, bookIdSet)
-				updateBibleFilesSecondary.updateBibleFilesSecondary(hashId, inp)
-			elif inp.subTypeCode() == "text_plain":
-				hashId = self.insertBibleFileset(dbConn, inp.typeCode, "text_plain", inp.bibleId, inp.filesetId, bookIdSet)
-				self.insertFilesetConnections(dbConn, hashId, inp.bibleId)			
+			hashId = self.insertBibleFileset(dbConn, inp.typeCode, inp.subTypeCode(), inp.bibleId, inp.filesetId, bookIdSet)
+			self.insertFilesetConnections(dbConn, hashId, inp.bibleId)					
+			# text_plain is still stored in the database; no upload 
+			if inp.subTypeCode() == "text_plain":
 				self.textUpdater.updateFilesetTextPlain(inp.bibleId, inp.filesetId, hashId, bookIdSet, inp.databasePath)
-
-			elif inp.subTypeCode() == "text_json":
-				## Future code for text_html (note: text_html is now renamed as text_json)
+			elif inp.subTypeCode() in {"text_usx", "text_json"}:
 				## BWF 9/7/2022: the below code assumes BiblePublisher has run. bookIdSet comes from BiblePublisher. 
 				#  for the initial introduction of proskomma/sofria, we will not be removing BiblePublisher, so this is still valid
-				hashId = self.insertBibleFileset(dbConn, inp.typeCode, "text_json", inp.bibleId, inp.filesetId, bookIdSet)
-				self.insertFilesetConnections(dbConn, hashId, inp.bibleId)
 				self.insertBibleFiles(dbConn, hashId, inputFileset, bookIdSet)
 				updateBibleFilesSecondary.updateBibleFilesSecondary(hashId, inp)
+
 			else:
 				print("typeCode is text, but subTypeCode (%s) is not recognized. No hashId available to return, so it's going to fail next" % (inp.subTypeCode()))
 
