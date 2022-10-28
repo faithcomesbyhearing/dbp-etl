@@ -73,21 +73,24 @@ class InputFileset:
 		self.bibleId = bibleId
 		self.index = index
 		self.languageRecord = languageRecord
-		self.filesetPrefix = "%s/%s/%s" % (self.typeCode, self.bibleId, self.filesetId)
 		if self.typeCode == "text":
-			self.databasePath = "%s%s.db" % (config.directory_accepted, damId)
+			self.databasePath = "%s%s.db" % (config.directory_accepted, self.textFilesetId())
+			# if filesetId is of type text and it formatted as a stocknumber, we can replaced 2 peer "_".
+			self.filesetId = self.filesetId.replace("2", "_")
 		else:
 			self.databasePath = None
 		if self.typeCode == "text" and len(self.filesetId) < 10:
 			# BWF. if we encounter this error message, go upstream and change filesetId to 10 chars
 			print("*** !!! text fileset with less than 10 characters !!! ***")
-			self.csvFilename = "%s%s_%s_%s.csv" % (config.directory_accepted, self.typeCode, self.bibleId, damId[:7] + "_" + damId[8:])
+			self.csvFilename = "%s%s_%s_%s.csv" % (config.directory_accepted, self.typeCode, self.bibleId, self.textFilesetId())
 		else:
 			self.csvFilename = "%s%s_%s_%s.csv" % (config.directory_accepted, self.typeCode, self.bibleId, self.filesetId)
 		if fileList != None:
 			self.files = self._downloadSelectedFiles(fileList)
 		else:
 			self.files = self._setFilenames()
+		self.filesetPrefix = "%s/%s/%s" % (self.typeCode, self.bibleId, self.filesetId)
+
 		self.filesMap = None
 		self.mediaContainer = None
 		self.mediaCodec = None
@@ -99,11 +102,14 @@ class InputFileset:
 		results = []
 		results.append("InputFileset\n")
 		results.append("location=" + self.location + "\n")
+		results.append("filesetPath=" + self.filesetPath + "\n")
+		results.append("fullPath=" + self.fullPath() + "\n")
 		results.append("locationType=" + self.locationType)
 		results.append("prefix=%s/%s/%s" % (self.typeCode, self.bibleId, self.filesetId))
 		results.append(" damId=" + self.lptsDamId)
 		results.append(" stockNum=" + self.stockNum())
 		results.append(" index=" + str(self.index))
+		results.append(" subTypeCode=" + str(self.subTypeCode()))
 		results.append(" script=" + str(self.languageRecord.Orthography(self.index)) + "\n")
 		results.append("filesetPrefix=" + self.filesetPrefix + "\n")
 		results.append("csvFilename=" + self.csvFilename + "\n")
@@ -224,19 +230,15 @@ class InputFileset:
 		else:
 			return self.location
 
-
 	def textFilesetId(self):
-		return self.lptsDamId[:7] + "_" + self.lptsDamId[8:]
+		return LanguageRecordInterface.transformToTextFilesetId(self.lptsDamId)
 
 	def fullPath(self):
-		#  This must be added to generate text_json filesets
-		if self.subTypeCode() == "text_json":
-			return "%s%s-json/" % (self.config.directory_accepted, self.textFilesetId())
+		if self.locationType == InputFileset.LOCAL:
+			return self.location + os.sep + self.filesetPath
 		else:
-			if self.locationType == InputFileset.LOCAL:
-				return self.location + os.sep + self.filesetPath
-			else:
-				return self.location + "/" + self.filesetPath
+			return self.location + "/" + self.filesetPath
+
 
 	def subTypeCode(self):
 		if self.typeCode == "text":
@@ -399,10 +401,11 @@ class InputFileset:
 
 
 	def batchName(self):
-		if self.typeCode == "text" and len(self.filesetId) < 10:
-			return textFilesetId()
-		else:
-			return self.filesetId
+		if self.typeCode == "text":
+			if len(self.filesetId) < 10:
+				print ("DEBUG: text filesetid less than 10 characters long: " + self.filesetId)
+
+		return self.filesetId
 
 
 if (__name__ == '__main__'):
@@ -428,8 +431,8 @@ if (__name__ == '__main__'):
 				if file.name.endswith(".usx"):
 					bibleDB.execute("INSERT INTO tableContents (code) VALUES (?)", (file.name.split(".")[0],))
 			inp.numberUSXFileset(inp)
-		#print(inp.toString())
-		#print("subtype", inp.subTypeCode())
+		print(inp.toString())
+		print("subtype", inp.subTypeCode())
 	Log.writeLog(config)
 
 # python3 load/InputFileset.py test s3://etl-development-input Spanish_N2SPNTLA_USX # works after refactor

@@ -190,7 +190,7 @@ class LPTSExtractReader (LanguageReaderInterface):
 					self.filesetIdMap[damId] = statuses
 					if "Text" in key: # Put in second key for Text filesets with underscore
 						damId = record[key]
-						damId = damId[:7] + "_" + damId[8:]
+						damId = LanguageRecordInterface.transformToTextFilesetId(damId)
 						statuses = self.filesetIdMap.get(damId, [])
 						statuses.append((status, languageRecord))
 						self.filesetIdMap[damId] = statuses
@@ -418,7 +418,7 @@ class LanguageRecord (LanguageRecordInterface):
 	def ReduceTextList(self, damIdList):
 		damIdSet = set()
 		for (damId, index, status, fieldName) in damIdList:
-			damIdOut = damId[:7] + "_" + damId[8:]
+			damIdOut = LanguageRecordInterface.transformToTextFilesetId(damId)
 			damIdSet.add((damIdOut, index, status))
 		return damIdSet
 

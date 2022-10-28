@@ -61,7 +61,6 @@ class PreValidate:
 			self.validateLPTS(stockNumberResultList[0])
 			resultList.extend(stockNumberResultList)
 		else:
-			# the input is not text; it's audio or video, which is provided as a single fileset
 			result = self.validateFilesetId(directoryName)
 			if (result != None):
 				self.validateLPTS(result)
@@ -69,9 +68,6 @@ class PreValidate:
 
 		return (resultList, self.messages)
 
-
-	def parseFilesetIdFromDirectoryName(self, directory):
-		return directory[:7] + "_" + directory[8:] + "-usx" if directory[8:10] == "ET" else directory
 
 	## Validate filesetId and return PreValidateResult
 	def validateFilesetId(self, directoryName):
@@ -99,7 +95,11 @@ class PreValidate:
 			if "Audio" in fieldName:
 				media = "audio"
 			elif "Text" in fieldName:
-				media = "text"			
+				media = "text"	
+				# for the case when text (which is usx) is loaded from a directory containing the filesetid,
+				# we know the text is actually usx, so, we should make sure that filesetid includes the suffix -usx
+				if not filesetId.endswith("-usx"):
+					filesetId = filesetId + "-usx"
 			elif "Video" in fieldName:
 				media = "video"
 			else:

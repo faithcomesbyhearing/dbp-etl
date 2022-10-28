@@ -49,7 +49,11 @@ class UpdateDBPTextFilesets:
 		elif subTypeCode == "text_html":
 			self.newFilesetId = filesetId.split("-")[0] + "-html"
 		elif subTypeCode == "text_json":
-			self.newFilesetId = filesetId.split("-")[0] + "-json"	
+			self.newFilesetId = filesetId.split("-")[0] + "-json"
+			self.newFilesetPath = self.newFilesetId
+			self.newLocation = self.config.directory_accepted
+		elif subTypeCode == "text_usx":
+			self.newFilesetId = filesetId.split("-")[0] + "-usx"
 
 		return None
 
@@ -106,7 +110,7 @@ class UpdateDBPTextFilesets:
 	
 	def createJSONFileset(self, inputFileset):
 		inp = inputFileset
-		textFileset = InputFileset(self.config, inp.location, self.newFilesetId, inp.filesetPath, inp.lptsDamId, inp.typeCode, inp.bibleId, inp.index, inp.languageRecord)
+		textFileset = InputFileset(self.config, self.newLocation, self.newFilesetId, self.newFilesetPath, inp.lptsDamId, inp.typeCode, inp.bibleId, inp.index, inp.languageRecord)
 		return textFileset
 
 

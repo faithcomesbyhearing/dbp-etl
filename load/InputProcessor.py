@@ -40,7 +40,7 @@ class InputProcessor:
 			for data in dataList:
 				inp = InputFileset(config, location, data.filesetId, path, data.damId, 
 					data.typeCode, data.bibleId(), data.index, data.languageRecord, data.fileList)
-				#print("INPUT", inp.toString())
+				# print("INPUT", inp.toString())
 				results.append(inp)
 			if messages != None and len(messages) > 0:
 				print("Validate.filesetCommandLineParser...setting RunStatus to fail for fileset %s because validate returned messages %s" % (directory, messages))
