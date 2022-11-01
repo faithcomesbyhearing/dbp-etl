@@ -429,6 +429,15 @@ class LanguageRecord (LanguageRecordInterface):
 			return None
 		else:
 			return result
+	def AltNameList(self):
+		altNametext = self.AltName()
+
+		if altNametext != None:
+			altNamelist = altNametext.split("|")
+			listStripped = map(lambda altName: altName.strip(), altNamelist)
+			return list(listStripped)
+
+		return []
 
 	def APIDevAudio(self):
 		return self.record.get("APIDevAudio")
@@ -579,7 +588,7 @@ class LanguageRecord (LanguageRecordInterface):
 		return self.record.get("Gideon_Text_Excluded")
 
 	def HeartName(self):
-		return self.record.get("HeartName")
+		return self.record.get("HeartName").strip() if self.record.get("HeartName") != None else None
 
 	def HubText(self):
 		return self.record.get("HubText")

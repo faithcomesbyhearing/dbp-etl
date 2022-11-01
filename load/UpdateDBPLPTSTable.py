@@ -46,8 +46,8 @@ class UpdateDBPLPTSTable:
 		self.updateBibleFilesetCopyrightOrganizations(filesetList)
 		bibletranslations = UpdateDBPBibleTranslations(self.config, self.db, self.dbOut, self.languageReader)
 		bibletranslations.insertEngVolumeName()
-		# languageTranslations = UpdateDBPLanguageTranslation(self.config, self.db, self.dbOut, self.languageReader)
-		# languageTranslations.updateOrInsertlanguageTranslation()
+		languageTranslations = UpdateDBPLanguageTranslation(self.config, self.db, self.dbOut, self.languageReader)
+		languageTranslations.updateOrInsertlanguageTranslation()
 		self.db.close()
 
 	##
