@@ -52,40 +52,37 @@ class UpdateDBPLanguageTranslation:
 
     def _updateOrInsertLanguageTranslations(self, languageNames, languageSourceId, languageTranslationId, priority):
         for languageName in languageNames:
-            insertRows = []
-            updateRows = []
+            if languageName != None and languageName != "":
+                insertRows = []
+                updateRows = []
 
-            indexedKey = "%s%s%s" % (languageSourceId,languageName,priority)
+                indexedKey = "%s%s%s" % (languageSourceId,languageName.lower(),priority)
 
-            if (languageName != None and
-                languageName != "" and not
-                self._isPejorativeAltName(languageName) and
-                self.langProcessed.get(indexedKey) == None):
+                if self.langProcessed.get(indexedKey) == None and not self._isPejorativeAltName(languageName):
+                    # store an index to avoid to process twice the same record
+                    self.langProcessed[indexedKey] = True
+                    # The column name that belongs to language_translations entity is a varchar with limit of 80 characters
+                    languageName = languageName[:80]
 
-                # store an index to avoid to process twice the same record
-                self.langProcessed[indexedKey] = True
-                # The column name that belongs to language_translations entity is a varchar with limit of 80 characters
-                languageName = languageName[:80]
+                    translationIdWithSameLangAndName = self.getTranslationByLangName(languageName, languageSourceId, languageTranslationId)
 
-                translationIdWithSameLangAndName = self.getTranslationByLangName(languageName, languageSourceId, languageTranslationId)
+                    tableName = "language_translations"
 
-                tableName = "language_translations"
+                    if translationIdWithSameLangAndName != None:
+                        langExistsByNameAndId = self.getTranslationByLangNameIdAndPriority(languageName, languageSourceId, languageTranslationId, priority)
 
-                if translationIdWithSameLangAndName != None:
-                    langExistsByNameAndId = self.getTranslationByLangNameIdAndPriority(languageName, languageSourceId, languageTranslationId, priority)
-
-                    if langExistsByNameAndId == None:
+                        if langExistsByNameAndId == None:
+                            languageName = languageName.replace("'", "\\'")
+                            attrNames = ("priority",)
+                            pkeyNames = ("language_source_id", "language_translation_id", "name", "id")
+                            updateRows.append((priority, languageSourceId, languageTranslationId, languageName, translationIdWithSameLangAndName))
+                            self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
+                    else:
                         languageName = languageName.replace("'", "\\'")
-                        attrNames = ("priority",)
-                        pkeyNames = ("language_source_id", "language_translation_id", "name", "id")
-                        updateRows.append((priority, languageSourceId, languageTranslationId, languageName, translationIdWithSameLangAndName))
-                        self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
-                else:
-                    languageName = languageName.replace("'", "\\'")
-                    attrNames = ("name", "priority")
-                    pkeyNames = ("language_source_id", "language_translation_id")
-                    insertRows.append((languageName, priority, languageSourceId, languageTranslationId))
-                    self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
+                        attrNames = ("name", "priority")
+                        pkeyNames = ("language_source_id", "language_translation_id")
+                        insertRows.append((languageName, priority, languageSourceId, languageTranslationId))
+                        self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
 
     def _isPejorativeAltName(self, languageName):
         return languageName.find("(pej") != -1
@@ -113,10 +110,10 @@ class UpdateDBPLanguageTranslation:
         return self.db.selectScalar("SELECT id FROM language_translations WHERE language_source_id=%s AND language_translation_id = %s AND priority=%s LIMIT 1", (languageSourceId, languageTranslationId, priority))
 
     def getTranslationByLangName(self, name, languageSourceId, languageTranslationId):
-        return self.db.selectScalar("SELECT id FROM language_translations WHERE language_source_id=%s AND language_translation_id = %s AND BINARY name=%s LIMIT 1", (languageSourceId, languageTranslationId, name))
+        return self.db.selectScalar("SELECT id FROM language_translations WHERE language_source_id=%s AND language_translation_id = %s AND name=%s LIMIT 1", (languageSourceId, languageTranslationId, name))
 
     def getTranslationByLangNameIdAndPriority(self, name, languageSourceId, languageTranslationId, priority):
-        return self.db.selectScalar("SELECT id FROM language_translations WHERE language_source_id=%s AND language_translation_id = %s AND BINARY name=%s AND priority=%s LIMIT 1", (languageSourceId, languageTranslationId, name, priority))
+        return self.db.selectScalar("SELECT id FROM language_translations WHERE language_source_id=%s AND language_translation_id = %s AND name=%s AND priority=%s LIMIT 1", (languageSourceId, languageTranslationId, name, priority))
 
 ## Unit Test
 if (__name__ == '__main__'):
