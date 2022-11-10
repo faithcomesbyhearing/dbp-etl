@@ -185,7 +185,10 @@ class TextStockNumberProcessor:
 
 		if len(stockNumberArray) > 0:
 			for stockNumberItem in stockNumberArray:
-				stockNumberArrayFinal.append(stockNumberItem[:-3] + "/" + stockNumberItem[-3:])
+				if len(stockNumberItem) > 7:
+					stockNumberArrayFinal.append(stockNumberItem[:-3] + "/" + stockNumberItem[-3:])
+				else:
+					stockNumberArrayFinal.append(stockNumberItem)
 
 		return stockNumberArrayFinal	
 

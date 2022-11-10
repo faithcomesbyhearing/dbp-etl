@@ -86,6 +86,10 @@ class LanguageRecordInterface(ABC):
     def transformToTextFilesetId(damId):
         return damId[:7] + "_" + damId[8:]
 
+    @staticmethod
+    def GetFilesetIdLen10(filesetId):
+        return filesetId[:10]
+
     ## BWF - part of LanguageRecord interface. may be a common base class method
     def ReduceTextList(self, damIdList):
         pass    

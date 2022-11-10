@@ -46,8 +46,8 @@ class UpdateDBPLPTSTable:
 		self.updateBibleFilesetCopyrightOrganizations(filesetList)
 		bibletranslations = UpdateDBPBibleTranslations(self.config, self.db, self.dbOut, self.languageReader)
 		bibletranslations.insertEngVolumeName()
-		# languageTranslations = UpdateDBPLanguageTranslation(self.config, self.db, self.dbOut, self.languageReader)
-		# languageTranslations.updateOrInsertlanguageTranslation()
+		languageTranslations = UpdateDBPLanguageTranslation(self.config, self.db, self.dbOut, self.languageReader)
+		languageTranslations.updateOrInsertlanguageTranslation()
 		self.db.close()
 
 	##
@@ -120,7 +120,8 @@ class UpdateDBPLPTSTable:
 						elif name == "bitrate":
 							description = bitrate
 						elif name == "stock_no":
-							description = languageRecord.Reg_StockNumber()
+							stockNumber = languageRecord.StockNumberByFilesetId(dbpFilesetId)
+							description = stockNumber if stockNumber != None else languageRecord.Reg_StockNumber()
 						elif name == "volume":
 							description = languageRecord.Volumne_Name()
 						else:
@@ -140,7 +141,7 @@ class UpdateDBPLPTSTable:
 					elif (oldDescription != description):
 						description = description.replace("'", "\\'")
 						updateRows.append((description, adminOnly, notes, iso, hashId, name, languageId))
-						#print("UPDATE: %s %s: OLD %s  NEW: %s" % (filesetId, name, oldDescription, description))
+						# print("UPDATE: filesetId=%s hashId=%s %s: OLD %s  NEW: %s" % (filesetId, hashId, name, oldDescription, description))
 
 		tableName = "bible_fileset_tags"
 		pkeyNames = ("hash_id", "name", "language_id")
@@ -330,6 +331,9 @@ class UpdateDBPLPTSTable:
 
 
 if (__name__ == '__main__'):
+	from Config import *
+	from LanguageReaderCreator import *
+
 	config = Config()
 	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
 	dbOut = SQLBatchExec(config)
@@ -337,7 +341,7 @@ if (__name__ == '__main__'):
 	filesets.process()
 	dbOut.displayStatements()
 	dbOut.displayCounts()
-	#dbOut.execute("test-lpts")
+	dbOut.execute("test-lpts")
 
 
 # python3 load/UpdateDBPLPTSTable.py test

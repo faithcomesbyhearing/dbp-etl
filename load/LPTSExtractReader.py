@@ -266,6 +266,42 @@ class LPTSExtractReader (LanguageReaderInterface):
 
 class LanguageRecord (LanguageRecordInterface):
 
+	Reg_StockNumberDamIdIndex = {
+		"Reg_CAudioDAMID1": True,
+		"Reg_NTAudioDamID1": True,
+		"Reg_OTAudioDamID1": True,
+		"Reg_CAudioDamID2": True,
+		"Reg_NTAudioDamID2": True,
+		"Reg_OTAudioDamID2": True,
+		"Reg_CAudioDamID3": True,
+		"Reg_NTAudioDamID3": True,
+		"Reg_OTAudioDamID3": True,
+		"Reg_NTTextDamID1": True,
+		"Reg_OTTextDamID1": True,
+		"Reg_NTTextDamID2": True,
+		"Reg_OTTextDamID2": True,
+		"Reg_NTTextDamID3": True,
+		"Reg_OTTextDamID3": True
+	}
+
+	ND_StockNumberDamIdIndex = {
+		"ND_CAudioDAMID1":  True,
+		"ND_NTAudioDamID1": True,
+		"ND_OTAudioDamID1": True,
+		"ND_CAudioDamID2":  True,
+		"ND_NTAudioDamID2": True,
+		"ND_OTAudioDamID2": True,
+		"ND_CAudioDamID3":  True,
+		"ND_NTAudioDamID3": True,
+		"ND_OTAudioDamID3": True,
+		"ND_NTTextDamID1":  True,
+		"ND_OTTextDamID1":  True,
+		"ND_NTTextDamID2":  True,
+		"ND_OTTextDamID2":  True,
+		"ND_NTTextDamID3":  True,
+		"ND_OTTextDamID3":  True
+	}
+
 	audio1DamIdDict = {
 		"ND_CAudioDAMID1": 		"ND_CAudioDAMStatus",
 		"ND_NTAudioDamID1": 	"ND_NTAudioDamIDStatus1",
@@ -429,6 +465,15 @@ class LanguageRecord (LanguageRecordInterface):
 			return None
 		else:
 			return result
+	def AltNameList(self):
+		altNametext = self.AltName()
+
+		if altNametext != None:
+			altNamelist = altNametext.split("|")
+			listStripped = map(lambda altName: altName.strip(), altNamelist)
+			return list(listStripped)
+
+		return []
 
 	def APIDevAudio(self):
 		return self.record.get("APIDevAudio")
@@ -579,7 +624,7 @@ class LanguageRecord (LanguageRecordInterface):
 		return self.record.get("Gideon_Text_Excluded")
 
 	def HeartName(self):
-		return self.record.get("HeartName")
+		return self.record.get("HeartName").strip() if self.record.get("HeartName") != None else None
 
 	def HubText(self):
 		return self.record.get("HubText")
@@ -619,7 +664,13 @@ class LanguageRecord (LanguageRecordInterface):
 		return self.record.get("ND_Recording_Status")
 
 	def ND_StockNumber(self):
-		return self.record.get("ND_StockNumber")
+		result = self.record.get("ND_StockNumber")
+		result = result.strip()
+
+		if result == "none":
+			result = None
+
+		return result
 
 	def NTAudioDamLoad(self):
 		return self.record.get("NTAudioDamLoad")
@@ -674,6 +725,26 @@ class LanguageRecord (LanguageRecordInterface):
 
 	def Reg_StockNumber(self):
 		return self.record.get("Reg_StockNumber")
+
+	def StockNumberByFilesetIdAndType(self, filesetId, typeCode):
+		damIds = self.DamIdList(typeCode)
+		for (damId, _, _, fieldname) in damIds:
+			if filesetId == damId:
+				if LanguageRecord.ND_StockNumberDamIdIndex.get(fieldname) == True:
+					return self.ND_StockNumber()
+				elif LanguageRecord.Reg_StockNumberDamIdIndex.get(fieldname) == True:
+					return self.Reg_StockNumber()
+		return None
+
+	def StockNumberByFilesetId(self, filesetId):
+		for typeCode in {"audio", "text", "video"}:
+			stockNumber = self.StockNumberByFilesetIdAndType(
+				LanguageRecordInterface.GetFilesetIdLen10(filesetId),
+				typeCode
+			)
+			if stockNumber != None:
+				return stockNumber
+		return None
 
 	def Restrictions(self):
 		return self.record.get("Restrictions")
@@ -818,13 +889,28 @@ if (__name__ == '__main__'):
 	result = {}
 	config = Config()
 	reader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
+	stockNumber = None
+	if len(sys.argv) > 2:
+		stockNumber = sys.argv[2]
+
 	for rec in reader.resultSet:
 		textDamIds = rec.DamIdList("text")
-		textDamIds = rec.ReduceTextList(textDamIds)
+		reduceTextDamIds = rec.ReduceTextList(textDamIds)
 		#if len(textDamIds) > 1:
 		#	print(textDamIds)
-		listDamIds = list(textDamIds)
+		listDamIds = list(reduceTextDamIds)
 		if len(listDamIds) > 1 and listDamIds[0][0][:6] != listDamIds[1][0][:6]:
 			print(rec.Reg_StockNumber(), listDamIds)
 
+		if stockNumber == rec.Reg_StockNumber() or stockNumber == rec.ND_StockNumber():
+			audioDamIds = rec.DamIdList("audio")
+			print("")
+			print("=========================================", stockNumber, "=========================================")
+			print("Reg_StockNumber:", rec.Reg_StockNumber())
+			print("ND_StockNumber:", rec.ND_StockNumber())
+			print("Text DamIds:", textDamIds)
+			print("Audio DamIds:", audioDamIds)
+			print("ReduceText DamIds:", reduceTextDamIds)
+			print("=========================================", stockNumber, "=========================================")
+			print("")
 
