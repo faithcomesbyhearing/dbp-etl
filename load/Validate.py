@@ -95,7 +95,7 @@ class Validate:
 		errorTuple = texts.validateFileset("text_json", inp.bibleId, inp.filesetId, inp.languageRecord, inp.index, filePath)
 
 		if errorTuple == None:
-			errorTuple = texts.invokeSofriaCli(filePath, inp.textFilesetId())
+			errorTuple = texts.invokeSofriaCli(filePath, inp.textLptsDamId())
 
 			if errorTuple == None:
 				return texts.createJSONFileset(inp)
