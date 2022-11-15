@@ -74,15 +74,15 @@ class InputFileset:
 		self.index = index
 		self.languageRecord = languageRecord
 		if self.typeCode == "text":
-			self.databasePath = "%s%s.db" % (config.directory_accepted, self.textFilesetId())
-			# if filesetId is of type text and it formatted as a stocknumber, we can replaced 2 peer "_".
-			self.filesetId = self.filesetId.replace("2", "_")
+			self.databasePath = "%s%s.db" % (config.directory_accepted, self.textLptsDamId())
+			# if filesetId is of type text and it formatted as a stocknumber, we can replaced 2 or 1 peer "_".
+			self.filesetId = self.textFilesetId()
 		else:
 			self.databasePath = None
 		if self.typeCode == "text" and len(self.filesetId) < 10:
 			# BWF. if we encounter this error message, go upstream and change filesetId to 10 chars
 			print("*** !!! text fileset with less than 10 characters !!! ***")
-			self.csvFilename = "%s%s_%s_%s.csv" % (config.directory_accepted, self.typeCode, self.bibleId, self.textFilesetId())
+			self.csvFilename = "%s%s_%s_%s.csv" % (config.directory_accepted, self.typeCode, self.bibleId, self.textLptsDamId())
 		else:
 			self.csvFilename = "%s%s_%s_%s.csv" % (config.directory_accepted, self.typeCode, self.bibleId, self.filesetId)
 		if fileList != None:
@@ -231,7 +231,10 @@ class InputFileset:
 			return self.location
 
 	def textFilesetId(self):
-		return LanguageRecordInterface.transformToTextFilesetId(self.lptsDamId)
+		return LanguageRecordInterface.transformToTextId(self.filesetId)
+
+	def textLptsDamId(self):
+		return LanguageRecordInterface.transformToTextId(self.lptsDamId)
 
 	def fullPath(self):
 		if self.locationType == InputFileset.LOCAL:

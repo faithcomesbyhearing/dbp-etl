@@ -82,9 +82,14 @@ class LanguageRecordInterface(ABC):
     def Copyrightc():
         pass
 
+    # Transform a damId or filesetId to a text damId or a text filesetId. e.g.
+    # from filesetId: TNKWBTN1ET-json to text filesetId: TNKWBTN_ET-json
+    # from filesetId: TNKWBTN1ET-usx to text filesetId: TNKWBTN_ET-usx
+    #
+    # from damId: TNKWBTN1ET to text damId: TNKWBTN_ET
     @staticmethod
-    def transformToTextFilesetId(damId):
-        return damId[:7] + "_" + damId[8:]
+    def transformToTextId(id):
+        return id[:7] + "_" + id[8:]
 
     @staticmethod
     def GetFilesetIdLen10(filesetId):
