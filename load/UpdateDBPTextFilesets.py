@@ -57,44 +57,30 @@ class UpdateDBPTextFilesets:
 
 		return None
 
-	def invokeBiblePublisher(self, inp, fullFilesetPath):
-		iso3 = inp.languageRecord.ISO()
-		iso1 = self.db.selectScalar("SELECT iso1 FROM languages WHERE iso = %s AND iso1 IS NOT NULL", (inp.languageRecord.ISO(),))
-		if iso1 == None:
-			iso1 = "null"
 
-		scriptId = self.db.selectScalar("SELECT script_id FROM lpts_script_codes WHERE lpts_name = %s", (inp.languageRecord.Orthography(inp.index),))
-
-		direction = self.db.selectScalar("SELECT direction FROM alphabets WHERE script = %s", (scriptId,))
-
-		# invoke Bible Publisher		
-		databaseName = inp.filesetId.split("-")[0]
-		cmd = [self.config.node_exe,
-			self.config.publisher_js,
-			fullFilesetPath,
-			self.config.directory_accepted,
-			databaseName, iso3, iso1, direction]
-		print("================= Invoke BiblePublisher ========================")
-		print("cmd: ", cmd)
-		print("=========================================")
-		response = subprocess.run(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=120)
-		if response == None or response.returncode != 0:
-			return((Log.EROR, "BiblePublisher error.. code: %d, stdout: [%s], stderr: [%s] " % (response.returncode, str(response.stdout.decode("utf-8")), str(response.stderr.decode("utf-8")))))
-		print("BiblePublisher invocation successful:", str(response.stdout.decode("utf-8")))	
-
-		return None
-
-	def invokeSofriaCli(self, fullFilesetPath, filesetLptsName):
+	def invokeSofriaCli(self, fullFilesetPath, inputFileset):
 		# invoke sofria
-		# this is the invocation of the sofria-cli. It should be similar to the invocation of BiblePublisher
+		#
+		# This is the invocation of the sofria-cli.
+		#
+		# This client will create and populate the tables: tableContents and verses
+		#
+		# The tableContents table will store data related to each book and the fields are:
+		# tableContents(code, heading, title, name, chapters)
+		#
+		# The verses table will store data related to each verse for each book and the fields are:
+		# verses(reference, text)
+		#
+		# The reference field is a string with the following format: "BOOK_CODE:CHAPTER_NUMBER:VERSE_RANGE" and The text field is verse content.
 		cmd = [self.config.node_exe,
 			self.config.sofria_client_js,
+			"run",
 			fullFilesetPath,
-			self.config.directory_accepted,
-			filesetLptsName]
+			"--populate-db=%s" % (inputFileset.databasePath),
+			"--generate-json=%s" % (os.path.join(self.config.directory_accepted, inputFileset.filesetId))]
 		print("================= Invoke Sofria Cli ========================")
 		print("cmd: ", cmd)
-		print("=========================================")
+		print("============================================================")
 		response = subprocess.run(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=900)
 		if response == None or response.returncode != 0:
 			return((Log.EROR, "Sofria error.. code: %d, stdout: [%s], stderr: [%s] " % (response.returncode, str(response.stdout.decode("utf-8")), str(response.stderr.decode("utf-8")))))
@@ -125,7 +111,7 @@ class UpdateDBPTextFilesets:
 		for (dbpBookId, dbpChapter, dbpVerseStart, dbpVerseEnd, dbpVerseText) in resultSet:
 			dbpVerseMap[(dbpBookId, dbpChapter, dbpVerseStart)] = (dbpVerseEnd, dbpVerseText)
 		ssBookIdSet = set()
-		verseList = self.getBiblePublisherVerses(filesetId, databasePath)
+		verseList = self.getBibleVersesFromSqlite(filesetId, databasePath)
 		for (ssBookId, ssChapter, ssVerseStart, ssVerseEnd, ssVerseText) in verseList:
 			ssBookIdSet.add((ssBookId, ssChapter, ssVerseStart))
 
@@ -169,21 +155,26 @@ class UpdateDBPTextFilesets:
 
 
 	# This method concatonates together those verses which have the same ending code.
-	def getBiblePublisherVerses(self, filesetId, databasePath):
+	def getBibleVersesFromSqlite(self, filesetId, databasePath):
 		results = []
 		priorBookId = None
 		priorChapter = -1
 		priorVerseEnd = 0
-		bibleDB = SqliteUtility(databasePath)		
-		for (reference, verseText) in bibleDB.select("SELECT reference, html FROM verses", ()):
+		bibleDB = SqliteUtility(databasePath)
+		# The `verses` table will store data related to each verse for each book and it has been populated by sofria-client.
+		for (reference, verseText) in bibleDB.select("SELECT reference, text FROM verses", ()):
 			(bookId, chapter, verseNum) = reference.split(":")
 			chapterNum = int(chapter)
 			if (priorBookId != bookId or priorChapter != chapterNum):
 				priorBookId = bookId
 				priorChapter = chapterNum
 				priorVerseEnd = 0
-			verseNumInput = self.removeSpecialChar(verseNum)
-			parts = re.split("[-,]", verseNumInput)
+
+			parts = re.split("[-,]", verseNum)
+
+			# NOTE: it is possible that verse value has a format equals to: number + string e.g. "2a".
+			# currently, this format is not allowed but we will need to handle this case.
+			# Also, we should make sure that the order is the correct.
 			verseStart = self.verseString2Int(bookId, chapter, parts[0])
 			verseEnd = self.verseString2Int(bookId, chapter, parts[len(parts) -1])
 			verseText = verseText.replace('\r', '')
@@ -197,13 +188,6 @@ class UpdateDBPTextFilesets:
 			priorVerseEnd = verseEnd
 		bibleDB.close()
 		return results
-
-	def removeSpecialChar(self, verse):
-		listCharacters = ['\u200f', '\u200c']
-		newVerse = verse
-		for character in listCharacters:
-			newVerse = newVerse.replace(character, '')
-		return newVerse
 
 	def verseString2Int(self, bookId, chapter, verse):
 		if verse.isdigit():

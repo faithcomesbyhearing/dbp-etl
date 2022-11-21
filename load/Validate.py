@@ -64,6 +64,12 @@ class Validate:
 					if jsonFileset != None:
 						results.append(jsonFileset)
 
+						errorTuple = texts.invokeSofriaCli(filePath, jsonFileset)
+
+						if errorTuple != None:
+							logger = Log.getLogger(inp.filesetId)
+							logger.messageTuple(errorTuple)
+
 		filesets += results
 
 		self.validateLPTS(filesets)
@@ -81,10 +87,7 @@ class Validate:
 		errorTuple = texts.validateFileset("text_plain", inp.bibleId, inp.filesetId, inp.languageRecord, inp.index, filePath)
 
 		if errorTuple == None:
-			errorTuple = texts.invokeBiblePublisher(inp, filePath)
-
-			if errorTuple == None:
-				return texts.createTextFileset(inp)
+			return texts.createTextFileset(inp)
 
 		logger = Log.getLogger(inp.filesetId)
 		logger.messageTuple(errorTuple)
@@ -95,10 +98,7 @@ class Validate:
 		errorTuple = texts.validateFileset("text_json", inp.bibleId, inp.filesetId, inp.languageRecord, inp.index, filePath)
 
 		if errorTuple == None:
-			errorTuple = texts.invokeSofriaCli(filePath, inp.textLptsDamId())
-
-			if errorTuple == None:
-				return texts.createJSONFileset(inp)
+			return texts.createJSONFileset(inp)
 
 		logger = Log.getLogger(inp.filesetId)
 		logger.messageTuple(errorTuple)

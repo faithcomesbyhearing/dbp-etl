@@ -357,7 +357,7 @@ class InputFileset:
 
 		return s3Thumbnails
 
-	## This method is used to download files to local disk when needed for processing, such as BiblePublisher
+	## This method is used to download files to local disk when needed for processing
 	def downloadFiles(self):
 		directory = self.config.directory_upload_aws + self.filesetPath
 		if not os.path.isdir(directory):
@@ -381,13 +381,14 @@ class InputFileset:
 
 
 	def numberUSXFileset(self, processedFileset):
-		# BWF 9/7/22 this assumes BiblePublisher has been called
+		# this assumes Sofria-client has been called
 		if len(self.files[0].name) < 9:
 			if self.locationType == InputFileset.LOCAL:
 				directory = self.fullPath() + os.sep
 			else:
 				directory = self.config.directory_upload_aws + self.filesetPath + os.sep # download path
 			bibleDB = SqliteUtility(processedFileset.databasePath)
+			# tableContents entity must have been populated by sofria-client. And the code column means book code value
 			resultList = bibleDB.selectList("SELECT code FROM tableContents ORDER BY rowId", ())
 			for index in range(0, len(resultList)):
 				num = index + 1
