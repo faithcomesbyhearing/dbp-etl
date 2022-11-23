@@ -8,9 +8,10 @@ from SQLUtility import *
 from SQLBatchExec import *
 
 class UpdateDBPLanguageTranslation:
-    HEART_NAME_PRIORITY = 9
+    HIGH_PRIORITY = 9
     ALT_NAME_PRIORITY = 0
     LANGUAGE_UNDETERMINED_TRANSLATION_ID = 8012
+    LANGUAGE_ENGLISH_ID = 6414
 
     def __init__(self, config, db, dbOut, languageReader):
         self.config = config
@@ -23,26 +24,36 @@ class UpdateDBPLanguageTranslation:
         return self.process()
 
     def process(self):
-        bibles = self.languageReader.getBibleIdMap()
+        languageRecords = self.languageReader.resultSet
 
-        for bibleId in bibles:
-            for _, languageRecord in bibles.get(bibleId):
-                lang = self.languageId(bibleId, languageRecord)
+        for languageRecord in languageRecords:
+            lang = self.languageId(languageRecord)
 
-                if lang != None:
-                    if languageRecord.HeartName() != None:
-                        self._processLanguageWithHeartName(lang, languageRecord)
+            if lang != None:
+                self._populatePriorityNine(lang, languageRecord)
 
-                    if languageRecord.AltName() != None:
-                        self._processLanguageWithAltName(lang, languageRecord)
+                if languageRecord.AltName() != None:
+                    self._processLanguageWithAltName(lang, languageRecord)
 
         return True
 
-    def _processLanguageWithHeartName(self, languageSourceId, languageRecord):
-        heartNamePriority = self.HEART_NAME_PRIORITY
-        languageTranslationId = languageSourceId
-        languageNames = [languageRecord.HeartName()]
-        self._updateOrInsertLanguageTranslations(languageNames, languageSourceId, languageTranslationId, heartNamePriority)
+    def _populatePriorityNine(self, languageSourceId, languageRecord):
+        if languageRecord.LangName() != None:
+            priorityEngLanguageName = [languageRecord.LangName().strip()]
+            self._updateOrInsertLanguageTranslations(
+                priorityEngLanguageName,
+                languageSourceId,
+                self.LANGUAGE_ENGLISH_ID,
+                self.HIGH_PRIORITY
+            )
+
+            priorityLanguageSourceName = [languageRecord.HeartName().strip()] if languageRecord.HeartName() != None else priorityEngLanguageName
+            self._updateOrInsertLanguageTranslations(
+                priorityLanguageSourceName,
+                languageSourceId,
+                languageSourceId,
+                self.HIGH_PRIORITY
+            )
 
     def _processLanguageWithAltName(self, languageSourceId, languageRecord):
         altNamePriority = self.ALT_NAME_PRIORITY
@@ -56,7 +67,7 @@ class UpdateDBPLanguageTranslation:
                 insertRows = []
                 updateRows = []
 
-                indexedKey = "%s%s%s" % (languageSourceId,languageName.lower(),priority)
+                indexedKey = "%s%s%s%s" % (languageSourceId, languageTranslationId, languageName.lower(), priority)
 
                 if self.langProcessed.get(indexedKey) == None and not self._isPejorativeAltName(languageName):
                     # store an index to avoid to process twice the same record
@@ -87,24 +98,31 @@ class UpdateDBPLanguageTranslation:
     def _isPejorativeAltName(self, languageName):
         return languageName.find("(pej") != -1
 
-    def languageId(self, bibleId, bible):
+    def languageId(self, languageRecord):
         result = None
-        if bible != None:
-            iso = bible.ISO()
-            langName = bible.LangName()
+        if languageRecord != None:
+            iso = languageRecord.ISO()
+            langName = languageRecord.LangName()
 
             if iso != None and langName != None:
                 result = self.db.selectScalar("SELECT id FROM languages WHERE iso=%s AND name=%s", (iso, langName))
                 if result != None:
                     return result
 
-        iso = bibleId[:3].lower()
+            if iso != None:
+                result = self.db.selectScalar("SELECT id FROM languages WHERE iso=%s", (iso))
+                if result != None:
+                    return result
 
-        result = self.db.selectScalar("SELECT id FROM languages WHERE iso=%s", (iso))
-        if result != None:
-            return result
-        else:
-            return None
+            bibleId = languageRecord.DBP_EquivalentSet()
+            if bibleId != None:
+                iso = bibleId[:3].lower()
+
+                result = self.db.selectScalar("SELECT id FROM languages WHERE iso=%s", (iso))
+                if result != None:
+                    return result
+
+        return None
 
     def getTranslationByLangIdAndPriority(self, languageSourceId, languageTranslationId, priority):
         return self.db.selectScalar("SELECT id FROM language_translations WHERE language_source_id=%s AND language_translation_id = %s AND priority=%s LIMIT 1", (languageSourceId, languageTranslationId, priority))
