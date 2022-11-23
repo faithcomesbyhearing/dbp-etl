@@ -39,16 +39,16 @@ class UpdateDBPLanguageTranslation:
 
     def _populatePriorityNine(self, languageSourceId, languageRecord):
         if languageRecord.LangName() != None:
-            priorityEngLanguageName = [languageRecord.LangName().strip()]
-            self._updateOrInsertLanguageTranslations(
+            priorityEngLanguageName = languageRecord.LangName().strip()
+            self._updateOrInsertLangTranslationsHighPriority(
                 priorityEngLanguageName,
                 languageSourceId,
                 self.LANGUAGE_ENGLISH_ID,
                 self.HIGH_PRIORITY
             )
 
-            priorityLanguageSourceName = [languageRecord.HeartName().strip()] if languageRecord.HeartName() != None else priorityEngLanguageName
-            self._updateOrInsertLanguageTranslations(
+            priorityLanguageSourceName = languageRecord.HeartName().strip() if languageRecord.HeartName() != None else priorityEngLanguageName
+            self._updateOrInsertLangTranslationsHighPriority(
                 priorityLanguageSourceName,
                 languageSourceId,
                 languageSourceId,
@@ -59,9 +59,9 @@ class UpdateDBPLanguageTranslation:
         altNamePriority = self.ALT_NAME_PRIORITY
         languageTranslationId = self.LANGUAGE_UNDETERMINED_TRANSLATION_ID
         languageNames = languageRecord.AltNameList()
-        self._updateOrInsertLanguageTranslations(languageNames, languageSourceId, languageTranslationId, altNamePriority)
+        self._updateOrInsertLangTranslationsLowerPriority(languageNames, languageSourceId, languageTranslationId, altNamePriority)
 
-    def _updateOrInsertLanguageTranslations(self, languageNames, languageSourceId, languageTranslationId, priority):
+    def _updateOrInsertLangTranslationsLowerPriority(self, languageNames, languageSourceId, languageTranslationId, priority):
         for languageName in languageNames:
             if languageName != None and languageName != "":
                 insertRows = []
@@ -88,6 +88,58 @@ class UpdateDBPLanguageTranslation:
                             pkeyNames = ("language_source_id", "language_translation_id", "name", "id")
                             updateRows.append((priority, languageSourceId, languageTranslationId, languageName, translationIdWithSameLangAndName))
                             self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
+                    else:
+                        languageName = languageName.replace("'", "\\'")
+                        attrNames = ("name", "priority")
+                        pkeyNames = ("language_source_id", "language_translation_id")
+                        insertRows.append((languageName, priority, languageSourceId, languageTranslationId))
+                        self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
+
+    def _updateOrInsertLangTranslationsHighPriority(self, languageName, languageSourceId, languageTranslationId, priority):
+        if languageName != None and languageName != "":
+            insertRows = []
+            updateRows = []
+
+            indexedKey = "%s%s%s" % (languageSourceId, languageTranslationId, priority)
+
+            if self.langProcessed.get(indexedKey) == None:
+                # store an index to avoid to process twice the same record
+                self.langProcessed[indexedKey] = True
+                # The column name that belongs to language_translations entity is a varchar with limit of 80 characters
+                languageName = languageName[:80]
+
+                langExistsByNameIdAndPriority = self.getTranslationByLangNameIdAndPriority(languageName, languageSourceId, languageTranslationId, priority)
+
+                if langExistsByNameIdAndPriority == None:
+                    tableName = "language_translations"
+
+                    langExistsByPriorityAndId = self.getTranslationByLangIdAndPriority(languageSourceId, languageTranslationId, priority)
+                    langExistsByNameAndId = self.getTranslationByLangName(languageName, languageSourceId, languageTranslationId)
+
+                    languageName = languageName.replace("'", "\\'")
+                    # There is Language with Priority 9 but Language Name is not equal
+                    if langExistsByPriorityAndId != None and langExistsByNameAndId == None:
+                        attrNames = ("name",)
+                        pkeyNames = ("language_source_id", "language_translation_id", "priority", "id")
+                        updateRows.append((languageName, languageSourceId, languageTranslationId, priority, langExistsByPriorityAndId))
+                        self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
+                    # There is Language with Priority 9 and there is another Language with the same Name
+                    elif langExistsByPriorityAndId != None and langExistsByNameAndId != None and langExistsByPriorityAndId != langExistsByNameAndId:
+                        attrNames = ("priority",)
+                        pkeyNames = ("language_source_id", "language_translation_id", "id")
+                        updateRows.append((0, languageSourceId, languageTranslationId, langExistsByPriorityAndId))
+                        self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
+
+                        updateRows = []
+                        pkeyNames = ("language_source_id", "language_translation_id", "name", "id")
+                        updateRows.append((priority, languageSourceId, languageTranslationId, languageName, langExistsByNameAndId))
+                        self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
+                    # There is a Language with the same but different priority to 9
+                    elif langExistsByPriorityAndId == None and langExistsByNameAndId != None:
+                        attrNames = ("priority",)
+                        pkeyNames = ("language_source_id", "language_translation_id", "name", "id")
+                        updateRows.append((priority, languageSourceId, languageTranslationId, languageName, langExistsByNameAndId))
+                        self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
                     else:
                         languageName = languageName.replace("'", "\\'")
                         attrNames = ("name", "priority")
