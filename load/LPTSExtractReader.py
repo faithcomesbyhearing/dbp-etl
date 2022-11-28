@@ -585,6 +585,16 @@ class LanguageRecord (LanguageRecordInterface):
 			print("ERROR: DBP_Equivalent index must be 1, 2, or 3.")
 			sys.exit()
 
+	def DBP_EquivalentSet(self):
+		if self.DBP_Equivalent() != None:
+			return self.DBP_Equivalent()
+		elif self.DBP_Equivalent2 != None:
+			return self.DBP_Equivalent2()
+		elif self.DBP_Equivalent3 != None:
+			return self.DBP_Equivalent3()
+		else:
+			None
+
 	def Download(self):
 		return self.record.get("Download")
 
