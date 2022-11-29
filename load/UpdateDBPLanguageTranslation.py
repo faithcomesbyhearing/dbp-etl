@@ -10,6 +10,7 @@ from SQLBatchExec import *
 class UpdateDBPLanguageTranslation:
     HIGH_PRIORITY = 9
     ALT_NAME_PRIORITY = 0
+    ETHNOLOGUE_NAME_PRIORITY = 5
     LANGUAGE_UNDETERMINED_TRANSLATION_ID = 8012
     LANGUAGE_ENGLISH_ID = 6414
 
@@ -34,6 +35,9 @@ class UpdateDBPLanguageTranslation:
 
                 if languageRecord.AltName() != None:
                     self._processLanguageWithAltName(lang, languageRecord)
+
+                if languageRecord.EthName() != None:
+                    self._processLanguageEthName(lang, languageRecord)
 
         return True
 
@@ -60,6 +64,12 @@ class UpdateDBPLanguageTranslation:
         languageTranslationId = self.LANGUAGE_UNDETERMINED_TRANSLATION_ID
         languageNames = languageRecord.AltNameList()
         self._updateOrInsertLangTranslationsLowerPriority(languageNames, languageSourceId, languageTranslationId, altNamePriority)
+
+    def _processLanguageEthName(self, languageSourceId, languageRecord):
+        ethNamePriority = self.ETHNOLOGUE_NAME_PRIORITY
+        languageTranslationId = self.LANGUAGE_UNDETERMINED_TRANSLATION_ID
+        languageNames = [languageRecord.EthName()]
+        self._updateOrInsertLangTranslationsLowerPriority(languageNames, languageSourceId, languageTranslationId, ethNamePriority)
 
     def _updateOrInsertLangTranslationsLowerPriority(self, languageNames, languageSourceId, languageTranslationId, priority):
         for languageName in languageNames:
