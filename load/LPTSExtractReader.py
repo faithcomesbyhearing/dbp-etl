@@ -619,7 +619,7 @@ class LanguageRecord (LanguageRecordInterface):
 			return None
 
 	def EthName(self):
-		return self.record.get("EthName")
+		return self.record.get("EthName").strip() if self.record.get("EthName") != None else None 
 
 	def FairUseLimit(self):
 		return self.record.get("FairUseLimit")
