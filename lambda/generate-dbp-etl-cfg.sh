@@ -38,8 +38,7 @@ filename.lpts_xml = lpts-dbp.xml
 # DBPLoadController
 mysql.exe = /usr/bin/mysql
 node.exe = /usr/bin/node
-publisher.js = /app/BiblePublisher/publish/Publisher.js
-sofria_client.js =  /app/sofria-cli/sofria_mediaId.js
+sofria_client.js =  /app/sofria-cli/biblebrain_uploader.js
 
 # docker filesystem
 directory.upload_aws = /efs/${S3_KEY_PREFIX}/etl_uploader/upload_aws/

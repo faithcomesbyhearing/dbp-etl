@@ -113,7 +113,6 @@ class Config:
 		self.directory_quarantine = self._getPath("directory.quarantine")
 		self.directory_duplicate = self._getPath("directory.duplicate")
 		self.node_exe = self._getPath("node.exe")
-		self.publisher_js = self._getPath("publisher.js")
 		self.sofria_client_js = self._getPath("sofria_client.js")
 		self.filename_accept_errors = self._getPath("filename.accept.errors")
 		self.filename_datetime = self._get("filename.datetime")
@@ -199,4 +198,3 @@ if (__name__ == '__main__'):
 	# print("DB", config.database_db_name)
 	print("Current DB name", config.current_database_name)
 	print("DB names", config.getDatabaseNames())
-	print("Publisher", config.publisher_js)

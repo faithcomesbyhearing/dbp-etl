@@ -150,13 +150,25 @@ class SqliteUtility:
 
 
 if __name__ == "__main__":
-	sql = SqliteUtility()
-	#count = sql.selectScalar("select count(*) from language_status", None)
-	#print(count)
-	#lista = sql.selectList("select title from language_status", None)
-	#print(lista)
-	mapa = sql.selectMap("SELECT script_name, script FROM scripts", ())
-	print(mapa)
-	#mapb = sql.selectMapList("select id, title from language_status", None)
-	#print(mapb)
+	databasePath = ""
+
+	if len(sys.argv) > 2:
+		databasePath = sys.argv[2]
+
+	sql = SqliteUtility(databasePath)
+	resultSet = sql.select("SELECT rowId, code, heading, title, name, chapters FROM tableContents ORDER BY rowId", ())
+
+	for (rowId, bookId, heading, title, name, chapters) in resultSet:
+		print("resultSet rowId: %s, bookId: %s, heading: %s, title: %s, name: %s, chapters: %s" % (rowId, bookId, heading, title, name, chapters))
+
+	# resultSet = sql.select("SELECT reference, text FROM verses", ())
+	# resultSet = sql.select("SELECT reference, text FROM verses WHERE reference LIKE 'PSA:5:%' OR reference LIKE 'PSA:4:%'", ())
+	# resultSet = sql.select("SELECT reference, text FROM verses WHERE reference LIKE 'GEN:2:%' ORDER BY rowId", ())
+	resultSet = sql.select("SELECT reference FROM verses WHERE reference LIKE 'GEN:2:%' ORDER BY rowId", ())
+
+	# for (reference, verseText) in resultSet:
+	for (reference) in resultSet:
+		# print("resultSet reference: %s, verseText: %s" % (reference, verseText))
+		print("reference: %s," % (reference))
+
 	sql.close()
