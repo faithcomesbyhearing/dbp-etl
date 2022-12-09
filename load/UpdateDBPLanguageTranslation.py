@@ -20,6 +20,7 @@ class UpdateDBPLanguageTranslation:
         self.dbOut = dbOut
         self.languageReader = languageReader
         self.langProcessed = {}
+        self.langUpdated = {}
 
     def updateOrInsertlanguageTranslation(self):
         return self.process()
@@ -33,11 +34,11 @@ class UpdateDBPLanguageTranslation:
             if lang != None:
                 self._populatePriorityNine(lang, languageRecord)
 
-                if languageRecord.AltName() != None:
-                    self._processLanguageWithAltName(lang, languageRecord)
-
                 if languageRecord.EthName() != None:
                     self._processLanguageEthName(lang, languageRecord)
+
+                if languageRecord.AltName() != None:
+                    self._processLanguageWithAltName(lang, languageRecord)
 
         return True
 
@@ -82,6 +83,7 @@ class UpdateDBPLanguageTranslation:
                 updateRows = []
 
                 indexedKey = "%s%s%s%s" % (languageSourceId, languageTranslationId, languageName.lower(), priority)
+                indexedEthNameKey = "%s%s%s%s" % (languageSourceId, languageTranslationId, languageName.lower(), self.ETHNOLOGUE_NAME_PRIORITY)
 
                 if self.langProcessed.get(indexedKey) == None and not self._isPejorativeAltName(languageName):
                     # store an index to avoid to process twice the same record
@@ -98,17 +100,22 @@ class UpdateDBPLanguageTranslation:
                         langExistsByNameAndId = self.getTranslationByLangNameIdAndPriority(languageName, languageSourceId, languageTranslationId, priority)
                         langEthNameId = self.getTranslationByLangNameIdAndPriority(languageName, languageSourceId, languageTranslationId, self.ETHNOLOGUE_NAME_PRIORITY)
 
-                        if langExistsByNameAndId == None and langEthNameId == None:
+                        if langExistsByNameAndId == None and langEthNameId == None and self.langUpdated.get(indexedEthNameKey) == None:
                             languageName = languageName.replace("'", "\\'")
                             pkeyNames = ("language_source_id", "language_translation_id", "name", "id")
                             updateRows.append(("priority", priority, oldPriority, languageSourceId, languageTranslationId, languageName, translationIdWithSameLangAndName))
                             self.dbOut.updateCol(tableName, pkeyNames, updateRows)
+                            # store an index to avoid to update or insert twice the same record with the same unique key
+                            self.langUpdated[indexedKey] = True
                     else:
-                        languageName = languageName.replace("'", "\\'")
-                        attrNames = ("name", "priority")
-                        pkeyNames = ("language_source_id", "language_translation_id")
-                        insertRows.append((languageName, priority, languageSourceId, languageTranslationId))
-                        self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
+                        if self.langUpdated.get(indexedEthNameKey) == None:
+                            languageName = languageName.replace("'", "\\'")
+                            attrNames = ("name", "priority")
+                            pkeyNames = ("language_source_id", "language_translation_id")
+                            insertRows.append((languageName, priority, languageSourceId, languageTranslationId))
+                            self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
+                            # # store an index to avoid to update or insert twice the same record with the same unique key
+                            self.langUpdated[indexedKey] = True
 
     def _updateOrInsertLangTranslationsEthName(self, languageName, languageSourceId, languageTranslationId, priority):
         if languageName != None and languageName != "":
@@ -147,6 +154,9 @@ class UpdateDBPLanguageTranslation:
                         pkeyNames = ("language_source_id", "language_translation_id")
                         valuesToInsert  = [(languageName, priority, languageSourceId, languageTranslationId)]
                         self.dbOut.insert(tableName, pkeyNames, attrNames, valuesToInsert)
+
+                    # store an index to avoid to update or insert twice the same record with the same unique key
+                    self.langUpdated[indexedKey] = True
 
     def _updateOrInsertLangTranslationsHighPriority(self, languageName, languageSourceId, languageTranslationId, priority):
         if languageName != None and languageName != "":

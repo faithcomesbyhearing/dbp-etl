@@ -498,7 +498,7 @@ class FilenameParser:
 		print("\nFound %s filesets to process" % (len(filesets)))
 		for inp in filesets:
 			prefix = inp.filesetPrefix
-			print(prefix)
+			print("FilenameParser: %s typeCode: %s" % (prefix, inp.typeCode))
 			logger = Log.getLogger(inp.filesetId)
 			if inp.typeCode == "audio":
 				templates = self.audioTemplates
@@ -538,7 +538,7 @@ class FilenameParser:
 				(extraChapters, missingChapters, missingVerses) = self.checkVideoBookChapterVerse(prefix, files)
 			elif inp.typeCode == "text":
 				(extraChapters, missingChapters, missingVerses) = ([], [], [])
-			
+
 			reducer = FilenameReducer(self.config, prefix, inp.csvFilename, files, extraChapters, missingChapters, missingVerses)
 			reducer.process(logger)
 		print("")
