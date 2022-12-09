@@ -61,13 +61,19 @@ class UpdateDBPLPTSTable:
 		notes = None
 		iso = "eng"
 		languageId = 6414
-		sql = "SELECT hash_id, name, description FROM bible_fileset_tags WHERE language_id = %s"
+		sql = "SELECT hash_id, name, description, admin_only FROM bible_fileset_tags WHERE language_id = %s"
 		tagHashIdMap = {}
 		resultSet = self.db.select(sql, (languageId))
+
+		tableName = "bible_fileset_tags"
+		pkeyNames = ("hash_id", "name", "language_id")
+		attrNames = ("description", "admin_only", "notes", "iso")
+
 		for row in resultSet:
-			(hashId, name, description) = row
+			(hashId, name, description, adminOnly) = row
 			tagMap = tagHashIdMap.get(hashId, {})
 			tagMap[name] = description
+			tagMap["%s_admin_only" % name] = adminOnly
 			tagHashIdMap[hashId] = tagMap
 		
 		for (bibleId, filesetId, setTypeCode, setSizeCode, assetId, hashId) in filesetList:
@@ -103,6 +109,7 @@ class UpdateDBPLPTSTable:
 
 				tagMap = tagHashIdMap.get(hashId, {})
 				for name in tagNameList:
+					adminOnly = 0
 					oldDescription = tagMap.get(name)
 
 					if languageRecord != None:
@@ -122,6 +129,12 @@ class UpdateDBPLPTSTable:
 						elif name == "stock_no":
 							stockNumber = languageRecord.StockNumberByFilesetId(dbpFilesetId)
 							description = stockNumber if stockNumber != None else languageRecord.Reg_StockNumber()
+							adminOnly = 1
+							oldAdminOnly = tagMap.get("%s_admin_only" % name)
+
+							if (oldAdminOnly != adminOnly):
+								valuesToUpdate = [("admin_only", adminOnly, oldAdminOnly, hashId, name, languageId)]
+								self.dbOut.updateCol("bible_fileset_tags", pkeyNames, valuesToUpdate)
 						elif name == "volume":
 							description = languageRecord.Volumne_Name()
 						else:
@@ -143,9 +156,6 @@ class UpdateDBPLPTSTable:
 						updateRows.append((description, adminOnly, notes, iso, hashId, name, languageId))
 						# print("UPDATE: filesetId=%s hashId=%s %s: OLD %s  NEW: %s" % (filesetId, hashId, name, oldDescription, description))
 
-		tableName = "bible_fileset_tags"
-		pkeyNames = ("hash_id", "name", "language_id")
-		attrNames = ("description", "admin_only", "notes", "iso")
 		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
 		self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
 		self.dbOut.delete(tableName, pkeyNames, deleteRows)
