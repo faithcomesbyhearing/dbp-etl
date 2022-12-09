@@ -55,20 +55,22 @@ class Validate:
 				else:
 					filePath = inp.fullPath()
 
-				textplainFileset = self.validateTextPlainFilesets(texts, inp, filePath)
-
-				if textplainFileset != None:
+				if self.validateTextPlainFilesets(texts, inp, filePath) == True:
+					textplainFileset = texts.createTextFileset(inp)
 					results.append(textplainFileset)
-					jsonFileset = self.validateTextJsonFilesets(texts, inp, filePath)
 
-					if jsonFileset != None:
-						results.append(jsonFileset)
+					if self.validateTextJsonFilesets(texts, inp, filePath) == True:
 
-						errorTuple = texts.invokeSofriaCli(filePath, jsonFileset)
+						inputFilesetDBPath = "%s%s.db" % (self.config.directory_accepted, inp.textLptsDamId())
+						inputFilesetId = texts.newFilesetId
+						errorTuple = texts.invokeSofriaCli(filePath, inputFilesetDBPath, inputFilesetId)
 
 						if errorTuple != None:
 							logger = Log.getLogger(inp.filesetId)
 							logger.messageTuple(errorTuple)
+
+						jsonFileset = texts.createJSONFileset(inp)
+						results.append(jsonFileset)
 
 		filesets += results
 
@@ -87,23 +89,24 @@ class Validate:
 		errorTuple = texts.validateFileset("text_plain", inp.bibleId, inp.filesetId, inp.languageRecord, inp.index, filePath)
 
 		if errorTuple == None:
-			return texts.createTextFileset(inp)
+			return True
 
 		logger = Log.getLogger(inp.filesetId)
 		logger.messageTuple(errorTuple)
 
-		return None
+		# return None
+		return False
 
 	def validateTextJsonFilesets(self, texts, inp, filePath):
 		errorTuple = texts.validateFileset("text_json", inp.bibleId, inp.filesetId, inp.languageRecord, inp.index, filePath)
 
 		if errorTuple == None:
-			return texts.createJSONFileset(inp)
+			return True
 
 		logger = Log.getLogger(inp.filesetId)
 		logger.messageTuple(errorTuple)
 
-		return None
+		return False
 
 	## prepareDirectory 1. Makes sure a directory exists. 2. If it contains .csv files,
 	## they are packaged up into a zip file using the timestamp of the first csv file.

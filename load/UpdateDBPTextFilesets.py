@@ -57,8 +57,7 @@ class UpdateDBPTextFilesets:
 
 		return None
 
-
-	def invokeSofriaCli(self, fullFilesetPath, inputFileset):
+	def invokeSofriaCli(self, fullFilesetPath, inputFilesetDBPath, inputFilesetId):
 		# invoke sofria
 		#
 		# This is the invocation of the sofria-cli.
@@ -76,8 +75,8 @@ class UpdateDBPTextFilesets:
 			self.config.sofria_client_js,
 			"run",
 			fullFilesetPath,
-			"--populate-db=%s" % (inputFileset.databasePath),
-			"--generate-json=%s" % (os.path.join(self.config.directory_accepted, inputFileset.filesetId))]
+			"--populate-db=%s" % (inputFilesetDBPath),
+			"--generate-json=%s" % (os.path.join(self.config.directory_accepted, inputFilesetId))]
 		print("================= Invoke Sofria Cli ========================")
 		print("cmd: ", cmd)
 		print("============================================================")
