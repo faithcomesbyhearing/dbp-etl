@@ -28,6 +28,7 @@ class UpdateDBPAccessTable:
 		textAccessTypes = self.db.select("SELECT id, name, lpts_fieldname FROM access_groups WHERE name like %s", ("%text%",))
 		videoAccessTypes = self.db.select("SELECT id, name, lpts_fieldname FROM access_groups WHERE name like %s", ("%video%",))
 		for (bibleId, filesetId, setTypeCode, setSizeCode, assetId, hashId) in filesetList:
+
 			#print(bibleId, filesetId, setTypeCode, setSizeCode, assetId, hashId)
 			typeCode = setTypeCode.split("_")[0]
 			if filesetId[8:10] == "SA":
@@ -51,6 +52,8 @@ class UpdateDBPAccessTable:
 				lpts = languageRecord.record
 			else:
 				lpts = {}
+				print ("getLanguageRecord method did not return a record for typeCode: %s, bibleId: %s, dbpFilesetId: %s " % ( typeCode, bibleId, dbpFilesetId))
+
 
 			for (accessId, accessName, accessDesc) in accessTypes:
 				accessIdInDBP = accessId in dbpAccessSet;
@@ -70,7 +73,7 @@ class UpdateDBPAccessTable:
 				if accessIdInLPTS and not accessIdInDBP:
 					insertRows.append((hashId, accessId))
 				elif accessIdInDBP and not accessIdInLPTS:
-					deleteRows.append((hashId, accessId))
+					print("accessId not in DBP or LPTS, but not deleting.. accessId: %s hashId: %s" % (accessId, hashId))
 
 		tableName = "access_group_filesets"
 		pkeyNames = ("hash_id", "access_group_id")
