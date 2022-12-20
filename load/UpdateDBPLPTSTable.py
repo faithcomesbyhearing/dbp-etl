@@ -363,14 +363,12 @@ insert into access_group_filesets
 select * from access_group_filesets_backup;
 SET FOREIGN_KEY_CHECKS=1;
 select count(*) from access_group_filesets;
-
 truncate table bible_fileset_tags;
 SET FOREIGN_KEY_CHECKS=0;
 insert into bible_fileset_tags 
 select * from bible_fileset_tags_backup;
 SET FOREIGN_KEY_CHECKS=1;
 select count(*) from bible_fileset_tags;
-
 truncate table bible_fileset_copyrights;
 SET FOREIGN_KEY_CHECKS=0;
 insert into bible_fileset_copyrights 
