@@ -94,7 +94,6 @@ class Validate:
 		logger = Log.getLogger(inp.filesetId)
 		logger.messageTuple(errorTuple)
 
-		# return None
 		return False
 
 	def validateTextJsonFilesets(self, texts, inp, filePath):
