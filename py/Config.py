@@ -60,7 +60,6 @@ class Config:
 		programRunning = splitPattern.split(sys.argv[0])[-1]
 
 		#self.node_exe = self._getPath("node.exe")
-		#self.publisher_js = self._getPath("publisher.js")
 		#self.mysql_exe = self._getPath("mysql.exe")
 		self.database_host = self._get("database.host")
 		self.database_user = self._get("database.user")
@@ -151,7 +150,3 @@ if (__name__ == '__main__'):
 	config = Config()
 	print("User", config.database_user)
 	print("DB", config.database_db_name)
-	#print("Publisher", config.publisher_js)
-
-
-

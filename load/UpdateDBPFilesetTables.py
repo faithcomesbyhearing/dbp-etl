@@ -123,8 +123,7 @@ class UpdateDBPFilesetTables:
 			if inp.subTypeCode() == "text_plain":
 				self.textUpdater.updateFilesetTextPlain(inp.bibleId, inp.filesetId, hashId, bookIdSet, inp.databasePath)
 			elif inp.subTypeCode() in {"text_usx", "text_json"}:
-				## BWF 9/7/2022: the below code assumes BiblePublisher has run. bookIdSet comes from BiblePublisher. 
-				#  for the initial introduction of proskomma/sofria, we will not be removing BiblePublisher, so this is still valid
+				## The below code assumes Sofria-client has run. bookIdSet comes from Sofria-client. 
 				self.insertBibleFiles(dbConn, hashId, inputFileset, bookIdSet)
 				updateBibleFilesSecondary.updateBibleFilesSecondary(hashId, inp)
 
@@ -142,6 +141,7 @@ class UpdateDBPFilesetTables:
 		bookIdSet = set()
 		if typeCode == "text":
 			sqlite = SqliteUtility(databasePath)
+			# tableContents entity must have been populated by sofria-client. And the code means book code value
 			bookIdSet = sqlite.selectSet("SELECT distinct code FROM tableContents", ())
 			sqlite.close()
 		else:

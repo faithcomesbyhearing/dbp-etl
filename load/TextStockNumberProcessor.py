@@ -150,7 +150,7 @@ class TextStockNumberProcessor:
 				if result == None:
 					self.errors.append("text is script %s, but there is no damId with that script in scope P." % (actualScript,))
 			else:
-				self.errorMessage("contains some books with scope [%s], but there is no damId with scope P" % (scope))
+				self.errors.append("contains some books with scope [%s], but there is no damId with scope P" % (scope))
 
 		return result
 

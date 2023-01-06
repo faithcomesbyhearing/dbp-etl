@@ -105,6 +105,7 @@ class Config:
 		self.s3_aws_role_arn = self._getOptional("s3.aws_role_arn") 
 		self.s3_aws_role_profile = self._getOptional("s3.aws_role_profile") # this is temporary
 		self.filename_lpts_xml = self._getOptional("filename.lpts_xml")
+		self.filename_metadata_xml = self._getOptional("filename.metadata_xml")
 		self.s3_bucket = self._get("s3.bucket")
 		self.s3_vid_bucket = self._get("s3.vid_bucket")
 		self.directory_accepted = self._getOptional("directory.accepted")
@@ -113,7 +114,6 @@ class Config:
 		self.directory_quarantine = self._getPath("directory.quarantine")
 		self.directory_duplicate = self._getPath("directory.duplicate")
 		self.node_exe = self._getPath("node.exe")
-		self.publisher_js = self._getPath("publisher.js")
 		self.sofria_client_js = self._getPath("sofria_client.js")
 		self.filename_accept_errors = self._getPath("filename.accept.errors")
 		self.filename_datetime = self._get("filename.datetime")
@@ -199,4 +199,3 @@ if (__name__ == '__main__'):
 	# print("DB", config.database_db_name)
 	print("Current DB name", config.current_database_name)
 	print("DB names", config.getDatabaseNames())
-	print("Publisher", config.publisher_js)
