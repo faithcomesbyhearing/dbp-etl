@@ -219,7 +219,9 @@ class UpdateDBPFilesetTables:
 					(chapterStart, verseStart, verseEnd) = self.convertChapterStart(bookId)
 				else:
 					chapterStart = int(row["chapter_start"]) if row["chapter_start"] != "" else None
-					verseStart = int(row["verse_start"]) if row["verse_start"] != "" else 1
+					verseStart = row["verse_start"] if row["verse_start"] != "" else 1
+					verseSequence = int(row["verse_sequence"]) if row["verse_sequence"] != 0 or row["verse_sequence"] != "" else 1
+
 					verseEnd = int(row["verse_end"]) if row["verse_end"] != "" else None
 				chapterEnd = int(row["chapter_end"]) if row["chapter_end"] != "" else None
 				fileName = row["file_name"]
@@ -233,7 +235,7 @@ class UpdateDBPFilesetTables:
 				key = (bookId, chapterStart, verseStart)
 				dbpValue = dbpMap.get(key)
 				if dbpValue == None:
-					insertRows.append((chapterEnd, verseEnd, fileName, fileSize, duration,
+					insertRows.append((chapterEnd, verseEnd, fileName, fileSize, duration, verseSequence,
 						hashId, bookId, chapterStart, verseStart))
 				else:
 					del dbpMap[key]
@@ -243,7 +245,7 @@ class UpdateDBPFilesetTables:
 						fileName != dbpFileName or
 						fileSize != dbpFileSize or
 						duration != dbpDuration):
-						updateRows.append((chapterEnd, verseEnd, fileName, fileSize, duration,
+						updateRows.append((chapterEnd, verseEnd, fileName, fileSize, duration, verseSequence,
 						hashId, bookId, chapterStart, verseStart))
 
 		if inp.typeCode == "video":
@@ -252,7 +254,7 @@ class UpdateDBPFilesetTables:
 
 		tableName = "bible_files"
 		pkeyNames = ("hash_id", "book_id", "chapter_start", "verse_start")
-		attrNames = ("chapter_end", "verse_end", "file_name", "file_size", "duration")
+		attrNames = ("chapter_end", "verse_end", "file_name", "file_size", "duration", "verse_sequence")
 		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows, 2)
 		self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
 		self.dbOut.delete(tableName, pkeyNames, deleteRows)
