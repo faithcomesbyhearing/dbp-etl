@@ -138,7 +138,17 @@ class UpdateDBPLanguageTranslation:
                         languageTranslationId
                     )
 
-                    if rowOldEthName != None:
+                    if rowOldEthName != None and rowlangNoEthName != None:
+                        (langIdNoEthName, oldLangPriority) = rowlangNoEthName
+                        pkeyNames = ("language_source_id", "language_translation_id", "id")
+                        valuesToUpdate = [("priority", priority, oldLangPriority, languageSourceId, languageTranslationId, langIdNoEthName)]
+                        self.dbOut.updateCol(tableName, pkeyNames, valuesToUpdate)
+
+                        (langExistsByPriorityAndId, _) = rowOldEthName
+                        pkeyNames = ("language_source_id", "language_translation_id", "id")
+                        updateRows = [("priority", 0, priority, languageSourceId, languageTranslationId, langExistsByPriorityAndId)]
+                        self.dbOut.updateCol(tableName, pkeyNames, updateRows)
+                    elif rowOldEthName != None:
                         (langExistsByPriorityAndId, oldLangTranName) = rowOldEthName
                         pkeyNames = ("language_source_id", "language_translation_id", "priority", "id")
                         valuesToUpdate = [("name", languageName, oldLangTranName, languageSourceId, languageTranslationId, priority, langExistsByPriorityAndId)]

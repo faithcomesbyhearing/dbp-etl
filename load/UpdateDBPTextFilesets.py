@@ -103,28 +103,30 @@ class UpdateDBPTextFilesets:
 		insertRows = []
 		updateRows = []
 		deleteRows = []
-		sql = ("SELECT book_id, chapter, verse_start, verse_end, verse_text FROM bible_verses"
+		sql = ("SELECT book_id, chapter, verse_start, verse_end, verse_sequence, verse_text FROM bible_verses"
 			" WHERE hash_id = %s AND book_id IN ('") + "','".join(bookIdSet) + "')"
 		resultSet = self.db.select(sql, (hashId))
 		dbpVerseMap = {}
-		for (dbpBookId, dbpChapter, dbpVerseStart, dbpVerseEnd, dbpVerseText) in resultSet:
-			dbpVerseMap[(dbpBookId, dbpChapter, dbpVerseStart)] = (dbpVerseEnd, dbpVerseText)
+		for (dbpBookId, dbpChapter, dbpVerseStart, dbpVerseEnd, dbpVerseSequence, dbpVerseText) in resultSet:
+			dbpVerseMap[(dbpBookId, dbpChapter, dbpVerseStart)] = (dbpVerseEnd, dbpVerseText, dbpVerseSequence)
 		ssBookIdSet = set()
 		verseList = self.getBibleVersesFromSqlite(filesetId, databasePath)
-		for (ssBookId, ssChapter, ssVerseStart, ssVerseEnd, ssVerseText) in verseList:
+		for (ssBookId, ssChapter, ssVerseStart, ssVerseEnd, ssVerseSequence, ssVerseText) in verseList:
 			ssBookIdSet.add((ssBookId, ssChapter, ssVerseStart))
 
 			if (ssBookId, ssChapter, ssVerseStart) not in dbpVerseMap.keys():
 				ssVerseText = ssVerseText.replace("'", "\\'")
-				insertRows.append((ssVerseEnd, ssVerseText, hashId, ssBookId, ssChapter, ssVerseStart))
+				insertRows.append((ssVerseEnd, ssVerseText, ssVerseSequence, hashId, ssBookId, ssChapter, ssVerseStart))
 			else:
-				(dbpVerseEnd, dbpVerseText) = dbpVerseMap.get((ssBookId, ssChapter, ssVerseStart))
+				(dbpVerseEnd, dbpVerseText, dbpVerseSequence) = dbpVerseMap.get((ssBookId, ssChapter, ssVerseStart))
 				if dbpVerseEnd != ssVerseEnd:
 					updateRows.append(("verse_end", ssVerseEnd, dbpVerseEnd, hashId, ssBookId, ssChapter, ssVerseStart))
 				if dbpVerseText != ssVerseText:
 					ssVerseText = ssVerseText.replace("'", "\\'")
 					shortenedPriorText = dbpVerseText.split('\n')[0][0:50]
 					updateRows.append(("verse_text", ssVerseText, shortenedPriorText, hashId, ssBookId, ssChapter, ssVerseStart))
+				if dbpVerseSequence != ssVerseSequence:
+					updateRows.append(("verse_sequence", ssVerseSequence, dbpVerseSequence, hashId, ssBookId, ssChapter, ssVerseStart))
 
 		for (dbpBookId, dbpChapter, dbpVerseStart) in dbpVerseMap.keys():
 			if (dbpBookId, dbpChapter, dbpVerseStart) not in ssBookIdSet:
@@ -132,7 +134,7 @@ class UpdateDBPTextFilesets:
 
 		tableName = "bible_verses"
 		pkeyNames = ("hash_id", "book_id", "chapter", "verse_start")
-		attrNames = ("verse_end", "verse_text")
+		attrNames = ("verse_end", "verse_text", "verse_sequence")
 		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
 		self.dbOut.updateCol(tableName, pkeyNames, updateRows)
 		self.dbOut.delete(tableName, pkeyNames, deleteRows)
@@ -161,8 +163,16 @@ class UpdateDBPTextFilesets:
 		priorVerseEnd = 0
 		bibleDB = SqliteUtility(databasePath)
 		# The `verses` table will store data related to each verse for each book and it has been populated by sofria-client.
-		for (reference, verseText) in bibleDB.select("SELECT reference, text FROM verses", ()):
-			(bookId, chapter, verseNum) = reference.split(":")
+		for (reference, verseSequence, verseText) in bibleDB.select("SELECT reference, verse_sequence, text FROM verses", ()):
+			referenceArray = reference.split(":")
+			if len(referenceArray) < 3:
+				print("ERROR: Reference value: %s does not contain correct format" % reference)
+				sys.exit()
+
+			bookId = referenceArray[0]
+			chapter = referenceArray[1]
+			verseNum = referenceArray[2]
+
 			chapterNum = int(chapter)
 			if (priorBookId != bookId or priorChapter != chapterNum):
 				priorBookId = bookId
@@ -171,19 +181,16 @@ class UpdateDBPTextFilesets:
 
 			parts = re.split("[-,]", verseNum)
 
-			# NOTE: it is possible that verse value has a format equals to: number + string e.g. "2a".
-			# currently, this format is not allowed but we will need to handle this case.
-			# Also, we should make sure that the order is the correct.
-			verseStart = self.verseString2Int(bookId, chapter, parts[0])
+			verseStart = parts[0]
 			verseEnd = self.verseString2Int(bookId, chapter, parts[len(parts) -1])
 			verseText = verseText.replace('\r', '')
 
-			if verseStart > priorVerseEnd:
-				results.append((bookId, chapterNum, verseStart, verseEnd, verseText))
+			if verseSequence > priorVerseEnd:
+				results.append((bookId, chapterNum, verseStart, verseEnd, verseSequence, verseText))
 			else:
-				(lastBookId, lastChapter, lastVerseStart, lastVerseEnd, lastVerseText) = results.pop()
+				(lastBookId, lastChapter, lastVerseStart, lastVerseEnd, lastVerseSequence, lastVerseText) = results.pop()
 				newVerseText = lastVerseText + '  ' + verseText
-				results.append((bookId, chapterNum, lastVerseStart, verseEnd, newVerseText))
+				results.append((bookId, chapterNum, lastVerseStart, verseEnd, verseSequence, newVerseText))
 			priorVerseEnd = verseEnd
 		bibleDB.close()
 		return results
@@ -192,8 +199,12 @@ class UpdateDBPTextFilesets:
 		if verse.isdigit():
 			return int(verse)
 		else:
-			print("ERROR: Verse %s contains non-number at %s %s" % (verse, bookId, chapter))
-			sys.exit()
+			verseNum = re.sub(r'[a-zA-Z]', '', verse)
+			try:
+				return int(verseNum)
+			except:
+				print("ERROR: Verse %s does not have correct format at %s %s" % (verse, bookId, chapter))
+				sys.exit()
 
 
 if (__name__ == '__main__'):

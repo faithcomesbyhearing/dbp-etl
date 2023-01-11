@@ -99,11 +99,12 @@ class BibleFileTimestamps_Insert:
 							timing = round(float(result.group(1)), 2)
 							verseStart = int(result.group(3))
 							versePart = result.group(4)
+							verseSequence = verseStart
 							if versePart == "" or versePart == "a":
-								values.append((fileId, verseStart, None, timing))
+								values.append((fileId, verseStart + versePart, None, timing, verseSequence))
 								# check that all verses are included
 								if (priorVerse + 1) != verseStart:
-									print("WARNING: %s %s:%s skipped from %d to %d" % (filesetId, book, chapter, priorVerse, verseStart))
+									print("WARNING: %s %s:%s skipped from %d to %d" % (filesetId, book, chapter, priorVerse, verseStart + versePart))
 								priorVerse = verseStart
 					else:
 						print("ERROR: No file for %s %s:%s" % (filesetId, book, chapter))
@@ -117,7 +118,7 @@ class BibleFileTimestamps_Insert:
 			" WHERE bf.hash_id = bs.hash_id AND bs.id = %s)")
 		errorStmt = ("REPLACE INTO bible_fileset_tags (hash_id, name, description, admin_only, iso, language_id)"
 			" VALUES (%s, 'timing_est_err', %s, 0, 'eng', 6414)")
-		insertStmt = "INSERT INTO bible_file_timestamps (bible_file_id, verse_start, verse_end, `timestamp`) VALUES (%s, %s, %s, %s)"		
+		insertStmt = "INSERT INTO bible_file_timestamps (bible_file_id, verse_start, verse_end, `timestamp`, verse_sequence) VALUES (%s, %s, %s, %s, %s)"
 		print("Row %d to be inserted for %s, %s" % (len(values), bibleDir, filesetId))
 		cursor = self.db.conn.cursor()
 		try:
