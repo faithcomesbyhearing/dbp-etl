@@ -221,8 +221,8 @@ class UpdateDBPFilesetTables:
 					chapterStart = int(row["chapter_start"]) if row["chapter_start"] != "" else None
 					verseStart = row["verse_start"] if row["verse_start"] != "" else 1
 					verseSequence = int(row["verse_sequence"]) if row["verse_sequence"] != 0 or row["verse_sequence"] != "" else 1
+					verseEnd = row["verse_end"] if row["verse_end"] != "" else None
 
-					verseEnd = int(row["verse_end"]) if row["verse_end"] != "" else None
 				chapterEnd = int(row["chapter_end"]) if row["chapter_end"] != "" else None
 				fileName = row["file_name"]
 				if inp.typeCode == "video":
