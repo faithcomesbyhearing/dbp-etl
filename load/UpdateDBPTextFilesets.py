@@ -182,7 +182,8 @@ class UpdateDBPTextFilesets:
 			parts = re.split("[-,]", verseNum)
 
 			verseStart = parts[0]
-			verseEnd = self.verseString2Int(bookId, chapter, parts[len(parts) -1])
+			verseEndNumber = self.verseString2Int(bookId, chapter, parts[len(parts) -1])
+			verseEnd = parts[len(parts) -1]
 			verseText = verseText.replace('\r', '')
 
 			if verseSequence > priorVerseEnd:
@@ -190,8 +191,8 @@ class UpdateDBPTextFilesets:
 			else:
 				(lastBookId, lastChapter, lastVerseStart, lastVerseEnd, lastVerseSequence, lastVerseText) = results.pop()
 				newVerseText = lastVerseText + '  ' + verseText
-				results.append((bookId, chapterNum, lastVerseStart, verseEnd, verseSequence, newVerseText))
-			priorVerseEnd = verseEnd
+				results.append((bookId, chapterNum, lastVerseStart, verseEnd, lastVerseSequence, newVerseText))
+			priorVerseEnd = verseEndNumber
 		bibleDB.close()
 		return results
 
