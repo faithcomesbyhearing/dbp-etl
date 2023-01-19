@@ -212,6 +212,15 @@ class Filename:
 	def print(self):
 		print(self.bookSeq, self.fileSeq, self.bookId, self.chapter, self.name, self.damid, self.type, self.file, self.errors)
 
+	def toString(self):
+		print(
+		"bookSeq: %s, fileSeq: %s, bookId: %s, chapter: %s, verseStart: %s, verseStartNum: %s, name: %s, damid: %s, type: %s, file: %s, errors: %s" % (
+			self.bookSeq, self.fileSeq, self.bookId,
+			self.chapter, self.verseStart, self.verseStartNum,
+			self.name, self.damid, self.type,
+			self.file, self.errors
+		))
+
 
 class FilenameRegex:
 
