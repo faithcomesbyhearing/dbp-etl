@@ -488,12 +488,6 @@ class FilenameParser:
 	def process3(self, filesets):
 		db = SQLUtility(self.config)
 		self.chapterMap = db.selectMap("SELECT id, chapters FROM books", None)
-		## I am not certain the LXX actually exists
-		extras = {"FRT":6, "INT":1, "BAK":2, "LXX":1, "CNC":2, "GLO":26, "TDX":1, "NDX":1, "OTH":5, 
-			"XXA":4, "XXB":3, "XXC":1, "XXD":1, "XXE":1, "XXF":1, "XXG":1}
-		self.chapterMap.update(extras)
-		corrections = {"MAL":3, "MAN":1, "PS2":1, "BAR":5, "EZA":9, "SIR":52}
-		self.chapterMap.update(corrections)
 		self.maxChapterMap = self.chapterMap.copy()
 		corrections = {"JOL":4, "PSA":151, "MAL":4, "BAR":6}
 		self.maxChapterMap.update(corrections)
@@ -548,6 +542,7 @@ class FilenameParser:
 			elif inp.typeCode == "text":
 				(extraChapters, missingChapters, missingVerses) = ([], [], [])
 
+			FilenameReducer.openAcceptErrorSet(self.config)
 			reducer = FilenameReducer(self.config, prefix, inp.csvFilename, files, extraChapters, missingChapters, missingVerses)
 			reducer.process(logger)
 		print("")
@@ -679,21 +674,29 @@ class FilenameParser:
 		else:
 			return "Traditional"
 
+	def summary3(self):
+		file = io.open("FilenameParser.out", mode="w", encoding="utf-8")
+		for entry in self.parsedList:
+			file.write("%s\n" % entry)
+		file.write("\n\nUnparsed\n\n")
+		for entry in self.unparsedList:
+			file.write("%d  %s\n" % entry)
+		file.close()
+		for parser, count in self.successCount.items():
+			print("Success Count: %s -> %s" % (parser, count))
 
-#if (__name__ == '__main__'):
-	#config = Config()
-	#FilenameReducer.openErrorReport(config)
-	#reader = InputReader(config)
-	#parser = FilenameParser(config)
-	#bucket = config.s3_bucket
-	#filenamesMap = reader.bucketListing(bucket)
-	#parser.process3(filenamesMap)
-	#reader = InputReader(config)
-	#bucket = config.s3_vid_bucket
-	#filenamesMap = reader.bucketListing(bucket)
-	#parser.process3(filenamesMap)
-	#parser.summary3()
-	#FilenameReducer.closeErrorReport()
+if (__name__ == '__main__'):
+	from InputReader import *
+	from LanguageReaderCreator import *
+	from InputProcessor import *
 
+	config = Config()
+	AWSSession.shared()
 
-
+	parser = FilenameParser(config)
+	bucket = config.s3_bucket
+	migration_stage = "B" if os.getenv("DATA_MODEL_MIGRATION_STAGE") == None else os.getenv("DATA_MODEL_MIGRATION_STAGE")
+	languageReader = LanguageReaderCreator(migration_stage).create(config.filename_lpts_xml)
+	filenamesMap = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
+	parser.process3(filenamesMap)
+	parser.summary3()

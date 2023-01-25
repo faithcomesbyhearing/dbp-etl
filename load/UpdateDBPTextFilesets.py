@@ -216,7 +216,8 @@ if (__name__ == '__main__'):
 
 	config = Config.shared()
 	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
-	filesets = InputFileset.filesetCommandLineParser(config, languageReader)
+	filesets = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
+
 	db = SQLUtility(config)
 	ctrl = DBPLoadController(config, db, languageReader)
 	ctrl.validate(filesets)
@@ -224,7 +225,7 @@ if (__name__ == '__main__'):
 	dbOut = SQLBatchExec(config)
 	update = UpdateDBPFilesetTables(config, db, dbOut)
 	for inp in InputFileset.upload:
-		hashId = update.processFileset(inp.typeCode, inp.bibleId, inp.filesetId, inp.fullPath(), inp.csvFilename, inp.databasePath)
+		hashId = update.processFileset(inp)
 
 	dbOut.displayStatements()
 	dbOut.displayCounts()
