@@ -489,13 +489,7 @@ class FilenameParser:
 		db = SQLUtility(self.config)
 		self.chapterMap = db.selectMap("SELECT id, chapters FROM books", None)
 		self.maxChapterMap = self.chapterMap.copy()
-		corrections = {"JOL":4, "PSA":151, "MAL":4, "BAR":6}
-		self.maxChapterMap.update(corrections)
 		self.usfx2Map = db.selectMap("SELECT id_usfx, id FROM books", None)
-		extras = {"FR":"FRT", "IN":"INT", "BK":"BAK", "CN":"CNC", "GS":"GLO", "TX":"TDX", "OH":"OTH",
-			"XA":"XXA", "XB":"XXB", "XC":"XXC", "XD":"XXD", "XE":"XXE", "XF":"XXF", "XG":"XXG"}
-		self.usfx2Map.update(extras)
-		self.usfx2Map["J1"] = "1JN" ## fix incorrect entry in books table
 		db.close()
 
 		print("\nFound %s filesets to process" % (len(filesets)))
