@@ -635,13 +635,13 @@ class FilenameParser:
 		#	return "Russian"
 		# Note BLGAMB has different order from 16 than 64
 		if filesetId in {"BLGAMBN1DA16"}:
-			return "Traditional"
-		if filesetId in {"GAGIBTN2DA", "GAGIBTN2DA16", "GAGIB1N2DA", "GAGIBTN1DA", "GAGIB1N1DA"}:
-			return "Russian"
+			return "Traditional" # it is Russian in lpts. TODO: Ask Alan
+		# if filesetId in {"GAGIBTN2DA", "GAGIBTN2DA16", "GAGIB1N2DA", "GAGIBTN1DA", "GAGIB1N1DA"}:
+		# 	return "Russian" # it is Russian in lpts
 		if filesetId in {"RUSBIBN1DA", "RUSBIBN1DA16"}:
-			return "Traditional"
-		if filesetId in {"RU1IBSN2DA", "RUSSVRN1DA"}:
-			return "Russian"
+			return "Traditional" # it is Russian in lpts. TODO: Ask Alan
+		# if filesetId in {"RU1IBSN2DA", "RUSSVRN1DA"}:
+		# 	return "Russian" # RU1 is not found, RUSSVR is discontinued
 		if languageRecord != None and languageRecord.NTOrder() != None:
 			return languageRecord.NTOrder()
 		else:
@@ -650,20 +650,20 @@ class FilenameParser:
 
 	def OTOrderTemp(self, filesetId, languageRecord):
 		if filesetId in {"CASNTMP1DA"}:
-			return "Hebrew"
+			return "Hebrew" # there is no OTOrder element. TODO: ask Alan to add
 		# These ENGESV filesets are labeled OTOrder = Hebrew
-		if filesetId in {"ENGESVC1DA", "ENGESVC2DA", "ENGESVC2DA16", "ENGESVO1DA", "ENGESVO2DA"}:
-			return "Traditional"
-		if filesetId in {"ENGNABC1DA"}:
-			return "Catholic"
+		# if filesetId in {"ENGESVC1DA", "ENGESVC2DA", "ENGESVC2DA16", "ENGESVO1DA", "ENGESVO2DA"}:
+		# 	return "Traditional" # it is Masoretic-Christian in lpts, which currently translates to Traditional
+		# if filesetId in {"ENGNABC1DA"}:
+		# 	return "Catholic" # ENGNAB does not have any OT filesets in lpts
 		if filesetId in {"GRKEPTC1DA", "GRKEPTO1DA"}:
-			return "Septuagint2"
-		if filesetId in {"GRKAVSO1DA"}:
-			return "Septuagint"
+			return "Septuagint2"  # there is no OTOrder element. TODO: ask Alan to add
+		# if filesetId in {"GRKAVSO1DA"}:
+		# 	return "Septuagint" # there is no GRKAVS in lpts or biblebrain
 		if filesetId in {"HBRHMTO2DA", "HBRHMTC2DA"}:
-			return "Hebrew"
+			return "Hebrew" # OTOrder is Masoretic-Tanakh. TODO: more analysis needed to determine solution.
 		if filesetId in {"TRNNTMP1DA"}:
-			return "TRNNTM"
+			return "TRNNTM" # TODO: is TRNNTM actually a book order
 		if languageRecord != None and languageRecord.OTOrder() != None:
 			return languageRecord.OTOrder()
 		else:
