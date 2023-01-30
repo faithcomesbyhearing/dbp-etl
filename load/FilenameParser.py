@@ -79,6 +79,7 @@ class Filename:
 
 
 	# This should only be used in cases where setBookBySeq was used to set bookId
+	# Deuterocanon DC 
 	def checkBookName(self, name):
 		self.name = name
 		book = Booknames().usfmBookId(name)

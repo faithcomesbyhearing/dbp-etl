@@ -63,6 +63,8 @@ class UpdateDBPFilesetTables:
 			sys.exit()
 
 
+	## Deuterocanon DC - the counts for OT to determine if complete should be aware that DC books may be involved.
+	## do we consistently classify the DC books as DC and not OT
 	def getSetSizeCode(NTBooks, OTBooks):
 		hasNT = len(NTBooks)
 		hasOT = len(OTBooks)
