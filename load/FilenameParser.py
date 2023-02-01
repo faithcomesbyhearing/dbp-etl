@@ -79,6 +79,7 @@ class Filename:
 
 
 	# This should only be used in cases where setBookBySeq was used to set bookId
+	# Deuterocanon DC 
 	def checkBookName(self, name):
 		self.name = name
 		book = Booknames().usfmBookId(name)
@@ -488,20 +489,8 @@ class FilenameParser:
 	def process3(self, filesets):
 		db = SQLUtility(self.config)
 		self.chapterMap = db.selectMap("SELECT id, chapters FROM books", None)
-		## I am not certain the LXX actually exists
-		extras = {"FRT":6, "INT":1, "BAK":2, "LXX":1, "CNC":2, "GLO":26, "TDX":1, "NDX":1, "OTH":5, 
-			"XXA":4, "XXB":3, "XXC":1, "XXD":1, "XXE":1, "XXF":1, "XXG":1}
-		self.chapterMap.update(extras)
-		corrections = {"MAL":3, "MAN":1, "PS2":1, "BAR":5, "EZA":9, "SIR":52}
-		self.chapterMap.update(corrections)
 		self.maxChapterMap = self.chapterMap.copy()
-		corrections = {"JOL":4, "PSA":151, "MAL":4, "BAR":6}
-		self.maxChapterMap.update(corrections)
 		self.usfx2Map = db.selectMap("SELECT id_usfx, id FROM books", None)
-		extras = {"FR":"FRT", "IN":"INT", "BK":"BAK", "CN":"CNC", "GS":"GLO", "TX":"TDX", "OH":"OTH",
-			"XA":"XXA", "XB":"XXB", "XC":"XXC", "XD":"XXD", "XE":"XXE", "XF":"XXF", "XG":"XXG"}
-		self.usfx2Map.update(extras)
-		self.usfx2Map["J1"] = "1JN" ## fix incorrect entry in books table
 		db.close()
 
 		print("\nFound %s filesets to process" % (len(filesets)))
@@ -548,6 +537,7 @@ class FilenameParser:
 			elif inp.typeCode == "text":
 				(extraChapters, missingChapters, missingVerses) = ([], [], [])
 
+			FilenameReducer.openAcceptErrorSet(self.config)
 			reducer = FilenameReducer(self.config, prefix, inp.csvFilename, files, extraChapters, missingChapters, missingVerses)
 			reducer.process(logger)
 		print("")
@@ -645,13 +635,13 @@ class FilenameParser:
 		#	return "Russian"
 		# Note BLGAMB has different order from 16 than 64
 		if filesetId in {"BLGAMBN1DA16"}:
-			return "Traditional"
-		if filesetId in {"GAGIBTN2DA", "GAGIBTN2DA16", "GAGIB1N2DA", "GAGIBTN1DA", "GAGIB1N1DA"}:
-			return "Russian"
+			return "Traditional" # it is Russian in lpts. TODO: Ask Alan
+		# if filesetId in {"GAGIBTN2DA", "GAGIBTN2DA16", "GAGIB1N2DA", "GAGIBTN1DA", "GAGIB1N1DA"}:
+		# 	return "Russian" # it is Russian in lpts
 		if filesetId in {"RUSBIBN1DA", "RUSBIBN1DA16"}:
-			return "Traditional"
-		if filesetId in {"RU1IBSN2DA", "RUSSVRN1DA"}:
-			return "Russian"
+			return "Traditional" # it is Russian in lpts. TODO: Ask Alan
+		# if filesetId in {"RU1IBSN2DA", "RUSSVRN1DA"}:
+		# 	return "Russian" # RU1 is not found, RUSSVR is discontinued
 		if languageRecord != None and languageRecord.NTOrder() != None:
 			return languageRecord.NTOrder()
 		else:
@@ -660,40 +650,48 @@ class FilenameParser:
 
 	def OTOrderTemp(self, filesetId, languageRecord):
 		if filesetId in {"CASNTMP1DA"}:
-			return "Hebrew"
+			return "Hebrew" # there is no OTOrder element. TODO: ask Alan to add
 		# These ENGESV filesets are labeled OTOrder = Hebrew
-		if filesetId in {"ENGESVC1DA", "ENGESVC2DA", "ENGESVC2DA16", "ENGESVO1DA", "ENGESVO2DA"}:
-			return "Traditional"
-		if filesetId in {"ENGNABC1DA"}:
-			return "Catholic"
+		# if filesetId in {"ENGESVC1DA", "ENGESVC2DA", "ENGESVC2DA16", "ENGESVO1DA", "ENGESVO2DA"}:
+		# 	return "Traditional" # it is Masoretic-Christian in lpts, which currently translates to Traditional
+		# if filesetId in {"ENGNABC1DA"}:
+		# 	return "Catholic" # ENGNAB does not have any OT filesets in lpts
 		if filesetId in {"GRKEPTC1DA", "GRKEPTO1DA"}:
-			return "Septuagint2"
-		if filesetId in {"GRKAVSO1DA"}:
-			return "Septuagint"
+			return "Septuagint2"  # there is no OTOrder element. TODO: ask Alan to add
+		# if filesetId in {"GRKAVSO1DA"}:
+		# 	return "Septuagint" # there is no GRKAVS in lpts or biblebrain
 		if filesetId in {"HBRHMTO2DA", "HBRHMTC2DA"}:
-			return "Hebrew"
+			return "Hebrew" # OTOrder is Masoretic-Tanakh. TODO: more analysis needed to determine solution.
 		if filesetId in {"TRNNTMP1DA"}:
-			return "TRNNTM"
+			return "TRNNTM" # TODO: is TRNNTM actually a book order
 		if languageRecord != None and languageRecord.OTOrder() != None:
 			return languageRecord.OTOrder()
 		else:
 			return "Traditional"
 
+	def summary3(self):
+		file = io.open("FilenameParser.out", mode="w", encoding="utf-8")
+		for entry in self.parsedList:
+			file.write("%s\n" % entry)
+		file.write("\n\nUnparsed\n\n")
+		for entry in self.unparsedList:
+			file.write("%d  %s\n" % entry)
+		file.close()
+		for parser, count in self.successCount.items():
+			print("Success Count: %s -> %s" % (parser, count))
 
-#if (__name__ == '__main__'):
-	#config = Config()
-	#FilenameReducer.openErrorReport(config)
-	#reader = InputReader(config)
-	#parser = FilenameParser(config)
-	#bucket = config.s3_bucket
-	#filenamesMap = reader.bucketListing(bucket)
-	#parser.process3(filenamesMap)
-	#reader = InputReader(config)
-	#bucket = config.s3_vid_bucket
-	#filenamesMap = reader.bucketListing(bucket)
-	#parser.process3(filenamesMap)
-	#parser.summary3()
-	#FilenameReducer.closeErrorReport()
+if (__name__ == '__main__'):
+	from InputReader import *
+	from LanguageReaderCreator import *
+	from InputProcessor import *
 
+	config = Config()
+	AWSSession.shared()
 
-
+	parser = FilenameParser(config)
+	bucket = config.s3_bucket
+	migration_stage = "B" if os.getenv("DATA_MODEL_MIGRATION_STAGE") == None else os.getenv("DATA_MODEL_MIGRATION_STAGE")
+	languageReader = LanguageReaderCreator(migration_stage).create(config.filename_lpts_xml)
+	filenamesMap = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
+	parser.process3(filenamesMap)
+	parser.summary3()

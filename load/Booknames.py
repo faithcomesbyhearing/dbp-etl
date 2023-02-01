@@ -375,17 +375,6 @@ class Booknames:
 		return result
 
 
-#NT Order:
-#Traditional
-#Russian
-#Plautdietsch
-#Finnish
-
-#OT Order:
-#Masoretic-Christian
-#Masoretic-Tanakh
-#Septuagint
-#Vulgate
 
 ##
 ## Old Testament Book orders
@@ -438,7 +427,6 @@ class Booknames:
 	def MasoreticChristianOT(self, sequence):
 		return self.TraditionalOT(sequence)
 
-
 	def HebrewOT(self, sequence):
 		hebrew = {
 			'A01':  'GEN',
@@ -485,7 +473,6 @@ class Booknames:
 
 	def MasoreticTanakhOT(self, sequence):
 		return self.HebrewOT(sequence)
-
 
 	def CatholicOT(self, sequence):   # This is my name for it. It must be corrected
 		catholic = {
@@ -538,13 +525,11 @@ class Booknames:
 		}
 		return catholic.get(sequence, None)
 
-
 	def VulgateOT(self, sequence):
 		vulgate = {
 			## To be added when sequence is known
 		}
 		return vulgate.get(sequence, None)
-
 
 	def SeptuagintOT(self, sequence):
 		septuagint = {
@@ -602,7 +587,6 @@ class Booknames:
 			'A50': 	'4MA' # 4Maccabees
 		}
 		return septuagint.get(sequence, None)
-
 
 	def Septuagint2OT(self, sequence):
 		septuagint = {
@@ -662,13 +646,11 @@ class Booknames:
 		}
 		return septuagint.get(sequence, None)
 
-
 	def DutchTraditionalOT(self, sequence):
 		dutch = {
 			## To be added when sequence is known
 		}
 		return dutch.get(sequence, None)
-
 
 	def TRNNTMOT(self, sequence):
 		trnntm = {
@@ -763,7 +745,6 @@ class Booknames:
 		}
 		return russian.get(sequence, None)
 
-
 	def PlautdietschNT(self, sequence):
 		diestsch = {
 			'B01':  'MAT',
@@ -795,7 +776,6 @@ class Booknames:
 			'B27':  'REV'
 		}
 		return diestsch.get(sequence, None)
-
 
 	def FinnishNT(self, sequence):
 		finnish = {

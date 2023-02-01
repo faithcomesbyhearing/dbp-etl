@@ -106,6 +106,7 @@ class TextStockNumberProcessor:
 		return result
 
 	## This method returns a map { scope: [(damId, script)] } from LPTS for a stock number
+	# BWF Note: this is only called for text processing
 	def _findDamIdScopeMap(self, stockNumber, lptsRecord):
 		result = {}
 		textDamIds = lptsRecord.DamIdList("text")
@@ -121,6 +122,7 @@ class TextStockNumberProcessor:
 		return result
 
 	## Match files included in 
+	## BWF Note: this is only called for text processing
 	def _matchFilesToDamId(self, stockNumber, scope, lptsRecord, scopeMap, bookIdMap, actualScript = None):
 		result = None
 		if scope == "N":
@@ -154,6 +156,7 @@ class TextStockNumberProcessor:
 
 		return result
 
+	## BWF Note: this is only called for text processing
 	def _combineMultiplePScope(self, stockNumber, ntResult, otResult):
 		results = []
 		if ntResult != None and ntResult.scope() == "P" and otResult != None and otResult.scope() == "P":

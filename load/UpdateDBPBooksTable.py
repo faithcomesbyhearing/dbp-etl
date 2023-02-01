@@ -6,6 +6,9 @@
 #
 # Assign a sequence number for each book as it will appear in bible_books
 #
+# Proposed new: For recognized OT/NT orders (eg Protestant, Russian Synodal), use the order from bibles.xx_order, where xx = protestant, synodal, etc) 
+# and do not examine the filenames to determine the order.
+#
 # 1) For audio, use the Ann,Bnn sequence that was in the filename
 # 2) For video, assign the Bnn sequence number based on book_id
 # 3) Text files often have a different numeric sequence, which will make it difficult to merge disjoint filesets.  
@@ -342,7 +345,8 @@ if (__name__ == '__main__'):
 
 	config = Config.shared()
 	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
-	filesets = InputFileset.filesetCommandLineParser(config, languageReader)
+	filesets = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
+
 	db = SQLUtility(config)
 	ctrl = DBPLoadController(config, db, languageReader)
 	ctrl.validate(filesets)
