@@ -246,7 +246,7 @@ class UpdateDBPFilesetTables:
 						verseEnd != dbpVerseEnd or
 						fileName != dbpFileName or
 						fileSize != dbpFileSize or
-						duration != dbpDuration):
+						(duration != dbpDuration and duration != None and duration != "") ):
 						updateRows.append((chapterEnd, verseEnd, fileName, fileSize, duration, verseSequence,
 						hashId, bookId, chapterStart, verseStart))
 
@@ -264,13 +264,13 @@ class UpdateDBPFilesetTables:
 
 	def convertChapterStart(self, bookId):
 		if bookId == "MAT":
-			return (28, 21, 21)
+			return (28, "21", "21")
 		elif bookId == "MRK":
-			return (16, 21, 21)
+			return (16, "21", "21")
 		elif bookId == "LUK":
-			return (24, 54, 54)
+			return (24, "54", "54")
 		elif bookId == "JHN":
-			return (21, 26, 26)
+			return (21, "26", "26")
 		else:
 			print("ERROR: Unexpected book %s in UpdateDBPDatabase." % (bookId))
 			sys.exit()
