@@ -119,6 +119,7 @@ class Config:
 		self.filename_accept_errors = self._getPath("filename.accept.errors")
 		self.filename_datetime = self._get("filename.datetime")
 		self.mysql_exe = self._getOptional("mysql.exe")
+		self.data_missing_verses_allowed = self._getOptional("data.missing_verses_allowed")
 
 		# TODO these dependencies need to be sorted out
 		if programRunning in {"DBPLoadController.py"}:
