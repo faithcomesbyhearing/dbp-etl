@@ -2,10 +2,7 @@
 
 # This program updates the bible_file_stream_bandwidth, and bible_file_stream_ts files for video
 
-import sys
-import os
 import re
-import subprocess
 from Config import *
 from SQLUtility import *
 from SQLBatchExec import *
@@ -191,22 +188,34 @@ if (__name__ == '__main__'):
 
 	config = Config.shared()
 	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
-	filesets = InputFileset.filesetCommandLineParser(config, languageReader)
+	filesets = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
+
 	db = SQLUtility(config)
 	ctrl = DBPLoadController(config, db, languageReader)
 	ctrl.validate(filesets)
 
 	dbOut = SQLBatchExec(config)
 	update = UpdateDBPFilesetTables(config, db, dbOut)
+	video = UpdateDBPVideoTables(config, db, dbOut)
+
+	filesetsVideoProccessed = []
 	for inp in InputFileset.upload:
-		hashId = update.processFileset(inp.typeCode, inp.bibleId, inp.filesetId, inp.fullPath(), inp.csvFilename, inp.databasePath)
+		hashId = update.processFileset(inp)
+
 		if inp.typeCode == "video":
-			video = UpdateDBPVideoTables(config, db, dbOut)
-			video.processFileset(inp.filesetPrefix, inp.filenames(), hashId)
+			filesetsVideoProccessed.append([inp.filesetPrefix, inp.filenames(), hashId])
 
 	dbOut.displayStatements()
 	dbOut.displayCounts()
-	dbOut.execute("test-" + inp.filesetId)
+	success = dbOut.execute("test-" + inp.filesetId)
+
+	if success and len(filesetsVideoProccessed) > 0:
+		for (filesetPrefix, filename, hashId) in filesetsVideoProccessed:
+			video.processFileset(filesetPrefix, filename, hashId)
+
+		dbOut.displayStatements()
+		dbOut.displayCounts()
+		dbOut.execute("test-video-" + inp.filesetId)
 
 # For these video tests to work, the filesets must have been uploaded by some other test, such as S3Utility.
 

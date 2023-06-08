@@ -2,19 +2,19 @@
 
 # This program prepares and executes a single batch of SQL.
 
-import io
 import os
-import sys
 import re
 import time
-from datetime import datetime
 import subprocess
 from Config import *
 from DBPRunFilesS3 import *
 
 
 class SQLBatchExec:
-
+	# NOTE: We could improve this class by opening the database connection and having an instance of the connection to run statements.
+	# We could then start a transaction using this instance. This would allow us to execute any statement in the middle of the transaction
+	# and finish the transaction when necessary. This is beneficial because we might need to run a query to retrieve data in the middle of
+	# the transaction, and we would want any changes made up to that point to be taken into consideration.
 	def __init__(self, config):
 		self.config = config
 		self.statements = []
