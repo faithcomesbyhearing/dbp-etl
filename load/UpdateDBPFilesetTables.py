@@ -242,6 +242,11 @@ class UpdateDBPFilesetTables:
 				else:
 					del dbpMap[key]
 					(dbpChapterEnd, dbpVerseEnd, dbpFileName, dbpFileSize, dbpDuration) = dbpValue
+
+					# If the duration value is empty, it will keep the value retrieved from the database.
+					if inp.typeCode == "video" and duration == None and (dbpDuration != None or dbpDuration != ""):
+						duration = dbpDuration
+
 					if (chapterEnd != dbpChapterEnd or
 						verseEnd != dbpVerseEnd or
 						fileName != dbpFileName or

@@ -87,15 +87,19 @@ class DBPLoadController:
 		dbOut = SQLBatchExec(self.config)
 		update = UpdateDBPFilesetTables(self.config, self.db, dbOut)
 		video = UpdateDBPVideoTables(self.config, self.db, dbOut)
+
 		for inp in inputFilesets:
 			print("DBPLoadController:updateFilesetTables. processing fileset: %s" % (inp.filesetId))
 			hashId = update.processFileset(inp)
-			if inp.typeCode == "video":
-				video.processFileset(inp.filesetPrefix, inp.filenames(), hashId)
+
 			if inp.typeCode == "text" and inp.subTypeCode() == "text_json":
 				self.validateJSONFilesets(inp)
 			dbOut.displayCounts()
 			success = dbOut.execute(inp.batchName())
+			if success and inp.typeCode == "video":
+				video.processFileset(inp.filesetPrefix, inp.filenames(), hashId)
+				dbOut.displayCounts()
+				success = dbOut.execute(inp.batchName() + "-video")
 			RunStatus.set(inp.filesetId, success)
 			if success:
 				InputFileset.complete.append(inp)
