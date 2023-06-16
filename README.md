@@ -17,7 +17,16 @@ The program can be run in the following ways:
 
 	filesetId can be any number of folders that are named after a filesetId, which contain files to be loaded.
 
+To debug we can use the pdb library.
 
+```python
+import pdb; pdb.set_trace()
+```
+When you run your script, execution will pause at the pdb.set_trace() call. You'll be able to inspect variables, step through your code, and do other things. Here are some commands you might find useful:
 
-
-
+- n(ext): Execute the next line.
+- s(tep): Step into a function call.
+- r(eturn): Continue execution until the current function returns.
+- c(ontinue): Continue execution until a breakpoint is encountered.
+- p(rint) <expression>: Evaluate the expression and print its value.
+- q(uit): Quit the debugger and exit.

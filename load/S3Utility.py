@@ -4,9 +4,7 @@
 #
 #
 
-import boto3
 import os
-import shutil
 import subprocess
 from Log import *
 from Config import *

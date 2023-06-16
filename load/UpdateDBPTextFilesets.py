@@ -6,6 +6,7 @@ import sys
 import os
 import re
 import sqlite3
+import json
 from Config import *
 from Log import *
 from LanguageReader import *
@@ -76,7 +77,8 @@ class UpdateDBPTextFilesets:
 			"run",
 			fullFilesetPath,
 			"--populate-db=%s" % (inputFilesetDBPath),
-			"--generate-json=%s" % (os.path.join(self.config.directory_accepted, inputFilesetId))]
+			"--generate-json=%s" % (os.path.join(self.config.directory_accepted, inputFilesetId)),
+			"--missing-verses-allowed=%s" % json.dumps(self.config.data_missing_verses_allowed).replace('\\', '')]
 		print("================= Invoke Sofria Cli ========================")
 		print("cmd: ", cmd)
 		print("============================================================")

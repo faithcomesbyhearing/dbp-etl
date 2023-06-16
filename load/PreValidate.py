@@ -74,7 +74,6 @@ class PreValidate:
 		filesetId = directoryName
 		filesetId1 = directoryName.split("-")[0]
 		damId = filesetId1.replace("_", "2")
-
 		results = self.languageReader.getFilesetRecords10(damId) # This method expects 10 digit DamId's always
 		if results == None:
 			damId = filesetId1.replace("_", "1")
