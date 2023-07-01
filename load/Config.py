@@ -11,7 +11,6 @@
 import os
 import sys
 import re
-import boto3
 import configparser
 
 class Config:
@@ -152,6 +151,16 @@ class Config:
 		elif programRunning in {"AudioHLS.py"}:
 			self.directory_audio_hls = self._getPath("directory.audio_hls") #"%s/FCBH/files/tmp" % (self.home)
 			self.audio_hls_duration_limit = self._getInt("audio.hls.duration.limit") #10  #### Must become command line param
+
+		if profile == 'test':
+			self.video_transcoder_pipeline = self._get("video.transcoder.pipeline")
+			self.video_transcoder_mock = self._get("video.transcoder.mock")
+			self.video_transcoder_region = self._get("video.transcoder.region")
+			self.video_preset_hls_1080p = self._get("video.preset.hls.1080p")
+			self.video_preset_hls_720p = self._get("video.preset.hls.720p")
+			self.video_preset_hls_480p = self._get("video.preset.hls.480p")
+			self.video_preset_hls_360p = self._get("video.preset.hls.360p")
+			self.video_preset_web = self._get("video.preset.web")
 
 		if profile in {'test', 'dev'}:
 			self.database_names['dbp'] = self.hashMap.get("database.db_name")

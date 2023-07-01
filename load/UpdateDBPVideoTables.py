@@ -196,7 +196,6 @@ if (__name__ == '__main__'):
 
 	dbOut = SQLBatchExec(config)
 	update = UpdateDBPFilesetTables(config, db, dbOut)
-	video = UpdateDBPVideoTables(config, db, dbOut)
 
 	filesetsVideoProccessed = []
 	for inp in InputFileset.upload:
@@ -208,6 +207,10 @@ if (__name__ == '__main__'):
 	dbOut.displayStatements()
 	dbOut.displayCounts()
 	success = dbOut.execute("test-" + inp.filesetId)
+	db.close()
+
+	db = SQLUtility(config)
+	video = UpdateDBPVideoTables(config, db, dbOut)
 
 	if success and len(filesetsVideoProccessed) > 0:
 		for (filesetPrefix, filename, hashId) in filesetsVideoProccessed:
@@ -216,6 +219,8 @@ if (__name__ == '__main__'):
 		dbOut.displayStatements()
 		dbOut.displayCounts()
 		dbOut.execute("test-video-" + inp.filesetId)
+
+	db.close()
 
 # For these video tests to work, the filesets must have been uploaded by some other test, such as S3Utility.
 
