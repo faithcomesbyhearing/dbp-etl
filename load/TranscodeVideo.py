@@ -38,17 +38,25 @@ class TranscodeVideo:
 		self.hls_audio_video_360p = config.video_preset_hls_360p
 		self.web_audio_video = config.video_preset_web
 		self.web_audio_video = config.video_preset_web
-		self.video_transcoder_mock = json.loads(config.video_transcoder_mock) if hasattr(config, 'video_transcoder_mock') else {}
-		if self.video_transcoder_mock.get("enable") == 1:
-			self.client = boto3.client(
-				'elastictranscoder',
-				region_name=self.video_transcoder_mock.get("region_name"),
-				endpoint_url=self.video_transcoder_mock.get("endpoint_url")
-			)
-		else:
-			self.client = AWSSession.shared().elasticTranscoder()
+		self.client = self.getTranscoderClient()
 		self.openJobs = []
 
+	def getTranscoderClient(self):
+		if hasattr(self.config, 'video_transcoder_mock') and self.config.video_transcoder_mock != None:
+			try:
+				self.video_transcoder_mock = json.loads(self.config.video_transcoder_mock)
+			except json.JSONDecodeError:
+				# Handle the error and set a empty dict for self.video_transcoder_mock
+				self.video_transcoder_mock = {}
+
+			if self.video_transcoder_mock.get("enable") == 1:
+				return boto3.client(
+					'elastictranscoder',
+					region_name=self.video_transcoder_mock.get("region_name"),
+					endpoint_url=self.video_transcoder_mock.get("endpoint_url")
+				)
+
+		return AWSSession.shared().elasticTranscoder()
 
 	def createJob(self, file):
 		baseobj = file[:file.rfind(".")]
