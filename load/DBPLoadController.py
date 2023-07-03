@@ -86,7 +86,6 @@ class DBPLoadController:
 		inp = inputFilesets
 		dbOut = SQLBatchExec(self.config)
 		update = UpdateDBPFilesetTables(self.config, self.db, dbOut)
-		video = UpdateDBPVideoTables(self.config, self.db, dbOut)
 
 		for inp in inputFilesets:
 			print("DBPLoadController:updateFilesetTables. processing fileset: %s" % (inp.filesetId))
@@ -97,6 +96,17 @@ class DBPLoadController:
 			dbOut.displayCounts()
 			success = dbOut.execute(inp.batchName())
 			if success and inp.typeCode == "video":
+				# Given that we've divided this process into two transactions: 1. Update Filesets Tables and 2. Update Video Tables, it's necessary
+				# to close the current database connection and establish a new one after the first transaction. This ensures that any subsequent
+				# queries executed will have access to the latest changes pushed by the SQLBatchExec instance (dbOut). This is crucial because
+				# SQLBatchExec uses its own database connection instance, which is distinct from the 'self.db' instance used by this DBPLoadController class.
+				self.db.close()
+				self.refreshDB()
+
+				# A new instance of UpdateDBPVideoTables must be created for each fileset. This is because the constructor of the UpdateDBPVideoTables
+				# class executes a select query to create a map of video_stream filesets. It's crucial that this map takes into account any new filesets
+				# that have been created up to this point.
+				video = UpdateDBPVideoTables(self.config, self.db, dbOut)
 				video.processFileset(inp.filesetPrefix, inp.filenames(), hashId)
 				dbOut.displayCounts()
 				success = dbOut.execute(inp.batchName() + "-video")
@@ -127,6 +137,10 @@ class DBPLoadController:
 
 		if len(result) > 0:
 			logger.invalidValues(inp.stockNum(), "text_json", len(result))
+
+	def refreshDB(self):
+		db = SQLUtility(self.config)
+		self.db = db
 
 if (__name__ == '__main__'):
 	print("*** DBPLoadController *** ")
