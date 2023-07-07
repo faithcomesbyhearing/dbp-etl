@@ -1,7 +1,6 @@
 # TranscodeVideo.py
 
-import time
-import csv
+import json
 import boto3
 from S3Utility import *
 from RunStatus import *
@@ -32,15 +31,32 @@ class TranscodeVideo:
 	def __init__(self, config, filesetPrefix):
 		self.config = config
 		self.filesetPrefix = filesetPrefix
-		self.client = AWSSession.shared().elasticTranscoder()
 		self.videoPipeline = config.video_transcoder_pipeline
 		self.hls_audio_video_1080p = config.video_preset_hls_1080p
 		self.hls_audio_video_720p = config.video_preset_hls_720p
 		self.hls_audio_video_480p = config.video_preset_hls_480p
 		self.hls_audio_video_360p = config.video_preset_hls_360p
 		self.web_audio_video = config.video_preset_web
+		self.web_audio_video = config.video_preset_web
+		self.client = self.getTranscoderClient()
 		self.openJobs = []
 
+	def getTranscoderClient(self):
+		if hasattr(self.config, 'video_transcoder_mock') and self.config.video_transcoder_mock != None:
+			try:
+				self.video_transcoder_mock = json.loads(self.config.video_transcoder_mock)
+			except json.JSONDecodeError:
+				# Handle the error and set a empty dict for self.video_transcoder_mock
+				self.video_transcoder_mock = {}
+
+			if self.video_transcoder_mock.get("enable") == 1:
+				return boto3.client(
+					'elastictranscoder',
+					region_name=self.video_transcoder_mock.get("region_name"),
+					endpoint_url=self.video_transcoder_mock.get("endpoint_url")
+				)
+
+		return AWSSession.shared().elasticTranscoder()
 
 	def createJob(self, file):
 		baseobj = file[:file.rfind(".")]
@@ -114,16 +130,15 @@ class TranscodeVideo:
 					stillOpenJobs.append(jobId)
 			self.openJobs = stillOpenJobs
 			time.sleep(10)
-		return errorCount == 0	
+		return errorCount == 0
 
 
 if (__name__ == '__main__'):
-	from LanguageReaderCreator import LanguageReaderCreator	
+	from LanguageReaderCreator import LanguageReaderCreator
 	from InputProcessor import *
 
 	config = Config.shared()
 	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
-	# filesets = InputFileset.filesetCommandLineParser(config, languageReader)
 	filesets = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
 
 	for inp in filesets:
@@ -136,4 +151,4 @@ if (__name__ == '__main__'):
 # Successful tests with source on s3
 
 
-
+# python3 load/DBPLoadController.py test s3://etl-development-input/ "ENGESVP2DV"
