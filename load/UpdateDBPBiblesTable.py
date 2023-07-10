@@ -8,8 +8,6 @@
 # also updated.
 
 
-import io
-import sys
 from Config import *
 from SQLUtility import *
 from SQLBatchExec import *
@@ -302,10 +300,6 @@ class UpdateDBPBiblesTable:
 
 	def testBibleForeignKeys(self, bibleId):
 		hasErrors = False
-		hasErrors |= self.testDeleteInTable(bibleId, self.config.database_user_db_name, "user_bookmarks")
-		hasErrors |= self.testDeleteInTable(bibleId, self.config.database_user_db_name, "user_highlights")
-		hasErrors |= self.testDeleteInTable(bibleId, self.config.database_user_db_name, "user_notes")
-		hasErrors |= self.testDeleteInTable(bibleId, self.config.database_user_db_name, "user_settings")
 		hasErrors |= self.testDeleteInTable(bibleId, self.config.database_db_name, "bible_translations")
 		return hasErrors
 
