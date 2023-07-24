@@ -119,6 +119,7 @@ class Config:
 		self.filename_datetime = self._get("filename.datetime")
 		self.mysql_exe = self._getOptional("mysql.exe")
 		self.data_missing_verses_allowed = self._getOptional("data.missing_verses_allowed")
+		self.data_org_has_granted_general_download_permission = self._getOptional("data.org_has_granted_general_download_permission")
 
 		# TODO these dependencies need to be sorted out
 		if programRunning in {"DBPLoadController.py"}:
