@@ -63,8 +63,8 @@ class UpdateDBPAccessTable:
 					accessIdInLPTS = lpts.get(accessDesc) == "-1" and "OT" in setSizeCode
 				elif accessId == 181: # allow_text_DOWNLOAD
 					accessIdInLPTS = self._isPublicDomain(languageRecord)
-				elif accessId in {191, 193}: # allow_text_APP_OFFLINE and allow_audio_APP_OFFLINE
-					accessIdInLPTS = self._isSILOnly(languageRecord) or self._isPioneerBibleTranslatorsOnly(languageRecord) or self._isPublicDomain(languageRecord) or self._isCreativeCommons(languageRecord)
+				# elif accessId in {191, 193}: # allow_text_APP_OFFLINE and allow_audio_APP_OFFLINE
+				# 	accessIdInLPTS = self._isSILOnly(languageRecord) or self._isPioneerBibleTranslatorsOnly(languageRecord) or self._isPublicDomain(languageRecord) or self._isCreativeCommons(languageRecord)
 					# if (accessIdInLPTS):
 					# 	print("*** 191/193... SIL: %s, PBT: %s, Public Domain: %s, CC: %s, hashId: %s, filesetId: %s" % (self._isSILOnly(languageRecord), self._isPioneerBibleTranslatorsOnly(languageRecord), self._isPublicDomain(languageRecord),self._isCreativeCommons(languageRecord), hashId, filesetId))
 				else:
@@ -73,7 +73,10 @@ class UpdateDBPAccessTable:
 				if accessIdInLPTS and not accessIdInDBP:
 					insertRows.append((hashId, accessId))
 				elif accessIdInDBP and not accessIdInLPTS:
-					print("accessId not in DBP or LPTS, but not deleting.. accessId: %s hashId: %s" % (accessId, hashId))
+					if accessId not in {191, 193}:
+						# accessId is in DBP but not in LPTS. For accessIds 19x, this was done manually and should be left alone.
+						# for all others, this is a signal from LPTS to delete from DBP
+						deleteRows.append((hashId, accessId))
 
 		tableName = "access_group_filesets"
 		pkeyNames = ("hash_id", "access_group_id")
