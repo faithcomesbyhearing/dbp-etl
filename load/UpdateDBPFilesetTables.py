@@ -114,8 +114,12 @@ class UpdateDBPFilesetTables:
 		updateBibleFilesSecondary = UpdateDBPBibleFilesSecondary(self.config, dbConn, self.dbOut)
 		if inp.typeCode in {"audio", "video"}:
 			setTypeCode = UpdateDBPFilesetTables.getSetTypeCode(inp.typeCode, inp.filesetId)
-			hashId = self.insertBibleFileset(dbConn, inp.typeCode, setTypeCode, inp.bibleId, inp.filesetId, bookIdSet)
-			self.insertFilesetConnections(dbConn, hashId, inp.bibleId)
+			setSizeCode = self.getSizeCode(dbConn, typeCode, hashId, bookIdSet)
+
+			UpdateDBPLPTSTable.upsertBibleFileset(dbConn, inp.typeCode, setTypeCode, inp.bibleId, inp.filesetId)
+			UpdateDBPLPTSTable.upsertBibleFilesetConnection(dbConn, hashId, inp.bibleId)
+			# end
+
 			self.insertBibleFiles(dbConn, hashId, inputFileset, bookIdSet)
 			updateBibleFilesSecondary.updateBibleFilesSecondary(hashId, inp)
 		elif inp.typeCode == "text":
@@ -164,39 +168,6 @@ class UpdateDBPFilesetTables:
 		ntBooks = fullBookIdSet.intersection(self.NT)
 		return UpdateDBPFilesetTables.getSetSizeCode(ntBooks, otBooks)
 
-
-	def insertBibleFileset(self, dbConn, typeCode, setTypeCode, bibleId, filesetId, bookIdSet):
-		tableName = "bible_filesets"
-		pkeyNames = ("hash_id",)
-		attrNames = ("id", "asset_id", "set_type_code", "set_size_code")
-		updateRows = []
-		bucket = self.config.s3_vid_bucket if typeCode == "video" else self.config.s3_bucket
-		hashId = UpdateDBPFilesetTables.getHashId(bucket, filesetId, setTypeCode)
-		setSizeCode = self.getSizeCode(dbConn, typeCode, hashId, bookIdSet)
-		row = dbConn.selectRow("SELECT id, asset_id, set_type_code, set_size_code FROM bible_filesets WHERE hash_id=%s", (hashId,))
-		if row == None:
-			updateRows.append((filesetId, bucket, setTypeCode, setSizeCode, hashId))
-			self.dbOut.insert(tableName, pkeyNames, attrNames, updateRows)
-		else:
-			(dbpFilesetId, dbpBucket, dbpSetTypeCode, dbpSetSizeCode) = row
-			if (dbpFilesetId != filesetId or
-				dbpBucket != bucket or
-				dbpSetTypeCode != setTypeCode or
-				dbpSetSizeCode != setSizeCode):
-				updateRows.append((filesetId, bucket, setTypeCode, setSizeCode, hashId))
-				self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
-		return hashId
-
-
-	def insertFilesetConnections(self, dbConn, hashId, bibleId):
-		insertRows = []
-		row = dbConn.selectRow("SELECT * FROM bible_fileset_connections WHERE hash_id=%s AND bible_id=%s", (hashId, bibleId))
-		if row == None:
-			insertRows.append((hashId, bibleId))
-			tableName = "bible_fileset_connections"
-			pkeyNames = ("hash_id", "bible_id")
-			attrNames = ()
-			self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
 
 
 	def insertBibleFiles(self, dbConn, hashId, inputFileset, bookIdSet):

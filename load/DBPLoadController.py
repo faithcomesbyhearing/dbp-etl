@@ -164,6 +164,10 @@ if (__name__ == '__main__'):
 		for inputFileset in InputFileset.complete:
 			print("Completed: ", inputFileset.filesetId)
 	else:
+		if (READ_ONLY) {
+			"cannot process"
+			return
+		}
 		ctrl.updateBibles()
 		ctrl.updateLPTSTables()
 	Log.writeLog(config)
