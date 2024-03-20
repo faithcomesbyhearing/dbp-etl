@@ -35,6 +35,12 @@ class UpdateDBPLPTSTable:
 
 	def process(self):
 		RunStatus.printDuration("BEGIN LPTS UPDATE")
+
+		# new.
+		self.upsertBibleFilesetsAndConnections(languageReader) 
+		#end 
+
+		# now, with the full list of bible_filesets, we can continue with normal processing
 		sql = ("SELECT b.bible_id, bf.id, bf.set_type_code, bf.set_size_code, bf.asset_id, bf.hash_id"
 			" FROM bible_filesets bf JOIN bible_fileset_connections b ON bf.hash_id = b.hash_id"
 			" ORDER BY b.bible_id, bf.id, bf.set_type_code")
@@ -49,6 +55,28 @@ class UpdateDBPLPTSTable:
 		languageTranslations = UpdateDBPLanguageTranslation(self.config, self.db, self.dbOut, self.languageReader)
 		languageTranslations.updateOrInsertlanguageTranslation()
 		self.db.close()
+
+##
+	## Bible Filesets
+	##
+	def upsertBibleFilesetsAndConnections(self, languageReader):
+
+		# iterate through languageReader
+
+		# for each language (instance of LanguageRecordInterface), we have:
+		#   bibleid (DBP_Equivalent)
+		# 	stocknumber (Reg_StockNumber)
+		#   filesets (called damids in lpts)
+
+		# iterate over each fileset and call upsertBibleFileset
+		# need to calculate setSizeCode and SetTypeCode
+		#def upsertBibleFileset(self, dbConn, setTypeCode, setSizeCode, filesetId):
+		# FIXME: determine setSizeCode from the stocknumber, which must be passed in somehow
+		hashId = self.upsertBibleFileset(dbConn, setTypeCode, setSizeCode, filesetId)
+
+		# 	def upsertBibleFilesetConnections(self, dbConn, hashId, bibleId):
+
+		self.upsertBibleFilesetConnection(dbConn, hashId, bibleId)
 
 	##
 	## Bible Fileset Tags
@@ -240,6 +268,42 @@ class UpdateDBPLPTSTable:
 		#unknownCopyrights = orgs.validateCopyrights()
 		orgs.updateLicensors(filesetList)
 		orgs.updateCopyrightHolders(filesetList)
+
+	# FIXME: must implement upsert, currently implements insert
+	# Note: changed to get SizeCode outside of this method
+	def upsertBibleFileset(self, dbConn, setTypeCode, setSizeCode, filesetId):
+		tableName = "bible_filesets"
+		pkeyNames = ("hash_id",)
+		attrNames = ("id", "asset_id", "set_type_code", "set_size_code")
+		updateRows = []
+		bucket = self.config.s3_bucket
+		hashId = UpdateDBPFilesetTables.getHashId(bucket, filesetId, setTypeCode)
+		row = dbConn.selectRow("SELECT id, asset_id, set_type_code, set_size_code FROM bible_filesets WHERE hash_id=%s", (hashId,))
+		if row == None:
+			updateRows.append((filesetId, bucket, setTypeCode, setSizeCode, hashId))
+			self.dbOut.insert(tableName, pkeyNames, attrNames, updateRows)
+		else:
+			(dbpFilesetId, dbpBucket, dbpSetTypeCode, dbpSetSizeCode) = row
+			if (dbpFilesetId != filesetId or
+				dbpBucket != bucket or
+				dbpSetTypeCode != setTypeCode or
+				dbpSetSizeCode != setSizeCode):
+				updateRows.append((filesetId, bucket, setTypeCode, setSizeCode, hashId))
+				self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
+		return hashId
+
+	# FIXME: must implement upsert, currently implements insert
+	def upsertBibleFilesetConnection(self, dbConn, hashId, bibleId):
+		insertRows = []
+		row = dbConn.selectRow("SELECT * FROM bible_fileset_connections WHERE hash_id=%s AND bible_id=%s", (hashId, bibleId))
+		if row == None:
+			insertRows.append((hashId, bibleId))
+			tableName = "bible_fileset_connections"
+			pkeyNames = ("hash_id", "bible_id")
+			attrNames = ()
+			self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
+
+
 
 
 	## This is not currently used.
