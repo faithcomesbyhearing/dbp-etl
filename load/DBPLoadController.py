@@ -85,7 +85,7 @@ class DBPLoadController:
 		print("\n*** DBPLoadController:updateFilesetTables ***")
 		inp = inputFilesets
 		dbOut = SQLBatchExec(self.config)
-		update = UpdateDBPFilesetTables(self.config, self.db, dbOut)
+		update = UpdateDBPFilesetTables(self.config, self.db, dbOut, self.languageReader)
 
 		for inp in inputFilesets:
 			print("DBPLoadController:updateFilesetTables. processing fileset: %s" % (inp.filesetId))
@@ -164,10 +164,6 @@ if (__name__ == '__main__'):
 		for inputFileset in InputFileset.complete:
 			print("Completed: ", inputFileset.filesetId)
 	else:
-		if (READ_ONLY) {
-			"cannot process"
-			return
-		}
 		ctrl.updateBibles()
 		ctrl.updateLPTSTables()
 	Log.writeLog(config)

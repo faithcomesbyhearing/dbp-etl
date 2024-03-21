@@ -5,11 +5,9 @@
 # to be changed based upon a comparison of DBP to LPTS.
 #
 
-import io
-import os
 import sys
+import hashlib
 import re
-from datetime import datetime
 from Config import *
 from RunStatus import *
 from LanguageReader import *
@@ -21,6 +19,15 @@ from UpdateDBPBibleTranslations import *
 from UpdateDBPLanguageTranslation import *
 
 class UpdateDBPLPTSTable:
+
+	@staticmethod
+	def getHashId(bucket, filesetId, setTypeCode):
+		md5 = hashlib.md5()
+		md5.update(filesetId.encode("latin1"))
+		md5.update(bucket.encode("latin1"))
+		md5.update(setTypeCode.encode("latin1"))
+		hash_id = md5.hexdigest()
+		return hash_id[:12]
 
 	def __init__(self, config, dbOut, languageReader):
 		self.config = config
@@ -36,15 +43,16 @@ class UpdateDBPLPTSTable:
 	def process(self):
 		RunStatus.printDuration("BEGIN LPTS UPDATE")
 
-		# new.
-		self.upsertBibleFilesetsAndConnections(languageReader) 
-		#end 
+		# get the biblefilesets that will be inserted or updated
+		filesetList = self.upsertBibleFilesetsAndConnections()
+
+		# we need to use the list of the new bible_filesets because the upsertBibleFilesetsAndConnections have not stored into database the record for now
 
 		# now, with the full list of bible_filesets, we can continue with normal processing
-		sql = ("SELECT b.bible_id, bf.id, bf.set_type_code, bf.set_size_code, bf.asset_id, bf.hash_id"
-			" FROM bible_filesets bf JOIN bible_fileset_connections b ON bf.hash_id = b.hash_id"
-			" ORDER BY b.bible_id, bf.id, bf.set_type_code")
-		filesetList = self.db.select(sql, ())
+		# sql = ("SELECT b.bible_id, bf.id, bf.set_type_code, bf.set_size_code, bf.asset_id, bf.hash_id"
+		# 	" FROM bible_filesets bf JOIN bible_fileset_connections b ON bf.hash_id = b.hash_id"
+		# 	" ORDER BY b.bible_id, bf.id, bf.set_type_code")
+		# filesetList = self.db.select(sql, ())
 		access = UpdateDBPAccessTable(self.config, self.db, self.dbOut, self.languageReader)
 		access.process(filesetList)
 		self.updateBibleFilesetTags(filesetList)
@@ -56,28 +64,84 @@ class UpdateDBPLPTSTable:
 		languageTranslations.updateOrInsertlanguageTranslation()
 		self.db.close()
 
-##
+	def getBibleFilesetType(self, filesetId):
+		if filesetId.endswith('1DA'):
+			return 'audio'
+		elif filesetId.endswith('2DA'):
+			return 'audio_drama'
+		elif filesetId.endswith('ET-usx'):
+			return 'text_usx'
+		elif filesetId.endswith('ET-html'):
+			return 'text_html'
+		elif filesetId.endswith('ET-json'):
+			return 'text_json'
+		elif filesetId.endswith('_ET'):
+			return 'text_plain'
+		elif filesetId.endswith('2DV'):
+			return 'video_stream'
+		elif filesetId.endswith('1SA'):
+			return 'audio_stream'
+		elif filesetId.endswith('2SA'):
+			return 'audio_drama_stream'
+
+		# Default case if none of the conditions match
+		return None
+
+	def getBibleFilesetSizeCode(self, portion):
+		if portion == 'Portion(s)':
+			return 'NTP'
+		elif portion == 'New Testament':
+			return 'NT'
+		elif portion == 'Old Testament':
+			return 'OT'
+
+		# Default case if none of the conditions match
+		return None
+
+	##
 	## Bible Filesets
 	##
-	def upsertBibleFilesetsAndConnections(self, languageReader):
+	def upsertBibleFilesetsAndConnections(self):
+		indexMap = {"audio": [1, 2, 3], "text": [1, 2, 3], "video": [1]}
 
-		# iterate through languageReader
+		lptsFilesetList = []
+		lptsFilesetProcessed = {}
+		for lptsRecord in self.languageReader.resultSet:
+			for typeCode in ["audio", "text", "video"]:
+				for index in indexMap[typeCode]:
+					filesetIds = lptsRecord.DamIds(typeCode, index)
+					for filesetId in filesetIds:
+						# iterate over each fileset and call upsertBibleFileset
+						# need to calculate setSizeCode and SetTypeCode
+						bibleId = lptsRecord.DBP_EquivalentByIndex(index)
+						setTypeCode = self.getBibleFilesetType(filesetId)
+						setSizeCode = self.getBibleFilesetSizeCode(lptsRecord.Portion())
 
-		# for each language (instance of LanguageRecordInterface), we have:
-		#   bibleid (DBP_Equivalent)
-		# 	stocknumber (Reg_StockNumber)
-		#   filesets (called damids in lpts)
+						if bibleId != None and setTypeCode != None and setSizeCode != None and lptsFilesetProcessed.get(filesetId) == None:
+							hashId = self.upsertBibleFileset(self.db, setTypeCode, setSizeCode, filesetId)
+							self.upsertBibleFilesetConnection(self.db, hashId, bibleId)
+							bucket = self.config.s3_bucket
+							lptsFilesetList.append((bibleId, filesetId, setTypeCode, setSizeCode, bucket, hashId))
+							lptsFilesetProcessed[filesetId] = True
 
-		# iterate over each fileset and call upsertBibleFileset
-		# need to calculate setSizeCode and SetTypeCode
-		#def upsertBibleFileset(self, dbConn, setTypeCode, setSizeCode, filesetId):
-		# FIXME: determine setSizeCode from the stocknumber, which must be passed in somehow
-		hashId = self.upsertBibleFileset(dbConn, setTypeCode, setSizeCode, filesetId)
 
-		# 	def upsertBibleFilesetConnections(self, dbConn, hashId, bibleId):
+		return lptsFilesetList
 
-		self.upsertBibleFilesetConnection(dbConn, hashId, bibleId)
+	def upsertBibleFilesetConnection(self, dbConn, hashId, bibleId):
+		insertRows = []
 
+		# We will validate if the bible exist before trying to create the relationship
+		bible = dbConn.selectRow("SELECT * FROM bibles WHERE id=%s", (bibleId))
+		if bible == None:
+			return
+		else :
+			row = dbConn.selectRow("SELECT * FROM bible_fileset_connections WHERE hash_id=%s AND bible_id=%s", (hashId, bibleId))
+			if row == None:
+				insertRows.append((hashId, bibleId))
+				tableName = "bible_fileset_connections"
+				pkeyNames = ("hash_id", "bible_id")
+				attrNames = ()
+				self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
 	##
 	## Bible Fileset Tags
 	##
@@ -241,11 +305,12 @@ class UpdateDBPLPTSTable:
 				if row != None and languageRecord == None:
 					deleteRows.append((hashId,))
 
-				elif languageRecord != None and row == None:
+				elif languageRecord != None and row == None and copyrightMsg != None:
 					copyrightMsg = copyrightMsg.replace("'", "\\'")
 					insertRows.append((copyrightDate, copyrightMsg, copyrightMsg, 1, hashId))
 
 				elif (row != None and
+					copyrightMsg != None and
 					(row[0] != copyrightDate or
 					row[1] != copyrightMsg or
 					row[2] != copyrightMsg or
@@ -269,15 +334,13 @@ class UpdateDBPLPTSTable:
 		orgs.updateLicensors(filesetList)
 		orgs.updateCopyrightHolders(filesetList)
 
-	# FIXME: must implement upsert, currently implements insert
-	# Note: changed to get SizeCode outside of this method
 	def upsertBibleFileset(self, dbConn, setTypeCode, setSizeCode, filesetId):
 		tableName = "bible_filesets"
 		pkeyNames = ("hash_id",)
 		attrNames = ("id", "asset_id", "set_type_code", "set_size_code")
 		updateRows = []
 		bucket = self.config.s3_bucket
-		hashId = UpdateDBPFilesetTables.getHashId(bucket, filesetId, setTypeCode)
+		hashId = self.getHashId(bucket, filesetId, setTypeCode)
 		row = dbConn.selectRow("SELECT id, asset_id, set_type_code, set_size_code FROM bible_filesets WHERE hash_id=%s", (hashId,))
 		if row == None:
 			updateRows.append((filesetId, bucket, setTypeCode, setSizeCode, hashId))
@@ -291,19 +354,6 @@ class UpdateDBPLPTSTable:
 				updateRows.append((filesetId, bucket, setTypeCode, setSizeCode, hashId))
 				self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
 		return hashId
-
-	# FIXME: must implement upsert, currently implements insert
-	def upsertBibleFilesetConnection(self, dbConn, hashId, bibleId):
-		insertRows = []
-		row = dbConn.selectRow("SELECT * FROM bible_fileset_connections WHERE hash_id=%s AND bible_id=%s", (hashId, bibleId))
-		if row == None:
-			insertRows.append((hashId, bibleId))
-			tableName = "bible_fileset_connections"
-			pkeyNames = ("hash_id", "bible_id")
-			attrNames = ()
-			self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
-
-
 
 
 	## This is not currently used.
