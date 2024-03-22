@@ -47,7 +47,7 @@ class UpdateDBPAccessTable:
 				print("FATAL: Unknown typeCode % in fileset: %s, hashId: %s" % (typeCode, filesetId, hashId))
 				sys.exit()
 
-			(languageRecord, lptsIndex) = self.languageReader.getLanguageRecord(typeCode, bibleId, dbpFilesetId)
+			(languageRecord, _) = self.languageReader.getLanguageRecord(typeCode, bibleId, dbpFilesetId)
 			if languageRecord != None:
 				lpts = languageRecord.record
 			else:
@@ -55,7 +55,7 @@ class UpdateDBPAccessTable:
 				print ("getLanguageRecord method did not return a record for typeCode: %s, bibleId: %s, dbpFilesetId: %s " % ( typeCode, bibleId, dbpFilesetId))
 
 
-			for (accessId, accessName, accessDesc) in accessTypes:
+			for (accessId, _, accessDesc) in accessTypes:
 				accessIdInDBP = accessId in dbpAccessSet;
 				if accessId == 101: # allow_text_NT_DBP
 					accessIdInLPTS = lpts.get(accessDesc) == "-1" and "NT" in setSizeCode
