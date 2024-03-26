@@ -109,19 +109,21 @@ class UpdateDBPFilesetTables:
 		bookIdSet = self.getBibleBooks(inp.typeCode, inp.csvFilename, inp.databasePath)
 		updateBibleFilesSecondary = UpdateDBPBibleFilesSecondary(self.config, dbConn, self.dbOut)
 		bucket = self.config.s3_vid_bucket if inp.typeCode == "video" else self.config.s3_bucket
+		# it needs to know if the new inputFileset has new files to set the flag content_loaded
+		isContentLoaded = 1 if len(inp.files) > 0 else 0
 
 		if inp.typeCode in {"audio", "video"}:
 			setTypeCode = UpdateDBPFilesetTables.getSetTypeCode(inp.typeCode, inp.filesetId)
 			hashId = lptsDBP.getHashId(bucket, inp.filesetId, setTypeCode)
 			setSizeCode = self.getSizeCode(dbConn, inp.typeCode, hashId, bookIdSet)
-			lptsDBP.upsertBibleFileset(dbConn, setTypeCode, setSizeCode, inp.filesetId)
+			lptsDBP.upsertBibleFileset(dbConn, setTypeCode, setSizeCode, inp.filesetId, isContentLoaded)
 			lptsDBP.upsertBibleFilesetConnection(dbConn, hashId, inp.bibleId)
 			self.insertBibleFiles(dbConn, hashId, inputFileset, bookIdSet)
 			updateBibleFilesSecondary.updateBibleFilesSecondary(hashId, inp)
 		elif inp.typeCode == "text":
 			hashId = lptsDBP.getHashId(bucket, inp.filesetId, inp.subTypeCode())
 			setSizeCode = self.getSizeCode(dbConn, inp.typeCode, hashId, bookIdSet)
-			lptsDBP.upsertBibleFileset(dbConn, inp.subTypeCode(), setSizeCode, inp.filesetId)
+			lptsDBP.upsertBibleFileset(dbConn, inp.subTypeCode(), setSizeCode, inp.filesetId, isContentLoaded)
 			lptsDBP.upsertBibleFilesetConnection(dbConn, hashId, inp.bibleId)
 			# text_plain is still stored in the database; no upload 
 			if inp.subTypeCode() == "text_plain":
