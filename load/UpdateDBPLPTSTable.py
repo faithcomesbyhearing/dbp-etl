@@ -334,24 +334,25 @@ class UpdateDBPLPTSTable:
 		orgs.updateLicensors(filesetList)
 		orgs.updateCopyrightHolders(filesetList)
 
-	def upsertBibleFileset(self, dbConn, setTypeCode, setSizeCode, filesetId):
+	def upsertBibleFileset(self, dbConn, setTypeCode, setSizeCode, filesetId, isContentLoaded=0):
 		tableName = "bible_filesets"
 		pkeyNames = ("hash_id",)
-		attrNames = ("id", "asset_id", "set_type_code", "set_size_code")
+		attrNames = ("id", "asset_id", "set_type_code", "set_size_code", "content_loaded")
 		updateRows = []
 		bucket = self.config.s3_bucket
 		hashId = self.getHashId(bucket, filesetId, setTypeCode)
-		row = dbConn.selectRow("SELECT id, asset_id, set_type_code, set_size_code FROM bible_filesets WHERE hash_id=%s", (hashId,))
+		row = dbConn.selectRow("SELECT id, asset_id, set_type_code, set_size_code, content_loaded FROM bible_filesets WHERE hash_id=%s", (hashId,))
 		if row == None:
-			updateRows.append((filesetId, bucket, setTypeCode, setSizeCode, hashId))
+			updateRows.append((filesetId, bucket, setTypeCode, setSizeCode, isContentLoaded, hashId))
 			self.dbOut.insert(tableName, pkeyNames, attrNames, updateRows)
 		else:
-			(dbpFilesetId, dbpBucket, dbpSetTypeCode, dbpSetSizeCode) = row
+			(dbpFilesetId, dbpBucket, dbpSetTypeCode, dbpSetSizeCode, dbpContentLoaded) = row
 			if (dbpFilesetId != filesetId or
 				dbpBucket != bucket or
 				dbpSetTypeCode != setTypeCode or
-				dbpSetSizeCode != setSizeCode):
-				updateRows.append((filesetId, bucket, setTypeCode, setSizeCode, hashId))
+				dbpSetSizeCode != setSizeCode or
+				dbpContentLoaded != isContentLoaded):
+				updateRows.append((filesetId, bucket, setTypeCode, setSizeCode, isContentLoaded, hashId))
 				self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
 		return hashId
 
