@@ -345,7 +345,7 @@ class UpdateDBPLPTSTable:
 		if row == None:
 			updateRows.append((filesetId, bucket, setTypeCode, setSizeCode, isContentLoaded, hashId))
 			self.dbOut.insert(tableName, pkeyNames, attrNames, updateRows)
-		else:
+		elif isContentLoaded == 1:
 			(dbpFilesetId, dbpBucket, dbpSetTypeCode, dbpSetSizeCode, dbpContentLoaded) = row
 			if (dbpFilesetId != filesetId or
 				dbpBucket != bucket or
