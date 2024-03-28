@@ -339,7 +339,7 @@ class UpdateDBPLPTSTable:
 		pkeyNames = ("hash_id",)
 		attrNames = ("id", "asset_id", "set_type_code", "set_size_code", "content_loaded")
 		updateRows = []
-		bucket = self.config.s3_vid_bucket if setTypeCode == "video" else self.config.s3_bucket	
+		bucket = self.config.s3_vid_bucket if setTypeCode == "video_stream" else self.config.s3_bucket	
 		hashId = self.getHashId(bucket, filesetId, setTypeCode)
 		row = dbConn.selectRow("SELECT id, asset_id, set_type_code, set_size_code, content_loaded FROM bible_filesets WHERE hash_id=%s", (hashId,))
 		if row == None:
