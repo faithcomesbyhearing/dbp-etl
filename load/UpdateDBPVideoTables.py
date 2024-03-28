@@ -195,7 +195,7 @@ if (__name__ == '__main__'):
 	ctrl.validate(filesets)
 
 	dbOut = SQLBatchExec(config)
-	update = UpdateDBPFilesetTables(config, db, dbOut)
+	update = UpdateDBPFilesetTables(config, db, dbOut, languageReader)
 
 	filesetsVideoProccessed = []
 	for inp in InputFileset.upload:
