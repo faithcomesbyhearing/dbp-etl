@@ -32,7 +32,7 @@ class UpdateDBPBiblesTable:
 		self.scriptCodeMap = self.db.selectMap(sql, ())
 		self.scriptNameMap = self.db.selectMap("SELECT lpts_name, script_id FROM lpts_script_codes", ())
 		self.numeralIdSet = self.db.selectSet("SELECT id FROM numeral_systems", ())
-		self.sizeCodeMap = self.db.selectMapList("SELECT id, set_size_code FROM bible_filesets", ())	
+		self.sizeCodeMap = self.db.selectMapList("SELECT id, set_size_code FROM bible_filesets where content_loaded = 1", ())	
 		resultSet = self.db.select("SELECT lower(l.iso), lower(t.name), l.id FROM languages l,language_translations t"
 			" WHERE l.id=t.language_source_id AND priority = 9 ORDER BY l.id desc", ())
 		self.languageMap1 = {}

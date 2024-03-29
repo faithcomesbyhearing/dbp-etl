@@ -20,7 +20,7 @@ class UpdateDBPVideoTables:
 		self.dbOut = dbOut
 		self.s3Utility = S3Utility(config)
 		sql = ("SELECT file_name, id FROM bible_files where hash_id in"
-			" (SELECT hash_id FROM bible_filesets WHERE set_type_code = 'video_stream')")
+			" (SELECT hash_id FROM bible_filesets WHERE content_loaded = 1 and set_type_code = 'video_stream')")
 		self.fileIdMap = db.selectMap(sql, ())
 		self.streamRegex = re.compile(r"BANDWIDTH=([0-9]+),RESOLUTION=([0-9]+)x([0-9]+),CODECS=\"(.+)\"")
 		self.tsRegex = re.compile(r"#EXTINF:([0-9\.]+),")
