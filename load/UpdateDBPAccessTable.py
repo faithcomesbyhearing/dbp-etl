@@ -135,6 +135,7 @@ if (__name__ == '__main__'):
 	filesets = UpdateDBPAccessTable(config, db, dbOut, languageReader)
 	sql = ("SELECT b.bible_id, bf.id, bf.set_type_code, bf.set_size_code, bf.asset_id, bf.hash_id"
 			" FROM bible_filesets bf JOIN bible_fileset_connections b ON bf.hash_id = b.hash_id"
+			" WHERE bf.content_loaded = 1 "
 			" ORDER BY b.bible_id, bf.id, bf.set_type_code")
 	filesetList = db.select(sql, ())
 	filesets.process(filesetList)
