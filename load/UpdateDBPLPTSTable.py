@@ -56,7 +56,7 @@ class UpdateDBPLPTSTable:
 		# but we also need to capture the "derived" filesets (eg transcoded opus16) when content is loaded 
 		# combine filesetList (from DB) and newFilesetList (which has not been committed yet)
 		# this will capture opus16 for new content load as well as new biblefilesets from metadata load
-		filesetList = filesetList1 + filesetList2
+		filesetList = filesetList1 + list(filesetList2)
 
 		access = UpdateDBPAccessTable(self.config, self.db, self.dbOut, self.languageReader)
 		access.process(filesetList)
