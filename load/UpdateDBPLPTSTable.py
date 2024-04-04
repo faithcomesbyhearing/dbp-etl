@@ -54,8 +54,9 @@ class UpdateDBPLPTSTable:
 
 		# we need to use the list of the new bible_filesets because the upsertBibleFilesetsAndConnections have not stored into database the record for now.
 		# but we also need to capture the "derived" filesets (eg transcoded opus16) when content is loaded 
-		# FIXME: combine filesetList (from DB) and newFilesetList (which has not been committed yet)
+		# combine filesetList (from DB) and newFilesetList (which has not been committed yet)
 		# this will capture opus16 for new content load as well as new biblefilesets from metadata load
+		filesetList.extend(newFilesetList)
 
 		access = UpdateDBPAccessTable(self.config, self.db, self.dbOut, self.languageReader)
 		access.process(filesetList)
