@@ -44,15 +44,19 @@ class UpdateDBPLPTSTable:
 		RunStatus.printDuration("BEGIN LPTS UPDATE")
 
 		# get the biblefilesets that will be inserted or updated
-		filesetList = self.upsertBibleFilesetsAndConnections()
-
-		# we need to use the list of the new bible_filesets because the upsertBibleFilesetsAndConnections have not stored into database the record for now
+		newFilesetList = self.upsertBibleFilesetsAndConnections()		
 
 		# now, with the full list of bible_filesets, we can continue with normal processing
-		# sql = ("SELECT b.bible_id, bf.id, bf.set_type_code, bf.set_size_code, bf.asset_id, bf.hash_id"
-		# 	" FROM bible_filesets bf JOIN bible_fileset_connections b ON bf.hash_id = b.hash_id"
-		# 	" ORDER BY b.bible_id, bf.id, bf.set_type_code")
-		# filesetList = self.db.select(sql, ())
+		sql = ("SELECT b.bible_id, bf.id, bf.set_type_code, bf.set_size_code, bf.asset_id, bf.hash_id"
+			" FROM bible_filesets bf JOIN bible_fileset_connections b ON bf.hash_id = b.hash_id"
+			" ORDER BY b.bible_id, bf.id, bf.set_type_code")
+		filesetList = self.db.select(sql, ())
+
+		# we need to use the list of the new bible_filesets because the upsertBibleFilesetsAndConnections have not stored into database the record for now.
+		# but we also need to capture the "derived" filesets (eg transcoded opus16) when content is loaded 
+		# FIXME: combine filesetList (from DB) and newFilesetList (which has not been committed yet)
+		# this will capture opus16 for new content load as well as new biblefilesets from metadata load
+
 		access = UpdateDBPAccessTable(self.config, self.db, self.dbOut, self.languageReader)
 		access.process(filesetList)
 		self.updateBibleFilesetTags(filesetList)
