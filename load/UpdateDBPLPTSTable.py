@@ -207,7 +207,6 @@ class UpdateDBPLPTSTable:
 					tagNameList = ["stock_no", "volume"]
 
 				(languageRecord, lptsIndex) = self.languageReader.getLanguageRecordLoose(typeCode, bibleId, dbpFilesetId)
-				print("   languageRecordLoose... stocknumber: %s" % (languageRecord.Reg_StockNumber()))
 
 				tagMap = tagHashIdMap.get(hashId, {})
 				for name in tagNameList:
