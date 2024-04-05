@@ -152,8 +152,6 @@ class UpdateDBPLPTSTable:
 	## Bible Fileset Tags
 	##
 	def updateBibleFilesetTags(self, filesetList):
-		print("\nUpdateBibleFilesetTags. enter")
-
 		insertRows = []
 		updateRows = []
 		deleteRows = []
@@ -177,8 +175,6 @@ class UpdateDBPLPTSTable:
 			tagHashIdMap[hashId] = tagMap
 		
 		for (bibleId, filesetId, setTypeCode, setSizeCode, assetId, hashId) in filesetList:
-			if hashId == "5a7fb6b8c42a":
-				print("DEBUG TAGS (text)..: %s %s %s %s" % (bibleId, filesetId, setTypeCode, hashId))			
 			typeCode = setTypeCode.split("_")[0]
 			if typeCode != "app":
 				if filesetId[8:10] == "SA":
@@ -244,11 +240,6 @@ class UpdateDBPLPTSTable:
 							sys.exit()
 					else:
 						description = None
-
-
-						if hashId == "5a7fb6b8c42a":
-							print("   filesetId: %s, hashId: %s, name: %s,  oldDescription: %s, description: %s" % (filesetId, hashId, name, oldDescription, description))
-
 
 					if oldDescription != None and description == None:
 						deleteRows.append((hashId, name, languageId))
