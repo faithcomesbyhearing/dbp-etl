@@ -73,9 +73,11 @@ class UpdateDBPAccessTable:
 				if accessIdInLPTS and not accessIdInDBP:
 					insertRows.append((hashId, accessId))
 				elif accessIdInDBP and not accessIdInLPTS:
-					if accessId not in {191, 193}:
-						# accessId is in DBP but not in LPTS. For accessIds 19x, this was done manually and should be left alone.
-						# for all others, this is a signal from LPTS to delete from DBP
+					# accessId is in DBP but not in LPTS. 
+  					# For accessIds 101 and 102, there is a bug in the fileset setSizeCode. Don't delete for now.
+					# For accessIds 19x, this was done manually and should be left alone.
+					# for all others, this is a signal from LPTS to delete from DBP
+					if accessId not in {101,102, 191, 193}:
 						deleteRows.append((hashId, accessId))
 
 		tableName = "access_group_filesets"
