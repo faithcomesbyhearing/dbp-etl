@@ -120,28 +120,28 @@ class LoadOrganizations:
 
 # BWF notes May 3, 2024 (remove before submitting PR)
 #
-# this may require a database change to allow duplicates of hashId, organization_id and role.
 # role is no longer relevant, but we'll leave it for now, using only role=2 and never role = 1
 #
-# if more than one agreement Type is selected (could be LORA, TextAgreement, Other). Note: the xml doesn't have TextAgreement and Other  yet, so this will be done in ticket 2173
+# if more than one agreement Type is selected (could be LORA, TextAgreement, Other). 
 # 			log statement that this data needs to be fixed
 #           continue
-
-# if agreementType = LORA
+#typeCode = setTypeCode.split("_")[0]
+# if languageReader.LORA = 1
 	# if Typecode = Audio
-#    	lptsLicensor = languageRecord.Licensor
-#		if languageRecord.CoLicensor is empty
+#    	lptsLicensor = languageRecord.Licensor()
+#		if languageRecord.CoLicensor() is empty
 #			log a statement - languageRecord.Licensor may or may not be text licensor - needs investigation
 	# else	if Typecode = Text and languageRecord.CoLicensor is not empty
 # 		lptsLicensor = languageRecord.CoLicensor
 
 
-# else if agreementType = TextAgreement (ticket 2173)
+# else if languageReader.TextAgreement = 1 (ticket 2173)
 #	if Type = Text
 #    	lptsLicensor = languageRecord.Licensor 
 #    	lptsLicensor2 = languageRecord.CoLicensor if CoLicensor is not empty
 # 	else if Type = Audio
-#    	set licensor = Hosanna				
+#    	set licensor = Hosanna	(create a constant called "Hosanna")
+			# old -- remove			
 				# lptsLicensor = languageRecord.Licensor()
 				# if lptsLicensor == None:
 				# 	lptsLicensor = languageRecord.CoLicensor()
@@ -163,8 +163,10 @@ class LoadOrganizations:
 		
 		# BWF: now, we may have two licensor orgs for the same hashId, so retrieve a collection instead of just one
 		# this only applies to Text Agreement (2173)
-		dbpOrg = dbpOrgMap.get(hashId)
+		dbpOrgList = dbpOrgMap.get(hashId)
 		
+		# maybe make a licensorOrgList
+		# logic to match licensorOrgList entries to dbpOrgList entries
 		# 
 		if licensorOrg != None and dbpOrg == None:
 			inserts.append((licensorOrg, hashId, 2))
@@ -173,13 +175,7 @@ class LoadOrganizations:
 		elif licensorOrg != dbpOrg:
 			updates.append(("organization_id", licensorOrg, dbpOrg, hashId, 2))
 
-		# (ticket 2173) since TextAgreement may have two licensors, we may need to add/insert/delete the second licensor
-  			if licensorOrg2 != None and dbpOrg2 == None:
-			inserts.append((licensorOrg, hashId, 2))
-		elif licensorOrg == None and dbpOrg != None:
-			deletes.append((hashId, 2))
-		elif licensorOrg != dbpOrg:
-			updates.append(("organization_id", licensorOrg, dbpOrg, hashId, 2))
+	
    
    
 
