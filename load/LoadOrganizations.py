@@ -115,25 +115,73 @@ class LoadOrganizations:
 				dbpFilesetId = filesetId
 			(languageRecord, lptsIndex) = self.languageReader.getLanguageRecordLoose(typeCode, bibleId, dbpFilesetId)
 			licensorOrg = None
+			licensorOrg2 = None
 			if languageRecord != None:
-				lptsLicensor = languageRecord.Licensor()
-				if lptsLicensor == None:
-					lptsLicensor = languageRecord.CoLicensor()
-				if lptsLicensor == None:
-					print("WARN %s has no licensor field." % (filesetId))
-				else:
+
+# BWF notes May 3, 2024 (remove before submitting PR)
+#
+# this may require a database change to allow duplicates of hashId, organization_id and role.
+# role is no longer relevant, but we'll leave it for now, using only role=2 and never role = 1
+#
+# if more than one agreement Type is selected (could be LORA, TextAgreement, Other). Note: the xml doesn't have TextAgreement and Other  yet, so this will be done in ticket 2173
+# 			log statement that this data needs to be fixed
+#           continue
+
+# if agreementType = LORA
+	# if Typecode = Audio
+#    	lptsLicensor = languageRecord.Licensor
+#		if languageRecord.CoLicensor is empty
+#			log a statement - languageRecord.Licensor may or may not be text licensor - needs investigation
+	# else	if Typecode = Text and languageRecord.CoLicensor is not empty
+# 		lptsLicensor = languageRecord.CoLicensor
+
+
+# else if agreementType = TextAgreement (ticket 2173)
+#	if Type = Text
+#    	lptsLicensor = languageRecord.Licensor 
+#    	lptsLicensor2 = languageRecord.CoLicensor if CoLicensor is not empty
+# 	else if Type = Audio
+#    	set licensor = Hosanna				
+				# lptsLicensor = languageRecord.Licensor()
+				# if lptsLicensor == None:
+				# 	lptsLicensor = languageRecord.CoLicensor()
+				# if lptsLicensor == None:
+				# 	print("WARN %s has no licensor field." % (filesetId))
+				# else:
 					#name = self.languageReader.reduceCopyrightToName(lptsLicensor)
+	 
+
+	 	if lptsLicensor != None
 					licensorOrg = organizationMap.get(lptsLicensor)
 					if licensorOrg == None:
 						print("WARN %s has no org_id for licensor: %s" % (filesetId, lptsLicensor))
+	 	# needed for TextAgreement (ticket 2173)
+		# if lptsLicensor2 != None
+		# 			licensorOrg2 = organizationMap.get(lptsLicensor2)
+		# 			if licensorOrg2 == None:
+		# 				print("WARN %s has no org_id for licensor: %s" % (filesetId, lptsLicensor2))
+		
+		# BWF: now, we may have two licensor orgs for the same hashId, so retrieve a collection instead of just one
+		# this only applies to Text Agreement (2173)
+		dbpOrg = dbpOrgMap.get(hashId)
+		
+		# 
+		if licensorOrg != None and dbpOrg == None:
+			inserts.append((licensorOrg, hashId, 2))
+		elif licensorOrg == None and dbpOrg != None:
+			deletes.append((hashId, 2))
+		elif licensorOrg != dbpOrg:
+			updates.append(("organization_id", licensorOrg, dbpOrg, hashId, 2))
 
-			dbpOrg = dbpOrgMap.get(hashId)
-			if licensorOrg != None and dbpOrg == None:
-				inserts.append((licensorOrg, hashId, 2))
-			elif licensorOrg == None and dbpOrg != None:
-				deletes.append((hashId, 2))
-			elif licensorOrg != dbpOrg:
-				updates.append(("organization_id", licensorOrg, dbpOrg, hashId, 2))
+		# (ticket 2173) since TextAgreement may have two licensors, we may need to add/insert/delete the second licensor
+  			if licensorOrg2 != None and dbpOrg2 == None:
+			inserts.append((licensorOrg, hashId, 2))
+		elif licensorOrg == None and dbpOrg != None:
+			deletes.append((hashId, 2))
+		elif licensorOrg != dbpOrg:
+			updates.append(("organization_id", licensorOrg, dbpOrg, hashId, 2))
+   
+   
 
 		tableName = "bible_fileset_copyright_organizations"
 		pkeyNames = ("hash_id", "organization_role")
@@ -143,56 +191,58 @@ class LoadOrganizations:
 		self.dbOut.delete(tableName, pkeyNames, deletes)
 		
 
-	## This method updates the bible_fileset_copyright_organizations with copyrightholders
-	def updateCopyrightHolders(self, filesetList):
-		inserts = []
-		updates = []
-		deletes = []
-		sql = "SELECT lpts_organization, organization_id FROM lpts_organizations WHERE organization_role=1"
-		organizationMap = self.db.selectMap(sql, ())
-		sql = "SELECT hash_id, organization_id FROM bible_fileset_copyright_organizations WHERE organization_role=1"
-		dbpOrgMap = self.db.selectMap(sql, ())
-		for (bibleId, filesetId, setTypeCode, setSizeCode, assetId, hashId) in filesetList:
-			typeCode = setTypeCode.split("_")[0]
-			if filesetId[8:10] == "SA":
-				dbpFilesetId = filesetId[:8] + "DA" + filesetId[10:]
-			else:
-				dbpFilesetId = filesetId
-			copyrightOrg = None
-			if typeCode != "app":
-				(languageRecord, lptsIndex) = self.languageReader.getLanguageRecordLoose(typeCode, bibleId, dbpFilesetId)
-				if languageRecord != None:
-					lptsCopyright = None
-					if typeCode == "text":
-						if self.hasDamIds(languageRecord, "text") and languageRecord.Copyrightc() != None:
-							lptsCopyright = languageRecord.Copyrightc()
-					elif typeCode == "audio":
-						if self.hasDamIds(languageRecord, "audio") and languageRecord.Copyrightp() != None:
-							lptsCopyright = languageRecord.Copyrightp()
-					elif typeCode == "video":
-						if self.hasDamIds(languageRecord, "video") and languageRecord.Copyright_Video() != None:
-							lptsCopyright = languageRecord.Copyright_Video()
+# BWF 5/3/24 - distinguishing between licensor and holder is not relevant. remove this method.
+	# ## This method updates the bible_fileset_copyright_organizations with copyrightholders
+	# def updateCopyrightHolders(self, filesetList):
+	# 	inserts = []
+	# 	updates = []
+	# 	deletes = []
+	# 	sql = "SELECT lpts_organization, organization_id FROM lpts_organizations WHERE organization_role=1"
+	# 	organizationMap = self.db.selectMap(sql, ())
+	# 	sql = "SELECT hash_id, organization_id FROM bible_fileset_copyright_organizations WHERE organization_role=1"
+	# 	dbpOrgMap = self.db.selectMap(sql, ())
+	# 	for (bibleId, filesetId, setTypeCode, setSizeCode, assetId, hashId) in filesetList:
+	# 		typeCode = setTypeCode.split("_")[0]
+	# 		if filesetId[8:10] == "SA":
+	# 			dbpFilesetId = filesetId[:8] + "DA" + filesetId[10:]
+	# 		else:
+	# 			dbpFilesetId = filesetId
+	# 		copyrightOrg = None
+	# 		if typeCode != "app":
+	# 			(languageRecord, lptsIndex) = self.languageReader.getLanguageRecordLoose(typeCode, bibleId, dbpFilesetId)
+	# 			if languageRecord != None:
+	# 				lptsCopyright = None
 
-					if lptsCopyright != None:
-						name = self.languageReader.reduceCopyrightToName(lptsCopyright)
-						copyrightOrg = organizationMap.get(name)
-						if copyrightOrg == None:
-							print("WARN %s has no org_id for copyright: %s" % (filesetId, name))
+	# 				if typeCode == "text":
+	# 					if self.hasDamIds(languageRecord, "text") and languageRecord.Copyrightc() != None:
+	# 						lptsCopyright = languageRecord.Copyrightc()
+	# 				elif typeCode == "audio":
+	# 					if self.hasDamIds(languageRecord, "audio") and languageRecord.Copyrightp() != None:
+	# 						lptsCopyright = languageRecord.Copyrightp()
+	# 				elif typeCode == "video":
+	# 					if self.hasDamIds(languageRecord, "video") and languageRecord.Copyright_Video() != None:
+	# 						lptsCopyright = languageRecord.Copyright_Video()
 
-			dbpOrg = dbpOrgMap.get(hashId)
-			if copyrightOrg != None and dbpOrg == None:
-				inserts.append((copyrightOrg, hashId, 1))
-			elif copyrightOrg == None and dbpOrg != None:
-				deletes.append((hashId, 1))
-			elif copyrightOrg != dbpOrg:
-				updates.append(("organization_id", copyrightOrg, dbpOrg, hashId, 1))
+	# 				if lptsCopyright != None:
+	# 					name = self.languageReader.reduceCopyrightToName(lptsCopyright)
+	# 					copyrightOrg = organizationMap.get(name)
+	# 					if copyrightOrg == None:
+	# 						print("WARN %s has no org_id for copyright: %s" % (filesetId, name))
 
-		tableName = "bible_fileset_copyright_organizations"
-		pkeyNames = ("hash_id", "organization_role")
-		attrNames = ("organization_id",)
-		self.dbOut.insert(tableName, pkeyNames, attrNames, inserts)
-		self.dbOut.updateCol(tableName, pkeyNames, updates)
-		self.dbOut.delete(tableName, pkeyNames, deletes)
+	# 		dbpOrg = dbpOrgMap.get(hashId)
+	# 		if copyrightOrg != None and dbpOrg == None:
+	# 			inserts.append((copyrightOrg, hashId, 1))
+	# 		elif copyrightOrg == None and dbpOrg != None:
+	# 			deletes.append((hashId, 1))
+	# 		elif copyrightOrg != dbpOrg:
+	# 			updates.append(("organization_id", copyrightOrg, dbpOrg, hashId, 1))
+
+	# 	tableName = "bible_fileset_copyright_organizations"
+	# 	pkeyNames = ("hash_id", "organization_role")
+	# 	attrNames = ("organization_id",)
+	# 	self.dbOut.insert(tableName, pkeyNames, attrNames, inserts)
+	# 	self.dbOut.updateCol(tableName, pkeyNames, updates)
+	# 	self.dbOut.delete(tableName, pkeyNames, deletes)
 
 
 	## After licensors have been updated in bible_fileset_copyright_organizations,
