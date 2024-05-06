@@ -21,6 +21,9 @@ class SQLBatchExec:
 		self.counts = []
 		self.unquotedRegex = re.compile(r"(^.*)(\'@.*?m3u8\')(.*$)")
 
+	def UpdateUnquotedRegex(self, unquotedRegex):
+		if unquotedRegex != None:
+			self.unquotedRegex = unquotedRegex
 
 	def insert(self, tableName, pkeyNames, attrNames, values, keyPosition=None):
 		if len(values) > 0:

@@ -1,6 +1,7 @@
 # LoadOrganizations.py
 
 import os
+import re
 
 class LoadOrganizations:
 	def __init__(self, config, db, dbOut, languageReader):
@@ -9,7 +10,10 @@ class LoadOrganizations:
 		self.dbOut = dbOut
 		self.languageReader = languageReader
 		self.LicensorHosanna = "Hosanna"
-
+		self.organization_map = {}
+		# It updates the regex to use the SQL temporary variable as a reference in the creation
+		# of the organization and organization translations
+		self.dbOut.UpdateUnquotedRegex(re.compile(r"(.*?)(\'@[^']*?\')(.*$)"))
 
 	## This program requires the primary key of bible_fileset_copyright_organizations
 	## to be hash_id, organization_id, organization_role.
@@ -133,11 +137,17 @@ class LoadOrganizations:
 		else:
 			print(f"WARN {role} is empty for fileset id: {fileset_id}")
 
-	def process_licensors(self, dbp_org_list, organization_map, lpts_licensors):
+	def process_licensors(self, dbp_org_list, lpts_licensors):
 		# Initialize all current DB organizations with the "ToDelete" status
 		licensor_in_dbp = {org: "ToDelete" for org in dbp_org_list} if dbp_org_list else {}
 		for licensor in lpts_licensors:
-			org_id = organization_map.get(licensor)
+			org_id = self.organization_map.get(licensor)
+			# If the licensor does not exist it will create a new licensor (organization) record
+			if org_id == None:
+				org_id = self.create_organization(licensor)
+				# update the organization map with the sql temp variable
+				self.organization_map[licensor] = org_id
+
 			self.update_licensor_status(licensor_in_dbp, org_id, dbp_org_list)
 		return licensor_in_dbp
 
@@ -145,7 +155,7 @@ class LoadOrganizations:
 		if org_id:
 			licensor_in_dbp[org_id] = "Existing" if org_id in dbp_org_list else "New"
 
-	def process_fileset(self, fileset, organization_map, dbp_org_map):
+	def process_fileset(self, fileset, dbp_org_map):
 		bible_id, fileset_id, type_code_prefix, _, _, hash_id = fileset
 		type_code = type_code_prefix.split("_")[0]
 		dbp_fileset_id = fileset_id if fileset_id[8:10] != "SA" else fileset_id[:8] + "DA" + fileset_id[10:]
@@ -158,8 +168,29 @@ class LoadOrganizations:
 		if lpts_licensors == None:
 			return
 
-		licensor_in_dbp = self.process_licensors(dbp_org_map.get(hash_id), organization_map, lpts_licensors)
+		licensor_in_dbp = self.process_licensors(dbp_org_map.get(hash_id), lpts_licensors)
 		self.update_database(licensor_in_dbp, hash_id)
+
+	def create_organization(self, licensor_name):
+		table_name_org = "organizations"
+		table_name_org_trans = "organization_translations"
+		licensor_name_slug = licensor_name.replace(" ", "_")
+		# Create a unique temp variable to store the organization id to create the relationship
+		licensor_name_sql_key = "@" + licensor_name.replace(" ", "_")
+
+		# organization
+		org_attr_names = ("slug",)
+		org_values = [(licensor_name_slug,)]
+
+		# organization_translations
+		org_trans_values = [(licensor_name_sql_key, licensor_name, licensor_name, 6414)]
+		org_trans_attr_values = ("organization_id", "name", "description")
+		org_trans_pkey_names = ("language_id",)
+
+		self.dbOut.insert(table_name_org, (), org_attr_names, org_values, 0)
+		self.dbOut.insert(table_name_org_trans, org_trans_pkey_names, org_trans_attr_values, org_trans_values)
+
+		return licensor_name_sql_key
 
 	def update_database(self, licensor_in_dbp, hash_id):
 		inserts, deletes = [], []
@@ -181,11 +212,11 @@ class LoadOrganizations:
 	def update_licensors(self, fileset_list):
 		# Initialize database and logging setup
 		# Retrive all ltps_organizations records
-		organization_map = self.db.selectMap("SELECT lpts_organization, organization_id FROM lpts_organizations WHERE organization_role IN (1, 2)", ())
+		self.organization_map = self.db.selectMap("SELECT ot.name, o.id FROM organizations o INNER JOIN organization_translations ot ON o.id = ot.organization_id", ())
 		dbp_org_map = self.db.selectMapList("SELECT hash_id, organization_id FROM bible_fileset_copyright_organizations WHERE organization_role=2", ())
 
 		for fileset in fileset_list:
-			self.process_fileset(fileset, organization_map, dbp_org_map)
+			self.process_fileset(fileset, dbp_org_map)
 		
 
 # BWF 5/3/24 - distinguishing between licensor and holder is not relevant. remove this method.
