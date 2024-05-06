@@ -1,21 +1,14 @@
 # LoadOrganizations.py
 
-import io
 import os
-import sys
-from Config import *
-from LanguageReader import *
-from SQLUtility import *
-from SQLBatchExec import *
 
 class LoadOrganizations:
-
-
 	def __init__(self, config, db, dbOut, languageReader):
 		self.config = config
 		self.db = db
 		self.dbOut = dbOut
 		self.languageReader = languageReader
+		self.LicensorHosanna = "Hosanna"
 
 
 	## This program requires the primary key of bible_fileset_copyright_organizations
@@ -98,93 +91,101 @@ class LoadOrganizations:
 #				resultSet.add(name)
 
 
+	def get_lpts_licensors(self, language_record, fileset_id, type_code):
+		licensors = []
+		if language_record.Has_Ambiguous_Agreement():
+			print("WARN ambiguos agreement and it needs to be fixed for fileset id: %s" % (fileset_id))
+			return None
+
+		if language_record.Has_Other_Agreement():
+			print("WARN licensor: %s and co licensor: %s cannot be processed due to 'other Agreement' for fileset id: %s" % (language_record.Licensor(), language_record.CoLicensor(), fileset_id))
+			return None
+
+		if language_record.Has_Lora_Agreement() and type_code == "audio":
+			self.add_licensor_if_not_empty(licensors, language_record.Licensor(), fileset_id, "licensor")
+			return licensors
+
+		if language_record.Has_Lora_Agreement() and type_code == "text":
+			self.add_licensor_if_not_empty(licensors, language_record.CoLicensor(), fileset_id, "co-licensor")
+			if language_record.CoLicensor() == None and language_record.Licensor() != None:
+				print("WARN %s has ambiguos text agreement, licensor: %s may or may not be the text licensor" % (fileset_id, language_record.Licensor()))
+			return licensors
+
+		if language_record.Has_Text_Agreement() and type_code == "text":
+			self.add_licensor_if_not_empty(licensors, language_record.Licensor(), fileset_id, "licensor")
+			self.add_licensor_if_not_empty(licensors, language_record.CoLicensor(), fileset_id, "co-licensor")
+			return licensors
+		
+		if language_record.Has_Text_Agreement() and type_code == "audio" and language_record.Reg_Recording_Status() != "Text Only":
+			self.add_licensor_if_not_empty(licensors, self.LicensorHosanna, fileset_id, "licensor")
+			return licensors
+		
+		if language_record.Reg_Recording_Status() == "Text Only" and type_code == "text":
+			self.add_licensor_if_not_empty(licensors, language_record.Licensor(), fileset_id, "licensor")
+			self.add_licensor_if_not_empty(licensors, language_record.CoLicensor(), fileset_id, "co-licensor")
+			return licensors
+
+		return None
+
+	def add_licensor_if_not_empty(self, licensors, licensor, fileset_id, role):
+		if licensor:
+			licensors.append(licensor)
+		else:
+			print(f"WARN {role} is empty for fileset id: {fileset_id}")
+
+	def process_licensors(self, dbp_org_list, organization_map, lpts_licensors):
+		# Initialize all current DB organizations with the "ToDelete" status
+		licensor_in_dbp = {org: "ToDelete" for org in dbp_org_list} if dbp_org_list else {}
+		for licensor in lpts_licensors:
+			org_id = organization_map.get(licensor)
+			self.update_licensor_status(licensor_in_dbp, org_id, dbp_org_list)
+		return licensor_in_dbp
+
+	def update_licensor_status(self, licensor_in_dbp, org_id, dbp_org_list):
+		if org_id:
+			licensor_in_dbp[org_id] = "Existing" if org_id in dbp_org_list else "New"
+
+	def process_fileset(self, fileset, organization_map, dbp_org_map):
+		bible_id, fileset_id, type_code_prefix, _, _, hash_id = fileset
+		type_code = type_code_prefix.split("_")[0]
+		dbp_fileset_id = fileset_id if fileset_id[8:10] != "SA" else fileset_id[:8] + "DA" + fileset_id[10:]
+
+		language_record = self.languageReader.getLanguageRecordLoose(type_code, bible_id, dbp_fileset_id)[0]
+		if not language_record:
+			return
+
+		lpts_licensors = self.get_lpts_licensors(language_record, fileset_id, type_code)
+		if lpts_licensors == None:
+			return
+
+		licensor_in_dbp = self.process_licensors(dbp_org_map.get(hash_id), organization_map, lpts_licensors)
+		self.update_database(licensor_in_dbp, hash_id)
+
+	def update_database(self, licensor_in_dbp, hash_id):
+		inserts, deletes = [], []
+		for licensor, status in licensor_in_dbp.items():
+			if status == "New":
+				inserts.append((licensor, hash_id, 2))
+			elif status == "ToDelete":
+				deletes.append((hash_id, licensor, 2))
+
+		table_name = "bible_fileset_copyright_organizations"
+		attr_names = ("organization_id",)
+		pkey_names = ("hash_id", "organization_role")
+		pkey_names_to_delete = ("hash_id", "organization_id", "organization_role")
+
+		self.dbOut.insert(table_name, pkey_names, attr_names, inserts)
+		self.dbOut.delete(table_name, pkey_names_to_delete, deletes)
+
 	## This method updates the bible_fileset_copyright_organization with licensors
-	def updateLicensors(self, filesetList):
-		inserts = []
-		updates = []
-		deletes = []
-		sql = "SELECT lpts_organization, organization_id FROM lpts_organizations WHERE organization_role=2"
-		organizationMap = self.db.selectMap(sql, ())
-		sql = "SELECT hash_id, organization_id FROM bible_fileset_copyright_organizations WHERE organization_role=2"
-		dbpOrgMap = self.db.selectMap(sql, ())
-		for (bibleId, filesetId, setTypeCode, setSizeCode, assetId, hashId) in filesetList:
-			typeCode = setTypeCode.split("_")[0]
-			if filesetId[8:10] == "SA":
-				dbpFilesetId = filesetId[:8] + "DA" + filesetId[10:]
-			else:
-				dbpFilesetId = filesetId
-			(languageRecord, lptsIndex) = self.languageReader.getLanguageRecordLoose(typeCode, bibleId, dbpFilesetId)
-			licensorOrg = None
-			licensorOrg2 = None
-			if languageRecord != None:
+	def update_licensors(self, fileset_list):
+		# Initialize database and logging setup
+		# Retrive all ltps_organizations records
+		organization_map = self.db.selectMap("SELECT lpts_organization, organization_id FROM lpts_organizations WHERE organization_role IN (1, 2)", ())
+		dbp_org_map = self.db.selectMapList("SELECT hash_id, organization_id FROM bible_fileset_copyright_organizations WHERE organization_role=2", ())
 
-# BWF notes May 3, 2024 (remove before submitting PR)
-#
-# role is no longer relevant, but we'll leave it for now, using only role=2 and never role = 1
-#
-# if more than one agreement Type is selected (could be LORA, TextAgreement, Other). 
-# 			log statement that this data needs to be fixed
-#           continue
-#typeCode = setTypeCode.split("_")[0]
-# if languageReader.LORA = 1
-	# if Typecode = Audio
-#    	lptsLicensor = languageRecord.Licensor()
-#		if languageRecord.CoLicensor() is empty
-#			log a statement - languageRecord.Licensor may or may not be text licensor - needs investigation
-	# else	if Typecode = Text and languageRecord.CoLicensor is not empty
-# 		lptsLicensor = languageRecord.CoLicensor
-
-
-# else if languageReader.TextAgreement = 1 (ticket 2173)
-#	if Type = Text
-#    	lptsLicensor = languageRecord.Licensor 
-#    	lptsLicensor2 = languageRecord.CoLicensor if CoLicensor is not empty
-# 	else if Type = Audio
-#    	set licensor = Hosanna	(create a constant called "Hosanna")
-			# old -- remove			
-				# lptsLicensor = languageRecord.Licensor()
-				# if lptsLicensor == None:
-				# 	lptsLicensor = languageRecord.CoLicensor()
-				# if lptsLicensor == None:
-				# 	print("WARN %s has no licensor field." % (filesetId))
-				# else:
-					#name = self.languageReader.reduceCopyrightToName(lptsLicensor)
-	 
-
-	 	if lptsLicensor != None
-					licensorOrg = organizationMap.get(lptsLicensor)
-					if licensorOrg == None:
-						print("WARN %s has no org_id for licensor: %s" % (filesetId, lptsLicensor))
-	 	# needed for TextAgreement (ticket 2173)
-		# if lptsLicensor2 != None
-		# 			licensorOrg2 = organizationMap.get(lptsLicensor2)
-		# 			if licensorOrg2 == None:
-		# 				print("WARN %s has no org_id for licensor: %s" % (filesetId, lptsLicensor2))
-		
-		# BWF: now, we may have two licensor orgs for the same hashId, so retrieve a collection instead of just one
-		# this only applies to Text Agreement (2173)
-		dbpOrgList = dbpOrgMap.get(hashId)
-		
-		# maybe make a licensorOrgList
-		# logic to match licensorOrgList entries to dbpOrgList entries
-		# 
-		if licensorOrg != None and dbpOrg == None:
-			inserts.append((licensorOrg, hashId, 2))
-		elif licensorOrg == None and dbpOrg != None:
-			deletes.append((hashId, 2))
-		elif licensorOrg != dbpOrg:
-			updates.append(("organization_id", licensorOrg, dbpOrg, hashId, 2))
-
-	
-   
-   
-
-		tableName = "bible_fileset_copyright_organizations"
-		pkeyNames = ("hash_id", "organization_role")
-		attrNames = ("organization_id",)
-		self.dbOut.insert(tableName, pkeyNames, attrNames, inserts)
-		self.dbOut.updateCol(tableName, pkeyNames, updates)
-		self.dbOut.delete(tableName, pkeyNames, deletes)
+		for fileset in fileset_list:
+			self.process_fileset(fileset, organization_map, dbp_org_map)
 		
 
 # BWF 5/3/24 - distinguishing between licensor and holder is not relevant. remove this method.
@@ -348,23 +349,31 @@ class LoadOrganizations:
 
 
 if (__name__ == '__main__'):
+	from Config import Config
+	from SQLUtility import SQLUtility
+	from SQLBatchExec import SQLBatchExec
+	from LanguageReaderCreator import LanguageReaderCreator
+
 	config = Config()
 	db = SQLUtility(config)
 	dbOut = SQLBatchExec(config)
-	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
-	orgs = LoadOrganizations(config, db, dbOut, languageReader)
-	orgs.changeCopyrightOrganizationsPrimaryKey()
-	sql = ("SELECT b.bible_id, bf.id, bf.set_type_code, bf.set_size_code, bf.asset_id, bf.hash_id"
-		" FROM bible_filesets bf JOIN bible_fileset_connections b ON bf.hash_id = b.hash_id"
-		" ORDER BY b.bible_id, bf.id, bf.set_type_code"
-		" LOCK IN SHARE MODE")
-	filesetList = db.select(sql, ())
-	print("num filelists", len(filesetList))
-	orgs.updateLicensors(filesetList)
-	orgs.updateCopyrightHolders(filesetList)
-	dbOut.displayStatements()
-	dbOut.displayCounts()
-	#dbOut.execute("test-orgs")
-	db.close()
+	migration_stage = "B" if os.getenv("DATA_MODEL_MIGRATION_STAGE") == None else os.getenv("DATA_MODEL_MIGRATION_STAGE")
+	print("migration stage:", migration_stage)
+
+	if migration_stage != None:
+		languageReader = LanguageReaderCreator(migration_stage).create(config.filename_lpts_xml)
+		orgs = LoadOrganizations(config, db, dbOut, languageReader)
+		sql = ("SELECT b.bible_id, bf.id, bf.set_type_code, bf.set_size_code, bf.asset_id, bf.hash_id"
+			" FROM bible_filesets bf JOIN bible_fileset_connections b ON bf.hash_id = b.hash_id"
+			" ORDER BY b.bible_id, bf.id, bf.set_type_code"
+			" LOCK IN SHARE MODE")
+		filesetList = db.select(sql, ())
+		if filesetList != None:
+			print("num filelists", len(filesetList))
+			orgs.update_licensors(filesetList)
+			dbOut.displayStatements()
+			dbOut.displayCounts()
+			dbOut.execute("test-orgs")
+			db.close()
 
 
