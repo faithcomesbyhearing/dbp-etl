@@ -98,44 +98,56 @@ class LoadOrganizations:
 	def get_lpts_licensors(self, language_record, fileset_id, type_code):
 		licensors = []
 		if language_record.Has_Ambiguous_Agreement():
-			print("WARN ambiguos agreement and it needs to be fixed for fileset id: %s" % (fileset_id))
+			print("ERROR ambiguous agreement and it needs to be fixed for fileset id: %s" % (fileset_id))
 			return None
 
 		if language_record.Has_Other_Agreement():
-			print("WARN licensor: %s and co licensor: %s cannot be processed due to 'other Agreement' for fileset id: %s" % (language_record.Licensor(), language_record.CoLicensor(), fileset_id))
+			print("WARN Agreement Type is 'Other', which is not currently being processed. licensor: %s and co licensor: %s, fileset id: %s" % (language_record.Licensor(), language_record.CoLicensor(), fileset_id))
 			return None
 
 		if language_record.Has_Lora_Agreement() and type_code == "audio":
-			self.add_licensor_if_not_empty(licensors, language_record.Licensor(), fileset_id, "licensor")
+			if language_record.Licensor() != None:
+				licensors.append(language_record.Licensor())
+			else:
+				print(f"ERROR Agreement Type is LORA but licensor is empty for fileset id: {fileset_id}")
+
 			return licensors
 
 		if language_record.Has_Lora_Agreement() and type_code == "text":
-			self.add_licensor_if_not_empty(licensors, language_record.CoLicensor(), fileset_id, "co-licensor")
+			if language_record.CoLicensor() != None:
+				licensors.append(language_record.CoLicensor())
+
 			if language_record.CoLicensor() == None and language_record.Licensor() != None:
-				print("WARN %s has ambiguos text agreement, licensor: %s may or may not be the text licensor" % (fileset_id, language_record.Licensor()))
+				print("WARN Agreement Type is LORA. Licensor %s has been added as the audio licensor, fileset id: %s. We cannot know if the licensor is also the text licensor. Please modify manually if necessary" % (language_record.Licensor(), fileset_id))
+
 			return licensors
 
 		if language_record.Has_Text_Agreement() and type_code == "text":
-			self.add_licensor_if_not_empty(licensors, language_record.Licensor(), fileset_id, "licensor")
-			self.add_licensor_if_not_empty(licensors, language_record.CoLicensor(), fileset_id, "co-licensor")
+			if language_record.Licensor() != None:
+				licensors.append(language_record.Licensor())
+			else:
+				print(f"ERROR Agreement Type is Text but licensor is empty for fileset id: {fileset_id}")
+
+			if language_record.CoLicensor() != None:
+				licensors.append(language_record.CoLicensor())
+
 			return licensors
 		
 		if language_record.Has_Text_Agreement() and type_code == "audio" and language_record.Reg_Recording_Status() != "Text Only":
-			self.add_licensor_if_not_empty(licensors, self.LicensorHosanna, fileset_id, "licensor")
+			licensors.append(self.LicensorHosanna)
+
 			return licensors
 		
 		if language_record.Reg_Recording_Status() == "Text Only" and type_code == "text":
-			self.add_licensor_if_not_empty(licensors, language_record.Licensor(), fileset_id, "licensor")
-			self.add_licensor_if_not_empty(licensors, language_record.CoLicensor(), fileset_id, "co-licensor")
+			if language_record.Licensor() != None:
+				licensors.append(language_record.Licensor())
+
+			if language_record.CoLicensor() != None:
+				licensors.append(language_record.CoLicensor())
+
 			return licensors
 
 		return None
-
-	def add_licensor_if_not_empty(self, licensors, licensor, fileset_id, role):
-		if licensor:
-			licensors.append(licensor)
-		else:
-			print(f"WARN {role} is empty for fileset id: {fileset_id}")
 
 	def process_licensors(self, dbp_org_list, lpts_licensors):
 		# Initialize all current DB organizations with the "ToDelete" status
