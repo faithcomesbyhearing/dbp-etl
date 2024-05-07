@@ -3,6 +3,7 @@
 import os
 import re
 import unicodedata
+from SQLBatchExec import SQLBatchExec
 
 class LoadOrganizations:
 	def __init__(self, config, db, dbOut, languageReader):
@@ -206,7 +207,7 @@ class LoadOrganizations:
 		org_values = [(licensor_name_slug,)]
 
 		# organization_translations
-		org_trans_values = [(licensor_name_sql_key, licensor_name, licensor_name, 6414)]
+		org_trans_values = [(licensor_name_sql_key, licensor_name.replace("'", "\\'"), licensor_name.replace("'", "\\'"), 6414)]
 		org_trans_attr_values = ("organization_id", "name", "description")
 		org_trans_pkey_names = ("language_id",)
 
@@ -405,7 +406,6 @@ class LoadOrganizations:
 if (__name__ == '__main__'):
 	from Config import Config
 	from SQLUtility import SQLUtility
-	from SQLBatchExec import SQLBatchExec
 	from LanguageReaderCreator import LanguageReaderCreator
 
 	config = Config()
