@@ -2,6 +2,7 @@
 
 import os
 import re
+import unicodedata
 
 class LoadOrganizations:
 	def __init__(self, config, db, dbOut, languageReader):
@@ -94,7 +95,6 @@ class LoadOrganizations:
 #			if not name in copyrightSet:
 #				resultSet.add(name)
 
-
 	def get_lpts_licensors(self, language_record, fileset_id, type_code):
 		licensors = []
 		if language_record.Has_Ambiguous_Agreement():
@@ -165,7 +165,8 @@ class LoadOrganizations:
 
 	def update_licensor_status(self, licensor_in_dbp, org_id, dbp_org_list):
 		if org_id:
-			licensor_in_dbp[org_id] = "Existing" if org_id in dbp_org_list else "New"
+			# If the list of organization references in DBP is empty, it will create a new reference in DBP
+			licensor_in_dbp[org_id] = "Existing" if dbp_org_list != None and org_id in dbp_org_list else "New"
 
 	def process_fileset(self, fileset, dbp_org_map):
 		bible_id, fileset_id, type_code_prefix, _, _, hash_id = fileset
@@ -183,12 +184,22 @@ class LoadOrganizations:
 		licensor_in_dbp = self.process_licensors(dbp_org_map.get(hash_id), lpts_licensors)
 		self.update_database(licensor_in_dbp, hash_id)
 
+	def create_licensor_slug(self, licensor_name):
+		normalized_string = unicodedata.normalize('NFKD', licensor_name).encode('ASCII', 'ignore').decode('utf-8')
+		# Replace any character that is not a letter, digit, or underscore with an underscore
+		temp_licensor_name = re.sub(r'\W', '-', normalized_string)
+		# Remove leading/trailing underscores and collapse multiple underscores to one
+		safe_licensor_name = re.sub(r'^-+|-+$', '', re.sub(r'-{2,}', '-', temp_licensor_name))
+		safe_licensor_name = safe_licensor_name.lower()
+
+		return safe_licensor_name
+
 	def create_organization(self, licensor_name):
 		table_name_org = "organizations"
 		table_name_org_trans = "organization_translations"
-		licensor_name_slug = licensor_name.replace(" ", "_")
+		licensor_name_slug = self.create_licensor_slug(licensor_name)
 		# Create a unique temp variable to store the organization id to create the relationship
-		licensor_name_sql_key = "@" + licensor_name.replace(" ", "_")
+		licensor_name_sql_key = "@" + SQLBatchExec.sanitize_value(licensor_name)
 
 		# organization
 		org_attr_names = ("slug",)
