@@ -790,6 +790,28 @@ class LanguageRecord (LanguageRecordInterface):
 	def Video_Matt_DamLoad(self):
 		return self.record.get("Video_Matt_DamLoad")
 
+	def LORA(self):
+		return int(self.record.get("LORA"))
+
+	def Other_Agreement(self):
+		return int(self.record.get("OtherAgreement"))
+
+	def Text_Agreement(self):
+		return int(self.record.get("TextAgreement"))
+
+	def Has_Lora_Agreement(self):
+		return self.LORA() == 1
+
+	def Has_Other_Agreement(self):
+		return self.Other_Agreement() == 1
+
+	def Has_Text_Agreement(self):
+		return self.Text_Agreement() == 1
+
+	def Has_Ambiguous_Agreement(self):
+		total = self.LORA() + self.Text_Agreement() + self.Other_Agreement()
+		return total > 1
+
 	def Volumne_Name(self):
 		result = self.record.get("Volumne_Name")
 		if result == "N/A" or result == "#N/A":
