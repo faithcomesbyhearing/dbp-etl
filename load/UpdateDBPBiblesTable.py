@@ -43,6 +43,10 @@ class UpdateDBPBiblesTable:
 		for (iso, name, langId) in resultSet:
 			self.languageMap2[(iso, name)] = langId
 		self.languageMap3 = self.db.selectMap("SELECT lower(iso), id FROM languages ORDER BY id desc", ())
+		resultSet = self.db.select("SELECT l.id, lower(l.iso), lower(lt.name) AS language_name, lower(c.name) AS country_name FROM languages l JOIN language_translations lt ON lt.language_source_id = l.id and lt.language_translation_id = 6414 AND lt.priority = 9 JOIN countries c ON c.id = l.country_id", ())
+		self.languageCountryMap = {}
+		for (language_id, iso, language_name, country_name) in resultSet:
+			self.languageCountryMap[(iso, language_name, country_name)] = language_id
 		self.yearPattern = re.compile("([0-9]{4})")
 
 
@@ -113,33 +117,46 @@ class UpdateDBPBiblesTable:
 		self.dbOut.delete(tableName, pkeyNames, deleteRows)
 
 
+	def normalize_language_record(self, language_record):
+		iso = language_record.ISO()
+		lang_name = language_record.LangName()
+		country_name = language_record.Country()
+
+		return (iso.lower() if iso else None,
+				lang_name.lower() if lang_name else None,
+				country_name.lower() if country_name else None)
+
 	def biblesLanguageId(self, bibleId, languageRecords):
 		final = set()
-		for (lptsIndex, languageRecord) in languageRecords:
-			iso = languageRecord.ISO()
-			iso = iso.lower() if iso != None else None
-			langName = languageRecord.LangName()
-			langName = langName.lower() if langName != None else None
-			result = self.languageMap1.get((iso, langName))
-			#print("languageMap1", bibleId, iso, langName, result)
-			if result != None:
+
+		for (_, languageRecord) in languageRecords:
+			iso, langName, countryName = self.normalize_language_record(languageRecord)
+			result = self.languageCountryMap.get((iso, langName, countryName))
+
+			if result:
 				final.add(result)
+			else:
+				print("WARN iso: %s | name: %s | country: %s did not match with StockNumber: %s" % (iso, langName, countryName, languageRecord.Reg_StockNumber()))
+
 		if len(final) == 0:
-			for (lptsIndex, languageRecord) in languageRecords:
-				iso = languageRecord.ISO()
-				iso = iso.lower() if iso != None else None
-				langName = languageRecord.LangName()
-				langName = langName.lower() if langName != None else None
-				result = self.languageMap2.get((iso, langName))
-				#print("languageMap2", bibleId, iso, langName, result)
+			for (_, languageRecord) in languageRecords:
+				iso, langName, _ = self.normalize_language_record(languageRecord)
+				result = self.languageMap1.get((iso, langName))
+
 				if result != None:
 					final.add(result)
 		if len(final) == 0:
-			for (lptsIndex, languageRecord) in languageRecords:
-				iso = languageRecord.ISO()
-				iso = iso.lower() if iso != None else None
+			for (_, languageRecord) in languageRecords:
+				iso, langName, _ = self.normalize_language_record(languageRecord)
+				result = self.languageMap2.get((iso, langName))
+
+				if result != None:
+					final.add(result)
+		if len(final) == 0:
+			for (_, languageRecord) in languageRecords:
+				iso, _, _ = self.normalize_language_record(languageRecord)
 				result = self.languageMap3.get(iso)
-				#print("languageMap3", bibleId, iso, result)
+
 				if result != None:
 					final.add(result)
 		if len(final) == 0:
@@ -316,7 +333,6 @@ class UpdateDBPBiblesTable:
 
 ## Unit Test
 if (__name__ == '__main__'):
-	from LanguageReader import *
 	from LanguageReaderCreator import LanguageReaderCreator
 
 	config = Config()
