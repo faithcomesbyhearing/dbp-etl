@@ -96,6 +96,79 @@ class LoadOrganizations:
 #			if not name in copyrightSet:
 #				resultSet.add(name)
 
+	def process_other_agreement(self, language_record, type_code, fileset_id):
+		licensors = []
+		if language_record.Has_Ambiguous_Methodology():
+			print("ERROR Agreement Type is 'Other', ambiguous methodology and it needs to be fixed for fileset id: %s" % (fileset_id))
+			return None
+
+		if language_record.HasTraditionalRecording():
+			if type_code == "text":
+				if language_record.Licensor() != None:
+					licensors.append(language_record.Licensor())
+				else:
+					print(f"ERROR Agreement Type is 'Other' and Methodology 'TraditionalRecording' but licensor is empty for fileset id: {fileset_id}")
+			else:
+				print(f"ERROR Agreement Type is 'Other', Methodology is TraditionalRecording, but type is not text. Unable to assign for fileset id: {fileset_id}")
+				return None
+
+			return licensors
+
+		if language_record.HasVirtualRecording():
+			if type_code == "text":
+				if language_record.Licensor() != None:
+					licensors.append(language_record.Licensor())
+				else:
+					print(f"ERROR Agreement Type is 'Other' and Methodology 'VirtualRecording' but licensor is empty for fileset id: {fileset_id}")
+			else:
+				print(f"ERROR Agreement Type is 'Other', Methodology is 'VirtualRecording', but type is not text. Unable to assign for fileset id: {fileset_id}")
+				return None
+
+			return licensors
+
+		if language_record.HasPartner():
+			if type_code == "audio":
+				if language_record.Licensor() != None:
+					licensors.append(language_record.Licensor())
+				else:
+					print(f"ERROR Agreement Type is 'Other' and Methodology 'Partner' but licensor is empty for fileset id: {fileset_id}")
+			if type_code == "text":
+				if language_record.CoLicensor() != None:
+					licensors.append(language_record.CoLicensor())
+				else:
+					print(f"WARN Agreement Type is 'Other' and Methodology 'Partner' but co-licensor is empty for fileset id: {fileset_id}")
+			return licensors
+
+		if language_record.HasJoint():
+			if  type_code == "text":
+				if language_record.Licensor() != None:
+					licensors.append(language_record.Licensor())
+				else:
+					print(f"ERROR Agreement Type is 'Other' and Methodology 'Joint' but licensor is empty for fileset id: {fileset_id}")
+			else:
+				print(f"ERROR Agreement Type is 'Other', Methodology is 'Joint', but type is not text. Unable to assign for fileset id: {fileset_id}")
+				return None
+
+			return licensors
+
+		if language_record.HearThis():
+			print(f"WARN Agreement Type is 'Other' and Methodology 'Hear This'. We are not able to process for fileset id: {fileset_id}")
+			return None
+
+		if language_record.HasRender():
+			if  type_code == "text":
+				if language_record.Licensor() != None:
+					licensors.append(language_record.Licensor())
+				else:
+					print(f"ERROR Agreement Type is 'Other' and Methodology 'Render' but licensor is empty for fileset id: {fileset_id}")
+			else:
+				print(f"ERROR Agreement Type is 'Other', Methodology is 'Render', but type is not text. Unable to assign for fileset id: {fileset_id}")
+				return None
+
+		print("ERROR AgreementType is Other. Unable to recognize how to process. licensor: %s, co-licensor: %s, fileset id: %s, type code: %s" % (language_record.Licensor(), language_record.CoLicensor(), fileset_id, type_code))
+
+		return None
+
 	def get_lpts_licensors(self, language_record, fileset_id, type_code):
 		licensors = []
 		if language_record.Has_Ambiguous_Agreement():
@@ -103,8 +176,13 @@ class LoadOrganizations:
 			return None
 
 		if language_record.Has_Other_Agreement():
-			print("WARN Agreement Type is 'Other', which is not currently being processed. licensor: %s and co licensor: %s, fileset id: %s" % (language_record.Licensor(), language_record.CoLicensor(), fileset_id))
-			return None
+			new_licensors = self.process_other_agreement(language_record, type_code, fileset_id)
+			if new_licensors != None:
+				licensors.extend(new_licensors)
+			else:
+				return None
+
+			return licensors
 
 		if language_record.Has_Lora_Agreement() and type_code == "audio":
 			if language_record.Licensor() != None:
