@@ -155,9 +155,15 @@ class LoadOrganizations:
 			print(f"WARN Agreement Type is 'Other' and Methodology 'Hear This'. We are not able to process for fileset id: {fileset_id}")
 			return None
 
-		if language_record.HasRender() and language_record.Licensor() != None and type_code == "audio":
-			licensors.append(language_record.Licensor())
-			return licensors
+		if language_record.HasRender():
+			if  type_code == "text":
+				if language_record.Licensor() != None:
+					licensors.append(language_record.Licensor())
+				else:
+					print(f"ERROR Agreement Type is 'Other' and Methodology 'Render' but licensor is empty for fileset id: {fileset_id}")
+			else:
+				print(f"ERROR Agreement Type is 'Other', Methodology is 'Render', but type is not text. Unable to assign for fileset id: {fileset_id}")
+				return None
 
 		print("ERROR AgreementType is Other. Unable to recognize how to process. licensor: %s, co-licensor: %s, fileset id: %s, type code: %s" % (language_record.Licensor(), language_record.CoLicensor(), fileset_id, type_code))
 
