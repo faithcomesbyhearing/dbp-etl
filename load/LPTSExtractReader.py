@@ -799,6 +799,42 @@ class LanguageRecord (LanguageRecordInterface):
 	def Text_Agreement(self):
 		return int(self.record.get("TextAgreement"))
 
+	def TraditionalRecording(self):
+		return int(self.record.get("TraditionalRecording"))
+
+	def VirtualRecording(self):
+		return int(self.record.get("VirtualRecording"))
+
+	def Partner(self):
+		return int(self.record.get("Partner"))
+
+	def Joint(self):
+		return int(self.record.get("Joint"))
+
+	def HearThis(self):
+		return int(self.record.get("HearThis"))
+
+	def Render(self):
+		return int(self.record.get("Render"))
+
+	def HasTraditionalRecording(self):
+		return self.TraditionalRecording() == 1
+
+	def HasVirtualRecording(self):
+		return self.VirtualRecording() == 1
+
+	def HasPartner(self):
+		return self.Partner() == 1
+
+	def HasJoint(self):
+		return self.Joint() == 1
+
+	def HasHearThis(self):
+		return self.HearThis() == 1
+
+	def HasRender(self):
+		return self.Render() == 1
+
 	def Has_Lora_Agreement(self):
 		return self.LORA() == 1
 
@@ -810,6 +846,10 @@ class LanguageRecord (LanguageRecordInterface):
 
 	def Has_Ambiguous_Agreement(self):
 		total = self.LORA() + self.Text_Agreement() + self.Other_Agreement()
+		return total > 1
+
+	def Has_Ambiguous_Methodology(self):
+		total = self.TraditionalRecording() + self.VirtualRecording() + self.Partner() + self.Joint() + self.HearThis() + self.Render()
 		return total > 1
 
 	def Volumne_Name(self):
