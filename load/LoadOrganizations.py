@@ -102,18 +102,28 @@ class LoadOrganizations:
 			print("ERROR Agreement Type is 'Other', ambiguous methodology and it needs to be fixed for fileset id: %s" % (fileset_id))
 			return None
 
-		if language_record.HasTraditionalRecording() and type_code == "text":
-			if language_record.Licensor() != None:
-				licensors.append(language_record.Licensor())
+		if language_record.HasTraditionalRecording():
+			if type_code == "text":
+				if language_record.Licensor() != None:
+					licensors.append(language_record.Licensor())
+				else:
+					print(f"ERROR Agreement Type is 'Other' and Methodology 'TraditionalRecording' but licensor is empty for fileset id: {fileset_id}")
 			else:
-				print(f"ERROR Agreement Type is 'Other' and Methodology 'TraditionalRecording' but licensor is empty for fileset id: {fileset_id}")
+				print(f"ERROR Agreement Type is 'Other', Methodology is TraditionalRecording, but type is not text. Unable to assign for fileset id: {fileset_id}")
+				return None
+
 			return licensors
 
-		if language_record.HasVirtualRecording() and type_code == "text":
-			if language_record.Licensor() != None:
-				licensors.append(language_record.Licensor())
+		if language_record.HasVirtualRecording():
+			if type_code == "text":
+				if language_record.Licensor() != None:
+					licensors.append(language_record.Licensor())
+				else:
+					print(f"ERROR Agreement Type is 'Other' and Methodology 'VirtualRecording' but licensor is empty for fileset id: {fileset_id}")
 			else:
-				print(f"ERROR Agreement Type is 'Other' and Methodology 'VirtualRecording' but licensor is empty for fileset id: {fileset_id}")
+				print(f"ERROR Agreement Type is 'Other', Methodology is 'VirtualRecording', but type is not text. Unable to assign for fileset id: {fileset_id}")
+				return None
+
 			return licensors
 
 		if language_record.HasPartner():
@@ -129,11 +139,16 @@ class LoadOrganizations:
 					print(f"WARN Agreement Type is 'Other' and Methodology 'Partner' but co-licensor is empty for fileset id: {fileset_id}")
 			return licensors
 
-		if language_record.HasJoint() and type_code == "text":
-			if language_record.Licensor() != None:
-				licensors.append(language_record.Licensor())
+		if language_record.HasJoint():
+			if  type_code == "text":
+				if language_record.Licensor() != None:
+					licensors.append(language_record.Licensor())
+				else:
+					print(f"ERROR Agreement Type is 'Other' and Methodology 'Joint' but licensor is empty for fileset id: {fileset_id}")
 			else:
-				print(f"ERROR Agreement Type is 'Other' and Methodology 'Joint' but licensor is empty for fileset id: {fileset_id}")
+				print(f"ERROR Agreement Type is 'Other', Methodology is 'Joint', but type is not text. Unable to assign for fileset id: {fileset_id}")
+				return None
+
 			return licensors
 
 		if language_record.HearThis():
@@ -144,7 +159,7 @@ class LoadOrganizations:
 			licensors.append(language_record.Licensor())
 			return licensors
 
-		print("WARN Agreement Type is 'Other', which is not currently being processed. licensor: %s and co licensor: %s, fileset id: %s, type code: %s" % (language_record.Licensor(), language_record.CoLicensor(), fileset_id, type_code))
+		print("ERROR AgreementType is Other. Unable to recognize how to process. licensor: %s, co-licensor: %s, fileset id: %s, type code: %s" % (language_record.Licensor(), language_record.CoLicensor(), fileset_id, type_code))
 
 		return None
 
