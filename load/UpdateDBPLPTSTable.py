@@ -108,7 +108,7 @@ class UpdateDBPLPTSTable:
 	## Bible Filesets
 	##
 	def upsertBibleFilesetsAndConnections(self):
-		indexMap = {"audio": [1, 2, 3], "text": [1, 2, 3], "video": [1]}
+		indexMap = {"audio": [1, 2, 3], "text": [1, 2, 3], "video": [1, 2, 3 ]}
 
 		lptsFilesetList = []
 		lptsFilesetProcessed = {}
