@@ -12,6 +12,8 @@ class LoadOrganizations:
 		self.dbOut = dbOut
 		self.languageReader = languageReader
 		self.LicensorHosanna = "Hosanna"
+		self.LicensorBibleMediaGroupLLC = "Bible Media Group, LLC"
+		self.CopyrightVideoText = "Courtesy of LUMO Project Films"
 		self.organization_map = {}
 		# It updates the regex to use the SQL temporary variable as a reference in the creation
 		# of the organization and organization translations
@@ -120,8 +122,9 @@ class LoadOrganizations:
 					licensors.append(language_record.Licensor())
 				else:
 					print(f"ERROR Agreement Type is 'Other' and Methodology 'VirtualRecording' but licensor is empty for fileset id: {fileset_id}")
+			elif type_code == "audio":
+				licensors.append(self.LicensorHosanna)
 			else:
-				print(f"ERROR Agreement Type is 'Other', Methodology is 'VirtualRecording', but type is not text. Unable to assign for fileset id: {fileset_id}")
 				return None
 
 			return licensors
@@ -145,8 +148,9 @@ class LoadOrganizations:
 					licensors.append(language_record.Licensor())
 				else:
 					print(f"ERROR Agreement Type is 'Other' and Methodology 'Joint' but licensor is empty for fileset id: {fileset_id}")
+			elif type_code == "audio":
+				licensors.append(self.LicensorHosanna)
 			else:
-				print(f"ERROR Agreement Type is 'Other', Methodology is 'Joint', but type is not text. Unable to assign for fileset id: {fileset_id}")
 				return None
 
 			return licensors
@@ -165,43 +169,36 @@ class LoadOrganizations:
 				print(f"ERROR Agreement Type is 'Other', Methodology is 'Render', but type is not text. Unable to assign for fileset id: {fileset_id}")
 				return None
 
-		print("ERROR AgreementType is Other. Unable to recognize how to process. licensor: %s, co-licensor: %s, fileset id: %s, type code: %s" % (language_record.Licensor(), language_record.CoLicensor(), fileset_id, type_code))
-
 		return None
 
-	def get_lpts_licensors(self, language_record, fileset_id, type_code):
+	def process_lora_agreement(self, language_record, type_code, fileset_id):
 		licensors = []
-		if language_record.Has_Ambiguous_Agreement():
-			print("ERROR ambiguous agreement and it needs to be fixed for fileset id: %s" % (fileset_id))
-			return None
 
-		if language_record.Has_Other_Agreement():
-			new_licensors = self.process_other_agreement(language_record, type_code, fileset_id)
-			if new_licensors != None:
-				licensors.extend(new_licensors)
-			else:
-				return None
-
-			return licensors
-
-		if language_record.Has_Lora_Agreement() and type_code == "audio":
+		if type_code == "audio":
 			if language_record.Licensor() != None:
 				licensors.append(language_record.Licensor())
 			else:
 				print(f"ERROR Agreement Type is LORA but licensor is empty for fileset id: {fileset_id}")
 
+			if language_record.Copyrightp() != None:
+				copyrightp_safe = language_record.Copyrightp().lower()
+				if self.LicensorHosanna.lower() in copyrightp_safe:
+					licensors.append(self.LicensorHosanna)
+
 			return licensors
 
-		if language_record.Has_Lora_Agreement() and type_code == "text":
+		if type_code == "text":
 			if language_record.CoLicensor() != None:
 				licensors.append(language_record.CoLicensor())
 
-			if language_record.CoLicensor() == None and language_record.Licensor() != None:
-				print("WARN Agreement Type is LORA. Licensor %s has been added as the audio licensor, fileset id: %s. We cannot know if the licensor is also the text licensor. Please modify manually if necessary" % (language_record.Licensor(), fileset_id))
-
 			return licensors
 
-		if language_record.Has_Text_Agreement() and type_code == "text":
+		return None
+
+	def process_text_agreement(self, language_record, type_code, fileset_id):
+		licensors = []
+
+		if type_code == "text":
 			if language_record.Licensor() != None:
 				licensors.append(language_record.Licensor())
 			else:
@@ -212,11 +209,50 @@ class LoadOrganizations:
 
 			return licensors
 		
-		if language_record.Has_Text_Agreement() and type_code == "audio" and language_record.Reg_Recording_Status() != "Text Only":
+		if type_code == "audio" and language_record.Reg_Recording_Status() != "Text Only":
 			licensors.append(self.LicensorHosanna)
-
 			return licensors
+
+		return None
+
+	def process_copyright_video_agreement(self, language_record, type_code, fileset_id):
+		licensors = []
+
+		if type_code == "video":
+			copyright_video_safe = language_record.Copyright_Video().lower()
+			if self.CopyrightVideoText.lower() in copyright_video_safe:
+				licensors.append(self.LicensorBibleMediaGroupLLC)
+				return licensors
 		
+		return None
+
+
+	def get_lpts_licensors(self, language_record, fileset_id, type_code):
+		licensors = []
+
+		if language_record.Has_Copyright_Video():
+			new_licensors = self.process_copyright_video_agreement(language_record, type_code, fileset_id)
+			if new_licensors != None:
+				licensors.extend(new_licensors)
+
+		if language_record.Has_Ambiguous_Agreement():
+			print("ERROR ambiguous agreement and it needs to be fixed for fileset id: %s" % (fileset_id))
+
+		elif language_record.Has_Other_Agreement():
+			new_licensors = self.process_other_agreement(language_record, type_code, fileset_id)
+			if new_licensors != None:
+				licensors.extend(new_licensors)
+
+		elif language_record.Has_Lora_Agreement():
+			new_licensors = self.process_lora_agreement(language_record, type_code, fileset_id)
+			if new_licensors != None:
+				licensors.extend(new_licensors)
+
+		elif language_record.Has_Text_Agreement():
+			new_licensors = self.process_text_agreement(language_record, type_code, fileset_id)
+			if new_licensors != None:
+				licensors.extend(new_licensors)
+
 		if language_record.Reg_Recording_Status() == "Text Only" and type_code == "text":
 			if language_record.Licensor() != None:
 				licensors.append(language_record.Licensor())
@@ -224,9 +260,7 @@ class LoadOrganizations:
 			if language_record.CoLicensor() != None:
 				licensors.append(language_record.CoLicensor())
 
-			return licensors
-
-		return None
+		return licensors
 
 	def process_licensors(self, dbp_org_list, lpts_licensors):
 		# Initialize all current DB organizations with the "ToDelete" status
@@ -257,7 +291,7 @@ class LoadOrganizations:
 			return
 
 		lpts_licensors = self.get_lpts_licensors(language_record, fileset_id, type_code)
-		if lpts_licensors == None:
+		if len(lpts_licensors) == 0:
 			return
 
 		licensor_in_dbp = self.process_licensors(dbp_org_map.get(hash_id), lpts_licensors)
