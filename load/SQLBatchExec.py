@@ -157,8 +157,14 @@ class SQLBatchExec:
 			tranFile = open(path, "w", encoding="utf-8")
 			tranFile.write("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;\n")
 			tranFile.write("START TRANSACTION;\n")
+			count = 0 
 			for statement in self.statements:
 				tranFile.write(statement + "\n")
+				## temporary only for massive one-time load
+				count+= 1
+				if (count > 1000):
+					tranFile.write("COMMIT;\n")
+					count = 0 
 			tranFile.write("COMMIT;\n")
 			tranFile.write("EXIT\n")
 			tranFile.close()
