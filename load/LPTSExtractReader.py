@@ -850,7 +850,7 @@ class LanguageRecord (LanguageRecordInterface):
 
 	def Has_Ambiguous_Methodology(self):
 		total = self.TraditionalRecording() + self.VirtualRecording() + self.Partner() + self.Joint() + self.HearThis() + self.Render()
-		return total != 1
+		return total > 1
 
 	def Volumne_Name(self):
 		result = self.record.get("Volumne_Name")
@@ -858,6 +858,9 @@ class LanguageRecord (LanguageRecordInterface):
 			return None
 		else:
 			return result
+
+	def Has_Copyright_Video(self):
+		return self.Copyright_Video() != None
 
 	def WebHubVideo(self):
 		return self.record.get("WebHubVideo")
