@@ -161,10 +161,10 @@ class SQLBatchExec:
 			for statement in self.statements:
 				tranFile.write(statement + "\n")
 				## temporary only for massive one-time load
-				count+= 1
-				if (count > 1000):
-					tranFile.write("COMMIT;\n")
-					count = 0 
+				# count+= 1
+				# if (count > 1000):
+				# 	tranFile.write("COMMIT;\n")
+				# 	count = 0 
 			tranFile.write("COMMIT;\n")
 			tranFile.write("EXIT\n")
 			tranFile.close()
