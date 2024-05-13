@@ -108,7 +108,7 @@ class UpdateDBPLPTSTable:
 	## Bible Filesets
 	##
 	def upsertBibleFilesetsAndConnections(self):
-		indexMap = {"audio": [1, 2, 3], "text": [1, 2, 3], "video": [1]}
+		indexMap = {"audio": [1, 2, 3], "text": [1, 2, 3], "video": [1, 2, 3 ]}
 
 		lptsFilesetList = []
 		lptsFilesetProcessed = {}
@@ -337,8 +337,7 @@ class UpdateDBPLPTSTable:
 		# These methods should be called by Validate
 		#unknownLicensors = orgs.validateLicensors()
 		#unknownCopyrights = orgs.validateCopyrights()
-		orgs.updateLicensors(filesetList)
-		orgs.updateCopyrightHolders(filesetList)
+		orgs.update_licensors(filesetList)
 
 	def upsertBibleFileset(self, dbConn, setTypeCode, setSizeCode, filesetId, isContentLoaded=0):
 		tableName = "bible_filesets"

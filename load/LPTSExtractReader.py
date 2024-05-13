@@ -790,12 +790,77 @@ class LanguageRecord (LanguageRecordInterface):
 	def Video_Matt_DamLoad(self):
 		return self.record.get("Video_Matt_DamLoad")
 
+	def LORA(self):
+		return int(self.record.get("LORA"))
+
+	def Other_Agreement(self):
+		return int(self.record.get("OtherAgreement"))
+
+	def Text_Agreement(self):
+		return int(self.record.get("TextAgreement"))
+
+	def TraditionalRecording(self):
+		return int(self.record.get("TraditionalRecording"))
+
+	def VirtualRecording(self):
+		return int(self.record.get("VirtualRecording"))
+
+	def Partner(self):
+		return int(self.record.get("Partner"))
+
+	def Joint(self):
+		return int(self.record.get("Joint"))
+
+	def HearThis(self):
+		return int(self.record.get("HearThis"))
+
+	def Render(self):
+		return int(self.record.get("Render"))
+
+	def HasTraditionalRecording(self):
+		return self.TraditionalRecording() == 1
+
+	def HasVirtualRecording(self):
+		return self.VirtualRecording() == 1
+
+	def HasPartner(self):
+		return self.Partner() == 1
+
+	def HasJoint(self):
+		return self.Joint() == 1
+
+	def HasHearThis(self):
+		return self.HearThis() == 1
+
+	def HasRender(self):
+		return self.Render() == 1
+
+	def Has_Lora_Agreement(self):
+		return self.LORA() == 1
+
+	def Has_Other_Agreement(self):
+		return self.Other_Agreement() == 1
+
+	def Has_Text_Agreement(self):
+		return self.Text_Agreement() == 1
+
+	def Has_Ambiguous_Agreement(self):
+		total = self.LORA() + self.Text_Agreement() + self.Other_Agreement()
+		return total > 1
+
+	def Has_Ambiguous_Methodology(self):
+		total = self.TraditionalRecording() + self.VirtualRecording() + self.Partner() + self.Joint() + self.HearThis() + self.Render()
+		return total > 1
+
 	def Volumne_Name(self):
 		result = self.record.get("Volumne_Name")
 		if result == "N/A" or result == "#N/A":
 			return None
 		else:
 			return result
+
+	def Has_Copyright_Video(self):
+		return self.Copyright_Video() != None
 
 	def WebHubVideo(self):
 		return self.record.get("WebHubVideo")
