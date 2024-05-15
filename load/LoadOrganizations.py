@@ -111,7 +111,6 @@ class LoadOrganizations:
 				else:
 					print(f"ERROR Agreement Type is 'Other' and Methodology 'TraditionalRecording' but licensor is empty for fileset id: {fileset_id}")
 			else:
-				print(f"ERROR Agreement Type is 'Other', Methodology is TraditionalRecording, but type is not text. Unable to assign for fileset id: {fileset_id}")
 				return None
 
 			return licensors
@@ -165,8 +164,9 @@ class LoadOrganizations:
 					licensors.append(language_record.Licensor())
 				else:
 					print(f"ERROR Agreement Type is 'Other' and Methodology 'Render' but licensor is empty for fileset id: {fileset_id}")
+			elif type_code == "audio":
+				licensors.append(self.LicensorHosanna)
 			else:
-				print(f"ERROR Agreement Type is 'Other', Methodology is 'Render', but type is not text. Unable to assign for fileset id: {fileset_id}")
 				return None
 
 		return None
