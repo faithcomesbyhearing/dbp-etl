@@ -733,6 +733,9 @@ class LanguageRecord (LanguageRecordInterface):
 	def Reg_Recording_Status(self):
 		return self.record.get("Reg_Recording_Status")
 
+	def IsActive(self):
+		return self.Reg_Recording_Status() != "Discontinued" and self.Reg_Recording_Status() != "Inactive" and self.Reg_Recording_Status() != "Void"
+
 	def Reg_StockNumber(self):
 		return self.record.get("Reg_StockNumber")
 

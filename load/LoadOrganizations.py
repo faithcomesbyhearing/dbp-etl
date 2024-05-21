@@ -111,7 +111,6 @@ class LoadOrganizations:
 				else:
 					print(f"ERROR Agreement Type is 'Other' and Methodology 'TraditionalRecording' but licensor is empty for fileset id: {fileset_id}")
 			else:
-				print(f"ERROR Agreement Type is 'Other', Methodology is TraditionalRecording, but type is not text. Unable to assign for fileset id: {fileset_id}")
 				return None
 
 			return licensors
@@ -165,8 +164,9 @@ class LoadOrganizations:
 					licensors.append(language_record.Licensor())
 				else:
 					print(f"ERROR Agreement Type is 'Other' and Methodology 'Render' but licensor is empty for fileset id: {fileset_id}")
+			elif type_code == "audio":
+				licensors.append(self.LicensorHosanna)
 			else:
-				print(f"ERROR Agreement Type is 'Other', Methodology is 'Render', but type is not text. Unable to assign for fileset id: {fileset_id}")
 				return None
 
 		return None
@@ -215,7 +215,7 @@ class LoadOrganizations:
 
 		return None
 
-	def process_copyright_video_agreement(self, language_record, type_code, fileset_id):
+	def process_copyright_video_agreement(self, language_record, type_code):
 		licensors = []
 
 		if type_code == "video":
@@ -226,16 +226,16 @@ class LoadOrganizations:
 		
 		return None
 
-
 	def get_lpts_licensors(self, language_record, fileset_id, type_code):
 		licensors = []
 
 		if language_record.Has_Copyright_Video():
-			new_licensors = self.process_copyright_video_agreement(language_record, type_code, fileset_id)
+			new_licensors = self.process_copyright_video_agreement(language_record, type_code)
 			if new_licensors != None:
 				licensors.extend(new_licensors)
 
-		if language_record.Has_Ambiguous_Agreement():
+		# It will log the ambiguous error if the record is not Discontinued, Inactive or Void.
+		if language_record.IsActive() and language_record.Has_Ambiguous_Agreement():
 			print("ERROR ambiguous agreement and it needs to be fixed for fileset id: %s" % (fileset_id))
 
 		elif language_record.Has_Other_Agreement():
@@ -262,9 +262,12 @@ class LoadOrganizations:
 
 		return licensors
 
+	def process_licensors_to_delete(self, dbp_org_list):
+		return {org: "ToDelete" for org in dbp_org_list} if dbp_org_list else {}
+
 	def process_licensors(self, dbp_org_list, lpts_licensors):
 		# Initialize all current DB organizations with the "ToDelete" status
-		licensor_in_dbp = {org: "ToDelete" for org in dbp_org_list} if dbp_org_list else {}
+		licensor_in_dbp = self.process_licensors_to_delete(dbp_org_list)
 		for licensor in lpts_licensors:
 			org_id = self.organization_map.get(licensor)
 			# If the licensor does not exist it will create a new licensor (organization) record
@@ -291,11 +294,15 @@ class LoadOrganizations:
 			return
 
 		lpts_licensors = self.get_lpts_licensors(language_record, fileset_id, type_code)
-		if len(lpts_licensors) == 0:
-			return
+		if len(lpts_licensors) > 0:
+			if language_record.IsActive():
+				licensor_in_dbp = self.process_licensors(dbp_org_map.get(hash_id), lpts_licensors)
+			else:
+				# If there is a licensor attached to the language record but the record is Discontinued, Inactive,
+				# or Void, it will delete all licensors stored in DBP related to the given fileset ID.
+				licensor_in_dbp = self.process_licensors_to_delete(dbp_org_map.get(hash_id))
 
-		licensor_in_dbp = self.process_licensors(dbp_org_map.get(hash_id), lpts_licensors)
-		self.update_database(licensor_in_dbp, hash_id)
+			self.update_database(licensor_in_dbp, hash_id)
 
 	def create_licensor_slug(self, licensor_name):
 		normalized_string = unicodedata.normalize('NFKD', licensor_name).encode('ASCII', 'ignore').decode('utf-8')
