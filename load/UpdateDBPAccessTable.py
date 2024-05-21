@@ -88,22 +88,21 @@ class UpdateDBPAccessTable:
 
 	def _isSILOnly(self, record):
 		if record != None:
-			return record.Licensor() == "SIL" and record.CoLicensor() == None
+			return record.HasLicensor("SIL") and record.CoLicensorList() == None
 		else:
 			return False
 
 	def _isPioneerBibleTranslatorsOnly(self, record):
 		if record != None:
-			return record.Licensor() == "Pioneer Bible Translators" and record.CoLicensor() == None
+			return record.HasLicensor("Pioneer Bible Translators") and record.CoLicensorList() == None
 		else:
 			return False
 
 	def _isPublicDomain(self, record):
 		if record != None:
-			pattern = re.compile(r"Public Domain", re.IGNORECASE)
-			if record.Licensor() != None and pattern.search(record.Licensor()):
+			if record.HasPublicDomainLicensor():
 				return True
-			if record.Copyrightc() != None and pattern.search(record.Copyrightc()):
+			if record.HasPublicDomainCopyrightc():
 				if len(record.Copyrightc()) < 20:
 					return True
 				else:

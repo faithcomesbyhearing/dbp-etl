@@ -106,8 +106,8 @@ class LoadOrganizations:
 
 		if language_record.HasTraditionalRecording():
 			if type_code == "text":
-				if language_record.Licensor() != None:
-					licensors.append(language_record.Licensor())
+				if language_record.LicensorList() != None:
+					licensors.extend(language_record.LicensorList())
 				else:
 					print(f"ERROR Agreement Type is 'Other' and Methodology 'TraditionalRecording' but licensor is empty for fileset id: {fileset_id}")
 			else:
@@ -117,8 +117,8 @@ class LoadOrganizations:
 
 		if language_record.HasVirtualRecording():
 			if type_code == "text":
-				if language_record.Licensor() != None:
-					licensors.append(language_record.Licensor())
+				if language_record.LicensorList() != None:
+					licensors.extend(language_record.LicensorList())
 				else:
 					print(f"ERROR Agreement Type is 'Other' and Methodology 'VirtualRecording' but licensor is empty for fileset id: {fileset_id}")
 			elif type_code == "audio":
@@ -130,21 +130,21 @@ class LoadOrganizations:
 
 		if language_record.HasPartner():
 			if type_code == "audio":
-				if language_record.Licensor() != None:
-					licensors.append(language_record.Licensor())
+				if language_record.LicensorList() != None:
+					licensors.extend(language_record.LicensorList())
 				else:
 					print(f"ERROR Agreement Type is 'Other' and Methodology 'Partner' but licensor is empty for fileset id: {fileset_id}")
 			if type_code == "text":
-				if language_record.CoLicensor() != None:
-					licensors.append(language_record.CoLicensor())
+				if language_record.CoLicensorList() != None:
+					licensors.extend(language_record.CoLicensorList())
 				else:
 					print(f"WARN Agreement Type is 'Other' and Methodology 'Partner' but co-licensor is empty for fileset id: {fileset_id}")
 			return licensors
 
 		if language_record.HasJoint():
 			if  type_code == "text":
-				if language_record.Licensor() != None:
-					licensors.append(language_record.Licensor())
+				if language_record.LicensorList() != None:
+					licensors.extend(language_record.LicensorList())
 				else:
 					print(f"ERROR Agreement Type is 'Other' and Methodology 'Joint' but licensor is empty for fileset id: {fileset_id}")
 			elif type_code == "audio":
@@ -160,8 +160,8 @@ class LoadOrganizations:
 
 		if language_record.HasRender():
 			if  type_code == "text":
-				if language_record.Licensor() != None:
-					licensors.append(language_record.Licensor())
+				if language_record.LicensorList() != None:
+					licensors.extend(language_record.LicensorList())
 				else:
 					print(f"ERROR Agreement Type is 'Other' and Methodology 'Render' but licensor is empty for fileset id: {fileset_id}")
 			elif type_code == "audio":
@@ -175,8 +175,8 @@ class LoadOrganizations:
 		licensors = []
 
 		if type_code == "audio":
-			if language_record.Licensor() != None:
-				licensors.append(language_record.Licensor())
+			if language_record.LicensorList() != None:
+				licensors.extend(language_record.LicensorList())
 			else:
 				print(f"ERROR Agreement Type is LORA but licensor is empty for fileset id: {fileset_id}")
 
@@ -199,19 +199,31 @@ class LoadOrganizations:
 		licensors = []
 
 		if type_code == "text":
-			if language_record.Licensor() != None:
-				licensors.append(language_record.Licensor())
+			if language_record.LicensorList() != None:
+				licensors.extend(language_record.LicensorList())
 			else:
 				print(f"ERROR Agreement Type is Text but licensor is empty for fileset id: {fileset_id}")
 
-			if language_record.CoLicensor() != None:
-				licensors.append(language_record.CoLicensor())
+			if language_record.CoLicensorList() != None:
+				licensors.extend(language_record.CoLicensorList())
 
 			return licensors
 		
 		if type_code == "audio" and language_record.Reg_Recording_Status() != "Text Only":
 			licensors.append(self.LicensorHosanna)
 			return licensors
+
+		return None
+
+	def process_text_only_recording(self, language_record, type_code):
+		licensors = []
+
+		if type_code == "text":
+			if language_record.LicensorList() != None:
+				licensors.extend(language_record.LicensorList())
+
+			if language_record.CoLicensorList() != None:
+				licensors.extend(language_record.CoLicensorList())
 
 		return None
 
@@ -253,12 +265,10 @@ class LoadOrganizations:
 			if new_licensors != None:
 				licensors.extend(new_licensors)
 
-		if language_record.Reg_Recording_Status() == "Text Only" and type_code == "text":
-			if language_record.Licensor() != None:
-				licensors.append(language_record.Licensor())
-
-			if language_record.CoLicensor() != None:
-				licensors.append(language_record.CoLicensor())
+		if language_record.HasTexOnlyRecordingStatus():
+			new_licensors = self.process_text_only_recording(language_record, type_code)
+			if new_licensors != None:
+				licensors.extend(new_licensors)
 
 		return licensors
 
