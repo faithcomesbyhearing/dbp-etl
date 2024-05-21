@@ -143,7 +143,7 @@ class PreValidate:
 			self.requiredFields(pre.filesetId, stockNumber, "ISO")
 		if pre.languageRecord.LangName() == None:
 			self.requiredFields(pre.filesetId, stockNumber, "LangName")
-		if pre.languageRecord.Licensor() == None:
+		if pre.languageRecord.LicensorList() == None:
 			self.requiredFields(pre.filesetId, stockNumber, "Licensor")
 		if pre.languageRecord.Reg_StockNumber() == None:
 			self.requiredFields(pre.filesetId, stockNumber, "Reg_StockNumber")

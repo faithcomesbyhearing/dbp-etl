@@ -3,9 +3,9 @@
 # This program reads the LPTS Extract and produces hash tables.
 #
 
-import io
 import sys
 import os
+import re
 from xml.dom import minidom
 from LanguageReader import LanguageReaderInterface, LanguageRecordInterface
 
@@ -484,11 +484,36 @@ class LanguageRecord (LanguageRecordInterface):
 	def APIDevVideo(self):
 		return self.record.get("APIDevVideo")
 
+	# deprecated
 	def CoLicensor(self):
-		return self.record.get("CoLicensor")
+		coLicensorList = self.CoLicensorList()
+
+		if coLicensorList != None and len(coLicensorList) != 0:
+			return coLicensorList[0]
+
+		return None
+
+	def CoLicensorList(self):
+		return self.SplitText(self.record.get("CoLicensor"))
+
+	def HasCoLicensor(self, coLicensor):
+		coLicensors = self.CoLicensorList()
+		return coLicensors != None and coLicensor in coLicensors
 
 	def Copyrightc(self):
 		return self.record.get("Copyrightc")
+
+	def HasPublicDomainCopyrightc(self):
+		"""
+		Check if Copyrightc contains the phrase 'Public Domain' (case-insensitive).
+
+		Returns:
+		bool: True if 'Public Domain' is found in Copyrightc, False otherwise.
+		"""
+		# Compile the regular expression for 'Public Domain' with case-insensitivity
+		pattern = re.compile(r"Public Domain", re.IGNORECASE)
+
+		return self.Copyrightc() != None and pattern.search(self.Copyrightc())
 
 	def Copyrightp(self):
 		return self.record.get("Copyrightp")
@@ -648,8 +673,56 @@ class LanguageRecord (LanguageRecordInterface):
 	def LangName(self):
 		return self.record.get("LangName")
 
+	def SplitText(self, input_string):
+		if input_string == None or input_string == "" or input_string.strip() == None:
+			return None
+
+		# Split the string by semicolon and strip whitespace from each item
+		result = [item.strip() for item in input_string.split(";") if item.strip()]
+
+		if not result:
+			return None
+
+		return result
+
+	# deprecated
 	def Licensor(self):
-		return self.record.get("Licensor")
+		licensorList = self.LicensorList()
+
+		if licensorList != None and len(licensorList) != 0:
+			return licensorList[0]
+
+		return None
+
+	def LicensorList(self):
+		return self.SplitText(self.record.get("Licensor"))
+
+	def HasLicensor(self, licensor):
+		licensors = self.LicensorList()
+		return licensors != None and licensor in licensors
+
+	def HasPublicDomainLicensor(self):
+		"""
+		Check if any licensor in the list contains the phrase 'Public Domain' (case-insensitive).
+
+		Args:
+		licensors (list of str): A list containing strings of licensor names.
+
+		Returns:
+		bool: True if 'Public Domain' is found in any string, False otherwise.
+		"""
+		# Compile the regular expression for 'Public Domain' with case-insensitivity
+		pattern = re.compile(r"Public Domain", re.IGNORECASE)
+
+		licensors = self.LicensorList()
+
+		if licensors != None:
+			for licensor in licensors:
+				if pattern.search(licensor):
+					return True
+
+		# Return False if 'Public Domain' was not found in any of the licensors
+		return False
 
 	def MobileText(self):
 		return self.record.get("MobileText")
@@ -729,6 +802,9 @@ class LanguageRecord (LanguageRecordInterface):
 		else:
 			print("ERROR: Reg_HUBLink index must be 1, 2, 3")
 			sys.exit()
+
+	def HasTexOnlyRecordingStatus(self):
+		return self.Reg_Recording_Status() == "Text Only"
 
 	def Reg_Recording_Status(self):
 		return self.record.get("Reg_Recording_Status")
