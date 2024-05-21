@@ -40,11 +40,26 @@ class UpdateDBPLPTSTable:
 		self.audioRegex = re.compile("([A-Z0-9]+)-([a-z]+)([0-9]+)")
 
 
+	def merge_fileset_lists(self, fileset_list_1, fileset_list_2):
+		# Dictionary to keep track of items by hash_id to avoid duplicates
+		combined_dict = {}
+
+		for item in fileset_list_1:
+			(_, _, _, _, _, hash_id) = item
+			combined_dict[hash_id] = item
+
+		for item in fileset_list_2:
+			(_, _, _, _, _, hash_id) = item
+			combined_dict[hash_id] = item
+
+		# Extract the combined items back to a list
+		return list(combined_dict.values())
+
 	def process(self):
 		RunStatus.printDuration("BEGIN LPTS UPDATE")
 
 		# get the biblefilesets that will be inserted or updated
-		filesetList1 = self.upsertBibleFilesetsAndConnections()		
+		filesetList1 = self.upsertBibleFilesetsAndConnections()
 
 		# now, with the full list of bible_filesets, we can continue with normal processing
 		sql = ("SELECT b.bible_id, bf.id, bf.set_type_code, bf.set_size_code, bf.asset_id, bf.hash_id"
@@ -57,7 +72,9 @@ class UpdateDBPLPTSTable:
 		# combine filesetList (from DB) and newFilesetList (which has not been committed yet)
 		# this will capture opus16 for new content load as well as new biblefilesets from metadata load
 		# Also, some filesets will be in both lists, so remove dups using a set
-		filesetList = list(set(filesetList1 + list(filesetList2)))
+		# But we need to remove the duplicates by filtering with the hash ID because the fileset could be a little different. For example, the set_size_code could be different, but the hash_id and fileset could be the same value.
+		filesetList = self.merge_fileset_lists(filesetList1, filesetList2)
+
 
 		access = UpdateDBPAccessTable(self.config, self.db, self.dbOut, self.languageReader)
 		access.process(filesetList)
@@ -122,13 +139,15 @@ class UpdateDBPLPTSTable:
 						bibleId = lptsRecord.DBP_EquivalentByIndex(index)
 						setTypeCode = self.getBibleFilesetType(filesetId)
 						setSizeCode = self.getBibleFilesetSizeCode(lptsRecord.Portion())
+						isArchived = 1 if lptsRecord.IsActive() == False else 0
 
 						if bibleId != None and setTypeCode != None and setSizeCode != None and lptsFilesetProcessed.get(filesetId) == None:
-							hashId = self.upsertBibleFileset(self.db, setTypeCode, setSizeCode, filesetId)
-							self.upsertBibleFilesetConnection(self.db, hashId, bibleId)
-							bucket = self.config.s3_bucket
-							lptsFilesetList.append((bibleId, filesetId, setTypeCode, setSizeCode, bucket, hashId))
-							lptsFilesetProcessed[filesetId] = True
+							hashId = self.upsertBibleFileset(dbConn=self.db, setTypeCode=setTypeCode, setSizeCode=setSizeCode, filesetId=filesetId, isArchived=isArchived)
+							if hashId != None:
+								self.upsertBibleFilesetConnection(self.db, hashId, bibleId)
+								bucket = self.config.s3_bucket
+								lptsFilesetList.append((bibleId, filesetId, setTypeCode, setSizeCode, bucket, hashId))
+								lptsFilesetProcessed[filesetId] = True
 
 
 		return lptsFilesetList
@@ -174,7 +193,7 @@ class UpdateDBPLPTSTable:
 			tagMap["%s_admin_only" % name] = adminOnly
 			tagHashIdMap[hashId] = tagMap
 		
-		for (bibleId, filesetId, setTypeCode, setSizeCode, assetId, hashId) in filesetList:
+		for (bibleId, filesetId, setTypeCode, _, _, hashId) in filesetList:
 			typeCode = setTypeCode.split("_")[0]
 			if typeCode != "app":
 				if filesetId[8:10] == "SA":
@@ -203,7 +222,7 @@ class UpdateDBPLPTSTable:
 				else:
 					tagNameList = ["stock_no", "volume"]
 
-				(languageRecord, lptsIndex) = self.languageReader.getLanguageRecordLoose(typeCode, bibleId, dbpFilesetId)
+				(languageRecord, _) = self.languageReader.getLanguageRecordLoose(typeCode, bibleId, dbpFilesetId)
 
 				tagMap = tagHashIdMap.get(hashId, {})
 				for name in tagNameList:
@@ -249,7 +268,7 @@ class UpdateDBPLPTSTable:
 						description = description.replace("'", "\\'")
 						insertRows.append((description, adminOnly, notes, iso, hashId, name, languageId))
 
-					elif (oldDescription != description):
+					elif (oldDescription != description) and description != None:
 						description = description.replace("'", "\\'")
 						updateRows.append((description, adminOnly, notes, iso, hashId, name, languageId))
 						# print("UPDATE: filesetId=%s hashId=%s %s: OLD %s  NEW: %s" % (filesetId, hashId, name, oldDescription, description))
@@ -339,27 +358,40 @@ class UpdateDBPLPTSTable:
 		#unknownCopyrights = orgs.validateCopyrights()
 		orgs.update_licensors(filesetList)
 
-	def upsertBibleFileset(self, dbConn, setTypeCode, setSizeCode, filesetId, isContentLoaded=0):
+	def upsertBibleFileset(self, dbConn, setTypeCode, setSizeCode, filesetId, isContentLoaded=0, isArchived=0):
+		# Avoid creating or updating the fileset if both values are true
+		if isContentLoaded == True and isArchived == True:
+			return None
+
 		tableName = "bible_filesets"
 		pkeyNames = ("hash_id",)
-		attrNames = ("id", "asset_id", "set_type_code", "set_size_code", "content_loaded")
+		attrNames = ("id", "asset_id", "set_type_code", "set_size_code", "content_loaded", "archived")
 		updateRows = []
 		bucket = self.config.s3_vid_bucket if setTypeCode == "video_stream" else self.config.s3_bucket	
 		hashId = self.getHashId(bucket, filesetId, setTypeCode)
-		row = dbConn.selectRow("SELECT id, asset_id, set_type_code, set_size_code, content_loaded FROM bible_filesets WHERE hash_id=%s", (hashId,))
+		row = dbConn.selectRow("SELECT id, asset_id, set_type_code, set_size_code, content_loaded, archived FROM bible_filesets WHERE hash_id=%s", (hashId,))
 		if row == None:
-			updateRows.append((filesetId, bucket, setTypeCode, setSizeCode, isContentLoaded, hashId))
+			updateRows.append((filesetId, bucket, setTypeCode, setSizeCode, isContentLoaded, isArchived, hashId))
 			self.dbOut.insert(tableName, pkeyNames, attrNames, updateRows)
-		elif isContentLoaded == 1:
-			(dbpFilesetId, dbpBucket, dbpSetTypeCode, dbpSetSizeCode, dbpContentLoaded) = row
-			if (dbpFilesetId != filesetId or
-				dbpBucket != bucket or
-				dbpSetTypeCode != setTypeCode or
-				dbpSetSizeCode != setSizeCode or
-				dbpContentLoaded != isContentLoaded):
+			return hashId
+
+		if isContentLoaded == 1:
+			attrNamesToUpdate = ("id", "asset_id", "set_type_code", "set_size_code", "content_loaded")
+			(_, _, _, _, dbpContentLoaded, _) = row
+			if dbpContentLoaded != isContentLoaded:
 				updateRows.append((filesetId, bucket, setTypeCode, setSizeCode, isContentLoaded, hashId))
 				self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
-		return hashId
+				return hashId
+
+		if isArchived == 1:
+			(_, _, _, _, _, dbpArchived) = row
+			if dbpArchived != isArchived:
+				attrNamesToUpdate = ("id", "asset_id", "set_type_code", "set_size_code", "archived")
+				updateRows.append((filesetId, bucket, setTypeCode, setSizeCode, isArchived, hashId))
+				self.dbOut.update(tableName, pkeyNames, attrNamesToUpdate, updateRows)
+				return hashId
+
+		return None
 
 
 	## This is not currently used.

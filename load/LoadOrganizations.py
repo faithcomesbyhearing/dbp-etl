@@ -319,7 +319,11 @@ class LoadOrganizations:
 		table_name_org_trans = "organization_translations"
 		licensor_name_slug = self.create_licensor_slug(licensor_name)
 		# Create a unique temp variable to store the organization id to create the relationship
-		licensor_name_sql_key = "@" + SQLBatchExec.sanitize_value(licensor_name)
+		licensor_name_sql_key = "@" + SQLBatchExec.sanitize_value(licensor_name_slug)
+		# Check using the slug if the organization exists or not
+		result = self.db.selectScalar("SELECT id FROM organizations WHERE slug=%s", (licensor_name_slug))
+		if result != None:
+			return result
 
 		# organization
 		org_attr_names = ("slug",)
