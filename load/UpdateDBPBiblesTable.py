@@ -21,7 +21,16 @@ class UpdateDBPBiblesTable:
 		self.db = db
 		self.dbOut = dbOut
 		self.languageReader = languageReader
-		self.filesetConnectionSet = self.db.selectSet("SELECT distinct bible_id FROM bible_fileset_connections", ())
+		# Retrieve the Bibles that have a connection where at least one fileset has content_loaded equal to true
+		self.filesetConnectionSet = self.db.selectSet(
+			"SELECT DISTINCT bfc.bible_id"
+			" FROM bible_fileset_connections bfc"
+			" WHERE EXISTS ("
+				" SELECT 1"
+				" FROM bible_filesets bf2"
+				" WHERE bf2.hash_id = bfc.hash_id AND bf2.content_loaded"
+			" )",
+		())
 		sql = ("SELECT l.iso, a.script_id FROM alphabet_language a"
 				" JOIN languages l ON a.language_id = l.id"
 				" WHERE a.script_id IN" 
@@ -71,10 +80,10 @@ class UpdateDBPBiblesTable:
 
 		for dbpBibleId in sorted(dbpBibleMap.keys()):
 			if dbpBibleId not in lptsBibleMap.keys():
-				if dbpBibleId in self.filesetConnectionSet:
-					print("WARN Attempt to delete bible_id: %s when it has filesets." % (dbpBibleId))
-				elif not self.testBibleForeignKeys(dbpBibleId):
+				if dbpBibleId not in self.filesetConnectionSet:
 					deleteRows.append(dbpBibleId)
+				else:
+					print("WARN Attempt to delete bible_id: %s because it does not exist in LPTS, but the Bible has filesets with content loaded." % (dbpBibleId))
 
 		for bibleId in sorted(lptsBibleMap.keys()):
 			languageRecords = lptsBibleMap[bibleId]
@@ -345,7 +354,7 @@ if (__name__ == '__main__'):
 
 	dbOut.displayStatements()
 	dbOut.displayCounts()
-	#dbOut.execute("test-bibles")
+	dbOut.execute("test-bibles")
 
 
 
