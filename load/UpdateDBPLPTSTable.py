@@ -380,7 +380,7 @@ class UpdateDBPLPTSTable:
 			(_, _, _, _, dbpContentLoaded, _) = row
 			if dbpContentLoaded != isContentLoaded:
 				updateRows.append((filesetId, bucket, setTypeCode, setSizeCode, isContentLoaded, hashId))
-				self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
+				self.dbOut.update(tableName, pkeyNames, attrNamesToUpdate, updateRows)
 				return hashId
 
 		if isArchived == 1:
