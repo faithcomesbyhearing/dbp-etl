@@ -79,6 +79,22 @@ class LanguageRecordInterface(ABC):
         pass
 
     @abstractmethod
+    def LicensorList():
+        pass
+
+    @abstractmethod
+    def HasLicensor(licensor):
+        pass
+
+    @abstractmethod
+    def HasCoLicensor(coLicensor):
+        pass
+
+    @abstractmethod
+    def CoLicensorList():
+        pass
+
+    @abstractmethod
     def Copyrightc():
         pass
 

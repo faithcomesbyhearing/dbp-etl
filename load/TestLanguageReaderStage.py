@@ -143,7 +143,7 @@ class TestLanguageReaderStage(unittest.TestCase):
         print("ISO: %s" % stageBResult.ISO())
         print("Country: %s" % stageBResult.Country())
         print("DBP_Equivalent: %s" % stageBResult.DBP_Equivalent())
-        print("Licensor: %s" % stageBResult.Licensor())
+        print("Licensor: %s" % stageBResult.LicensorList())
         print("Copyrightc: %s" % stageBResult.Copyrightc())
         print("Copyrightp: %s" % stageBResult.Copyrightp())
         print("Volumne_Name: %s" % stageBResult.Volumne_Name())
