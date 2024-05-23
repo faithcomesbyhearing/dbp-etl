@@ -44,7 +44,7 @@ class SQLBatchExec:
 		if len(values) > 0:
 			names = attrNames + pkeyNames
 			valsubs = ["'%s'"] * len(names)
-			sql = "INSERT IGNORE INTO %s (%s) VALUES (%s);" % (tableName, ", ".join(names), ", ".join(valsubs))
+			sql = "INSERT INTO %s (%s) VALUES (%s);" % (tableName, ", ".join(names), ", ".join(valsubs))
 			for value in values:
 				stmt = sql % value
 				stmt = self.unquoteValues(stmt)
