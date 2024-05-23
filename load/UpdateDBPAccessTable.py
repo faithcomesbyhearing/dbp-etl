@@ -105,8 +105,6 @@ class UpdateDBPAccessTable:
 			if record.HasPublicDomainCopyrightc():
 				if len(record.Copyrightc()) < 20:
 					return True
-				else:
-					print("INFO Possible Public Domain Found in %s: %s" % (record.Reg_StockNumber(), record.Copyrightc()))
 		return False
 	
 	def _isCreativeCommonsText(self, record):
