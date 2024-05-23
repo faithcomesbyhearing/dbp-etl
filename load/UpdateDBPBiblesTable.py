@@ -139,6 +139,9 @@ class UpdateDBPBiblesTable:
 		final = set()
 
 		for (_, languageRecord) in languageRecords:
+			if not languageRecord.IsActive():
+				continue
+
 			iso, langName, countryName = self.normalize_language_record(languageRecord)
 			result = self.languageCountryMap.get((iso, langName, countryName))
 
@@ -149,6 +152,9 @@ class UpdateDBPBiblesTable:
 
 		if len(final) == 0:
 			for (_, languageRecord) in languageRecords:
+				if not languageRecord.IsActive():
+					continue
+
 				iso, langName, _ = self.normalize_language_record(languageRecord)
 				result = self.languageMap1.get((iso, langName))
 
@@ -156,6 +162,9 @@ class UpdateDBPBiblesTable:
 					final.add(result)
 		if len(final) == 0:
 			for (_, languageRecord) in languageRecords:
+				if not languageRecord.IsActive():
+					continue
+
 				iso, langName, _ = self.normalize_language_record(languageRecord)
 				result = self.languageMap2.get((iso, langName))
 
@@ -163,12 +172,16 @@ class UpdateDBPBiblesTable:
 					final.add(result)
 		if len(final) == 0:
 			for (_, languageRecord) in languageRecords:
+				if not languageRecord.IsActive():
+					continue
+
 				iso, _, _ = self.normalize_language_record(languageRecord)
 				result = self.languageMap3.get(iso)
 
 				if result != None:
 					final.add(result)
 		if len(final) == 0:
+			iso, _, _ = self.normalize_language_record(languageRecord)
 			print("ERROR_01 ISO code of bibleId unknown", iso, bibleId)
 			return None
 		if len(final) > 1:
