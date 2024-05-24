@@ -324,28 +324,37 @@ class LoadOrganizations:
 
 		return safe_licensor_name
 
+	def create_organization_translation(self, organization_id, licensor_name):
+		# organization_translations
+		table_name_org_trans = "organization_translations"
+		org_trans_values = [(organization_id, licensor_name.replace("'", "\\'"), licensor_name.replace("'", "\\'"), 6414)]
+		org_trans_attr_values = ("organization_id", "name", "description")
+		org_trans_pkey_names = ("language_id",)
+		self.dbOut.insert(table_name_org_trans, org_trans_pkey_names, org_trans_attr_values, org_trans_values)
+
 	def create_organization(self, licensor_name):
 		table_name_org = "organizations"
-		table_name_org_trans = "organization_translations"
 		licensor_name_slug = self.create_licensor_slug(licensor_name)
 		# Create a unique temp variable to store the organization id to create the relationship
 		licensor_name_sql_key = "@" + SQLBatchExec.sanitize_value(licensor_name_slug)
 		# Check using the slug if the organization exists or not
-		result = self.db.selectScalar("SELECT id FROM organizations WHERE slug=%s", (licensor_name_slug))
-		if result != None:
-			return result
+		organization_id = self.db.selectScalar("SELECT id FROM organizations WHERE slug=%s", (licensor_name_slug))
+		if organization_id != None:
+			# Check using the organization id and organization name if the ENG organization translations record exists
+			result = self.db.selectScalar(
+				"SELECT organization_id FROM organization_translations WHERE organization_id=%s AND name=%s AND language_id=6414", (organization_id, licensor_name.replace("'", "\\'"))
+			)
+			if result == None:
+				self.create_organization_translation(organization_id, licensor_name)
+			return organization_id
 
 		# organization
 		org_attr_names = ("slug",)
 		org_values = [(licensor_name_slug,)]
+		self.dbOut.insert(table_name_org, (), org_attr_names, org_values, 0)
 
 		# organization_translations
-		org_trans_values = [(licensor_name_sql_key, licensor_name.replace("'", "\\'"), licensor_name.replace("'", "\\'"), 6414)]
-		org_trans_attr_values = ("organization_id", "name", "description")
-		org_trans_pkey_names = ("language_id",)
-
-		self.dbOut.insert(table_name_org, (), org_attr_names, org_values, 0)
-		self.dbOut.insert(table_name_org_trans, org_trans_pkey_names, org_trans_attr_values, org_trans_values)
+		self.create_organization_translation(licensor_name_sql_key, licensor_name)
 
 		return licensor_name_sql_key
 
