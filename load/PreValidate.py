@@ -85,7 +85,9 @@ class PreValidate:
 		mediaSet = set()
 		bibleIdSet = set()
 		for (languageRecord, status, fieldName) in results:
-			stockNum = languageRecord.Reg_StockNumber()
+			if not languageRecord.IsActive():
+				continue
+			stockNum = languageRecord.Reg_StockNumber() 
 			if stockNum != None:
 				stockNumSet.add(stockNum)
 			damId = languageRecord.record.get(fieldName)
