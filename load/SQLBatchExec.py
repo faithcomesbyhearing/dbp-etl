@@ -58,7 +58,7 @@ class SQLBatchExec:
 	def insertSet(self, tableName, pkeyNames, attrNames, values):
 		if len(values) > 0:
 			names = attrNames + pkeyNames
-			stmt = "INSERT IGNORE INTO %s (%s) VALUES " % (tableName, ", ".join(names))
+			stmt = "INSERT INTO %s (%s) VALUES " % (tableName, ", ".join(names))
 			self.statements.append(stmt)
 			valsubs = ["'%s'"] * len(names)
 			sql = "(%s)," % (", ".join(valsubs))
