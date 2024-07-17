@@ -20,7 +20,7 @@ class UpdateDBPVideoTables:
 		self.dbOut = dbOut
 		self.s3Utility = S3Utility(config)
 		sql = ("SELECT file_name, id FROM bible_files where hash_id in"
-			" (SELECT hash_id FROM bible_filesets WHERE set_type_code = 'video_stream')")
+			" (SELECT hash_id FROM bible_filesets WHERE content_loaded = 1 and set_type_code = 'video_stream')")
 		self.fileIdMap = db.selectMap(sql, ())
 		self.streamRegex = re.compile(r"BANDWIDTH=([0-9]+),RESOLUTION=([0-9]+)x([0-9]+),CODECS=\"(.+)\"")
 		self.tsRegex = re.compile(r"#EXTINF:([0-9\.]+),")
@@ -96,7 +96,7 @@ class UpdateDBPVideoTables:
 
 		fileId = self.fileIdMap.get(m3u8Filename)
 		if fileId == None:
-			fileId = "@" + m3u8Filename.replace("-", "_")
+			fileId = "@" + SQLBatchExec.sanitize_value(m3u8Filename)
 		for line in m3u8Content.split("\n"):
 			if line.startswith("#EXT-X-STREAM-INF:"):
 				match = self.streamRegex.search(line)
@@ -139,7 +139,7 @@ class UpdateDBPVideoTables:
 
 		bandwidthId = self.dbpBandwidthIdMap.get(m3u8Filename)
 		if bandwidthId == None:
-			bandwidthId = "@" + m3u8Filename.replace("-", "_")
+			bandwidthId = "@" + SQLBatchExec.sanitize_value(m3u8Filename)
 		else:
 			bandwidthId = int(bandwidthId)
 		for line in m3u8Content.split("\n"):
@@ -195,26 +195,20 @@ if (__name__ == '__main__'):
 	ctrl.validate(filesets)
 
 	dbOut = SQLBatchExec(config)
-	update = UpdateDBPFilesetTables(config, db, dbOut)
+	update = UpdateDBPFilesetTables(config, db, dbOut, languageReader)
 
-	filesetsVideoProccessed = []
-	for inp in InputFileset.upload:
-		hashId = update.processFileset(inp)
+	if len(InputFileset.upload) > 0:
+		filesetsVideoProccessed = []
+		for inp in InputFileset.upload:
+			hashId = update.processFileset(inp)
 
-		if inp.typeCode == "video":
-			filesetsVideoProccessed.append([inp.filesetPrefix, inp.filenames(), hashId])
+			if inp.typeCode == "video":
+				filesetsVideoProccessed.append([inp.filesetPrefix, inp.filenames(), hashId])
 
-	dbOut.displayStatements()
-	dbOut.displayCounts()
-	success = dbOut.execute("test-" + inp.filesetId)
-	db.close()
-
-	db = SQLUtility(config)
-	video = UpdateDBPVideoTables(config, db, dbOut)
-
-	if success and len(filesetsVideoProccessed) > 0:
-		for (filesetPrefix, filename, hashId) in filesetsVideoProccessed:
-			video.processFileset(filesetPrefix, filename, hashId)
+		if len(filesetsVideoProccessed) > 0:
+			video = UpdateDBPVideoTables(config, db, dbOut)
+			for (filesetPrefix, filename, hashId) in filesetsVideoProccessed:
+				video.processFileset(filesetPrefix, filename, hashId)
 
 		dbOut.displayStatements()
 		dbOut.displayCounts()

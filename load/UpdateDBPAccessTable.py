@@ -47,7 +47,7 @@ class UpdateDBPAccessTable:
 				print("FATAL: Unknown typeCode % in fileset: %s, hashId: %s" % (typeCode, filesetId, hashId))
 				sys.exit()
 
-			(languageRecord, lptsIndex) = self.languageReader.getLanguageRecord(typeCode, bibleId, dbpFilesetId)
+			(languageRecord, _) = self.languageReader.getLanguageRecord(typeCode, bibleId, dbpFilesetId)
 			if languageRecord != None:
 				lpts = languageRecord.record
 			else:
@@ -55,7 +55,7 @@ class UpdateDBPAccessTable:
 				print ("getLanguageRecord method did not return a record for typeCode: %s, bibleId: %s, dbpFilesetId: %s " % ( typeCode, bibleId, dbpFilesetId))
 
 
-			for (accessId, accessName, accessDesc) in accessTypes:
+			for (accessId, _, accessDesc) in accessTypes:
 				accessIdInDBP = accessId in dbpAccessSet;
 				if accessId == 101: # allow_text_NT_DBP
 					accessIdInLPTS = lpts.get(accessDesc) == "-1" and "NT" in setSizeCode
@@ -63,8 +63,8 @@ class UpdateDBPAccessTable:
 					accessIdInLPTS = lpts.get(accessDesc) == "-1" and "OT" in setSizeCode
 				elif accessId == 181: # allow_text_DOWNLOAD
 					accessIdInLPTS = self._isPublicDomain(languageRecord)
-				elif accessId in {191, 193}: # allow_text_APP_OFFLINE and allow_audio_APP_OFFLINE
-					accessIdInLPTS = self._isSILOnly(languageRecord) or self._isPioneerBibleTranslatorsOnly(languageRecord) or self._isPublicDomain(languageRecord) or self._isCreativeCommons(languageRecord)
+				# elif accessId in {191, 193}: # allow_text_APP_OFFLINE and allow_audio_APP_OFFLINE
+				# 	accessIdInLPTS = self._isSILOnly(languageRecord) or self._isPioneerBibleTranslatorsOnly(languageRecord) or self._isPublicDomain(languageRecord) or self._isCreativeCommons(languageRecord)
 					# if (accessIdInLPTS):
 					# 	print("*** 191/193... SIL: %s, PBT: %s, Public Domain: %s, CC: %s, hashId: %s, filesetId: %s" % (self._isSILOnly(languageRecord), self._isPioneerBibleTranslatorsOnly(languageRecord), self._isPublicDomain(languageRecord),self._isCreativeCommons(languageRecord), hashId, filesetId))
 				else:
@@ -73,7 +73,12 @@ class UpdateDBPAccessTable:
 				if accessIdInLPTS and not accessIdInDBP:
 					insertRows.append((hashId, accessId))
 				elif accessIdInDBP and not accessIdInLPTS:
-					print("accessId not in DBP or LPTS, but not deleting.. accessId: %s hashId: %s" % (accessId, hashId))
+					# accessId is in DBP but not in LPTS. 
+  					# For accessIds 101 and 102, there is a bug in the fileset setSizeCode. Don't delete for now.
+					# For accessIds 19x, this was done manually and should be left alone.
+					# for all others, this is a signal from LPTS to delete from DBP
+					if accessId not in {101,102, 191, 193}:
+						deleteRows.append((hashId, accessId))
 
 		tableName = "access_group_filesets"
 		pkeyNames = ("hash_id", "access_group_id")
@@ -83,26 +88,23 @@ class UpdateDBPAccessTable:
 
 	def _isSILOnly(self, record):
 		if record != None:
-			return record.Licensor() == "SIL" and record.CoLicensor() == None
+			return record.HasLicensor("SIL") and record.CoLicensorList() == None
 		else:
 			return False
 
 	def _isPioneerBibleTranslatorsOnly(self, record):
 		if record != None:
-			return record.Licensor() == "Pioneer Bible Translators" and record.CoLicensor() == None
+			return record.HasLicensor("Pioneer Bible Translators") and record.CoLicensorList() == None
 		else:
 			return False
 
 	def _isPublicDomain(self, record):
 		if record != None:
-			pattern = re.compile(r"Public Domain", re.IGNORECASE)
-			if record.Licensor() != None and pattern.search(record.Licensor()):
+			if record.HasPublicDomainLicensor():
 				return True
-			if record.Copyrightc() != None and pattern.search(record.Copyrightc()):
+			if record.HasPublicDomainCopyrightc():
 				if len(record.Copyrightc()) < 20:
 					return True
-				else:
-					print("INFO Possible Public Domain Found in %s: %s" % (record.Reg_StockNumber(), record.Copyrightc()))
 		return False
 	
 	def _isCreativeCommonsText(self, record):
@@ -132,6 +134,7 @@ if (__name__ == '__main__'):
 	filesets = UpdateDBPAccessTable(config, db, dbOut, languageReader)
 	sql = ("SELECT b.bible_id, bf.id, bf.set_type_code, bf.set_size_code, bf.asset_id, bf.hash_id"
 			" FROM bible_filesets bf JOIN bible_fileset_connections b ON bf.hash_id = b.hash_id"
+			" WHERE bf.content_loaded = 1 "
 			" ORDER BY b.bible_id, bf.id, bf.set_type_code")
 	filesetList = db.select(sql, ())
 	filesets.process(filesetList)

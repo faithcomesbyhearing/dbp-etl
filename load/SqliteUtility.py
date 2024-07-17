@@ -131,6 +131,15 @@ class SqliteUtility:
 			results[row[0]] = row[1]
 		return results
 
+	def selectMapList(self, statement, values):
+		resultSet = self.select(statement, values)
+		results = {}
+		if resultSet != None:
+			for row in resultSet:
+				if row[0] not in results:
+					results[row[0]] = []  # Initialize a new list for this key
+				results[row[0]].append(row[1])  # Append the values to the list of the key
+		return results
 
 #	def selectMapList(self, statement, values):
 #		resultSet = self.select(statement, values)

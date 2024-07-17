@@ -11,8 +11,8 @@ FROM public.ecr.aws/docker/library/alpine:latest
 
 WORKDIR /app
 
-RUN apk update
-RUN apk add aws-cli ffmpeg jq mysql-client nodejs python3 py3-pip
+RUN apk update && \
+    apk add --no-cache ffmpeg jq mysql-client nodejs python3 py3-pip
 
 # --
 # To get past the "externally-managed-environment" error
@@ -29,7 +29,7 @@ RUN python -m venv $VIRTUAL_ENV
 RUN /bin/sh -c "source $VIRTUAL_ENV/bin/activate"
 # --
 
-RUN pip install boto3 pymysql pytz
+RUN pip install boto3 pymysql pytz awscli
 
 COPY --from=Sofria /app/sofria-cli ./sofria-cli
 

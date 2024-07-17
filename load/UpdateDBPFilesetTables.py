@@ -22,18 +22,10 @@ from SQLBatchExec import *
 from UpdateDBPTextFilesets import *
 from UpdateDBPBooksTable import *
 from UpdateDBPBibleFilesSecondary import *
+from UpdateDBPLPTSTable import *
 
 
 class UpdateDBPFilesetTables:
-
-	def getHashId(bucket, filesetId, setTypeCode):
-		md5 = hashlib.md5()
-		md5.update(filesetId.encode("latin1"))
-		md5.update(bucket.encode("latin1"))
-		md5.update(setTypeCode.encode("latin1"))
-		hash_id = md5.hexdigest()
-		return hash_id[:12]
-
 
 	def getSetTypeCode(typeCode, filesetId):
 		if typeCode == "video":
@@ -93,7 +85,7 @@ class UpdateDBPFilesetTables:
 				return "S"
 
 
-	def __init__(self, config, db, dbOut):
+	def __init__(self, config, db, dbOut, languageReader):
 		self.config = config
 		self.db = db
 		self.dbOut = dbOut
@@ -104,27 +96,35 @@ class UpdateDBPFilesetTables:
 		self.durationRegex = re.compile(r"duration=([0-9\.]+)", re.MULTILINE)
 		self.textUpdater = UpdateDBPTextFilesets(self.config, self.db, self.dbOut)
 		self.booksUpdater = UpdateDBPBooksTable(self.config, self.dbOut)
+		self.languageReader = languageReader
+
 
 
 	def processFileset(self, inputFileset):
 		inp = inputFileset
 		print(inp.typeCode, inp.bibleId, inp.filesetId)
+		lptsDBP = UpdateDBPLPTSTable(self.config, self.dbOut, self.languageReader)
+
 		dbConn = SQLUtility(self.config)
 		bookIdSet = self.getBibleBooks(inp.typeCode, inp.csvFilename, inp.databasePath)
 		updateBibleFilesSecondary = UpdateDBPBibleFilesSecondary(self.config, dbConn, self.dbOut)
+		bucket = self.config.s3_vid_bucket if inp.typeCode == "video" else self.config.s3_bucket
+		# it needs to know if the new inputFileset has new files to set the flag content_loaded
+		isContentLoaded = 1 if len(inp.files) > 0 else 0
+
 		if inp.typeCode in {"audio", "video"}:
 			setTypeCode = UpdateDBPFilesetTables.getSetTypeCode(inp.typeCode, inp.filesetId)
-			setSizeCode = self.getSizeCode(dbConn, typeCode, hashId, bookIdSet)
-
-			UpdateDBPLPTSTable.upsertBibleFileset(dbConn, inp.typeCode, setTypeCode, inp.bibleId, inp.filesetId)
-			UpdateDBPLPTSTable.upsertBibleFilesetConnection(dbConn, hashId, inp.bibleId)
-			# end
-
+			hashId = lptsDBP.getHashId(bucket, inp.filesetId, setTypeCode)
+			setSizeCode = self.getSizeCode(dbConn, inp.typeCode, hashId, bookIdSet)
+			lptsDBP.upsertBibleFileset(dbConn, setTypeCode, setSizeCode, inp.filesetId, isContentLoaded)
+			lptsDBP.upsertBibleFilesetConnection(dbConn, hashId, inp.bibleId)
 			self.insertBibleFiles(dbConn, hashId, inputFileset, bookIdSet)
 			updateBibleFilesSecondary.updateBibleFilesSecondary(hashId, inp)
 		elif inp.typeCode == "text":
-			hashId = self.insertBibleFileset(dbConn, inp.typeCode, inp.subTypeCode(), inp.bibleId, inp.filesetId, bookIdSet)
-			self.insertFilesetConnections(dbConn, hashId, inp.bibleId)					
+			hashId = lptsDBP.getHashId(bucket, inp.filesetId, inp.subTypeCode())
+			setSizeCode = self.getSizeCode(dbConn, inp.typeCode, hashId, bookIdSet)
+			lptsDBP.upsertBibleFileset(dbConn, inp.subTypeCode(), setSizeCode, inp.filesetId, isContentLoaded)
+			lptsDBP.upsertBibleFilesetConnection(dbConn, hashId, inp.bibleId)
 			# text_plain is still stored in the database; no upload 
 			if inp.subTypeCode() == "text_plain":
 				self.textUpdater.updateFilesetTextPlain(inp.bibleId, inp.filesetId, hashId, bookIdSet, inp.databasePath)
@@ -278,7 +278,7 @@ if (__name__ == '__main__'):
 	ctrl.validate(filesets)
 
 	dbOut = SQLBatchExec(config)
-	update = UpdateDBPFilesetTables(config, db, dbOut)
+	update = UpdateDBPFilesetTables(config, db, dbOut, languageReader)
 	for inp in InputFileset.upload:
 		hashId = update.processFileset(inp)
 

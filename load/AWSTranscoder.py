@@ -30,11 +30,31 @@ class AWSTranscoder:
 
 	def __init__(self, config):
 		self.config = config
+		self.url = None
+		self.key = None
 
+	def setAudioTranscoderParameters(self):
+		if hasattr(self.config, 'audio_transcoder_mock') and self.config.audio_transcoder_mock != None:
+			audio_transcoder_mock = {}
+
+			try:
+				audio_transcoder_mock = json.loads(self.config.audio_transcoder_mock)
+			except json.JSONDecodeError:
+				# Handle the error and set a empty dict for self.audio_transcoder_mock
+				audio_transcoder_mock = {}
+
+			if audio_transcoder_mock.get("enable") == 1:
+				self.url = audio_transcoder_mock.get("endpoint_url")
+				self.key = audio_transcoder_mock.get("key")
+				return True
+
+		self.url = self.config.audio_transcoder_url
+		self.key = self.config.audio_transcoder_key
+
+		return True
 
 	def transcodeAudio(self, inputFileset): 
-		url = self.config.audio_transcoder_url
-		key = self.config.audio_transcoder_key
+		self.setAudioTranscoderParameters()
 		inp = '"input": ' + self.config.audio_transcoder_input
 		inp = inp.replace("$bucket", inputFileset.location)
 		inp = inp.replace("$prefix", inputFileset.filesetPath)
@@ -68,7 +88,7 @@ class AWSTranscoder:
 		except Exception as err:
 			print("ERROR: json error in request:" + request)
 			return []
-		result = self.transcode(url, key, request)
+		result = self.transcode(self.url, self.key, request)
 		outFilesets = self.parseAudioResponse(inputFileset, result)
 		for fileset in outFilesets:
 			print("AWSTranscoder:transcodeAudio... outfileset: %s" %(fileset))
@@ -182,9 +202,12 @@ class AWSTranscoder:
 
 
 if (__name__ == '__main__'):
+	from LanguageReaderCreator import LanguageReaderCreator
+	from InputProcessor import InputProcessor
+
 	config = Config.shared()
 	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
-	inpFilesets = InputFileset.filesetCommandLineParser(config, languageReader)
+	inpFilesets = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
 	inpFileset = inpFilesets[0]
 	transcoder = AWSTranscoder(config)
 	outFilesets = transcoder.transcodeAudio(inpFileset)

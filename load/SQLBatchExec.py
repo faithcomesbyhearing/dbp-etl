@@ -5,6 +5,8 @@
 import os
 import re
 import time
+import unicodedata
+import hashlib
 import subprocess
 from Config import *
 from DBPRunFilesS3 import *
@@ -21,6 +23,22 @@ class SQLBatchExec:
 		self.counts = []
 		self.unquotedRegex = re.compile(r"(^.*)(\'@.*?m3u8\')(.*$)")
 
+	def UpdateUnquotedRegex(self, unquotedRegex):
+		if unquotedRegex != None:
+			self.unquotedRegex = unquotedRegex
+
+	@staticmethod
+	def sanitize_value(value):
+		# remove accent or special characters
+		normalized_value = unicodedata.normalize('NFKD', value).encode('ASCII', 'ignore').decode('utf-8')
+		safe_variable_name = re.sub(r'\W', '_', normalized_value)
+		# Ensure the variable name does not exceed 64 characters
+		if len(safe_variable_name) > 64:
+			# Hash the original safe name to ensure uniqueness and append to truncated name
+			hash_suffix = hashlib.md5(safe_variable_name.encode('utf-8')).hexdigest()[:8]
+			safe_variable_name = safe_variable_name[:55] + "_" + hash_suffix
+
+		return safe_variable_name
 
 	def insert(self, tableName, pkeyNames, attrNames, values, keyPosition=None):
 		if len(values) > 0:
@@ -32,7 +50,7 @@ class SQLBatchExec:
 				stmt = self.unquoteValues(stmt)
 				self.statements.append(stmt)
 				if keyPosition != None:
-					keyValue = value[keyPosition].replace("-", "_")
+					keyValue = SQLBatchExec.sanitize_value(value[keyPosition])
 					self.statements.append("SET @%s = LAST_INSERT_ID();" % (keyValue,))
 			self.counts.append(("insert", tableName, len(values)))
 
@@ -139,8 +157,14 @@ class SQLBatchExec:
 			tranFile = open(path, "w", encoding="utf-8")
 			tranFile.write("SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;\n")
 			tranFile.write("START TRANSACTION;\n")
+			count = 0 
 			for statement in self.statements:
 				tranFile.write(statement + "\n")
+				## temporary only for massive one-time load
+				# count+= 1
+				# if (count > 1000):
+				# 	tranFile.write("COMMIT;\n")
+				# 	count = 0 
 			tranFile.write("COMMIT;\n")
 			tranFile.write("EXIT\n")
 			tranFile.close()
