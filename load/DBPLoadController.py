@@ -61,6 +61,7 @@ class DBPLoadController:
 		Log.writeLog(self.config)
 
 	def updateBibles(self):
+		# this should only be called when uploading an xml file, meaning (a) we are not uploading content and (b) Blimp is not the system of record
 		print("\n*** DBPLoadController:updateBibles ***")
 
 		dbOut = SQLBatchExec(self.config)
@@ -118,6 +119,7 @@ class DBPLoadController:
 
 
 	def updateLPTSTables(self):
+		# this should only be called when uploading an xml file, meaning (a) we are not uploading content and (b) Blimp is not the system of record
 		print("\n*** DBPLoadController:updateLPTSTables ***")
 		dbOut = SQLBatchExec(self.config)
 		lptsDBP = UpdateDBPLPTSTable(self.config, dbOut, self.languageReader)
@@ -148,7 +150,7 @@ if (__name__ == '__main__'):
 	config = Config()
 	AWSSession.shared() # ensure AWSSession init
 	db = SQLUtility(config)
-	# DATA_MODEL_MIGRATION_STAGE should be "B" or "C"
+	# DATA_MODEL_MIGRATION_STAGE should be "B" or "C", or "BLIMP"
 	#print("DATA_MODEL_MIGRATION_STAGE DBPLoadController ==> [%s]" % os.getenv("DATA_MODEL_MIGRATION_STAGE"))
 	migration_stage = "B" if os.getenv("DATA_MODEL_MIGRATION_STAGE") == None else os.getenv("DATA_MODEL_MIGRATION_STAGE")
 	languageReader = LanguageReaderCreator(migration_stage).create(config.filename_lpts_xml)
@@ -157,17 +159,16 @@ if (__name__ == '__main__'):
 		InputFileset.validate = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
 		ctrl.repairAudioFileNames(InputFileset.validate)
 		ctrl.validate(InputFileset.validate)
-		if ctrl.updateBibles():
-			ctrl.upload(InputFileset.upload)
-			ctrl.updateFilesetTables(InputFileset.database)
-			ctrl.updateLPTSTables()
+		ctrl.upload(InputFileset.upload)
+		ctrl.updateFilesetTables(InputFileset.database)
 		for inputFileset in InputFileset.complete:
 			print("Completed: ", inputFileset.filesetId)
 	else:
-		if (READ_ONLY) {
-			"cannot process"
-			return
-		}
+		# FIXME(2101) - this is the path for processing the xml file. 
+		if (migration_stage == "BLIMP"):
+			print("cannot process because Blimp is the system of record")
+			return;
+	
 		ctrl.updateBibles()
 		ctrl.updateLPTSTables()
 	Log.writeLog(config)

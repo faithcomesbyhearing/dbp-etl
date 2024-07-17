@@ -15,6 +15,8 @@ class LanguageReaderCreator:
             return LPTSExtractReader(lpts_xml_path)
         elif (self.stage == "C"):
             return StageCLanguageReader()
+        elif (self.stage == "BLIMP"):
+            return BlimpLanguageReader() # FIXME(2101)
         else:
             print ("unrecognized stage: ", self.stage)
 

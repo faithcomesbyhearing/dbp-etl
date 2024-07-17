@@ -17,11 +17,15 @@ class Validate:
 	def __init__(self, config, db):
 		self.config = config
 		self.db = db
-		self.scriptNameSet = db.selectSet("SELECT lpts_name FROM lpts_script_codes", ())
-		self.numeralsSet = db.selectSet("SELECT id FROM numeral_systems", ())
-
 
 	def process(self, filesets):
+		# FIXME(2101): add a check that each fileset can be found in bible_fileset_connections, and that the associated bible also exists
+		# select *
+		# from bible_filesets bfs
+		# join bible_fileset_connections bfc on bfc.hash_id = bfs.hash_id
+		# join bibles b on b.id = bfc.bible_id
+		# where bfs.id = <filesetid>
+		# must return a value for each fileset.
 		self.prepareDirectory(self.config.directory_accepted)
 		self.prepareDirectory(self.config.directory_quarantine)
 		self.prepareDirectory(self.config.directory_duplicate)
@@ -38,12 +42,6 @@ class Validate:
 					logger.invalidFileExt(file.name)
 				elif inp.typeCode == "video" and ext != ".mp4":
 					logger.invalidFileExt(file.name)
-
-			if inp.typeCode == "text":
-				unicodeScript = UnicodeScript()
-				errors = unicodeScript.validateStockNoRecord(inp.languageRecord, self.db)
-				for error in errors:
-					logger.message(Log.EROR, error)
 
 		## Validate Text Filesets
 		texts = UpdateDBPTextFilesets(self.config, self.db, None)
@@ -74,16 +72,9 @@ class Validate:
 
 		filesets += results
 
-		self.validateLPTS(filesets)
-
 		FilenameReducer.openAcceptErrorSet(self.config)
 		parser = FilenameParser(self.config)
 		parser.process3(filesets)
-
-		## This was intended for processing an entire bucket.
-		#find = FindDuplicateFilesets(self.config)
-		#duplicates = find.findDuplicates()
-		#find.moveDuplicates(duplicates)
 
 	def validateTextPlainFilesets(self, texts, inp, filePath):
 		errorTuple = texts.validateFileset("text_plain", inp.bibleId, inp.filesetId, inp.languageRecord, inp.index, filePath)
@@ -138,19 +129,6 @@ class Validate:
 		return None
 
 
-	## These validations require MySql and so are not done in PreValidate
-	def validateLPTS(self, filesets):
-		for inp in filesets:
-			logger = Log.getLogger(inp.filesetId)
-			if inp.typeCode == "text":
-
-				scriptName = inp.languageRecord.Orthography(inp.index)
-				if scriptName != None and scriptName not in self.scriptNameSet:
-					logger.invalidValues(inp.stockNum(), "_x003n_Orthography", scriptName)
-
-				numeralsName = inp.languageRecord.Numerals()
-				if numeralsName != None and numeralsName not in self.numeralsSet:
-					logger.invalidValues(inp.stockNum(), "Numerals", numeralsName)
 
 
 if (__name__ == '__main__'):

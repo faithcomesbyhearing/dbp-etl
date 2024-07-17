@@ -5,8 +5,7 @@ from UnicodeScript import *
 
 class TextStockNumberProcessor:
 
-	def __init__(self, languageReader):
-		self.languageReader = languageReader
+	def __init__(self):
 		self.unicodeScript = UnicodeScript()
 		self.errors = [] # array of strings
 		self.OT = { "GEN", "EXO", "LEV", "NUM", "DEU", "JOS", "JDG", "RUT", "1SA", "2SA", "1KI", "2KI", "1CH", "2CH", 
@@ -14,6 +13,11 @@ class TextStockNumberProcessor:
 					"JOL", "AMO", "OBA", "JON", "MIC", "NAM", "HAB", "ZEP", "HAG", "ZEC", "MAL" }
 		self.NT = { "MAT", "MRK", "LUK", "JHN", "ACT", "ROM", "1CO", "2CO", "GAL", "EPH", "PHP", "COL", "1TH", "2TH", 
 					"1TI", "2TI", "TIT", "PHM", "HEB", "JAS", "1PE", "2PE", "1JN", "2JN", "3JN", "JUD", "REV" }			
+
+	def __init__(self, languageReader):
+		self.languageReader = languageReader
+		self.__init__();
+	
 
 	def validateTextStockNumbersFromLambda(self, stocknumberFileContentsString, directoryName, filenames):
 		resultList = []

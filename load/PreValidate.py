@@ -25,7 +25,7 @@ class PreValidate:
 	# there is no bucket involved, since the code has not been uploaded yet
 	def validateLambda(self, directoryName, filenames, stocknumberFileContentsString = None):
 		result = None
-		textStockNumberProcessor = TextStockNumberProcessor(self.languageReader)
+		textStockNumberProcessor = TextStockNumberProcessor() # FIXME(2101) - self.languageReader is not needed for Lambda pre-validation. not sure if this is legal, but this is the intent
 		(stockNumberResultList, textProcessingErrors) = textStockNumberProcessor.validateTextStockNumbersFromLambda(stocknumberFileContentsString, directoryName, filenames)
 		self.addErrorMessages("text-processing", textProcessingErrors)
 		if (self.hasErrors()):
@@ -79,7 +79,7 @@ class PreValidate:
 			damId = filesetId1.replace("_", "1")
 			results = self.languageReader.getFilesetRecords10(damId)
 			if results == None:
-				self.errorMessage(filesetId1, "filesetId is not in LPTS")
+				self.errorMessage(filesetId1, "filesetId is not in Biblebrain")
 				return None
 		stockNumSet = set()
 		mediaSet = set()
@@ -151,10 +151,6 @@ class PreValidate:
 			self.requiredFields(pre.filesetId, stockNumber, "Reg_StockNumber")
 		if pre.languageRecord.Volumne_Name() == None:
 			self.requiredFields(pre.filesetId, stockNumber, "Volumne_Name")
-
-		if pre.typeCode == "text" and pre.languageRecord.Orthography(pre.index) == None:
-			fieldName = "_x003%d_Orthography" % (pre.index)
-			self.requiredFields(pre.filesetId, stockNumber, fieldName)
 
 
 	def addErrorMessages(self, identifier, messages):
