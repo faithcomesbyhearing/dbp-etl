@@ -9,10 +9,9 @@ from Config import Config
 
 ### copied from lambda/prevalidate/Handler.py, except for s3Client
 def handler(event, context):
-
+    print("PreValidate Lambda Handler. 1")
 
     bucket    = os.getenv("UPLOAD_BUCKET")
-    # migration_stage = os.getenv("DATA_MODEL_MIGRATION_STAGE") # Should be "B" or "C"
 
     directory = event["prefix"] # can be filesetId or lang_stockno_USX
     filenames = event["files"] # Should be object keys
@@ -22,19 +21,28 @@ def handler(event, context):
     stocknumbersContents = event["stocknumbers"]
 
     # session = boto3.Session() # this is in prod handler since the lambda has only one session profile 
+    print("PreValidate Lambda Handler. 10")
     config = Config.shared()
+    print("PreValidate Lambda Handler. 20")
     session = boto3.Session(profile_name = config.s3_aws_profile)    
+    print("PreValidate Lambda Handler. 30")
     s3Client = session.client("s3")
 	 
-    # print("Copying lpts-dbp.xml...")
-    # s3Client.download_file(bucket, "lpts-dbp.xml", "/tmp/lpts-dbp.xml")  # commented out for efficiency during testing
     migration_stage = os.getenv("DATA_MODEL_MIGRATION_STAGE", "B")
+    if migration_stage == "B":
+        print("Copying lpts-dbp.xml...")
+        s3Client.download_file(bucket, "lpts-dbp.xml", "/tmp/lpts-dbp.xml") 
+    print("PreValidate Lambda Handler. 40")
     lpts_xml = config.filename_lpts_xml if migration_stage == "B" else ""
+    print("PreValidate Lambda Handler. 50")
     languageReader = LanguageReaderCreator(migration_stage).create(lpts_xml)
 
 
-    preValidate = PreValidate(languageReader, s3Client, bucket) ## removed UnicodeScript
+    print("PreValidate Lambda Handler. 60")
+    preValidate = PreValidate(languageReader, s3Client, bucket)
+    print("PreValidate Lambda Handler. 70")
     messages = preValidate.validateLambda(directory, filenames, stocknumbersContents)
+    print("PreValidate Lambda Handler. 80")
     return messages
 #### end of copy
 

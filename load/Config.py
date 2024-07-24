@@ -99,6 +99,7 @@ class Config:
 		return self.database_names
 
 	def setConfigParametersFromProfile(self, profile, programRunning):
+		print("Config:setConfigParametersFromProfile. profile: %s, programRunning: %s" % (profile, programRunning))
 		self.s3_artifacts_bucket = self._get("s3.artifacts_bucket")
 		self.s3_aws_profile = self._getOptional("s3.aws_profile") 
 		self.s3_aws_role_arn = self._getOptional("s3.aws_role_arn") 
