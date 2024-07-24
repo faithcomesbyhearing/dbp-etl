@@ -109,7 +109,7 @@ class Config:
 		self.s3_vid_bucket = self._get("s3.vid_bucket")
 		self.directory_accepted = self._getOptional("directory.accepted")
 		self.directory_errors = self._getOptional("directory.errors")
-		self.directory_upload_aws = self._getPath("directory.upload_aws")
+		self.directory_upload_aws = self._getOptional("directory.upload_aws")
 		self.directory_quarantine = self._getPath("directory.quarantine")
 		self.directory_duplicate = self._getPath("directory.duplicate")
 		self.directory_bucket_list = self._getPath("directory.bucket_list")
