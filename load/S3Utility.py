@@ -78,7 +78,7 @@ class S3Utility:
 if (__name__ == '__main__'):
 	from SQLUtility import *
 	from InputProcessor import *
-	from UpdateDBPTextFilesets import *
+	from UpdateDBPTextFilesets import UpdateDBPTextFilesets
 	from LanguageReaderCreator import LanguageReaderCreator	
 
 	config = Config.shared()
@@ -96,7 +96,7 @@ if (__name__ == '__main__'):
 				filePath = inp.downloadFiles()
 			else:
 				filePath = inp.fullPath()
-			errorTuple = texts.validateFileset("text_plain", inp.bibleId, inp.filesetId, inp.languageRecord, inp.index, filePath)
+			errorTuple = texts.validateFileset("text_plain", inp.filesetId, inp.languageRecord, inp.index)
 			if errorTuple != None:
 				logger = Log.getLogger(inp.filesetId)
 				logger.messageTuple(errorTuple)

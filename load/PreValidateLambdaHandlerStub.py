@@ -1,17 +1,18 @@
 # PreValidateHandlerStub.py
 # This is a test stub intended to provide the same interface as the AWS Lambda Handler
 import boto3
+import os
+import sys
 from LanguageReaderCreator import LanguageReaderCreator
-from PreValidate import *
-from UnicodeScript import *
-from Config import *
+from PreValidate import PreValidate
+from Config import Config
 
 ### copied from lambda/prevalidate/Handler.py, except for s3Client
 def handler(event, context):
 
 
     bucket    = os.getenv("UPLOAD_BUCKET")
-    migration_stage = os.getenv("DATA_MODEL_MIGRATION_STAGE") # Should be "B" or "C"
+    # migration_stage = os.getenv("DATA_MODEL_MIGRATION_STAGE") # Should be "B" or "C"
 
     directory = event["prefix"] # can be filesetId or lang_stockno_USX
     filenames = event["files"] # Should be object keys
@@ -27,7 +28,10 @@ def handler(event, context):
 	 
     # print("Copying lpts-dbp.xml...")
     # s3Client.download_file(bucket, "lpts-dbp.xml", "/tmp/lpts-dbp.xml")  # commented out for efficiency during testing
-    languageReader = LanguageReaderCreator(migration_stage).create(config.filename_lpts_xml)
+    migration_stage = os.getenv("DATA_MODEL_MIGRATION_STAGE", "B")
+    lpts_xml = config.filename_lpts_xml if migration_stage == "B" else ""
+    languageReader = LanguageReaderCreator(migration_stage).create(lpts_xml)
+
 
     preValidate = PreValidate(languageReader, s3Client, bucket) ## removed UnicodeScript
     messages = preValidate.validateLambda(directory, filenames, stocknumbersContents)
@@ -38,7 +42,7 @@ def handler(event, context):
 if (__name__ == '__main__'):
 
     os.environ["UPLOAD_BUCKET"] = "dbp-etl-upload-dev-ya1mbvdty8tlq15r"
-    os.environ["DATA_MODEL_MIGRATION_STAGE"] = "B"
+    # os.environ["DATA_MODEL_MIGRATION_STAGE"] = "B"
 
     # general
     textOTFiles = ["xxxGEN.usx", "xxxEXO.usx", "xxxLEV.usx", "xxxNUM.usx", "xxxDEU.usx", "xxxJOS.usx", "xxxJDG.usx", "xxxRUT.usx", "xxx1SA.usx", "xxx2SA.usx", "xxx1KI.usx", "xxx2KI.usx", "xxx1CH.usx", "xxx2CH.usx", 
@@ -157,7 +161,6 @@ if (__name__ == '__main__'):
         else:
             messages = handler(audioEvent_Fail, None) 
     elif (type == "video"):
-        # messages = handler(videoEvent, None)   
         print ("video event not implemented")     
         sys.exit()
     else:

@@ -1,6 +1,5 @@
 # This class collects and reports error messages
 
-from datetime import datetime
 from Config import *
 from DBPRunFilesS3 import *
 
@@ -85,6 +84,9 @@ class Log:
 
 	def missingBibleIds(self):
 		self.messages.append((Log.EROR, "bibleId is not in LPTS."))
+
+	def missingBibleIdConnection(self, filesetId):
+		self.messages.append((Log.EROR, "FilesetId: %s is not related with a specific bible." % (filesetId)))
 
 	def missingFilesetIds(self):
 		self.messages.append((Log.EROR, "filesetId is not in LPTS record."))
