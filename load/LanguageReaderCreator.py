@@ -8,7 +8,6 @@ class LanguageReaderCreator:
 		self.stage = stage
 		self.stage_map = {
 			"B": LPTSExtractReader,
-			"C": StageCLanguageReader,
 			"BLIMP": BlimpLanguageReader
 		}
 
