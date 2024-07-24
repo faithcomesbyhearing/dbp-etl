@@ -104,7 +104,8 @@ class Config:
 		self.s3_aws_profile = self._getOptional("s3.aws_profile") 
 		self.s3_aws_role_arn = self._getOptional("s3.aws_role_arn") 
 		self.s3_aws_role_profile = self._getOptional("s3.aws_role_profile") # this is temporary
-		self.filename_lpts_xml = self._getOptional("filename.lpts_xml")
+		if os.environ.get('DATA_MODEL_MIGRATION_STAGE') == 'B':
+			self.filename_lpts_xml = self._getOptional("filename.lpts_xml")
 		self.filename_metadata_xml = self._getOptional("filename.metadata_xml")
 		self.s3_bucket = self._get("s3.bucket")
 		self.s3_vid_bucket = self._get("s3.vid_bucket")
@@ -138,7 +139,6 @@ class Config:
 			self.video_preset_hls_480p = self._get("video.preset.hls.480p")
 			self.video_preset_hls_360p = self._get("video.preset.hls.360p")
 			self.video_preset_web = self._get("video.preset.web")
-			self.filename_lpts_xml = self._getPath("filename.lpts_xml")
 			self.database_names['dbp'] = self.hashMap.get("database.db_name")
 			self.database_names['user_dbp'] = self.hashMap.get("database.user_db_name")
 			self.database_host = self._get("database.host")
