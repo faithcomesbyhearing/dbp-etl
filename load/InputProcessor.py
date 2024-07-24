@@ -4,19 +4,17 @@
 # one or more InputFileset objects are created and returned.
 # 
 import os
-from datetime import datetime
 from Log import *
 from Config import *
-from InputFileset import *
+from InputFileset import InputFileset
 from RunStatus import *
 from PreValidate import *
 from AWSSession import *
-from UnicodeScript import *
 
 class InputProcessor:
 
 	## parse command line, and return [InputFileset]
-	def commandLineProcessor(config, s3Client, languageReader):
+	def commandLineProcessor(config, s3Client, languageReader=None):
 		if len(sys.argv) < 4:
 			print("FATAL command line parameters: config_profile  s3://bucket|localPath  path_list ")
 			sys.exit()

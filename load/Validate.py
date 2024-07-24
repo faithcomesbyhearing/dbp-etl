@@ -34,6 +34,9 @@ class Validate:
 		## Validate filetypes
 		for inp in filesets:
 			logger = Log.getLogger(inp.filesetId)
+			bibleId = self.db.selectScalar("SELECT bible_fileset_connections.bible_id FROM bible_fileset_connections INNER JOIN bible_filesets ON bible_filesets.hash_id = bible_fileset_connections.hash_id WHERE bible_filesets.id = %s", (inp.filesetId,))
+			if bibleId == None:
+				logger.missingBibleIdConnection(inp.filesetId)
 			for file in inp.files:
 				ext = os.path.splitext(file.name)[-1]
 				if inp.typeCode == "audio" and ext not in {".mp3", ".opus", ".webm", ".m4a", ".jpg", ".tif", ".png", ".zip"}:
@@ -53,11 +56,11 @@ class Validate:
 				else:
 					filePath = inp.fullPath()
 
-				if self.validateTextPlainFilesets(texts, inp, filePath) == True:
+				if self.validateTextPlainFilesets(texts, inp) == True:
 					textplainFileset = texts.createTextFileset(inp)
 					results.append(textplainFileset)
 
-					if self.validateTextJsonFilesets(texts, inp, filePath) == True:
+					if self.validateTextJsonFilesets(texts, inp) == True:
 
 						inputFilesetDBPath = "%s%s.db" % (self.config.directory_accepted, inp.textLptsDamId())
 						inputFilesetId = texts.newFilesetId
@@ -76,8 +79,8 @@ class Validate:
 		parser = FilenameParser(self.config)
 		parser.process3(filesets)
 
-	def validateTextPlainFilesets(self, texts, inp, filePath):
-		errorTuple = texts.validateFileset("text_plain", inp.bibleId, inp.filesetId, inp.languageRecord, inp.index, filePath)
+	def validateTextPlainFilesets(self, texts, inp):
+		errorTuple = texts.validateFileset("text_plain", inp.filesetId, inp.languageRecord, inp.index)
 
 		if errorTuple == None:
 			return True
@@ -87,8 +90,8 @@ class Validate:
 
 		return False
 
-	def validateTextJsonFilesets(self, texts, inp, filePath):
-		errorTuple = texts.validateFileset("text_json", inp.bibleId, inp.filesetId, inp.languageRecord, inp.index, filePath)
+	def validateTextJsonFilesets(self, texts, inp):
+		errorTuple = texts.validateFileset("text_json", inp.filesetId, inp.languageRecord, inp.index)
 
 		if errorTuple == None:
 			return True
@@ -132,12 +135,18 @@ class Validate:
 
 
 if (__name__ == '__main__'):
-	from DBPLoadController import *
-	from LanguageReaderCreator import *
+	from DBPLoadController import DBPLoadController
+	from LanguageReaderCreator import LanguageReaderCreator
+	from InputProcessor import InputProcessor
+
 	config = Config()
 	AWSSession.shared() # ensure AWSSession init
 	db = SQLUtility(config)
-	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
+	migration_stage = os.getenv("DATA_MODEL_MIGRATION_STAGE", "B")
+	lpts_xml = config.filename_lpts_xml if migration_stage == "B" else ""
+
+	languageReader = LanguageReaderCreator(migration_stage).create(lpts_xml)
+
 	filesets = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
 	ctrl = DBPLoadController(config, db, languageReader)
 	ctrl.validate(filesets)

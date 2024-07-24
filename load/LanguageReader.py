@@ -105,7 +105,9 @@ class LanguageRecordInterface(ABC):
     # from damId: TNKWBTN1ET to text damId: TNKWBTN_ET
     @staticmethod
     def transformToTextId(id):
-        return id[:7] + "_" + id[8:]
+        if id != None:
+            return id[:7] + "_" + id[8:]
+        return ""
 
     @staticmethod
     def GetFilesetIdLen10(filesetId):

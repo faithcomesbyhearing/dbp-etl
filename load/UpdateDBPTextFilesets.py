@@ -1,11 +1,8 @@
 # UpdateDBPTextFilesets.py
 
-
-import io
 import sys
 import os
 import re
-import sqlite3
 import json
 from Config import *
 from Log import *
@@ -26,21 +23,23 @@ class UpdateDBPTextFilesets:
 
 
 	## This is called one fileset at a time by Validate.process
-	def validateFileset(self, subTypeCode, bibleId, filesetId, languageRecord, lptsIndex, fullFilesetPath):
+	# def validateFileset(self, subTypeCode, bibleId, filesetId, languageRecord, lptsIndex, fullFilesetPath):
+	def validateFileset(self, subTypeCode, filesetId, languageRecord, lptsIndex):
 		if languageRecord == None or lptsIndex == None:
 			return((Log.EROR, "has no LPTS record."))
 		iso3 = languageRecord.ISO()
 		if iso3 == None:
 			return((Log.EROR, "has no iso language code."))
-		scriptName = languageRecord.Orthography(lptsIndex)
-		if scriptName == None:
-			return((Log.EROR, "has no Orthography."))
-		scriptId = self.db.selectScalar("SELECT script_id FROM lpts_script_codes WHERE lpts_name = %s", (scriptName,))
-		if scriptId == None:
-			return((Log.EROR, "%s script name is not in lpts_script_codes." % (scriptName,)))
-		direction = self.db.selectScalar("SELECT direction FROM alphabets WHERE script = %s", (scriptId,))
-		if direction not in {"ltr", "rtl"}:
-			return((Log.EROR, "%s script has no direction in alphabets." % (scriptId,)))
+		## Orthography validation is not longer necessary
+		# scriptName = languageRecord.Orthography(lptsIndex)
+		# if scriptName == None:
+		# 	return((Log.EROR, "has no Orthography."))
+		# scriptId = self.db.selectScalar("SELECT script_id FROM lpts_script_codes WHERE lpts_name = %s", (scriptName,))
+		# if scriptId == None:
+		# 	return((Log.EROR, "%s script name is not in lpts_script_codes." % (scriptName,)))
+		# direction = self.db.selectScalar("SELECT direction FROM alphabets WHERE script = %s", (scriptId,))
+		# if direction not in {"ltr", "rtl"}:
+		# 	return((Log.EROR, "%s script has no direction in alphabets." % (scriptId,)))
 		if subTypeCode == "text_format":
 			# BWF. six character filesetid is deprecated. Analysis shows that calls to this method should not send subTypeCode=text_format 
 			print("**** text_format subTypeCode... creating SIX character filesetId")
@@ -212,12 +211,17 @@ class UpdateDBPTextFilesets:
 
 if (__name__ == '__main__'):
 	from LanguageReaderCreator import LanguageReaderCreator
-	from LanguageReader import *
-	from InputFileset import *
-	from DBPLoadController import *
+	from InputFileset import InputFileset
+	from DBPLoadController import DBPLoadController
+	from InputProcessor import InputProcessor
+	from UpdateDBPFilesetTables import UpdateDBPFilesetTables
 
 	config = Config.shared()
-	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
+	# languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
+	migration_stage = os.getenv("DATA_MODEL_MIGRATION_STAGE", "B")
+	lpts_xml = config.filename_lpts_xml if migration_stage == "B" else ""
+	languageReader = LanguageReaderCreator(migration_stage).create(lpts_xml)
+
 	filesets = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
 
 	db = SQLUtility(config)
@@ -225,7 +229,7 @@ if (__name__ == '__main__'):
 	ctrl.validate(filesets)
 
 	dbOut = SQLBatchExec(config)
-	update = UpdateDBPFilesetTables(config, db, dbOut)
+	update = UpdateDBPFilesetTables(config, db, dbOut, languageReader)
 	for inp in InputFileset.upload:
 		hashId = update.processFileset(inp)
 

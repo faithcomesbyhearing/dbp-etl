@@ -9,7 +9,6 @@
 # prior step are going to be processed.
 
 import os
-import json
 from datetime import datetime
 from Log import *
 from Config import *
@@ -18,7 +17,7 @@ from LanguageReader import *
 from SqliteUtility import *
 from PreValidate import *
 from AWSSession import *
-from UnicodeScript import *
+from LanguageReader import LanguageRecordInterface
 
 class InputFile:
 
