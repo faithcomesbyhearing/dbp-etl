@@ -1,9 +1,7 @@
 from LanguageReader import LanguageReaderInterface
+from BlimpLanguageService import BlimpLanguageService as LanguageService
+from BlimpLanguageServiceParse import parseResult
 
-# FIXME(2101) - this is copied from StageCLanguageReader, but not implemented. 
-# instead of reading from xml file, query the database. 
-# Since the BlimpLanguageReader should only be called during content load, only implement 
-# the methods needed during content loading
 class BlimpLanguageReader (LanguageReaderInterface):
     def __init__(self):
         self.service = LanguageService()
@@ -19,7 +17,8 @@ class BlimpLanguageReader (LanguageReaderInterface):
        raise Exception("Not implemented")
 
     def getByStockNumber(self, stockNumber):
-        raise Exception("Not implemented")
+        result = parseResult(self.service.getMediaByStocknumber(stockNumber))
+        return result[0] if len(result) > 0 else None
 
     def getLanguageRecordLoose(typeCode, bibleId, dbpFilesetId):
        raise Exception("Not implemented")
@@ -28,7 +27,37 @@ class BlimpLanguageReader (LanguageReaderInterface):
         raise Exception("Not implemented")
 
     def getFilesetRecords10(self, filesetId):
-        raise Exception("Not implemented")
+        damId = filesetId[:10]
+
+        if len(damId) == 10 and damId[-2:] == "SA":
+            damId = damId[:8] + "DA"
+
+        (mediaId, modeType) = self.service.getMediaIdFromFilesetId(damId)
+        if mediaId == None:
+            filesetIdWithoutMusic = damId[:7] + "_" + damId[8:10]
+            (mediaId, modeType) = self.service.getMediaIdFromFilesetId(filesetIdWithoutMusic)
+
+        if mediaId != None:
+            result = parseResult(self.service.getMediaById(mediaId))
+            languageRecord = result[0] if len(result) > 0 else None
+            response = set()
+            modeTypeCamelCase = modeType
+            if modeType != None:
+                modeTypeCamelCase = modeType.capitalize()
+
+            response.add((languageRecord, languageRecord.Status(), modeTypeCamelCase))
+            return response
+
+        return None
 
     def getFilesetRecords(self, filesetId):
-        raise Exception("Not implemented")
+        (mediaId, _) = self.service.getMediaIdFromFilesetId(filesetId[:10])
+
+        if mediaId != None:
+            result = parseResult(self.service.getMediaById(mediaId))
+            languageRecord = result[0] if len(result) > 0 else None
+            response = set()
+            response.add((languageRecord.Status(), languageRecord))
+            return response
+
+        return None

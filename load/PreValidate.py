@@ -13,7 +13,7 @@ from TextStockNumberProcessor import *
 
 class PreValidate:
 
-	def __init__(self, languageReader, s3Client, bucket):
+	def __init__(self, languageReader=None, s3Client=None, bucket=""):
 		self.languageReader = languageReader
 		self.messages = {}	
 		self.s3Client = s3Client
@@ -25,7 +25,8 @@ class PreValidate:
 	# there is no bucket involved, since the code has not been uploaded yet
 	def validateLambda(self, directoryName, filenames, stocknumberFileContentsString = None):
 		result = None
-		textStockNumberProcessor = TextStockNumberProcessor() # FIXME(2101) - self.languageReader is not needed for Lambda pre-validation. not sure if this is legal, but this is the intent
+		# TextStockNumberProcessor will be invoked but the variable self.languageReader could be None
+		textStockNumberProcessor = TextStockNumberProcessor(self.languageReader)
 		(stockNumberResultList, textProcessingErrors) = textStockNumberProcessor.validateTextStockNumbersFromLambda(stocknumberFileContentsString, directoryName, filenames)
 		self.addErrorMessages("text-processing", textProcessingErrors)
 		if (self.hasErrors()):
@@ -84,15 +85,13 @@ class PreValidate:
 		stockNumSet = set()
 		mediaSet = set()
 		bibleIdSet = set()
-		for (languageRecord, status, fieldName) in results:
+		for (languageRecord, _, fieldName) in results:
 			if not languageRecord.IsActive():
 				continue
 			stockNum = languageRecord.Reg_StockNumber() 
 			if stockNum != None:
 				stockNumSet.add(stockNum)
 			damId = languageRecord.record.get(fieldName)
-
-			dbpFilesetId = filesetId
 			if "Audio" in fieldName:
 				media = "audio"
 			elif "Text" in fieldName:
@@ -191,9 +190,9 @@ class PreValidate:
 
 ## System Test for PreValidate,testing the validateDBPETL entry point (see PreValidateLambdaHandlerStub for the lambda entry point system test)
 if (__name__ == "__main__"):
-	import boto3
-	from Config import *
-	from AWSSession import *
+	import sys
+	from Config import Config
+	from AWSSession import AWSSession
 	from LanguageReaderCreator import LanguageReaderCreator	
 
 	if len(sys.argv) < 2:
@@ -203,7 +202,7 @@ if (__name__ == "__main__"):
 	location = "s3://dbp-etl-upload-dev-ya1mbvdty8tlq15r"
 	prefix = "2022-03-25-16-14-34"
 	directoryName = "Abidji_N2ABIWBT_USX"
-	migration_stage = os.getenv("DATA_MODEL_MIGRATION_STAGE") # Should be "B" or "C"
+	migration_stage = os.getenv("DATA_MODEL_MIGRATION_STAGE", "B")
 
 	if len(sys.argv) > 2:
 		location = sys.argv[2][:-1] if sys.argv[2].endswith("/") else sys.argv[2]
@@ -222,7 +221,8 @@ if (__name__ == "__main__"):
 
 	config = Config()
 	AWSSession.shared()
-	languageReader = LanguageReaderCreator(migration_stage).create(config.filename_lpts_xml)
+	lpts_xml = config.filename_lpts_xml if migration_stage == "B" else ""
+	languageReader = LanguageReaderCreator(migration_stage).create(lpts_xml)
 	s3Client = AWSSession.shared().s3Client
 
 	preValidate = PreValidate(languageReader, s3Client, location) 
@@ -241,3 +241,5 @@ if (__name__ == "__main__"):
 
 # python3 load/PreValidate.py test s3://dbp-etl-upload-dev-ya1mbvdty8tlq15r 2022-03-25-16-14-34 Spanish_N2SPNTLA_USX
 # python3 load/PreValidate.py test s3://dbp-etl-upload-dev-ya1mbvdty8tlq15r 2022-09-27-13-48-13 ENGESVO2ET
+
+# dbp-etl-dev s3://dbp-etl-upload-dev-ya1mbvdty8tlq15r/2022-10-17-18-49-35/Spanish_N2SPNTLA_USX/

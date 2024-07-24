@@ -87,7 +87,6 @@ class DBPLoadController:
 		inp = inputFilesets
 		dbOut = SQLBatchExec(self.config)
 		update = UpdateDBPFilesetTables(self.config, self.db, dbOut, self.languageReader)
-
 		for inp in inputFilesets:
 			print("DBPLoadController:updateFilesetTables. processing fileset: %s" % (inp.filesetId))
 			hashId = update.processFileset(inp)
@@ -124,7 +123,7 @@ class DBPLoadController:
 		dbOut = SQLBatchExec(self.config)
 		lptsDBP = UpdateDBPLPTSTable(self.config, dbOut, self.languageReader)
 		lptsDBP.process()
-		#dbOut.displayStatements()
+		dbOut.displayStatements()
 		dbOut.displayCounts()
 		success = dbOut.execute("lpts")
 		RunStatus.set(RunStatus.LPTS, success)
@@ -138,6 +137,7 @@ class DBPLoadController:
 			"and SUBSTR(filesetid, 8,1) != '_'", ('text%'))
 
 		if len(result) > 0:
+			logger = Log.getLogger(inp.filesetId)
 			logger.invalidValues(inp.stockNum(), "text_json", len(result))
 
 	def refreshDB(self):
@@ -146,16 +146,17 @@ class DBPLoadController:
 
 if (__name__ == '__main__'):
 	print("*** DBPLoadController *** ")
-	from LanguageReaderCreator import *
+	from LanguageReaderCreator import LanguageReaderCreator
 	config = Config()
 	AWSSession.shared() # ensure AWSSession init
 	db = SQLUtility(config)
-	# DATA_MODEL_MIGRATION_STAGE should be "B" or "C", or "BLIMP"
-	#print("DATA_MODEL_MIGRATION_STAGE DBPLoadController ==> [%s]" % os.getenv("DATA_MODEL_MIGRATION_STAGE"))
-	migration_stage = "B" if os.getenv("DATA_MODEL_MIGRATION_STAGE") == None else os.getenv("DATA_MODEL_MIGRATION_STAGE")
-	languageReader = LanguageReaderCreator(migration_stage).create(config.filename_lpts_xml)
-	ctrl = DBPLoadController(config, db, languageReader)
+	migration_stage = os.getenv("DATA_MODEL_MIGRATION_STAGE", "B")
+	lpts_xml = config.filename_lpts_xml if migration_stage == "B" else ""
+
 	if len(sys.argv) != 2:
+		# load content will always point to BLIMP stage because the lpts.xml should be used
+		languageReader = LanguageReaderCreator("BLIMP").create("")
+		ctrl = DBPLoadController(config, db, languageReader)
 		InputFileset.validate = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
 		ctrl.repairAudioFileNames(InputFileset.validate)
 		ctrl.validate(InputFileset.validate)
@@ -164,13 +165,14 @@ if (__name__ == '__main__'):
 		for inputFileset in InputFileset.complete:
 			print("Completed: ", inputFileset.filesetId)
 	else:
-		# FIXME(2101) - this is the path for processing the xml file. 
-		if (migration_stage == "BLIMP"):
+		if migration_stage == "BLIMP":
 			print("cannot process because Blimp is the system of record")
-			return;
-	
-		ctrl.updateBibles()
-		ctrl.updateLPTSTables()
+		elif migration_stage == "C" or migration_stage == "B":
+			languageReader = LanguageReaderCreator(migration_stage).create(lpts_xml)
+			ctrl = DBPLoadController(config, db, languageReader)
+			ctrl.updateBibles()
+			ctrl.updateLPTSTables()
+
 	Log.writeLog(config)
 	RunStatus.exit()
 
