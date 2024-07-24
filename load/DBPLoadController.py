@@ -152,9 +152,11 @@ if (__name__ == '__main__'):
 	db = SQLUtility(config)
 	migration_stage = os.getenv("DATA_MODEL_MIGRATION_STAGE", "B")
 	lpts_xml = config.filename_lpts_xml if migration_stage == "B" else ""
-
+	print("Migration Stage: %s " % migration_stage)
 	if len(sys.argv) != 2:
-		# load content will always point to BLIMP stage because the lpts.xml should be used
+		print("Processing Content Load")
+
+		# load content will always point to BLIMP stage because the lpts.xml is no longer used
 		languageReader = LanguageReaderCreator("BLIMP").create("")
 		ctrl = DBPLoadController(config, db, languageReader)
 		InputFileset.validate = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
@@ -165,9 +167,11 @@ if (__name__ == '__main__'):
 		for inputFileset in InputFileset.complete:
 			print("Completed: ", inputFileset.filesetId)
 	else:
+		print("Processing Metadata Load")
 		if migration_stage == "BLIMP":
 			print("cannot process because Blimp is the system of record")
 		elif migration_stage == "C" or migration_stage == "B":
+			print("Processing XML file")
 			languageReader = LanguageReaderCreator(migration_stage).create(lpts_xml)
 			ctrl = DBPLoadController(config, db, languageReader)
 			ctrl.updateBibles()

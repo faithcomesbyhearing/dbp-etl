@@ -13,7 +13,7 @@ class LanguageReaderCreator:
 		}
 
 	def create(self, lpts_xml_path: Union[str, None] = None):
-		print(f"migration stage: [{self.stage}]")
+		print(f"LanguageReader requested: [{self.stage}]")
 		reader_class = self.stage_map.get(self.stage)
 		if not reader_class:
 			raise ValueError(f"Unrecognized stage: {self.stage}")
