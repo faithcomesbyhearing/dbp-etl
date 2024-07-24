@@ -151,7 +151,6 @@ if (__name__ == '__main__'):
 	AWSSession.shared() # ensure AWSSession init
 	db = SQLUtility(config)
 	migration_stage = os.getenv("DATA_MODEL_MIGRATION_STAGE", "B")
-	lpts_xml = config.filename_lpts_xml if migration_stage == "B" else ""
 	print("Migration Stage: %s " % migration_stage)
 	if len(sys.argv) != 2:
 		print("Processing Content Load")
@@ -172,6 +171,7 @@ if (__name__ == '__main__'):
 			print("cannot process because Blimp is the system of record")
 		elif migration_stage == "C" or migration_stage == "B":
 			print("Processing XML file")
+			lpts_xml = config.filename_lpts_xml
 			languageReader = LanguageReaderCreator(migration_stage).create(lpts_xml)
 			ctrl = DBPLoadController(config, db, languageReader)
 			ctrl.updateBibles()
