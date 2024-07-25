@@ -1,19 +1,19 @@
 
+import os
 from botocore.exceptions import ClientError
 from PreValidateResult import *
-from UnicodeScript import *
 
 class TextStockNumberProcessor:
 
-	def __init__(self, languageReader):
+	def __init__(self, languageReader=None):
 		self.languageReader = languageReader
-		self.unicodeScript = UnicodeScript()
 		self.errors = [] # array of strings
 		self.OT = { "GEN", "EXO", "LEV", "NUM", "DEU", "JOS", "JDG", "RUT", "1SA", "2SA", "1KI", "2KI", "1CH", "2CH", 
 					"EZR", "NEH", "EST", "JOB", "PSA", "PRO", "ECC", "SNG", "ISA", "JER", "LAM", "EZK", "DAN", "HOS", 
 					"JOL", "AMO", "OBA", "JON", "MIC", "NAM", "HAB", "ZEP", "HAG", "ZEC", "MAL" }
 		self.NT = { "MAT", "MRK", "LUK", "JHN", "ACT", "ROM", "1CO", "2CO", "GAL", "EPH", "PHP", "COL", "1TH", "2TH", 
 					"1TI", "2TI", "TIT", "PHM", "HEB", "JAS", "1PE", "2PE", "1JN", "2JN", "3JN", "JUD", "REV" }			
+
 
 	def validateTextStockNumbersFromLambda(self, stocknumberFileContentsString, directoryName, filenames):
 		resultList = []
@@ -111,7 +111,6 @@ class TextStockNumberProcessor:
 		result = {}
 		textDamIds = lptsRecord.DamIdList("text")
 		textDamIds = lptsRecord.ReduceTextList(textDamIds)
-		#print("damIds", textDamIds)
 		for (damId, index, status) in textDamIds:
 			scope = damId[6]
 			script = lptsRecord.Orthography(index)
@@ -133,7 +132,7 @@ class TextStockNumberProcessor:
 		if len(bookIdsFound) >= len(bookIdSet):
 			if scopeMap.get(scope) != None:
 				for (damId, index, script) in scopeMap.get(scope):
-					if actualScript == None or self.unicodeScript.matchScripts(actualScript, script):
+					if actualScript == None:
 						filenameList = self._getFilenameList(scope, bookIdsFound, bookIdMap)
 						result = PreValidateResult(lptsRecord, damId + "-usx", damId, "text", index, filenameList)
 				if result == None:
@@ -146,7 +145,7 @@ class TextStockNumberProcessor:
 		elif len(bookIdsFound) > 0:
 			if scopeMap.get("P") != None:
 				for (damId, index, script) in scopeMap.get("P"):
-					if actualScript == None or self.unicodeScript.matchScripts(actualScript, script):
+					if actualScript == None:
 						filenameList = self._getFilenameList(scope, bookIdsFound, bookIdMap)
 						result = PreValidateResult(lptsRecord, damId + "-usx", damId, "text", index, filenameList)
 				if result == None:
@@ -242,12 +241,28 @@ class TextStockNumberProcessor:
 
 
 	def getSampleUnicodeTextFromS3(self, s3Client, bucket, fullPath):
-		filenames = self.unicodeScript.getFilenames(s3Client, bucket, fullPath)
-		sampleText =  self.unicodeScript.readObject(s3Client, bucket, fullPath + "/" + filenames[0]) if len(filenames) > 0 else None
-		if sampleText != None:
-			textArray = self.unicodeScript.parseXMLStrings(sampleText)
-			#print("sample", "".join(textArray[:40]))
-			(actualScript, matchPct) = self.unicodeScript.findScript(textArray)
+		filenames = self.getFilenames(s3Client, bucket, fullPath)
+		return (filenames, None)
+
+	def getFilenames(self, s3Client, location, filesetPath):
+		results = []
+		if not location.startswith("s3://"):
+			pathname = location + os.sep + filesetPath
+			if os.path.isdir(pathname):
+				for filename in [f for f in os.listdir(pathname) if not f.startswith('.')]:
+					if (filename.endswith(".usx") and not filename.startswith(".")):
+						results.append(filename)
+			else:
+				self.errors.append("ERROR: Invalid pathname %s" % (pathname,))
 		else:
-			actualScript = None
-		return (filenames, actualScript)
+			bucket = location[5:]
+			request = { 'Bucket': bucket, 'MaxKeys': 1000, 'Prefix': filesetPath + "/" }
+			response = s3Client.list_objects_v2(**request)
+			for item in response.get('Contents', []):
+				objKey = item.get('Key')
+				filename = objKey[len(filesetPath) + 1:]
+				if (filename.endswith(".usx") and not filename.startswith(".")):
+					results.append(filename)
+			if len(results) == 0:
+				self.errors.append("ERROR: Invalid bucket %s or prefix %s/" % (bucket, filesetPath))
+		return results

@@ -1,17 +1,17 @@
 # PreValidateHandlerStub.py
 # This is a test stub intended to provide the same interface as the AWS Lambda Handler
 import boto3
+import os
+import sys
 from LanguageReaderCreator import LanguageReaderCreator
-from PreValidate import *
-from UnicodeScript import *
-from Config import *
+from PreValidate import PreValidate
+from Config import Config
 
 ### copied from lambda/prevalidate/Handler.py, except for s3Client
 def handler(event, context):
-
+    print("PreValidate Lambda Handler. 1")
 
     bucket    = os.getenv("UPLOAD_BUCKET")
-    migration_stage = os.getenv("DATA_MODEL_MIGRATION_STAGE") # Should be "B" or "C"
 
     directory = event["prefix"] # can be filesetId or lang_stockno_USX
     filenames = event["files"] # Should be object keys
@@ -21,16 +21,28 @@ def handler(event, context):
     stocknumbersContents = event["stocknumbers"]
 
     # session = boto3.Session() # this is in prod handler since the lambda has only one session profile 
+    print("PreValidate Lambda Handler. 10")
     config = Config.shared()
+    print("PreValidate Lambda Handler. 20")
     session = boto3.Session(profile_name = config.s3_aws_profile)    
+    print("PreValidate Lambda Handler. 30")
     s3Client = session.client("s3")
 	 
-    # print("Copying lpts-dbp.xml...")
-    # s3Client.download_file(bucket, "lpts-dbp.xml", "/tmp/lpts-dbp.xml")  # commented out for efficiency during testing
-    languageReader = LanguageReaderCreator(migration_stage).create(config.filename_lpts_xml)
+    migration_stage = os.getenv("DATA_MODEL_MIGRATION_STAGE", "B")
+    if migration_stage == "B":
+        print("Copying lpts-dbp.xml...")
+        s3Client.download_file(bucket, "lpts-dbp.xml", "/tmp/lpts-dbp.xml") 
+    print("PreValidate Lambda Handler. 40")
+    lpts_xml = config.filename_lpts_xml if migration_stage == "B" else ""
+    print("PreValidate Lambda Handler. 50")
+    languageReader = LanguageReaderCreator(migration_stage).create(lpts_xml)
 
-    preValidate = PreValidate(languageReader, s3Client, bucket) ## removed UnicodeScript
+
+    print("PreValidate Lambda Handler. 60")
+    preValidate = PreValidate(languageReader, s3Client, bucket)
+    print("PreValidate Lambda Handler. 70")
     messages = preValidate.validateLambda(directory, filenames, stocknumbersContents)
+    print("PreValidate Lambda Handler. 80")
     return messages
 #### end of copy
 
@@ -38,7 +50,7 @@ def handler(event, context):
 if (__name__ == '__main__'):
 
     os.environ["UPLOAD_BUCKET"] = "dbp-etl-upload-dev-ya1mbvdty8tlq15r"
-    os.environ["DATA_MODEL_MIGRATION_STAGE"] = "B"
+    # os.environ["DATA_MODEL_MIGRATION_STAGE"] = "B"
 
     # general
     textOTFiles = ["xxxGEN.usx", "xxxEXO.usx", "xxxLEV.usx", "xxxNUM.usx", "xxxDEU.usx", "xxxJOS.usx", "xxxJDG.usx", "xxxRUT.usx", "xxx1SA.usx", "xxx2SA.usx", "xxx1KI.usx", "xxx2KI.usx", "xxx1CH.usx", "xxx2CH.usx", 
@@ -157,7 +169,6 @@ if (__name__ == '__main__'):
         else:
             messages = handler(audioEvent_Fail, None) 
     elif (type == "video"):
-        # messages = handler(videoEvent, None)   
         print ("video event not implemented")     
         sys.exit()
     else:
