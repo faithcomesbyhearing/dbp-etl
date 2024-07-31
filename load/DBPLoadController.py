@@ -63,6 +63,7 @@ class DBPLoadController:
 	def updateBibles(self):
 		# this should only be called when uploading an xml file, meaning (a) we are not uploading content and (b) Blimp is not the system of record
 		print("\n*** DBPLoadController:updateBibles ***")
+		RunStatus.statusMap[RunStatus.BIBLE] = RunStatus.NOT_DONE
 
 		dbOut = SQLBatchExec(self.config)
 		bibles = UpdateDBPBiblesTable(self.config, self.db, dbOut, self.languageReader)
@@ -120,6 +121,8 @@ class DBPLoadController:
 	def updateLPTSTables(self):
 		# this should only be called when uploading an xml file, meaning (a) we are not uploading content and (b) Blimp is not the system of record
 		print("\n*** DBPLoadController:updateLPTSTables ***")
+		RunStatus.statusMap[RunStatus.LPTS] = RunStatus.NOT_DONE
+
 		dbOut = SQLBatchExec(self.config)
 		lptsDBP = UpdateDBPLPTSTable(self.config, dbOut, self.languageReader)
 		lptsDBP.process()

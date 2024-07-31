@@ -18,7 +18,7 @@ class RunStatus:
 	NOT_DONE = "not done"
 
 	start = time.time()
-	statusMap = { BIBLE: NOT_DONE, LPTS: NOT_DONE }
+	statusMap = { }
 	dbConn = None
 	runId = None
 
