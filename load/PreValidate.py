@@ -59,11 +59,11 @@ class PreValidate:
 			return ([], self.messages)
 
 		if len(stockNumberResultList) > 0:
-			print("PreValidate.validateDBPETL. line 62. stocknumberResultList > 0" )
+			print("PreValidate.validateDBPETL. line 62. stocknumberResultList > 0.. value: %s" % (stockNumberResultList[0]))
 			self.validateLPTS(stockNumberResultList[0])
 			resultList.extend(stockNumberResultList)
 		else:
-			print("PreValidate.validateDBPETL. line 62. stocknumberResultList  was not >0.. validate filesetid from directoryName: %s" % (directoryName))
+			print("PreValidate.validateDBPETL. line 66. stocknumberResultList  was not >0.. validate filesetid from directoryName: %s" % (directoryName))
 			result = self.validateFilesetId(directoryName)
 			print("PreValidate.validateDBPETL. result from validateFilesetId: %s" % (result))
 			if (result != None):
@@ -71,7 +71,7 @@ class PreValidate:
 				self.validateLPTS(result)
 				resultList = [result]
 
-		print("PreValidate.validateDBPETL. returning resultList %s, messages: %s" % (resultList, self.messages))
+		print("PreValidate.validateDBPETL. returning resultList[0] %s, messages: %s" % (resultList[0], self.messages))
 		return (resultList, self.messages)
 
 

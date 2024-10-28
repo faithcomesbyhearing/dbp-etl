@@ -34,7 +34,7 @@ class TextStockNumberProcessor:
 			(filenames, actualScript) = self.getSampleUnicodeTextFromS3(s3Client, location, fullPath)
 			stockNumberResultList = self.validateUSXStockList(stockNumberList, filenames, actualScript)
 			resultList.extend(stockNumberResultList)
-		print("TextStocknumberProcessor.validateTextStockNumbersFromController returning resultList: %s " % (resultList))
+		print("TextStocknumberProcessor.validateTextStockNumbersFromController returning resultList[0]: %s " % (resultList[0]))
 		return (resultList, self.errors)
 
 
@@ -119,6 +119,7 @@ class TextStockNumberProcessor:
 		textDamIds = lptsRecord.DamIdList("text")
 		textDamIds = lptsRecord.ReduceTextList(textDamIds)
 		for (damId, index, status) in textDamIds:
+			print("TextStocknumberProcessor._findDamIdScopeMap.. damId (should be max 10 characters... ): %s, index: %s" % (damId, index))
 			scope = damId[6]
 			script = lptsRecord.Orthography(index)
 
@@ -130,6 +131,7 @@ class TextStockNumberProcessor:
 	## Match files included in 
 	## BWF Note: this is only called for text processing
 	def _matchFilesToDamId(self, stockNumber, scope, lptsRecord, scopeMap, bookIdMap, actualScript = None):
+		print("TextStocknumberProcessor.matchFilesToDamId. stocknumber: %s, scope: %s, lptsRecord: %s" % (stockNumber, scope, lptsRecord))
 		result = None
 		if scope == "N":
 			bookIdSet = self.NT 
@@ -139,6 +141,7 @@ class TextStockNumberProcessor:
 		if len(bookIdsFound) >= len(bookIdSet):
 			if scopeMap.get(scope) != None:
 				for (damId, index, script) in scopeMap.get(scope):
+					print("TextStocknumberProcessor.matchFilesToDamId, line 143. damId: %s, index: %s" % (damId, index))
 					if actualScript == None:
 						filenameList = self._getFilenameList(scope, bookIdsFound, bookIdMap)
 						result = PreValidateResult(lptsRecord, damId + "-usx", damId, "text", index, filenameList)
@@ -152,6 +155,7 @@ class TextStockNumberProcessor:
 		elif len(bookIdsFound) > 0:
 			if scopeMap.get("P") != None:
 				for (damId, index, script) in scopeMap.get("P"):
+					print("TextStocknumberProcessor.matchFilesToDamId, line 143. damId: %s, index: %s" % (damId, index))
 					if actualScript == None:
 						filenameList = self._getFilenameList(scope, bookIdsFound, bookIdMap)
 						result = PreValidateResult(lptsRecord, damId + "-usx", damId, "text", index, filenameList)

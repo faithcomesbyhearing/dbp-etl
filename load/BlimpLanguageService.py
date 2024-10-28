@@ -68,17 +68,20 @@ class BlimpLanguageService:
 
         return (mediaId, modeType)
 
+# BWF note: this is only called for text processing
 def getMediaByIdAndFormat(bibleId, format):
     config = Config()
     # config.setCurrentDatabaseDBName('LANGUAGE')
     sqlClient = SQLUtility(config)
+    # BWF 10/28/24. Changed CHAR_LENGTH(bf.id) from > 6 to =10. This filters out the derivatives, which are now in the database before loading.
+    # but it introduces a requirement that there be a ten character text fileset, and not just the old six character text fileset.
     derivativeOfmediaRecord = sqlClient.select(
         "SELECT bf.id, 'Complete' as status\
         FROM bible_filesets bf\
         INNER JOIN bible_fileset_connections bfc ON bfc.hash_id = bf.hash_id\
         INNER JOIN bible_fileset_types bft ON bft.set_type_code = bf.set_type_code\
         INNER JOIN bible_fileset_modes bfm ON bfm.id = bft.mode_id\
-        WHERE CHAR_LENGTH(bf.id) > 6\
+        WHERE CHAR_LENGTH(bf.id) = 10\
         AND bfc.bible_id = %s\
         AND bfm.name = %s\
         ", (bibleId, format)
