@@ -52,21 +52,26 @@ class PreValidate:
 		# objects are not relevant for the lambda entry point
 		textStockNumberProcessor = TextStockNumberProcessor(self.languageReader)
 		stocknumberString = textStockNumberProcessor.getStockNumberStringFromS3(s3Client, location, fullPath)
-
+		print("PreValidate.validateDBPETL. after call to getStocknumberStringFromS3. stocknumberString: %s " % (stocknumberString))
 		(stockNumberResultList, textProcessingMessages) = textStockNumberProcessor.validateTextStockNumbersFromController(stocknumberString, directoryName, s3Client, location, fullPath)
 		self.addErrorMessages("text-processing", textProcessingMessages)
 		if (self.hasErrors()):
 			return ([], self.messages)
 
 		if len(stockNumberResultList) > 0:
+			print("PreValidate.validateDBPETL. line 62. stocknumberResultList > 0" )
 			self.validateLPTS(stockNumberResultList[0])
 			resultList.extend(stockNumberResultList)
 		else:
+			print("PreValidate.validateDBPETL. line 62. stocknumberResultList  was not >0.. validate filesetid from directoryName: %s" % (directoryName))
 			result = self.validateFilesetId(directoryName)
+			print("PreValidate.validateDBPETL. result from validateFilesetId: %s" % (result))
 			if (result != None):
+				print("PreValidate.validateDBPETL. result from validateFilesetId was not empty, so validateLPTS ???")
 				self.validateLPTS(result)
 				resultList = [result]
 
+		print("PreValidate.validateDBPETL. returning resultList %s, messages: %s" % (resultList, self.messages))
 		return (resultList, self.messages)
 
 
@@ -74,11 +79,15 @@ class PreValidate:
 	def validateFilesetId(self, directoryName):
 		filesetId = directoryName
 		filesetId1 = directoryName.split("-")[0]
+		print("PreValidate.validateFilesetId. directoryName: %s, filesetId: %s, filesetId1: %s " % (directoryName, filesetId, filesetId1))
 		damId = filesetId1.replace("_", "2")
 		results = self.languageReader.getFilesetRecords10(damId) # This method expects 10 digit DamId's always
+		print("PreValidate.validateFilesetId. check1: results: %s" % (results))
 		if results == None:
 			damId = filesetId1.replace("_", "1")
 			results = self.languageReader.getFilesetRecords10(damId)
+			print("PreValidate.validateFilesetId. check2: results: %s" % (results))
+
 			if results == None:
 				self.errorMessage(filesetId1, "filesetId is not in Biblebrain")
 				return None
@@ -86,19 +95,25 @@ class PreValidate:
 		mediaSet = set()
 		bibleIdSet = set()
 		for (languageRecord, _, fieldName) in results:
+			print("PreValidate.validateFilesetId. didn't return error.. languageRecord: %s, fieldName: %s" % (languageRecord, fieldName))
 			if not languageRecord.IsActive():
+				print("PreValidate.validateFilesetId.  languageRecord not active.. continue: %s" % (languageRecord))
 				continue
 			stockNum = languageRecord.Reg_StockNumber() 
+			print("PreValidate.validateFilesetId. regStockNumber: %s" % (stockNum))
 			if stockNum != None:
 				stockNumSet.add(stockNum)
 			damId = languageRecord.record.get(fieldName)
+			print("PreValidate.validateFilesetId. damId: %s" % (damId))
 			if "Audio" in fieldName:
 				media = "audio"
 			elif "Text" in fieldName:
 				media = "text"	
 				# for the case when text (which is usx) is loaded from a directory containing the filesetid,
 				# we know the text is actually usx, so, we should make sure that filesetid includes the suffix -usx
+				print("PreValidate.validateFilesetId. damId: %s" % (damId))
 				if not filesetId.endswith("-usx"):
+					print("PreValidate.validateFilesetId. filesetId doesn't end with -usx, so adding -usx: %s" % (filesetId))
 					filesetId = filesetId + "-usx"
 			elif "Video" in fieldName:
 				media = "video"
@@ -115,6 +130,7 @@ class PreValidate:
 				index = 1
 
 			bibleId = languageRecord.DBP_EquivalentByIndex(index)
+			print("PreValidate.validateFilesetId. index: %s, bibleId: %s" % (index, bibleId))
 			if bibleId != None:
 				bibleIdSet.add(bibleId)
 		if len(stockNumSet) > 1:
@@ -127,8 +143,10 @@ class PreValidate:
 			self.errorMessage(filesetId, "in %s has more than one DBP_Equivalent: %s" % (", ".join(stockNumSet), ", ".join(bibleIdSet)))
 
 		if len(mediaSet) > 0 and len(bibleIdSet) > 0:
+			print("PreValidate.validateFilesetId. mediaSet and bibleIdSet not empty. return PreValidateResult..")
 			return PreValidateResult(languageRecord, filesetId, damId, list(mediaSet)[0], index)
 		else:
+			print("PreValidate.validateFilesetId. mediaSet and bibleIdSet empty. return None")
 			return None
 
 	def validateLPTS(self, preValidateResult):

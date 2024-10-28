@@ -26,19 +26,26 @@ class TextStockNumberProcessor:
 
 	def validateTextStockNumbersFromController(self, stocknumberFileContentsString, directoryName, s3Client, location, fullPath):
 		resultList = []
+		print("TextStocknumberProcessor.validateTextStockNumbersFromController entry... stocknumberFileContentsString: %s, directoryName: %s, location: %s, fullPath %s " % (stocknumberFileContentsString, directoryName, location, fullPath))
+
 		stockNumberList = self.getStockNumberList(stocknumberFileContentsString, directoryName)
 		if stockNumberList != None and len(stockNumberList) > 0:
+			print("TextStocknumberProcessor.validateTextStockNumbersFromController stocknumberList is not empty: %s" % (stockNumberList))
 			(filenames, actualScript) = self.getSampleUnicodeTextFromS3(s3Client, location, fullPath)
 			stockNumberResultList = self.validateUSXStockList(stockNumberList, filenames, actualScript)
 			resultList.extend(stockNumberResultList)
+		print("TextStocknumberProcessor.validateTextStockNumbersFromController returning resultList: %s " % (resultList))
 		return (resultList, self.errors)
 
 
 	def getStockNumberList(self,stocknumberFileContentsString, directoryName):
+		# print("TextStocknumberProcessor.getStockNumberList... stocknumberFileContentsString: %s" % (stocknumberFileContentsString))
 		if (stocknumberFileContentsString != None and stocknumberFileContentsString != ""):
 			stockNumberList = self.parseStockNumberString(stocknumberFileContentsString)
+			print("TextStocknumberProcessor.getStockNumberList, returning stockNumberList from contentsString: %s, stocknumberList: %s" % (stocknumberFileContentsString, stockNumberList))
 		else:
 			stockNumberList = self.parseStockNumberFromDirectoryName(directoryName)
+			print("TextStocknumberProcessor.getStockNumberList, returning stockNumberList from parsing Directory name: %s, stocknumberList: %s" % (directoryName, stockNumberList))
 		return stockNumberList
 		
 
