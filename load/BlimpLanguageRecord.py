@@ -46,6 +46,7 @@ class BlimpLanguageRecord (LanguageRecordInterface):
 
         self.record.update(record)
     
+    # BWF note: this is only called for text processing
     def DamIdList(self, typeCode):
         return getMediaByIdAndFormat(self.derivativeOf(), typeCode)
     

@@ -31,11 +31,13 @@ class InputProcessor:
 			# the CLI allows a path to contain multiple directories. The primary use case is for the path to contain a single directory
 			path = path[:-1] if path.endswith("/") else path
 			directory = path.split("/")[-1]
+			print("InputProcessor.commandLineProcessor.. path: %s, directory: %s" % (path, directory))
 
 			# this call will return a list of PreValidateResult objects containing information on validated filesets
 			preValidate = PreValidate(languageReader, s3Client, location)
 			(dataList, messages) = preValidate.validateDBPETL(s3Client, location, directory, path)
 			for data in dataList:
+				print("InputProcessor.commandLineProcessor.. data: %s" % (data))
 				inp = InputFileset(config, location, data.filesetId, path, data.damId, 
 					data.typeCode, data.bibleId(), data.index, data.languageRecord, data.fileList)
 				# print("INPUT", inp.toString())
