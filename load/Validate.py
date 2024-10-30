@@ -19,13 +19,6 @@ class Validate:
 		self.db = db
 
 	def process(self, filesets):
-		# FIXME(2101): add a check that each fileset can be found in bible_fileset_connections, and that the associated bible also exists
-		# select *
-		# from bible_filesets bfs
-		# join bible_fileset_connections bfc on bfc.hash_id = bfs.hash_id
-		# join bibles b on b.id = bfc.bible_id
-		# where bfs.id = <filesetid>
-		# must return a value for each fileset.
 		self.prepareDirectory(self.config.directory_accepted)
 		self.prepareDirectory(self.config.directory_quarantine)
 		self.prepareDirectory(self.config.directory_duplicate)
@@ -36,7 +29,11 @@ class Validate:
 			logger = Log.getLogger(inp.filesetId)
 			bibleId = self.db.selectScalar("SELECT bible_fileset_connections.bible_id FROM bible_fileset_connections INNER JOIN bible_filesets ON bible_filesets.hash_id = bible_fileset_connections.hash_id WHERE bible_filesets.id = %s", (inp.filesetId,))
 			if bibleId == None:
-				logger.missingBibleIdConnection(inp.filesetId)
+				# Exclude the usx fileset to be able to create a derived usx fileset if the text_plain exists
+				if inp.subTypeCode() == "text_usx":
+					print("FilesetId: %s is not related with a specific bible." % (inp.filesetId))
+				else:
+					logger.missingBibleIdConnection(inp.filesetId)
 			for file in inp.files:
 				ext = os.path.splitext(file.name)[-1]
 				if inp.typeCode == "audio" and ext not in {".mp3", ".opus", ".webm", ".m4a", ".jpg", ".tif", ".png", ".zip"}:

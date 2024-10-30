@@ -279,10 +279,13 @@ if (__name__ == '__main__'):
 # python3 load/DBPLoadController.py test s3://dbp-etl-mass-batch "Carrier, Central N2CRXWYI/05 DBP & GBA/Carrier, Central_P1CRXWYI/Carrier, Central_P1CRXWYI_USX"
 
 
+# time python3 load/TestCleanup.py test JAAJARN1DA
+# time python3 load/DBPLoadController.py test s3://etl-development-input/ JAAJARN1DA
 
-
-
-
+# time python3 load/TestCleanup.py test SPAERVN_ET
+# time python3 load/TestCleanup.py test SPAERVN_ET-json
+# time python3 load/TestCleanup.py test SPAERVN_ET-usx
+# time python3 load/DBPLoadController.py test s3://etl-development-input/ Spanish_N1SPAPBT_USX
 
 
 

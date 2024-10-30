@@ -217,7 +217,6 @@ if (__name__ == '__main__'):
 	from UpdateDBPFilesetTables import UpdateDBPFilesetTables
 
 	config = Config.shared()
-	# languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
 	migration_stage = os.getenv("DATA_MODEL_MIGRATION_STAGE", "B")
 	lpts_xml = config.filename_lpts_xml if migration_stage == "B" else ""
 	languageReader = LanguageReaderCreator(migration_stage).create(lpts_xml)

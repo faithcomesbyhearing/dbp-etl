@@ -12,7 +12,7 @@ def parseMediaRow(rowTuple):
         LanguageRecord.propertiesName['licensor']: '',
         LanguageRecord.propertiesName['copyrightc']: '',
         LanguageRecord.propertiesName['copyrightp']: '',
-        LanguageRecord.propertiesName['volumneName']: '',
+        LanguageRecord.propertiesName['volumneName']: rowTuple[4],
         LanguageRecord.propertiesName['dbpMobile']: '',
         LanguageRecord.propertiesName['dbpWebHub']: '',
         LanguageRecord.propertiesName['mobileText']: '',
