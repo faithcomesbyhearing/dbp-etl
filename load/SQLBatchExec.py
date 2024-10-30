@@ -46,7 +46,7 @@ class SQLBatchExec:
 			valsubs = ["'%s'"] * len(names)
 			# temporary -- remove the error checks. This should only be used in exceptional circumstances
 			# sql = "INSERT INTO %s (%s) VALUES (%s);" % (tableName, ", ".join(names), ", ".join(valsubs))
-			sql = "INSERT IGNORE INTO %s (%s) VALUES (%s);" % (tableName, ", ".join(names), ", ".join(valsubs))
+			sql = "INSERT  INTO %s (%s) VALUES (%s);" % (tableName, ", ".join(names), ", ".join(valsubs))
 			for value in values:
 				stmt = sql % value
 				stmt = self.unquoteValues(stmt)
@@ -62,7 +62,7 @@ class SQLBatchExec:
 			names = attrNames + pkeyNames
 			# temporary -- remove the error checks. This should only be used in exceptional circumstances
 			# stmt = "INSERT INTO %s (%s) VALUES " % (tableName, ", ".join(names))
-			stmt = "INSERT IGNORE INTO %s (%s) VALUES " % (tableName, ", ".join(names))
+			stmt = "INSERT  INTO %s (%s) VALUES " % (tableName, ", ".join(names))
 			self.statements.append(stmt)
 			valsubs = ["'%s'"] * len(names)
 			sql = "(%s)," % (", ".join(valsubs))
