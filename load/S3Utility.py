@@ -29,7 +29,7 @@ class S3Utility:
 
 	def uploadAllFilesets(self, filesets):
 		for inp in filesets:
-			print("DBPLoadController:uploadAllFilesets.. inp.typeCode: %s subTypeCode: %s" %(inp.typeCode,  inp.subTypeCode()))
+			print("DBPLoadController:uploadAllFilesets.. inp.typeCode: %s subTypeCode: %s inp.id: %s" %(inp.typeCode,  inp.subTypeCode(), inp.filesetId))
 			s3Bucket = self.config.s3_vid_bucket if inp.typeCode == "video" else self.config.s3_bucket
 			if inp.typeCode == "video":
 				self.uploadFileset(s3Bucket, inp)
@@ -48,7 +48,7 @@ class S3Utility:
 						print("uploadAllFilesets. outFileset NOT added to database list: %s" % (outFileset.csvFilename))
 			elif inp.typeCode == "text":
 				subTypeCode = inp.subTypeCode()
-				if inp.subTypeCode() == "text_plain":
+				if subTypeCode in {"text_plain", "text_usx", "text_json"}:
 					InputFileset.database.append(inp) ## Temp until text_format is ready
 				else:
 					done = self.uploadFileset(s3Bucket, inp)

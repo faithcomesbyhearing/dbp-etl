@@ -120,6 +120,12 @@ class UpdateDBPFilesetTables:
 			lptsDBP.upsertBibleFilesetConnection(dbConn, hashId, inp.bibleId)
 			self.insertBibleFiles(dbConn, hashId, inputFileset, bookIdSet)
 			updateBibleFilesSecondary.updateBibleFilesSecondary(hashId, inp)
+
+			filesetList = []
+			filesetList.append((inp.bibleId, inp.filesetId, setTypeCode, None, None, hashId))
+			lptsDBP.updateBibleFilesetTags(filesetList)
+			# If Opus-16 should be generated in ETL, we would need to invoke lptsDBP.updateBibleFilesetLicenseGroup(inp, hashId=hashId)
+
 		elif inp.typeCode == "text":
 			hashId = lptsDBP.getHashId(bucket, inp.filesetId, inp.subTypeCode())
 			setSizeCode = self.getSizeCode(dbConn, inp.typeCode, hashId, bookIdSet)
@@ -128,11 +134,18 @@ class UpdateDBPFilesetTables:
 			# text_plain is still stored in the database; no upload 
 			if inp.subTypeCode() == "text_plain":
 				self.textUpdater.updateFilesetTextPlain(inp.bibleId, inp.filesetId, hashId, bookIdSet, inp.databasePath)
+				filesetList = []
+				filesetList.append((inp.bibleId, inp.filesetId, inp.subTypeCode(), None, None, hashId))
+				lptsDBP.updateBibleFilesetTags(filesetList)
+				lptsDBP.updateBibleFilesetLicenseGroup(inp, hashId=hashId)
 			elif inp.subTypeCode() in {"text_usx", "text_json"}:
 				## The below code assumes Sofria-client has run. bookIdSet comes from Sofria-client. 
 				self.insertBibleFiles(dbConn, hashId, inputFileset, bookIdSet)
 				updateBibleFilesSecondary.updateBibleFilesSecondary(hashId, inp)
-
+				filesetList = []
+				filesetList.append((inp.bibleId, inp.filesetId, inp.subTypeCode(), None, None, hashId))
+				lptsDBP.updateBibleFilesetTags(filesetList)
+				lptsDBP.updateBibleFilesetLicenseGroup(inp, hashId=hashId)
 			else:
 				print("typeCode is text, but subTypeCode (%s) is not recognized. No hashId available to return, so it's going to fail next" % (inp.subTypeCode()))
 

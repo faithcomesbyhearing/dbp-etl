@@ -169,3 +169,21 @@ class BlimpLanguageRecord (LanguageRecordInterface):
 
     def Copyright_Video(self):
         return self.record.get("Copyright_Video")
+
+
+    def StockNumberByFilesetIdAndType(self, filesetId, typeCode):
+        damIds = self.DamIdList(typeCode)
+        for (damId, _, _) in damIds:
+            if filesetId == damId:
+                return self.Reg_StockNumber()
+        return None
+
+    def StockNumberByFilesetId(self, filesetId):
+        for typeCode in {"audio", "text", "video"}:
+            stockNumber = self.StockNumberByFilesetIdAndType(
+				LanguageRecordInterface.GetFilesetIdLen10(filesetId),
+				typeCode
+			)
+            if stockNumber != None:
+                return stockNumber
+        return None

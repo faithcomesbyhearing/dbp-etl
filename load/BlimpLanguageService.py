@@ -6,16 +6,21 @@ class BlimpLanguageService:
         self.config = Config()
     
     def getMediaById(self, mediaId):
-        # self.config.setCurrentDatabaseDBName('LANGUAGE')
         sql = SQLUtility(self.config)
 
         return sql.select(
             "SELECT bf.id,\
                     bft.description,\
-                    bfc.bible_id AS bible_id\
+                    bfc.bible_id AS bible_id,\
+                    bfm.name AS mode_type,\
+                    bt.name AS bible_name\
             FROM bible_filesets bf\
             INNER JOIN bible_fileset_connections bfc ON bfc.hash_id = bf.hash_id\
+            INNER JOIN bibles b ON b.id = bfc.bible_id\
             INNER JOIN bible_fileset_tags bft on bft.hash_id = bf.hash_id\
+            INNER JOIN bible_fileset_types bfty ON bfty.set_type_code = bf.set_type_code\
+            INNER JOIN bible_fileset_modes bfm ON bfm.id = bfty.mode_id\
+            LEFT JOIN bible_translations bt ON b.id = bt.bible_id AND bt.language_id = 6414\
             WHERE bft.name = 'stock_no'\
             AND bf.id = %s LIMIT 1\
             ",
@@ -23,29 +28,28 @@ class BlimpLanguageService:
         )
 
     def getMediaByStocknumber(self, stockNumber):
-        # self.config.setCurrentDatabaseDBName('LANGUAGE')
         sql = SQLUtility(self.config)
 
         return sql.select(
             "SELECT bf.id,\
                     bft.description,\
                     bfc.bible_id AS bible_id,\
-                    bfm.name AS mode_type\
+                    bfm.name AS mode_type,\
+                    bt.name AS bible_name\
             FROM bible_filesets bf\
             INNER JOIN bible_fileset_connections bfc ON bfc.hash_id = bf.hash_id\
+            INNER JOIN bibles b ON b.id = bfc.bible_id\
             INNER JOIN bible_fileset_tags bft on bft.hash_id = bf.hash_id\
             INNER JOIN bible_fileset_types bfty ON bfty.set_type_code = bf.set_type_code\
             INNER JOIN bible_fileset_modes bfm ON bfm.id = bfty.mode_id\
+            LEFT JOIN bible_translations bt ON b.id = bt.bible_id AND bt.language_id = 6414\
             WHERE bft.name = 'stock_no'\
             AND bft.description = %s LIMIT 1\
             ",
             (stockNumber)
         )
 
-        # return  result[0] if len(result) > 0 else None
-
     def getMediaIdFromFilesetId(self, filesetId):
-        # self.config.setCurrentDatabaseDBName('BIBLEBRAIN')
         sql = SQLUtility(self.config)
 
         fileset = sql.select(

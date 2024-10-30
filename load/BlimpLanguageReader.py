@@ -20,8 +20,21 @@ class BlimpLanguageReader (LanguageReaderInterface):
         result = parseResult(self.service.getMediaByStocknumber(stockNumber))
         return result[0] if len(result) > 0 else None
 
-    def getLanguageRecordLoose(typeCode, bibleId, dbpFilesetId):
-       raise Exception("Not implemented")
+    def getLanguageRecordLoose(self, typeCode, bibleId, dbpFilesetId):
+        damId = dbpFilesetId[:10]
+
+        if len(damId) == 10 and damId[-2:] == "SA":
+            damId = damId[:8] + "DA"
+
+        (mediaId, modeType) = self.service.getMediaIdFromFilesetId(damId)
+
+        if modeType != typeCode:
+            return (None, None)
+
+        result = parseResult(self.service.getMediaById(mediaId))
+        languageRecord = result[0] if len(result) > 0 else None
+
+        return (languageRecord, None)
 
     def reduceCopyrightToName(lptsCopyright):
         raise Exception("Not implemented")

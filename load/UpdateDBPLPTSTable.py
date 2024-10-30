@@ -33,6 +33,9 @@ class UpdateDBPLPTSTable:
 		self.config = config
 		self.db = SQLUtility(config)
 		self.dbOut = dbOut
+		# It updates the regex to use the SQL temporary variable as a reference in the creation
+		# of the license group and license group filesets
+		self.dbOut.UpdateUnquotedRegex(re.compile(r"(.*?)(\'@[^']*?\')(.*$)"))
 		self.languageReader = languageReader
 		self.updateCounts = {}
 		self.hashIdMap = None
@@ -167,6 +170,43 @@ class UpdateDBPLPTSTable:
 				pkeyNames = ("hash_id", "bible_id")
 				attrNames = ()
 				self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
+
+	def updateBibleFilesetLicenseGroup(self, inputFileset, hashId):
+		row = self.db.selectRow("SELECT lg.id, lg.name FROM license_group lg INNER JOIN license_group_filesets lgf ON lgf.license_group_id = lg.id INNER JOIN bible_filesets bf ON bf.hash_id = lgf.hash_id WHERE bf.id=%s LIMIT 1", (inputFileset.filesetId))
+
+		# Create license group if it does not exist
+		if row == None:
+			row = self.db.selectRow("SELECT lg.id, lg.name FROM license_group lg INNER JOIN license_group_filesets lgf ON lgf.license_group_id = lg.id INNER JOIN bible_filesets bf ON bf.hash_id = lgf.hash_id WHERE bf.id=%s LIMIT 1", (inputFileset.lptsDamId))
+
+			tableNameGroupFilesets = "license_group_filesets"
+			pkeyNamesGroupFilesets = ("hash_id", "license_group_id")
+			attrNamesGroupFilesets = ()
+
+			tableNameGroup = "license_group"
+			pkeyNamesGroup = ("name", "bible_id")
+			attrNamesGroup = ("description",)
+
+			insertRowsGroupFilesets = []
+			insertRowsGroup = []
+
+			if row != None:
+				(licenseId, _) = row
+				insertRowsGroupFilesets.append((hashId, licenseId))
+			else:
+				licenseName = "%s-%s" % (inputFileset.bibleId, inputFileset.typeCode)
+
+				row = self.db.selectRow("SELECT lg.id FROM license_group lg WHERE lg.name=%s LIMIT 1", (licenseName))
+				# Check if the license group name exists
+				if row == None:
+					insertRowsGroup.append((licenseName, licenseName, inputFileset.bibleId))
+					licenseNameKey = "@" + SQLBatchExec.sanitize_value(licenseName)
+					insertRowsGroupFilesets.append((hashId, licenseNameKey))
+				else:
+					(licenseId,) = row
+					insertRowsGroupFilesets.append((hashId, licenseId))
+
+			self.dbOut.insert(tableNameGroup, pkeyNamesGroup, attrNamesGroup, insertRowsGroup, 0)
+			self.dbOut.insert(tableNameGroupFilesets, pkeyNamesGroupFilesets, attrNamesGroupFilesets, insertRowsGroupFilesets)
 	##
 	## Bible Fileset Tags
 	##
@@ -192,7 +232,7 @@ class UpdateDBPLPTSTable:
 			tagMap[name] = description
 			tagMap["%s_admin_only" % name] = adminOnly
 			tagHashIdMap[hashId] = tagMap
-		
+
 		for (bibleId, filesetId, setTypeCode, _, _, hashId) in filesetList:
 			typeCode = setTypeCode.split("_")[0]
 			if typeCode != "app":
