@@ -71,7 +71,6 @@ class PreValidate:
 				self.validateLPTS(result)
 				resultList = [result]
 
-		print("PreValidate.validateDBPETL. returning resultList[0] %s, messages: %s" % (resultList[0], self.messages))
 		return (resultList, self.messages)
 
 
@@ -82,7 +81,7 @@ class PreValidate:
 		print("PreValidate.validateFilesetId. directoryName: %s, filesetId: %s, filesetId1: %s " % (directoryName, filesetId, filesetId1))
 		damId = filesetId1.replace("_", "2")
 		results = self.languageReader.getFilesetRecords10(damId) # This method expects 10 digit DamId's always
-		print("PreValidate.validateFilesetId. check1: results: %s" % (results))
+		print("PreValidate.validateFilesetId. damId: %s check1: results: %s" % (damId, results))
 		if results == None:
 			damId = filesetId1.replace("_", "1")
 			results = self.languageReader.getFilesetRecords10(damId)

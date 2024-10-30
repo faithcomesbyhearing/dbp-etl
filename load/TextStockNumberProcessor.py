@@ -34,7 +34,7 @@ class TextStockNumberProcessor:
 			(filenames, actualScript) = self.getSampleUnicodeTextFromS3(s3Client, location, fullPath)
 			stockNumberResultList = self.validateUSXStockList(stockNumberList, filenames, actualScript)
 			resultList.extend(stockNumberResultList)
-		#print("TextStocknumberProcessor.validateTextStockNumbersFromController returning resultList[0]: %s " % (resultList[0])) // for filesets, this throws exception
+
 		return (resultList, self.errors)
 
 
