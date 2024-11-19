@@ -1,5 +1,5 @@
 from LanguageReader import LanguageRecordInterface
-from BlimpLanguageService import getMediaByIdAndFormat 
+from BlimpLanguageService import getMediaByIdAndFormat, getLicensorsByFilesetId, getCopyrightByFilesetId
 
 class BlimpLanguageRecord (LanguageRecordInterface):
     propertiesName = {
@@ -139,10 +139,14 @@ class BlimpLanguageRecord (LanguageRecordInterface):
         pass
 
     def Copyrightc(self):
-        return 1
-    
+        # Check the copyright of the primary fileset
+        copyrightList = getCopyrightByFilesetId(self.Id())
+        return copyrightList[0] if len(copyrightList) > 0 else None
+
     def LicensorList(self):
-        return [1]
+        # Check the licensors of the primary fileset
+        licensorList = getLicensorsByFilesetId(self.Id())
+        return licensorList if len(licensorList) > 0 else None
 
     def HasLicensor(self, licensor):
         pass
@@ -165,11 +169,12 @@ class BlimpLanguageRecord (LanguageRecordInterface):
         return "Traditional"
 
     def Copyrightp(self):
-        return self.record.get("Copyrightp")
+        # It can use Copyrightc because, in Blimp, the relationship between the fileset (text, audio and video) and the copyright is stored in the entity
+        return self.Copyrightc()
 
     def Copyright_Video(self):
-        return self.record.get("Copyright_Video")
-
+        # It can use Copyrightc because, in Blimp, the relationship between the fileset (text, audio and video) and the copyright is stored in the entity
+        return self.Copyrightc()
 
     def StockNumberByFilesetIdAndType(self, filesetId, typeCode):
         damIds = self.DamIdList(typeCode)

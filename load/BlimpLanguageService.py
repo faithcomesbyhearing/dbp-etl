@@ -100,3 +100,51 @@ def getMediaByIdAndFormat(bibleId, format):
         record.append((damId, 1, status))
 
     return record
+
+def getLicensorsByFilesetId(filesetId):
+    config = Config()
+    sqlClient = SQLUtility(config)
+
+    licensors = sqlClient.select(
+        "SELECT organizations.id, organization_translations.name, organization_logos.url AS logo\
+        FROM organizations\
+        INNER JOIN organization_translations ON organization_translations.organization_id = organizations.id\
+        LEFT JOIN organization_logos ON organization_logos.organization_id = organizations.id AND organization_logos.icon = false\
+        INNER JOIN bible_fileset_copyright_organizations ON bible_fileset_copyright_organizations.organization_id = organizations.id\
+        INNER JOIN bible_filesets ON bible_filesets.hash_id = bible_fileset_copyright_organizations.hash_id\
+        WHERE organization_translations.language_id = 6414\
+        AND bible_fileset_copyright_organizations.organization_role = 2\
+        AND bible_filesets.id = %s\
+        GROUP BY organizations.id, organization_translations.name, organization_logos.url\
+        ", (filesetId)
+    )
+
+    records = []
+    for row in licensors:
+        organizationId = row[0]
+        organizationName = row[1]
+        organizationLogo = row[2]
+        records.append((organizationId, organizationName, organizationLogo))
+
+    return records
+
+def getCopyrightByFilesetId(filesetId):
+    config = Config()
+    sqlClient = SQLUtility(config)
+
+    licensors = sqlClient.select(
+        "SELECT bible_fileset_copyrights.copyright, bible_fileset_copyrights.copyright_date, bible_fileset_copyrights.copyright_description\
+        FROM bible_fileset_copyrights\
+        INNER JOIN bible_filesets ON bible_filesets.hash_id = bible_fileset_copyrights.hash_id\
+        AND bible_filesets.id = %s\
+        ", (filesetId)
+    )
+
+    records = []
+    for row in licensors:
+        copyright = row[0]
+        copyrightDate = row[1]
+        copyrightDescription = row[2]
+        records.append((copyright, copyrightDate, copyrightDescription))
+
+    return records
