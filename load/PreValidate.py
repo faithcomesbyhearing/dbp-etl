@@ -260,3 +260,7 @@ if (__name__ == "__main__"):
 # python3 load/PreValidate.py test s3://dbp-etl-upload-dev-ya1mbvdty8tlq15r 2022-09-27-13-48-13 ENGESVO2ET
 
 # dbp-etl-dev s3://dbp-etl-upload-dev-ya1mbvdty8tlq15r/2022-10-17-18-49-35/Spanish_N2SPNTLA_USX/
+
+# python3 load/PreValidate.py test s3://dbp-etl-upload-dev-ya1mbvdty8tlq15r 2023-07-10-15-38-20 JAAJARN2DA/
+# python3 load/PreValidate.py test s3://etl-development-input/ "" TGKWBTP2DV
+# python3 load/PreValidate.py test s3://dbp-etl-upload-dev-ya1mbvdty8tlq15r 2024-07-24-17-15-56 Spanish_N2SPNBDA_USX
