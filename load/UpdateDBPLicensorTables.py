@@ -66,7 +66,7 @@ class UpdateDBPLicensorTables:
 				updates.append((copyrightDate, copyright, copyrightDescription, derivedHashId))
 
 		self.dbOut.insert(tableName, pkeyNames, attrNames, inserts)
-		self.dbOut.updateCol(tableName, pkeyNames, updates)
+		self.dbOut.update(tableName, pkeyNames, attrNames, updates)
 
 		return True
 
