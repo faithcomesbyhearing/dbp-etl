@@ -13,12 +13,14 @@
 import re
 import sys
 import csv
+import os
 import math
 import subprocess
 from SqliteUtility import SqliteUtility
 from Config import Config
 from SQLUtility import SQLUtility
 from SQLBatchExec import SQLBatchExec
+from InputFileset import InputFileset
 from UpdateDBPTextFilesets import UpdateDBPTextFilesets
 from UpdateDBPBooksTable import UpdateDBPBooksTable
 from UpdateDBPBibleFilesSecondary import UpdateDBPBibleFilesSecondary
@@ -288,11 +290,12 @@ class UpdateDBPFilesetTables:
 ## Unit Test
 if (__name__ == '__main__'):
 	from LanguageReaderCreator import LanguageReaderCreator	
-	from InputFileset import *
-	from DBPLoadController import *
+	from InputProcessor import InputProcessor
+	from AWSSession import AWSSession
+	from DBPLoadController import DBPLoadController
 
 	config = Config.shared()
-	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
+	languageReader = LanguageReaderCreator("BLIMP").create("")
 	filesets = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
 	db = SQLUtility(config)
 	ctrl = DBPLoadController(config, db, languageReader)
