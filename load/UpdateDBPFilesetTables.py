@@ -10,19 +10,20 @@
 # 4. Insert the transactions one fileset at a time.
 # 5. I am going to use a command line batch using pipe, but for now, I can just use pymysql
 
-import io
+import re
 import sys
-import hashlib
 import csv
 import math
 import subprocess
-from Config import *
-from SQLUtility import *
-from SQLBatchExec import *
-from UpdateDBPTextFilesets import *
-from UpdateDBPBooksTable import *
-from UpdateDBPBibleFilesSecondary import *
-from UpdateDBPLPTSTable import *
+from SqliteUtility import SqliteUtility
+from Config import Config
+from SQLUtility import SQLUtility
+from SQLBatchExec import SQLBatchExec
+from UpdateDBPTextFilesets import UpdateDBPTextFilesets
+from UpdateDBPBooksTable import UpdateDBPBooksTable
+from UpdateDBPBibleFilesSecondary import UpdateDBPBibleFilesSecondary
+from UpdateDBPLPTSTable import UpdateDBPLPTSTable
+from UpdateDBPLicensorTables import UpdateDBPLicensorTables
 
 
 class UpdateDBPFilesetTables:
@@ -108,6 +109,7 @@ class UpdateDBPFilesetTables:
 		dbConn = SQLUtility(self.config)
 		bookIdSet = self.getBibleBooks(inp.typeCode, inp.csvFilename, inp.databasePath)
 		updateBibleFilesSecondary = UpdateDBPBibleFilesSecondary(self.config, dbConn, self.dbOut)
+		updateLicensor = UpdateDBPLicensorTables(dbConn, self.dbOut)
 		bucket = self.config.s3_vid_bucket if inp.typeCode == "video" else self.config.s3_bucket
 		# it needs to know if the new inputFileset has new files to set the flag content_loaded
 		isContentLoaded = 1 if len(inp.files) > 0 else 0
@@ -125,6 +127,9 @@ class UpdateDBPFilesetTables:
 			filesetList.append((inp.bibleId, inp.filesetId, setTypeCode, None, None, hashId))
 			lptsDBP.updateBibleFilesetTags(filesetList)
 			# If Opus-16 should be generated in ETL, we would need to invoke lptsDBP.updateBibleFilesetLicenseGroup(inp, hashId=hashId)
+
+			if inp.isDerivedFileset():
+				updateLicensor.processFileset(inp.lptsDamId, hashId)
 
 		elif inp.typeCode == "text":
 			hashId = lptsDBP.getHashId(bucket, inp.filesetId, inp.subTypeCode())
@@ -148,6 +153,9 @@ class UpdateDBPFilesetTables:
 				lptsDBP.updateBibleFilesetLicenseGroup(inp, hashId=hashId)
 			else:
 				print("typeCode is text, but subTypeCode (%s) is not recognized. No hashId available to return, so it's going to fail next" % (inp.subTypeCode()))
+
+			if inp.isDerivedFileset():
+				updateLicensor.processFileset(inp.lptsDamId, hashId)
 
 		tocBooks = self.booksUpdater.getTableOfContents(inp.typeCode, inp.bibleId, inp.filesetId, inp.csvFilename, inp.databasePath)
 		self.booksUpdater.updateBibleBooks(inp.typeCode, inp.bibleId, tocBooks)
