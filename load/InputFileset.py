@@ -255,6 +255,14 @@ class InputFileset:
 		else:
 			return None
 
+	def isDerivedFileset(self):
+		if self.typeCode == "text":
+			if self.filesetId.endswith("-usx") or self.filesetId.endswith("-html") or self.filesetId.endswith("-json"):
+				return True
+		elif self.typeCode == "audio" and self.filesetId.endswith("-opus16"):
+				return True
+
+		return False
 
 	def isMP3Fileset(self):
 		for file in self.files:
