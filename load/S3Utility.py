@@ -48,10 +48,10 @@ class S3Utility:
 						print("uploadAllFilesets. outFileset NOT added to database list: %s" % (outFileset.csvFilename))
 			elif inp.typeCode == "text":
 				subTypeCode = inp.subTypeCode()
-				if subTypeCode in {"text_plain", "text_usx", "text_json"}:
-					InputFileset.database.append(inp) ## Temp until text_format is ready
+				if subTypeCode in {"text_plain"}:
+					InputFileset.database.append(inp)
 				else:
-					done = self.uploadFileset(s3Bucket, inp)
+					self.uploadFileset(s3Bucket, inp)
 
 
 	def uploadFileset(self, s3Bucket, inputFileset):
@@ -76,13 +76,13 @@ class S3Utility:
 
 
 if (__name__ == '__main__'):
-	from SQLUtility import *
-	from InputProcessor import *
+	from SQLUtility import SQLUtility
+	from InputProcessor import InputProcessor
 	from UpdateDBPTextFilesets import UpdateDBPTextFilesets
 	from LanguageReaderCreator import LanguageReaderCreator	
 
 	config = Config.shared()
-	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
+	languageReader = LanguageReaderCreator("BLIMP").create("")
 	filesets = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
 
 	s3 = S3Utility(config)
@@ -125,5 +125,6 @@ if (__name__ == '__main__'):
 # time python3 load/S3Utility.py test-video /Volumes/FCBH/all-dbp-etl-test/ video/ENGESV/ENGESVP2DV
 # time python3 load/S3Utility.py test-video /Volumes/FCBH/all-dbp-etl-test/ video/ENGESX/ENGESVP2DV
 
+# time python3 load/S3Utility.py test s3://etl-development-input Spanish_N2SPNTLA_USX
 
 

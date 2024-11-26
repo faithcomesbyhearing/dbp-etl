@@ -52,18 +52,13 @@ class UpdateDBPLicensorTables:
 
 		for (copyright, copyrightDate, copyrightDescription) in copyrights:
 			hashIdExisting = self.db.selectScalar("\
-				SELECT bible_fileset_copyrights.copyright,\
-					bible_fileset_copyrights.copyright_date,\
-					bible_fileset_copyrights.copyright_description,\
-					bible_fileset_copyrights.open_access\
+				SELECT bible_fileset_copyrights.copyright\
 				FROM bible_fileset_copyrights\
 				WHERE bible_fileset_copyrights.hash_id = %s", (derivedHashId,)
 			)
 
 			if hashIdExisting == None:
 				inserts.append((copyrightDate, copyright, copyrightDescription, derivedHashId))
-			else:
-				updates.append((copyrightDate, copyright, copyrightDescription, derivedHashId))
 
 		self.dbOut.insert(tableName, pkeyNames, attrNames, inserts)
 		self.dbOut.update(tableName, pkeyNames, attrNames, updates)
