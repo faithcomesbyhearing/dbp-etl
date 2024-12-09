@@ -84,7 +84,7 @@ class TextStockNumberProcessor:
 		# print("text processor:validateUSXStockNumber. stockNumber [%s], count of filenames [%s], actualScript [%s] " % (stockNumber, len(filenames), actualScript))
 		lptsRecord = self.languageReader.getByStockNumber(stockNumber)
 		if lptsRecord == None:
-			self.errors.append("stockNumber [%s] is not in LPTS" % (stockNumber))
+			self.errors.append("stockNumber [%s] is not in Blimp. Contact the Agreements team" % (stockNumber))
 			return []
 
 		scopeMap = self._findDamIdScopeMap(stockNumber, lptsRecord) # scopeMap is { scope: [(damId, script)] }

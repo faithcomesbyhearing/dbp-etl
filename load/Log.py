@@ -83,13 +83,13 @@ class Log:
 		self.messages.append((Log.EROR, "/%s has an invalid file ext." % (filename)))
 
 	def missingBibleIds(self):
-		self.messages.append((Log.EROR, "bibleId is not in LPTS."))
+		self.messages.append((Log.EROR, "bibleId is not in Blimp. Contact the Agreements team."))
 
 	def missingBibleIdConnection(self, filesetId):
 		self.messages.append((Log.EROR, "FilesetId: %s is not related with a specific bible." % (filesetId)))
 
 	def missingFilesetIds(self):
-		self.messages.append((Log.EROR, "filesetId is not in LPTS record."))
+		self.messages.append((Log.EROR, "filesetId is not in Blimp. Contact the Agreements team."))
 
 	def damIdStatus(self, stockNo, status):
 		self.messages.append((Log.WARN, "LPTS %s has status = %s." % (stockNo, status)))

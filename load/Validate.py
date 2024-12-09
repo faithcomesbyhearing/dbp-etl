@@ -30,9 +30,7 @@ class Validate:
 			bibleId = self.db.selectScalar("SELECT bible_fileset_connections.bible_id FROM bible_fileset_connections INNER JOIN bible_filesets ON bible_filesets.hash_id = bible_fileset_connections.hash_id WHERE bible_filesets.id = %s", (inp.filesetId,))
 			if bibleId == None:
 				# Exclude the usx fileset to be able to create a derived usx fileset if the text_plain exists
-				if inp.subTypeCode() == "text_usx":
-					print("FilesetId: %s is not related with a specific bible." % (inp.filesetId))
-				else:
+				if inp.subTypeCode() != "text_usx":
 					logger.missingBibleIdConnection(inp.filesetId)
 			for file in inp.files:
 				ext = os.path.splitext(file.name)[-1]
