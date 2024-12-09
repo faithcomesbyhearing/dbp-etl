@@ -81,7 +81,7 @@ class UpdateDBPTextFilesets:
 		print("================= Invoke Sofria Cli ========================")
 		print("cmd: ", cmd)
 		print("============================================================")
-		response = subprocess.run(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=900)
+		response = subprocess.run(cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, timeout=1800)
 		if response == None or response.returncode != 0:
 			return((Log.EROR, "Sofria error.. code: %d, stdout: [%s], stderr: [%s] " % (response.returncode, str(response.stdout.decode("utf-8")), str(response.stderr.decode("utf-8")))))
 		print("Sofria invocation successful:", str(response.stdout.decode("utf-8")))
