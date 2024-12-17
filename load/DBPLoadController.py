@@ -288,4 +288,6 @@ if (__name__ == '__main__'):
 # time python3 load/DBPLoadController.py test s3://etl-development-input/ Spanish_N1SPAPBT_USX
 
 
-
+# time python3 load/TestCleanup.py test ENGESVN2DA
+# time python3 load/TestCleanup.py test ENGESVN2DA-opus16
+# time python3 load/DBPLoadController.py test s3://etl-development-input/ ENGESVN2DA
