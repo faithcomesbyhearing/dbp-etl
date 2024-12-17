@@ -128,10 +128,11 @@ class UpdateDBPFilesetTables:
 			filesetList = []
 			filesetList.append((inp.bibleId, inp.filesetId, setTypeCode, None, None, hashId))
 			lptsDBP.updateBibleFilesetTags(filesetList)
-			# If Opus-16 should be generated in ETL, we would need to invoke lptsDBP.updateBibleFilesetLicenseGroup(inp, hashId=hashId)
 
 			if inp.isDerivedFileset():
 				updateLicensor.processFileset(inp.lptsDamId, hashId)
+				# We need to create a license group for the derived audio fileset
+				lptsDBP.updateBibleFilesetLicenseGroup(inp, hashId=hashId)
 
 		elif inp.typeCode == "text":
 			hashId = lptsDBP.getHashId(bucket, inp.filesetId, inp.subTypeCode())
