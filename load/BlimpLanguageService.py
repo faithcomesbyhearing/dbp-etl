@@ -72,6 +72,23 @@ class BlimpLanguageService:
 
         return (mediaId, modeType)
 
+    def getStocknumber(self, stocknumber):
+        sql = SQLUtility(self.config)
+
+        return sql.selectScalar("\
+            SELECT bft.description\
+            FROM bible_filesets bf\
+            INNER JOIN bible_fileset_connections bfc ON bfc.hash_id = bf.hash_id\
+            INNER JOIN bible_fileset_tags bft on bft.hash_id = bf.hash_id\
+            WHERE bft.name = 'stock_no'\
+            AND bft.description = %s\
+            GROUP BY bft.description\
+            LIMIT 1\
+            ",
+            (stocknumber)
+        )
+
+
 # BWF note: this is only called for text processing
 def getMediaByIdAndFormat(bibleId, format):
     config = Config()

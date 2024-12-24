@@ -6,7 +6,7 @@
 
 # The main of this class expects an environment variable $LPTS_XML set to the full path to that XML file.
 
-import json
+import re
 from PreValidateResult import *
 from LanguageReader import *
 from TextStockNumberProcessor import *
@@ -71,8 +71,37 @@ class PreValidate:
 				self.validateLPTS(result)
 				resultList = [result]
 
+				parts = directoryName.split("_")
+				if len(parts) > 2 and parts[0].lower() == "covenant":
+					bucket = location[5:]
+
+					request = { 'Bucket': bucket, 'MaxKeys': 1000, 'Prefix': fullPath + "/" }
+					response = s3Client.list_objects_v2(**request)
+					pattern = re.compile(r'^COVENANT_SEGMENT\s*\d{1,2}[A-Z]?\s*.*\.mp4$', re.IGNORECASE)
+
+					covenentFiles = []
+
+					for item in response.get('Contents', []):
+						objKey = item.get('Key')
+						filename = objKey[len(fullPath) + 1:]
+
+						if pattern.match(filename):
+							covenentFiles.append(filename)
+
+					if len(covenentFiles) == 0:
+						self.errorMessage(directoryName, "ERROR: Convenant files does not have the valid format in bucket %s or prefix %s/" % (bucket, fullPath))
+
 		return (resultList, self.messages)
 
+	def calculateCovenantFileset(self, stocknumber):
+		# Find the position of the '/'
+		slash_index = stocknumber.find('/')
+
+		# Check if the '/' is found and the index 2 is within the bounds
+		if slash_index != -1 and len(stocknumber) > 2:
+			return stocknumber[2:slash_index]+stocknumber[slash_index+1:]+"S2DV"
+
+		return None
 
 	## Validate filesetId and return PreValidateResult
 	def validateFilesetId(self, directoryName):
@@ -88,8 +117,28 @@ class PreValidate:
 			print("PreValidate.validateFilesetId. check2: results: %s" % (results))
 
 			if results == None:
-				self.errorMessage(filesetId1, "filesetId is not in Biblebrain")
-				return None
+				parts = directoryName.split("_")
+				if len(parts) > 2 and parts[0] == "Covenant":
+					# check if the directory name is a covenant stock number
+					covenantStocknumber = directoryName[-9:]
+
+					# Check if the fourth character is an underscore
+					if covenantStocknumber[5] == '_':
+						covenantStocknumber = covenantStocknumber.replace('_', '/')
+						existsStocknumber = self.languageReader.getStocknumber(covenantStocknumber)
+
+						if existsStocknumber != None:
+							covenentFileset = self.calculateCovenantFileset(covenantStocknumber)
+							filesetId = covenentFileset
+							results = self.languageReader.getFilesetRecords10(covenentFileset)
+						else:
+							self.errorMessage(existsStocknumber, "Stocknumber is not in Biblebrain")
+							return None
+
+				if results == None:
+					self.errorMessage(filesetId1, "filesetId is not in Biblebrain")
+					return None
+
 		stockNumSet = set()
 		mediaSet = set()
 		bibleIdSet = set()
@@ -264,3 +313,4 @@ if (__name__ == "__main__"):
 # python3 load/PreValidate.py test s3://dbp-etl-upload-dev-ya1mbvdty8tlq15r 2023-07-10-15-38-20 JAAJARN2DA/
 # python3 load/PreValidate.py test s3://etl-development-input/ "" TGKWBTP2DV
 # python3 load/PreValidate.py test s3://dbp-etl-upload-dev-ya1mbvdty8tlq15r 2024-07-24-17-15-56 Spanish_N2SPNBDA_USX
+# python3 load/PreValidate.py test s3://etl-development-input/ "" "Covenant_Manobo, Obo SD_S2OBO_COV"
