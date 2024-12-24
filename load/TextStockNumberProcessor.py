@@ -219,7 +219,7 @@ class TextStockNumberProcessor:
 			if stocknumber != '':
 				stocknumberArrayFinal.append(stocknumber)
 
-		return stocknumberArrayFinal		
+		return stocknumberArrayFinal
 
 	def parseStockNumberFromDirectoryName(self, directoryName):
 		parts = directoryName.split("_")
@@ -228,8 +228,8 @@ class TextStockNumberProcessor:
 			if len(stockNumber) > 5:
 				stockNumber = stockNumber[:-3] + "/" + stockNumber[-3:]
 				return [stockNumber]
-			else:
-				self.errors.append("Could not parse stocknumber from directory name: [%s]" % (directoryName))
+			elif parts[0].lower() != "covenant":
+					self.errors.append("Could not parse stocknumber from directory name: [%s]" % (directoryName))
 		return None
 
 

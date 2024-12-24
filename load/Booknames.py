@@ -369,7 +369,19 @@ class Booknames:
 			'Zefanya':		'ZEP',
 			'Hagai':		'HAG',
 			'Zakharia':		'ZEC',
-			'Maleakhi':		'MAL'
+			'Maleakhi':		'MAL',
+			'Segment 01':	'C01',
+			'Segment 02':	'C02',
+			'Segment 03':	'C03',
+			'Segment 04':	'C04',
+			'Segment 05':	'C05',
+			'Segment 06':	'C06',
+			'Segment 07':	'C07',
+			'Segment 08':	'C08',
+			'Segment 09':	'C09',
+			'Segment 10':	'C10',
+			'Segment 11':	'C11',
+			'Segment 12':	'C12',
 		}
 		result = books.get(bookName, None)
 		return result
