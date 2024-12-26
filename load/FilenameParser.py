@@ -234,7 +234,7 @@ class FilenameRegex:
 		file = Filename(self, filenameTuple)
 		match = self.regex.match(filenameTuple[0])
 		if match != None:
-			if self.name[:3] == "vid":
+			if self.name in ("video1", "video2", "video3", "video4"):
 				file.addUnknown(match.group(1))
 				if self.name in {"video1", "video2"}:
 					file.setBookId(match.group(2), parser.chapterMap)
@@ -249,7 +249,22 @@ class FilenameRegex:
 					file.setVerseStart(match.group(4))
 					file.setVerseEnd(match.group(5))
 					file.setChapterEnd(file.chapter, parser.maxChapterMap)
-	
+			elif self.name == "video5":
+				file.addUnknown(match.group(1))
+				# Chapter for covenant is always 1 by default
+				videoChapterAndVerse = "1"
+				videoType = match.group(4)
+				file.setChapter(videoChapterAndVerse, parser.maxChapterMap)
+				file.setType(videoType)
+
+				segment = match.group(2)
+				file.setBookName("Segment "+segment, parser.chapterMap)
+				bookId = "C"+segment if match.group(2) in ("01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12") else None
+
+				file.setBookId(bookId, parser.chapterMap)
+				file.setVerseStart(videoChapterAndVerse)
+				file.setVerseEnd(videoChapterAndVerse)
+				file.setChapterEnd(file.chapter, parser.maxChapterMap)
 			elif self.name == "text1":
 				file.setDamid(match.group(1))
 				file.setBookSeq(match.group(2))
@@ -420,6 +435,7 @@ class FilenameParser:
 			FilenameRegex("video2", r"(.*)_(MAT|MRK|LUK|JHN)_(End_[Cc]redits)()().*.(mp4)"),
 			FilenameRegex("video3", r"(.*)_(Mark)_([0-9]{1,3})-([0-9]{1,2})b?-([0-9]{1,2}).*.(mp4)"),
 			FilenameRegex("video4", r"(.*)_(MRKZ)_(End_[Cc]redits)()().*.(mp4)"),
+			FilenameRegex("video5", r'^(COVENANT)_SEGMENT\s*(\d{1,2})\s*–\s*(.*)\.(mp4)$'),
 		)
 		self.textTemplates = (
 			## {damid}_{bookseq}_{bookid}_{optionalchap}.html   AAZANT_70_MAT_10.html
@@ -691,7 +707,11 @@ if (__name__ == '__main__'):
 	parser = FilenameParser(config)
 	bucket = config.s3_bucket
 	migration_stage = "B" if os.getenv("DATA_MODEL_MIGRATION_STAGE") == None else os.getenv("DATA_MODEL_MIGRATION_STAGE")
-	languageReader = LanguageReaderCreator(migration_stage).create(config.filename_lpts_xml)
+	lpts_xml = config.filename_lpts_xml if migration_stage == "B" else ""
+
+	languageReader = LanguageReaderCreator(migration_stage).create(lpts_xml)
 	filenamesMap = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
 	parser.process3(filenamesMap)
 	parser.summary3()
+
+# time python3 load/FilenameParser.py test s3://etl-development-input/ "Covenant_Manobo, Obo SD_S2OBO_COV"

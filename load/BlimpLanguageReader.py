@@ -74,3 +74,7 @@ class BlimpLanguageReader (LanguageReaderInterface):
             return response
 
         return None
+
+    def getStocknumber(self, stocknumber):
+        (record) = self.service.getStocknumber(stocknumber)
+        return record

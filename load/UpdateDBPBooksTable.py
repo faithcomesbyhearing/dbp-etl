@@ -243,6 +243,18 @@ class UpdateDBPBooksTable:
 			if typeCode == "video":
 				seqMap = {"MAT": "B01", "MRK": "B02", "LUK": "B03", "JHN": "B04", "ACT": "B05"}
 				nameMap = {"MAT": "Matthew", "MRK": "Mark", "LUK": "Luke", "JHN": "John", "ACT": "Acts"}
+
+				# Extend Covenant Films with C01 to C12
+				# Extend seqMap with C01 to C12
+				for i in range(1, 13):
+					key = f"C{i:02}"  # Creates keys C01, C02, ... C12
+					seqMap[key] = key
+
+				# Extend nameMap with Segment 01 to Segment 12
+				for i in range(1, 13):
+					key = f"C{i:02}"  # Creates keys C01, C02, ... C12
+					nameMap[key] = f"Segment {i:02}"
+
 				for tocBook in tocBooks:
 					tocBook.bookSeq = seqMap.get(tocBook.bookId)
 					tocBook.name = nameMap.get(tocBook.bookId)
@@ -344,7 +356,10 @@ if (__name__ == '__main__'):
 	from DBPLoadController import *
 
 	config = Config.shared()
-	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
+	migration_stage = "B" if os.getenv("DATA_MODEL_MIGRATION_STAGE") == None else os.getenv("DATA_MODEL_MIGRATION_STAGE")
+	lpts_xml = config.filename_lpts_xml if migration_stage == "B" else ""
+	languageReader = LanguageReaderCreator(migration_stage).create(lpts_xml)
+
 	filesets = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
 
 	db = SQLUtility(config)
@@ -366,4 +381,5 @@ if (__name__ == '__main__'):
 # time python3 load/UpdateDBPBooksTable.py test /Volumes/FCBH/all-dbp-etl-test/ HYWWAVN2ET
 # time python3 load/UpdateDBPBooksTable.py test-video /Volumes/FCBH/all-dbp-etl-test/ ENGESVP2DV
 
+# time python3 load/UpdateDBPBooksTable.py test s3://etl-development-input/ "Covenant_Manobo, Obo SD_S2OBO_COV"
 
