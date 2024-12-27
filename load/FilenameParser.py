@@ -435,7 +435,7 @@ class FilenameParser:
 			FilenameRegex("video2", r"(.*)_(MAT|MRK|LUK|JHN)_(End_[Cc]redits)()().*.(mp4)"),
 			FilenameRegex("video3", r"(.*)_(Mark)_([0-9]{1,3})-([0-9]{1,2})b?-([0-9]{1,2}).*.(mp4)"),
 			FilenameRegex("video4", r"(.*)_(MRKZ)_(End_[Cc]redits)()().*.(mp4)"),
-			FilenameRegex("video5", r'^(COVENANT)_SEGMENT\s*(\d{1,2})\s*–\s*(.*)\.(mp4)$'),
+			FilenameRegex("video5", r'^(COVENANT)_SEGMENT\s*(\d{1,2})(.*)\.(mp4)$'),
 		)
 		self.textTemplates = (
 			## {damid}_{bookseq}_{bookid}_{optionalchap}.html   AAZANT_70_MAT_10.html
