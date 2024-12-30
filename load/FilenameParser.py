@@ -61,7 +61,6 @@ class Filename:
 		if bookId != None:
 			self.setBookId(bookId, chapterMap)
 
-
 	def setFileSeq(self, fileSeq):
 		self.fileSeq = fileSeq
 		if not fileSeq.isdigit():
@@ -76,6 +75,17 @@ class Filename:
 			self.errors.append("usfm not found for name: %s" % (name))
 		else:
 			self.setBookId(bookId, chapterMap)
+
+	def setCovenantBookNameById(self, bookId):
+		# FIXME: if the below works, retrieve names from DB; otherwise reference from Booknames.Covenant
+
+		# create map only once
+		db = SQLUtility(self.config)
+		self.bookNameMap = db.selectMap("SELECT id, name FROM books where book_group = 'Covenant Film'", None)
+		db.close()
+
+		bookName = "foo" # FIXME: look up in map
+		self.name = bookName
 
 
 	# This should only be used in cases where setBookBySeq was used to set bookId
@@ -250,18 +260,22 @@ class FilenameRegex:
 					file.setVerseEnd(match.group(5))
 					file.setChapterEnd(file.chapter, parser.maxChapterMap)
 			elif self.name == "video5":
-				file.addUnknown(match.group(1))
+				# Covenant films
+				# example filename: COVENANT_SEGMENT 01 optional.mp4
+				# the segment id is used to establish the bookId, which establishes order
+				# the segment id is also used to map the book name. 
 				# Chapter for covenant is always 1 by default
+				segment = match.group(2)
+				bookId = "C"+segment if match.group(2) in ("01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12") else None
+				file.bookId = bookId
+				file.setCovenantBookNameById(bookId) # FIXME: implement this 
+
+				file.addUnknown(match.group(1))
 				videoChapterAndVerse = "1"
 				videoType = match.group(4)
 				file.setChapter(videoChapterAndVerse, parser.maxChapterMap)
 				file.setType(videoType)
 
-				segment = match.group(2)
-				file.setBookName("Segment "+segment, parser.chapterMap)
-				bookId = "C"+segment if match.group(2) in ("01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12") else None
-
-				file.setBookId(bookId, parser.chapterMap)
 				file.setVerseStart(videoChapterAndVerse)
 				file.setVerseEnd(videoChapterAndVerse)
 				file.setChapterEnd(file.chapter, parser.maxChapterMap)
