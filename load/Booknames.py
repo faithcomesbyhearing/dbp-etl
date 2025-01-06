@@ -821,8 +821,7 @@ class Booknames:
 		}
 		return finnish.get(sequence, None)
 	
-	# FIXME: retrieve from books table. Remove this if the db retrieval works as expected
-	def Covenant(self, sequence):
+	def Covenant(self, bookId):
 		covenant = {
 			'C01':  'Intro & Garden of Eden',
 			'C02':  'Noah, Abram, Ishmael is Born',
@@ -837,4 +836,4 @@ class Booknames:
 			'C11':  'Tabernacle Building, Spying out Land',
 			'C12':  'After the Forty Years / End Credits'
 		}
-		return covenant.get(sequence, None)	
+		return covenant.get(bookId, None)

@@ -293,3 +293,4 @@ if (__name__ == '__main__'):
 # time python3 load/DBPLoadController.py test s3://etl-development-input/ ENGESVN2DA
 
 # time python3 load/DBPLoadController.py test s3://etl-development-input/ "Covenant_Manobo, Obo SD_S2OBO_COV"
+# time python3 load/DBPLoadController.py test s3://etl-development-input/ "Covenant_Aceh SD_S2ACE_COV"

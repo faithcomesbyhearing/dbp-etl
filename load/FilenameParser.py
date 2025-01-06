@@ -55,7 +55,7 @@ class Filename:
 			self.errors.append("book sequence must begin A or B")
 			return
 		booknames = Booknames()
-		#print("orderFunction", orderFunction)
+
 		func = getattr(booknames, orderFunction)
 		bookId = func(bookSeq)	
 		if bookId != None:
@@ -76,17 +76,16 @@ class Filename:
 		else:
 			self.setBookId(bookId, chapterMap)
 
-	def setCovenantBookNameById(self, bookId):
-		# FIXME: if the below works, retrieve names from DB; otherwise reference from Booknames.Covenant
+	def setCovenantBookNameById(self, bookId, covenantBookNameMap):
+		# retrieve names from DB; otherwise reference from Booknames.Covenant
+		bookName = covenantBookNameMap.get(bookId)
+		if bookName == None:
+			print("WARN: bookname not found in database for id: %s. It will try to fetch name from Booknames().Covenant" % (bookId))
+			bookName = Booknames().Covenant(bookId)
+			if bookName == None:
+				self.errors.append("bookname not found for id: %s" % (bookId))
 
-		# create map only once
-		db = SQLUtility(self.config)
-		self.bookNameMap = db.selectMap("SELECT id, name FROM books where book_group = 'Covenant Film'", None)
-		db.close()
-
-		bookName = "foo" # FIXME: look up in map
 		self.name = bookName
-
 
 	# This should only be used in cases where setBookBySeq was used to set bookId
 	# Deuterocanon DC 
@@ -268,7 +267,7 @@ class FilenameRegex:
 				segment = match.group(2)
 				bookId = "C"+segment if match.group(2) in ("01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12") else None
 				file.bookId = bookId
-				file.setCovenantBookNameById(bookId) # FIXME: implement this 
+				file.setCovenantBookNameById(bookId, parser.covenantBookNameMap)
 
 				file.addUnknown(match.group(1))
 				videoChapterAndVerse = "1"
@@ -276,6 +275,7 @@ class FilenameRegex:
 				file.setChapter(videoChapterAndVerse, parser.maxChapterMap)
 				file.setType(videoType)
 
+				file.setBookId(bookId, parser.chapterMap)
 				file.setVerseStart(videoChapterAndVerse)
 				file.setVerseEnd(videoChapterAndVerse)
 				file.setChapterEnd(file.chapter, parser.maxChapterMap)
@@ -521,6 +521,7 @@ class FilenameParser:
 		self.chapterMap = db.selectMap("SELECT id, chapters FROM books", None)
 		self.maxChapterMap = self.chapterMap.copy()
 		self.usfx2Map = db.selectMap("SELECT id_usfx, id FROM books", None)
+		self.covenantBookNameMap = db.selectMap("SELECT id, notes FROM books where book_group = 'Covenant Film'", None)
 		db.close()
 
 		print("\nFound %s filesets to process" % (len(filesets)))
@@ -711,9 +712,8 @@ class FilenameParser:
 			print("Success Count: %s -> %s" % (parser, count))
 
 if (__name__ == '__main__'):
-	from InputReader import *
-	from LanguageReaderCreator import *
-	from InputProcessor import *
+	from LanguageReaderCreator import LanguageReaderCreator
+	from InputProcessor import InputProcessor
 
 	config = Config()
 	AWSSession.shared()
@@ -729,3 +729,4 @@ if (__name__ == '__main__'):
 	parser.summary3()
 
 # time python3 load/FilenameParser.py test s3://etl-development-input/ "Covenant_Manobo, Obo SD_S2OBO_COV"
+# time python3 load/FilenameParser.py test s3://etl-development-input/ "Covenant_Aceh SD_S2ACE_COV"
