@@ -820,3 +820,20 @@ class Booknames:
 			'B27':  'REV'
 		}
 		return finnish.get(sequence, None)
+	
+	def Covenant(self, bookId):
+		covenant = {
+			'C01':  'Intro & Garden of Eden',
+			'C02':  'Noah, Abram, Ishmael is Born',
+			'C03':  'Hagar and Ishmael',
+			'C04':  'Abraham, Isaac and Jacob',
+			'C05':  'Joseph Sold into Slavery',
+			'C06':  'Joseph and His Brothers',
+			'C07':  'Moses and the Burning Bush',
+			'C08':  'The Plagues',
+			'C09':  'Red Sea, Manna/Quail',
+			'C10':  'The Golden Calf, Covenant with Moses',
+			'C11':  'Tabernacle Building, Spying out Land',
+			'C12':  'After the Forty Years / End Credits'
+		}
+		return covenant.get(bookId, None)

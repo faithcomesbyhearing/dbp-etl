@@ -250,10 +250,14 @@ class UpdateDBPBooksTable:
 					key = f"C{i:02}"  # Creates keys C01, C02, ... C12
 					seqMap[key] = key
 
-				# Extend nameMap with Segment 01 to Segment 12
-				for i in range(1, 13):
-					key = f"C{i:02}"  # Creates keys C01, C02, ... C12
-					nameMap[key] = f"Segment {i:02}"
+					# Add to nameMap from tocBooks if available else use default "Segment 01 to Segment 12"
+					matched_tocBook = next((tocBook for tocBook in tocBooks if tocBook.bookId == key), None)
+					if matched_tocBook:
+						nameMap[key] = matched_tocBook.name
+					else:
+						# Default fallback if no match found in tocBooks
+						nameMap[key] = f"Segment {i:02}"
+
 
 				for tocBook in tocBooks:
 					tocBook.bookSeq = seqMap.get(tocBook.bookId)
@@ -291,7 +295,7 @@ class UpdateDBPBooksTable:
 				insertRows.append((toc.bookSeq, name, nameShort, toc.chapters, bibleId, toc.bookId))
 
 			elif typeCode == "text":
-				(dbpBookId, dbpBookSeq, dbpName, dbpNameShort, dbpChapters) = bibleBookMap[toc.bookId]
+				(_, dbpBookSeq, dbpName, dbpNameShort, dbpChapters) = bibleBookMap[toc.bookId]
 				if toc.name != dbpName:
 					name = toc.name.replace("'", "\\'")
 					updateRows.append(("name", name, dbpName, bibleId, toc.bookId))
@@ -304,11 +308,20 @@ class UpdateDBPBooksTable:
 					updateRows.append(("chapters", toc.chapters, dbpChapters, bibleId, toc.bookId))
 
 			elif typeCode == "audio":
-				(dbpBookId, dbpBookSeq, dbpName, dbpNameShort, dbpChapters) = bibleBookMap[toc.bookId]	
+				(_, dbpBookSeq, dbpName, dbpNameShort, dbpChapters) = bibleBookMap[toc.bookId]
 				if toc.bookSeq != dbpBookSeq:
 					updateRows.append(("book_seq", toc.bookSeq, dbpBookSeq, bibleId, toc.bookId))
 				if len(toc.chapters) > len(dbpChapters):
 					updateRows.append(("chapters", toc.chapters, dbpChapters, bibleId, toc.bookId))
+
+			elif typeCode == "video":
+				(_, dbpBookSeq, dbpName, dbpNameShort, dbpChapters) = bibleBookMap[toc.bookId]
+				if toc.name != dbpName:
+					name = toc.name.replace("'", "\\'")
+					updateRows.append(("name", name, dbpName, bibleId, toc.bookId))
+				if toc.nameShort != dbpNameShort:
+					nameShort = toc.nameShort.replace("'", "\\'")
+					updateRows.append(("name_short", nameShort, dbpNameShort, bibleId, toc.bookId))
 
 		sql = ("SELECT distinct book_id FROM bible_files bf"
 			" JOIN bible_fileset_connections bfc ON bf.hash_id = bfc.hash_id"
@@ -382,4 +395,4 @@ if (__name__ == '__main__'):
 # time python3 load/UpdateDBPBooksTable.py test-video /Volumes/FCBH/all-dbp-etl-test/ ENGESVP2DV
 
 # time python3 load/UpdateDBPBooksTable.py test s3://etl-development-input/ "Covenant_Manobo, Obo SD_S2OBO_COV"
-
+# time python3 load/UpdateDBPBooksTable.py test s3://etl-development-input/ "Covenant_Aceh SD_S2ACE_COV"
