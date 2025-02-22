@@ -243,20 +243,15 @@ class FilenameRegex:
 		file = Filename(self, filenameTuple)
 		match = self.regex.match(filenameTuple[0])
 		if match != None:
-			if self.name in ("video1", "video2", "video3", "video4"):
+			if self.name in ("video1", "video2"):
 				file.addUnknown(match.group(1))
 				if self.name in {"video1", "video2"}:
-					file.setBookId(match.group(2), parser.chapterMap)
-				elif self.name == "video3":
-					file.setBookName(match.group(2), parser.chapterMap)
-				elif self.name == "video4":
-					bookId = "MRK" if match.group(2) == "MRKZ" else None
-					file.setBookId(bookId, parser.chapterMap)
-				file.setChapter(match.group(3), parser.maxChapterMap)
-				file.setType(match.group(6))
+					file.setBookId(match.group(3), parser.chapterMap)
+				file.setChapter(match.group(4), parser.maxChapterMap)
+				file.setType(match.group(7))
 				if file.chapter.isdigit():
-					file.setVerseStart(match.group(4))
-					file.setVerseEnd(match.group(5))
+					file.setVerseStart(match.group(5))
+					file.setVerseEnd(match.group(6))
 					file.setChapterEnd(file.chapter, parser.maxChapterMap)
 			elif self.name == "video5":
 				# Covenant films
@@ -279,16 +274,6 @@ class FilenameRegex:
 				file.setVerseStart(videoChapterAndVerse)
 				file.setVerseEnd(videoChapterAndVerse)
 				file.setChapterEnd(file.chapter, parser.maxChapterMap)
-			elif self.name == "text1":
-				file.setDamid(match.group(1))
-				file.setBookSeq(match.group(2))
-				file.setBookId(match.group(3), parser.chapterMap)
-				file.setChapter(match.group(4), parser.maxChapterMap)
-				file.setType(match.group(5))
-			elif self.name == "text2":
-				file.setUSFX2(match.group(1), parser.chapterMap, parser.usfx2Map)
-				file.setChapter(match.group(2), parser.maxChapterMap)
-				file.setType(match.group(3))
 			elif self.name == "text3":
 				if match.group(1) != None:
 					file.setBookSeq(match.group(1))
@@ -297,11 +282,6 @@ class FilenameRegex:
 				chapter = str(parser.maxChapterMap.get(match.group(2)))
 				file.setChapterEnd(chapter, parser.maxChapterMap)
 				file.setType(match.group(3))
-			elif self.name == "text4":
-				file.setBookSeq(match.group(1))
-				file.setBookId(match.group(2), parser.chapterMap)
-				file.setChapter(match.group(3), parser.maxChapterMap)
-				file.setType(match.group(4))
 
 			elif self.name == "audio99":
 				file.setDamid(match.group(1))
@@ -318,18 +298,12 @@ class FilenameRegex:
 				file.setChapterEnd(match.group(6), parser.maxChapterMap)
 				file.setVerseEnd(match.group(7))				
 				file.setType(match.group(8))
-			elif self.name == "audio101" or self.name == "audio102":
+			elif self.name == "audio101":
 				file.setBookBySeq(match.group(1), parser.otOrder, parser.ntOrder, parser.chapterMap)
 				file.setChapter(match.group(2), parser.maxChapterMap)
 				file.checkBookName(match.group(3))
 				file.setDamid(match.group(4))
 				file.setType(match.group(5))
-			elif self.name == "audio103":
-				file.setBookBySeq(match.group(1), parser.otOrder, parser.ntOrder, parser.chapterMap)
-				file.setChapter(match.group(2), parser.maxChapterMap)
-				file.checkBookName(match.group(3) + "_" + match.group(4))
-				file.setDamid(match.group(5))
-				file.setType(match.group(6))
 			elif self.name == "audioCOXWBT":
 				file.setBookSeq(match.group(1))
 				file.setBookName(match.group(2), parser.chapterMap)
@@ -445,34 +419,30 @@ class FilenameParser:
 		self.successCount = {}
 
 		self.videoTemplates = (
-			FilenameRegex("video1", r"(.*)_(MAT|MRK|LUK|JHN)_([0-9]{1,3})-([0-9]{1,2})b?-([0-9]{1,2}).*.(mp4)"),
-			FilenameRegex("video2", r"(.*)_(MAT|MRK|LUK|JHN)_(End_[Cc]redits)()().*.(mp4)"),
-			FilenameRegex("video3", r"(.*)_(Mark)_([0-9]{1,3})-([0-9]{1,2})b?-([0-9]{1,2}).*.(mp4)"),
-			FilenameRegex("video4", r"(.*)_(MRKZ)_(End_[Cc]redits)()().*.(mp4)"),
+			## Example: English_KJV_JHN_1-1-18.mp4
+			FilenameRegex("video1", r"(.*)_([A-Z0-9]{3})_([A-Z0-9]{3})_([0-9]{1,3})-([0-9]{1,2})b?-([0-9]{1,2}).*.(mp4)"),
+			## Example: English_KJV_JHN_End_credits.mp4
+			FilenameRegex("video2", r"(.*)_([A-Z0-9]{3})_([A-Z0-9]{3})_(End_[Cc]redits)()().*.(mp4)"),
+			# Example: COVENANT_SEGMENT 01 – Intro and Garden of Eden.mp4
 			FilenameRegex("video5", r'^(COVENANT)_SEGMENT\s*(\d{1,2})(.*)\.(mp4)$'),
 		)
 		self.textTemplates = (
-			## {damid}_{bookseq}_{bookid}_{optionalchap}.html   AAZANT_70_MAT_10.html
-			FilenameRegex("text1", r"([A-Z0-9]{5,7})_([0-9]{1,3})_([A-Z0-9]{3})_?([0-9]{0,3}).(html)"),
-			## {usfx2}{optionalchap}.html  AC12.html
-			FilenameRegex("text2", r"([A-Z][A-Z0-9])([0-9]{0,3}).(html)"),
-			## {seq}{bookid}.usx
+			## {book order}{book code(USFM)}.usx
+			## Example: 001GEN.usx
 			FilenameRegex("text3", r"([0-9]{3})?([A-Z0-9]{3}).(usx)"),
-			## {seq}{bookid}_{chap}.json 041MRK_012.json
-			FilenameRegex("text4", r"([0-9]{3})?([A-Z0-9]{3})_([0-9]{3})?.(json)")
+
 		)
 		self.audioTemplates = (
-			## New audio format
-			## {filesetid}_{A/B}{ordering}_{USFM}_{chap_start}[_{verse_start}-{chapter_end}_{verse_end}].mp3
-			FilenameRegex("audio99", r"([A-Z0-9]+)_([AB][0-9]+)_([1-4]?[A-Z]+)_([0-9]+).(mp3|opus|webm)"),
-			FilenameRegex("audio100", r"([A-Z0-9]+)_([AB][0-9]+)_([1-4]?[A-Z]+)_([0-9]+)_([0-9]+)-([0-9]+)_([0-9]+).(mp3|opus|webm)"),
-			## using three did not pick up more than 2, but I think it will.
-			## {bookseq}___{chap}_{bookname}____{damid}.mp3   B01___01_Matthew_____ENGGIDN2DA.mp3
-			FilenameRegex("audio101", r"([AB][0-9]{2})_+([0-9]{2,3})_+([1-4]?[A-Za-z\-]+)_+([A-Z0-9]+).(mp3|opus|webm)"),
-			## {bookseq}___{chap}_{bookname}____{damid}.mp3   B01___01_1CorinthiansENGGIDN2DA.mp3
-			FilenameRegex("audio102", r"([AB][0-9]{2})_+([0-9]{2,3})_+([1-4]?[A-Za-z\-]+[a-z])([A-Z0-9]+).(mp3|opus|webm)"),
-			## {bookseq}___{chap}_{bookname1}_{bookname2}____{damid}.mp3   B01___01_San_Mateo___ACCIBSN1DA.mp3			
-			FilenameRegex("audio103", r"([AB][0-9]{2})_+([0-9]{2,3})_+([1-4]?[A-Za-z]+)_([1-4]?[A-Za-z]+)_+([A-Z0-9]+).(mp3|opus|webm)"),
+
+			## {filesetid}_{A/B}{ordering}_{book code(USFM)}_{chap_start}[_{verse_start}-{chapter_end}_{verse_end}].mp3
+			## Example: ENGESVN2DA_B01_MAT_001.mp3
+			FilenameRegex("audio99", r"^([A-Z0-9]{10})_([AB]\d{2})_([A-Z0-9]{3})_(\d{3})\.(mp3|opus|webm)$"),
+			## Example: IRUNLCP1DA_B13_1TH_001_001-001_010.mp3
+			FilenameRegex("audio100", r"^([A-Z0-9]{10})_([AB]\d{2})_([A-Z0-9]{3})_(\d{3})_(\d{3})-(\d{3})_(\d{3})\.(mp3|opus|webm)$"),
+
+			## {A/B}{ordering}___{chapter start}_{book name}__{mediaid}.mp3
+			## Example: B01___01_Matthew_____ENGGIDN2DA.mp3
+			FilenameRegex("audio101", r"^([AB]\d{2})_{3}(\d{2,3})_+([1-4]?[A-Za-z\-]+)_+([A-Z0-9]{10})\.(mp3|opus|webm)$"),
 
 ## Rename 106, 107, 108 to be a specific name
 			## {bookseq}_{bookname}_{chap}_{damid}.mp3   B01_Genesis_01_S1COXWBT.mp3
@@ -592,7 +562,7 @@ class FilenameParser:
 		parserTries = []
 		for template in templates:
 			file = template.parse(filenameTuple, self)
-			#print("error", file.file, template.name, file.errors, file.type)
+			# print("error", file.file, template.name, file.errors, file.type)
 			if file.numErrors() == 0:
 				return file
 			parserTries.append(file)
@@ -730,3 +700,6 @@ if (__name__ == '__main__'):
 
 # time python3 load/FilenameParser.py test s3://etl-development-input/ "Covenant_Manobo, Obo SD_S2OBO_COV"
 # time python3 load/FilenameParser.py test s3://etl-development-input/ "Covenant_Aceh SD_S2ACE_COV"
+# time python3 load/FilenameParser.py test s3://etl-development-input/ "ENGESVN2DA"
+# time python3 load/FilenameParser.py test s3://etl-development-input/ "TGKWBTP2DV"
+# time python3 load/FilenameParser.py test s3://etl-development-input/ "Tatar_N2TTRIBT_USX"
