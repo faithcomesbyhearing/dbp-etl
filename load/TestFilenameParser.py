@@ -19,9 +19,14 @@ test_audio_files = [
 ]
 
 test_video_files = [
-    "English_KJV_JHN_1-1-18.mp4",   # Full chapter - should match video1
-    "English_KJV_JHN_End_credits.mp4",   # Full chapter - should match video2
-    "Tajik_WBT_LUK_End_Credits.mp4",   # Full chapter - should match video2
+    "English_KJV_JHN_1-1-18.mp4",   # Full chapter - not match any
+    "English_KJV_JHN_End_credits.mp4",   # Full chapter - not match any
+    "Tajik_WBT_LUK_End_Credits.mp4",   # Full chapter - not match any
+    "English-KJV_JHN_1-1-18.mp4",   # Full chapter - should match video1
+    "English-KJV_JHN_End_credits.mp4",   # Full chapter - should match video2
+    "Tajik-WBT_LUK_End_Credits.mp4",   # Full chapter - should match video2
+    "English_JHN_1-1-18.mp4",   # Full chapter - should match video3
+    "English_JHN_End_Credits.mp4",   # Full chapter - should match video3
     "COVENANT_SEGMENT 01 – Intro and Garden of Eden.mp4",   # Full chapter - should match video5
     "COVENANT_SEGMENT 02 – The Fall.mp4",   # Full chapter - should match video5
     "COVENANT - Fall.mp4",  # Invalid case - should not match any
@@ -78,8 +83,8 @@ if __name__ == '__main__':
     print("\nSummary:")
 
     # Validation check
-    expected_success_count = 17
-    expected_failure_count = 9
+    expected_success_count = 19
+    expected_failure_count = 12
 
     if total_success == expected_success_count and total_failure == expected_failure_count:
         print("✅ Test executed successfully.")
