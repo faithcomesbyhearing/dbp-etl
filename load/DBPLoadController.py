@@ -22,6 +22,7 @@ from UpdateDBPBiblesTable import *
 from UpdateDBPLPTSTable import *
 from UpdateDBPVideoTables import *
 from UpdateDBPBibleFilesSecondary import *
+from MondayProductCodeBoard import MondayProductCodeBoard, ProductCodeColumns
 
 
 class DBPLoadController:
@@ -78,7 +79,8 @@ class DBPLoadController:
 	def upload(self, inputFilesets):
 		print("\n*** DBPLoadController:upload ***")
 		self.s3Utility.uploadAllFilesets(inputFilesets)
-		secondary = UpdateDBPBibleFilesSecondary(self.config, None, None)
+		dbOut = SQLBatchExec(self.config)
+		secondary = UpdateDBPBibleFilesSecondary(self.config, self.db, dbOut)
 		secondary.createAllZipFiles(inputFilesets)
 		Log.writeLog(self.config)
 
@@ -147,6 +149,36 @@ class DBPLoadController:
 		db = SQLUtility(self.config)
 		self.db = db
 
+	def synchronizeMonday(self, inputFileset):
+		mondayService = MondayProductCodeBoard(self.config)
+		(languageRecord, _) = self.languageReader.getLanguageRecordLoose(inputFileset.typeCode, inputFileset.bibleId, inputFileset.filesetId)
+		stocknumber = languageRecord.StockNumberByFilesetId(inputFileset.filesetId)
+
+		zipFiles = inputFileset.zipFilesIndexedByBookId()
+		productCodes = {}
+		gospelBookNameMap = self.db.selectMap("SELECT id, notes FROM books where book_group = 'Gospels'", None)
+		for bookId in gospelBookNameMap.keys():
+			zipFile = zipFiles.get(bookId)
+			if zipFile != None:
+				licensor = languageRecord.LicensorList()[0] if languageRecord.LicensorList() != None else ""
+				if len(licensor) >= 3:
+					(_, licensorName, _) = licensor
+				else:
+					licensorName = ""
+				productCodes[GospelFilmStockNumberPrefix + stocknumber[2:] + "_" + bookId] = {
+					ProductCodeColumns.StockNumber: stocknumber,
+					ProductCodeColumns.Language: languageRecord.LangName().strip() if languageRecord.LangName() != None else "",
+					ProductCodeColumns.BiblebrainLink: self.config.cdn_partner_base + zipFile.name,
+					ProductCodeColumns.Licensor: licensorName,
+					ProductCodeColumns.CoLicensor: languageRecord.CoLicensor().strip() if languageRecord.CoLicensor() != None else "",
+					ProductCodeColumns.Version: languageRecord.Version(),
+					ProductCodeColumns.LanguageCountry: languageRecord.Country(),
+				}
+
+		if productCodes != {}:
+			mondayService.synchronize(productCodes)
+			Log.getLogger(inputFileset.filesetId).message(Log.INFO, "Monday product codes synchronized")
+
 if (__name__ == '__main__'):
 	print("*** DBPLoadController *** ")
 	from LanguageReaderCreator import LanguageReaderCreator
@@ -164,10 +196,21 @@ if (__name__ == '__main__'):
 		InputFileset.validate = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
 		ctrl.repairAudioFileNames(InputFileset.validate)
 		ctrl.validate(InputFileset.validate)
-		ctrl.upload(InputFileset.upload)
-		ctrl.updateFilesetTables(InputFileset.database)
-		for inputFileset in InputFileset.complete:
-			print("Completed: ", inputFileset.filesetId)
+		hasError = False
+		for inp in InputFileset.upload:
+			logger = Log.getLogger(inp.filesetId)
+			if logger.errorCount() > 0:
+				print("")
+				print("DBPLoadController:validate. fileset: %s has errors" %(inp.filesetId))
+				print("")
+				RunStatus.set(inp.filesetId, False)
+				hasError = True
+		if not hasError:
+			ctrl.upload(InputFileset.upload)
+			ctrl.updateFilesetTables(InputFileset.database)
+			for inputFileset in InputFileset.complete:
+				print("Completed: ", inputFileset.filesetId)
+				ctrl.synchronizeMonday(inputFileset)
 	else:
 		print("Processing Metadata Load")
 		if migration_stage == "BLIMP":
@@ -294,3 +337,5 @@ if (__name__ == '__main__'):
 
 # time python3 load/DBPLoadController.py test s3://etl-development-input/ "Covenant_Manobo, Obo SD_S2OBO_COV"
 # time python3 load/DBPLoadController.py test s3://etl-development-input/ "Covenant_Aceh SD_S2ACE_COV"
+
+# time python3 load/DBPLoadController.py test s3://etl-development-input/ "SPNBDAP2DV"
