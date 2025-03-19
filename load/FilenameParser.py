@@ -254,7 +254,7 @@ class FilenameRegex:
 					file.setChapterEnd(file.chapter, parser.maxChapterMap)
 				else:
 					file.setType(match.group(5))
-			if self.name in ("video3", "video4"):
+			elif self.name in ("video3", "video4"):
 				file.addUnknown(match.group(1))
 				file.setBookName(match.group(2), parser.chapterMap)
 				file.setChapter(match.group(3), parser.maxChapterMap)

@@ -30,34 +30,6 @@ from UpdateDBPLicensorTables import UpdateDBPLicensorTables
 
 class UpdateDBPFilesetTables:
 
-	def getSetTypeCode(typeCode, filesetId):
-		if typeCode == "video":
-			return "video_stream"
-		elif typeCode == "audio":
-			code = filesetId[7:9]
-			if code == "1D":
-				return "audio"
-			elif code == "2D":
-				return "audio_drama"
-			else:
-				code = filesetId[8:10]
-				if code == "1D":
-					return "audio"
-				elif code == "2D":
-					return "audio_drama"
-				elif filesetId == "N1TUVDPI":
-					return "audio"
-				elif filesetId == "O1TUVDPI":
-					return "audio"
-				else:
-					print("ERROR: file type not known for %s, set_type_code set to 'unknown'" % (filesetId))
-					#return "unknown"
-					sys.exit()
-		else:
-			print("ERROR: type code %s is not know for %s" % (typeCode, filesetId))
-			sys.exit()
-
-
 	## Deuterocanon DC - the counts for OT to determine if complete should be aware that DC books may be involved.
 	## do we consistently classify the DC books as DC and not OT
 	def getSetSizeCode(NTBooks, OTBooks):
@@ -117,7 +89,7 @@ class UpdateDBPFilesetTables:
 		isContentLoaded = 1 if len(inp.files) > 0 else 0
 
 		if inp.typeCode in {"audio", "video"}:
-			setTypeCode = UpdateDBPFilesetTables.getSetTypeCode(inp.typeCode, inp.filesetId)
+			setTypeCode = inp.getSetTypeCode()
 			hashId = lptsDBP.getHashId(bucket, inp.filesetId, setTypeCode)
 			setSizeCode = self.getSizeCode(dbConn, inp.typeCode, hashId, bookIdSet)
 			lptsDBP.upsertBibleFileset(dbConn, setTypeCode, setSizeCode, inp.filesetId, isContentLoaded)
@@ -128,6 +100,9 @@ class UpdateDBPFilesetTables:
 			filesetList = []
 			filesetList.append((inp.bibleId, inp.filesetId, setTypeCode, None, None, hashId))
 			lptsDBP.updateBibleFilesetTags(filesetList)
+
+			if inp.typeCode == "video":
+				lptsDBP.updateBibleProductCode(inp)
 
 			if inp.isDerivedFileset():
 				updateLicensor.processFileset(inp.lptsDamId, hashId)
