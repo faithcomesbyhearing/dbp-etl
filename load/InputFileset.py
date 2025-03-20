@@ -42,6 +42,16 @@ class InputFile:
 	def startswith(self, text):
 		return self.name.startswith(text)
 
+	def isZip(self):
+		return self.name.endswith(".zip")
+
+	def zipBookId(self):
+		if self.isZip():
+			parts = self.name.split("_")
+			return parts[1][0:3] if len(parts) > 1 else None
+
+		return None
+
 class InputFileset:
 
 	BUCKET = "BUCKET"
@@ -116,6 +126,32 @@ class InputFileset:
 			results.append(file.toString() + "\n")
 		return " ".join(results)
 
+	def getSetTypeCode(self):
+		if self.typeCode == "video":
+			return "video_stream"
+		elif self.typeCode == "audio":
+			code = self.filesetId[7:9]
+			if code == "1D":
+				return "audio"
+			elif code == "2D":
+				return "audio_drama"
+			else:
+				code = self.filesetId[8:10]
+				if code == "1D":
+					return "audio"
+				elif code == "2D":
+					return "audio_drama"
+				elif self.filesetId == "N1TUVDPI":
+					return "audio"
+				elif self.filesetId == "O1TUVDPI":
+					return "audio"
+				else:
+					print("ERROR: file type not known for %s, set_type_code set to 'unknown'" % (self.filesetId))
+					sys.exit()
+		## This method only works for audio and video filesets
+		else:
+			print("ERROR: type code %s is not know for %s" % (self.typeCode, self.filesetId))
+			sys.exit()
 
 	## This method is used instead of _setFilenames when a specific list of files has been provided
 	def _downloadSelectedFiles(self, fileList):
@@ -271,6 +307,19 @@ class InputFileset:
 				return True
 		return False
 
+	def isMP4Fileset(self):
+		for file in self.files:
+			ext = file.name.split(".")[-1]
+			if ext == "mp4":
+				return True
+		return False
+
+	def videoFileNamesByBook(self, bookId):
+		results = []
+		for file in self.files:
+			if bookId in file.name:
+				results.append(file.name)
+		return results
 
 	def filenames(self):
 		results = []
@@ -316,6 +365,14 @@ class InputFileset:
 			if ext == "zip":
 				return file
 		return None
+
+	def zipFilesIndexedByBookId(self):
+		results = {}
+
+		for file in self.files:
+			if file.isZip() and file.zipBookId() is not None:
+				results[file.zipBookId()] = file
+		return results
 	
 	def thumbnailFiles(self):
 		results = []
