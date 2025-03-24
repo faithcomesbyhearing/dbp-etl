@@ -163,6 +163,8 @@ class BoardService(Board):
                         }
                     else:
                         column_values_to_update[col_id] = value
+                elif isinstance(value, int):
+                    column_values_to_update[col_id] = str(value)
 
         return column_values_to_update
 

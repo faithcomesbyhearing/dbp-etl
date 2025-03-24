@@ -12,6 +12,7 @@ class ProductCodeColumns:
     CoLicensor = "Co-Licensor"
     Version = "Version"
     LanguageCountry = "Language Country"
+    Mode = "Mode"
 
 ProductCodeColumnAllowed = [
     ProductCodeColumns.StockNumber,
@@ -22,6 +23,7 @@ ProductCodeColumnAllowed = [
     ProductCodeColumns.CoLicensor,
     ProductCodeColumns.Version,
     ProductCodeColumns.LanguageCountry,
+    ProductCodeColumns.Mode,
 ]
 
 class MondayProductCodeBoard:

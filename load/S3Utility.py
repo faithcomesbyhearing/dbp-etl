@@ -70,7 +70,7 @@ class S3Utility:
 			return False
 		else:
 			if inp.filesetPrefix.startswith("video"):
-				# TranscodeVideo.transcodeVideoFileset(self.config, inp.filesetPrefix, inp.s3FileKeys())
+				TranscodeVideo.transcodeVideoFileset(self.config, inp.filesetPrefix, inp.s3FileKeys())
 			InputFileset.database.append(inp)
 			return True
 

@@ -51,6 +51,16 @@ class InputFile:
 			return parts[1][0:3] if len(parts) > 1 else None
 
 		return None
+	def hasValidFilesetPath(self, typeCode, bibleId, filesetId):
+		directory = os.path.dirname(self.name)
+		directoryParts = directory.split('/')
+
+		print("directoryParts", directoryParts)
+		print("typeCode", typeCode, "bibleId", bibleId, "filesetId", filesetId)
+		if len(directoryParts) < 3:
+			return False
+
+		return directoryParts[0] == typeCode and directoryParts[1] == bibleId and directoryParts[2] == filesetId
 
 class InputFileset:
 
@@ -141,10 +151,6 @@ class InputFileset:
 					return "audio"
 				elif code == "2D":
 					return "audio_drama"
-				elif self.filesetId == "N1TUVDPI":
-					return "audio"
-				elif self.filesetId == "O1TUVDPI":
-					return "audio"
 				else:
 					print("ERROR: file type not known for %s, set_type_code set to 'unknown'" % (self.filesetId))
 					sys.exit()

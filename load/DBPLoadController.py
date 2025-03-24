@@ -149,6 +149,12 @@ class DBPLoadController:
 		db = SQLUtility(self.config)
 		self.db = db
 
+	def calculateProductCode(self, typeCode, stocknumber, bookId):
+		if typeCode == "video":
+			return GospelFilmStockNumberPrefix + stocknumber[2:] + "_" + bookId
+		else:
+			return stocknumber
+
 	def synchronizeMonday(self, inputFileset):
 		mondayService = MondayProductCodeBoard(self.config)
 		(languageRecord, _) = self.languageReader.getLanguageRecordLoose(inputFileset.typeCode, inputFileset.bibleId, inputFileset.filesetId)
@@ -160,17 +166,30 @@ class DBPLoadController:
 		for bookId in gospelBookNameMap.keys():
 			zipFile = zipFiles.get(bookId)
 			if zipFile != None:
+				# Check if the zip file has a valid path E.g. video/{BibleId}/{FilesetId}/{Zipfile}.zip
+				if zipFile.hasValidFilesetPath(inputFileset.typeCode, inputFileset.bibleId, inputFileset.filesetId) is False:
+					Log.getLogger(inputFileset.filesetId).message(Log.EROR, "BiblebrainLink does not have a correct path: %s" % zipFile.name)
+					continue
+
 				licensor = languageRecord.LicensorList()[0] if languageRecord.LicensorList() != None else ""
 				if len(licensor) >= 3:
 					(_, licensorName, _) = licensor
 				else:
 					licensorName = ""
-				productCodes[GospelFilmStockNumberPrefix + stocknumber[2:] + "_" + bookId] = {
+
+				# possible statuses are: {0: Video, 1: Audio}
+				mode = 0 if inputFileset.typeCode == "video" else 1
+
+				# The zipFile.name is the path to the zip file with the pattern video/{BibleId}/{FilesetId}/{Zipfile}.zip
+				biblebrainLink = self.config.cdn_partner_base + zipFile.name
+				productCode = self.calculateProductCode(inputFileset.typeCode, stocknumber, bookId)
+				productCodes[productCode] = {
 					ProductCodeColumns.StockNumber: stocknumber,
 					ProductCodeColumns.Language: languageRecord.LangName().strip() if languageRecord.LangName() != None else "",
-					ProductCodeColumns.BiblebrainLink: self.config.cdn_partner_base + zipFile.name,
+					ProductCodeColumns.BiblebrainLink: biblebrainLink,
 					ProductCodeColumns.Licensor: licensorName,
 					ProductCodeColumns.CoLicensor: languageRecord.CoLicensor().strip() if languageRecord.CoLicensor() != None else "",
+					ProductCodeColumns.Mode: mode,
 					ProductCodeColumns.Version: languageRecord.Version(),
 					ProductCodeColumns.LanguageCountry: languageRecord.Country(),
 				}
