@@ -56,6 +56,24 @@ class SQLBatchExec:
 					self.statements.append("SET @%s = LAST_INSERT_ID();" % (keyValue,))
 			self.counts.append(("insert", tableName, len(values)))
 
+	def hasKeyStatement(self, keyValue):
+		"""
+		Check if the statements list contains a statement with the given keyValue.
+
+		Args:
+			keyValue (str): The key value to search for
+
+		Returns:
+			bool: True if found, False otherwise
+		"""
+		sanitized_key = SQLBatchExec.sanitize_value(keyValue)
+		search_pattern = f"SET @{sanitized_key} = LAST_INSERT_ID();"
+
+		for statement in self.statements:
+			if statement == search_pattern:
+				return True
+
+		return False
 
 	def insertSet(self, tableName, pkeyNames, attrNames, values):
 		if len(values) > 0:
@@ -93,6 +111,7 @@ class SQLBatchExec:
 			for value in values:
 				stmt = sql % value
 				stmt = stmt.replace("'None'", "NULL")
+				stmt = self.unquoteValues(stmt)
 				self.statements.append(stmt)
 			self.counts.append(("update", tableName, len(values)))
 

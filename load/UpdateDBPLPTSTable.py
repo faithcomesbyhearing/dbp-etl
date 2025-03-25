@@ -172,41 +172,43 @@ class UpdateDBPLPTSTable:
 				self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
 
 	def updateBibleFilesetLicenseGroup(self, inputFileset, hashId):
-		row = self.db.selectRow("SELECT lg.id, lg.name FROM license_group lg INNER JOIN license_group_filesets lgf ON lgf.license_group_id = lg.id INNER JOIN bible_filesets bf ON bf.hash_id = lgf.hash_id WHERE bf.id=%s LIMIT 1", (inputFileset.filesetId))
+		row = self.db.selectRow("SELECT lg.id, lg.name FROM license_group lg INNER JOIN bible_filesets bf ON bf.license_group_id = lg.id WHERE bf.id=%s LIMIT 1", (inputFileset.filesetId))
 
 		# Create license group if it does not exist
 		if row == None:
-			row = self.db.selectRow("SELECT lg.id, lg.name FROM license_group lg INNER JOIN license_group_filesets lgf ON lgf.license_group_id = lg.id INNER JOIN bible_filesets bf ON bf.hash_id = lgf.hash_id WHERE bf.id=%s LIMIT 1", (inputFileset.lptsDamId))
+			row = self.db.selectRow("SELECT lg.id, lg.name FROM license_group lg INNER JOIN bible_filesets bf ON bf.license_group_id = lg.id WHERE bf.id=%s LIMIT 1", (inputFileset.lptsDamId))
 
-			tableNameGroupFilesets = "license_group_filesets"
-			pkeyNamesGroupFilesets = ("hash_id", "license_group_id")
-			attrNamesGroupFilesets = ()
+			tableNameFilesets = "bible_filesets"
+			pkeyNamesFilesets = ("hash_id",)
+			attrNamesToUpdate = ("license_group_id",)
 
 			tableNameGroup = "license_group"
-			pkeyNamesGroup = ("name", "bible_id")
+			pkeyNamesGroup = ("name",)
 			attrNamesGroup = ("description",)
 
-			insertRowsGroupFilesets = []
+			updateRowsFilesets = []
 			insertRowsGroup = []
 
 			if row != None:
 				(licenseId, _) = row
-				insertRowsGroupFilesets.append((hashId, licenseId))
+				updateRowsFilesets.append((licenseId, hashId))
 			else:
 				licenseName = "%s-%s" % (inputFileset.bibleId, inputFileset.typeCode)
 
 				row = self.db.selectRow("SELECT lg.id FROM license_group lg WHERE lg.name=%s LIMIT 1", (licenseName))
 				# Check if the license group name exists
 				if row == None:
-					insertRowsGroup.append((licenseName, licenseName, inputFileset.bibleId))
+					# Check if the license group name has already been created
+					if self.dbOut.hasKeyStatement(licenseName) is False:
+						insertRowsGroup.append((licenseName, licenseName))
 					licenseNameKey = "@" + SQLBatchExec.sanitize_value(licenseName)
-					insertRowsGroupFilesets.append((hashId, licenseNameKey))
+					updateRowsFilesets.append((licenseNameKey, hashId))
 				else:
 					(licenseId,) = row
-					insertRowsGroupFilesets.append((hashId, licenseId))
+					updateRowsFilesets.append((licenseId, hashId))
 
 			self.dbOut.insert(tableNameGroup, pkeyNamesGroup, attrNamesGroup, insertRowsGroup, 0)
-			self.dbOut.insert(tableNameGroupFilesets, pkeyNamesGroupFilesets, attrNamesGroupFilesets, insertRowsGroupFilesets)
+			self.dbOut.update(tableNameFilesets, pkeyNamesFilesets, attrNamesToUpdate, updateRowsFilesets)
 	##
 	## Bible Fileset Tags
 	##

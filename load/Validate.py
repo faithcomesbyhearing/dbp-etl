@@ -36,7 +36,7 @@ class Validate:
 				ext = os.path.splitext(file.name)[-1]
 				if inp.typeCode == "audio" and ext not in {".mp3", ".opus", ".webm", ".m4a", ".jpg", ".tif", ".png", ".zip"}:
 					logger.invalidFileExt(file.name)
-				elif inp.typeCode == "text" and not ext in {".html", ".usx", ".xml", ".json"}:
+				elif inp.typeCode == "text" and not ext in {".usx"}:
 					logger.invalidFileExt(file.name)
 				elif inp.typeCode == "video" and ext != ".mp4":
 					logger.invalidFileExt(file.name)
