@@ -256,7 +256,7 @@ class FilenameRegex:
 					file.setType(match.group(5))
 			elif self.name in ("video3", "video4"):
 				file.addUnknown(match.group(1))
-				file.setBookName(match.group(2), parser.chapterMap)
+				file.setBookId(match.group(2), parser.chapterMap)
 				file.setChapter(match.group(3), parser.maxChapterMap)
 				if file.chapter.isdigit():
 					file.setType(match.group(6))
@@ -366,6 +366,7 @@ class FilenameParser:
 		self.parsedList = []
 		self.unparsedList = []
 		self.successCount = {}
+		self.totalFiles = []
 
 		self.videoTemplates = (
 			## Language[-BibleVersion]_Book_Chapter-VerseStart-VerseEnd.mp4
@@ -459,6 +460,7 @@ class FilenameParser:
 			self.ntOrder = self.NTOrderTemp(inp.filesetId, inp.languageRecord)
 
 			(numErrors, files) = self.parseOneFileset3(templates, prefix, inp.filenamesTuple())
+			self.totalFiles.append((len(files), prefix))
 			if numErrors == 0:
 				self.parsedList.append((prefix))
 			else:
@@ -610,6 +612,11 @@ class FilenameParser:
 		file.write("\n\nUnparsed\n\n")
 		for entry in self.unparsedList:
 			file.write("%d  %s\n" % entry)
+			print("Error unparsed: %s -> %s" % entry)
+		file.write("\n\nTotal Files\n\n")
+		for entry in self.totalFiles:
+			file.write("%d  %s\n" % entry)
+			print("Total Files: %s -> %s" % entry)
 		file.close()
 		for parser, count in self.successCount.items():
 			print("Success Count: %s -> %s" % (parser, count))
@@ -636,3 +643,7 @@ if (__name__ == '__main__'):
 # time python3 load/FilenameParser.py test s3://etl-development-input/ "ENGESVN2DA"
 # time python3 load/FilenameParser.py test s3://etl-development-input/ "TGKWBTP2DV"
 # time python3 load/FilenameParser.py test s3://etl-development-input/ "Tatar_N2TTRIBT_USX"
+
+# time python3 load/FilenameParser.py test s3://etl-development-input/ "SLUYPMP2DV"
+# time python3 load/FilenameParser.py test s3://etl-development-input/ "URIWBTN2DV"
+# time python3 load/FilenameParser.py test s3://etl-development-input/ "SPNBDAP2DV"
