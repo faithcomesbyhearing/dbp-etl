@@ -254,7 +254,7 @@ class FilenameRegex:
 					file.setChapterEnd(file.chapter, parser.maxChapterMap)
 				else:
 					file.setType(match.group(5))
-			if self.name in ("video3", "video4"):
+			elif self.name in ("video3", "video4"):
 				file.addUnknown(match.group(1))
 				file.setBookName(match.group(2), parser.chapterMap)
 				file.setChapter(match.group(3), parser.maxChapterMap)
@@ -294,7 +294,11 @@ class FilenameRegex:
 				chapter = str(parser.maxChapterMap.get(match.group(2)))
 				file.setChapterEnd(chapter, parser.maxChapterMap)
 				file.setType(match.group(3))
-
+			elif self.name == "text4":
+				file.setBookSeq(match.group(1))
+				file.setBookId(match.group(2), parser.chapterMap)
+				file.setChapter(match.group(3), parser.maxChapterMap)
+				file.setType(match.group(4))
 			elif self.name == "audio99":
 				file.setDamid(match.group(1))
 				file.setBookSeq(match.group(2))
@@ -388,6 +392,9 @@ class FilenameParser:
 			## Example: 001GEN.usx
 			FilenameRegex("text3", r"([0-9]{3})?([A-Z0-9]{3}).(usx)"),
 
+			## {seq}{bookid}_{chap}.json
+			## Example: 041MRK_012.json
+			FilenameRegex("text4", r"([0-9]{3})?([A-Z0-9]{3})_([0-9]{3})?.(json)")
 		)
 		self.audioTemplates = (
 
@@ -398,8 +405,8 @@ class FilenameParser:
 			FilenameRegex("audio100", r"^([A-Z0-9]{10})_([AB]\d{2})_([A-Z0-9]{3})_(\d{3})_(\d{3})-(\d{3})_(\d{3})\.(mp3|opus|webm)$"),
 
 			## {A/B}{ordering}___{chapter start}_{book name}__{mediaid}.mp3
-			## Example: B01___01_Matthew_____ENGGIDN2DA.mp3
-			FilenameRegex("audio101", r"^([AB]\d{2})_{3}(\d{2,3})_+([1-4]?[A-Za-z\-]+)_+([A-Z0-9]{10})\.(mp3|opus|webm)$"),
+			## Example: B01___01_Matthew_____ENGGIDN2DA.mp3 or B07___01_1CorinthiansENGESVN2DA.mp3
+			FilenameRegex("audio101", r"^([AB]\d{2})_{3}(\d{2,3})_+([1-4]?[A-Za-z\-]+)_*([A-Z0-9]{10})\.(mp3|opus|webm)$"),
 
 			## A01_{seq3}_title_title_title__damid.mp3
 			FilenameRegex("audioStory1", r"A01_+([0-9]{3})_([A-Za-z0-9_]+)_+([A-Z0-9]+).(mp3|opus|webm)"),
