@@ -5,9 +5,9 @@ from datetime import datetime, timedelta, timezone
 
 # Global variable for the s3zipper base URL
 S3ZIPPER_BASE_URL = "https://api.s3zipper.com"
-MAX_WAIT_SECONDS = 600
+MAX_WAIT_SECONDS = 3600  # 1 hour
 POLL_INTERVAL = 2
-STS_EXPIRATION_TIME = 900  # 15 minutes
+STS_EXPIRATION_TIME = 3600  # 1 hour
 
 class S3ZipperService:
     """
@@ -197,7 +197,7 @@ class S3ZipperService:
 
                 state_data = resp.json()
                 state = state_data.get("State")  # e.g. "SUCCESS", "FAILURE", etc.
-                print("s3Zipper State:", state)
+                print("s3Zipper State:", state, "progress time:", progress_time/60, "minutes")
 
                 if state == "SUCCESS":
                     # Finished successfully
@@ -206,6 +206,9 @@ class S3ZipperService:
                     # We will retry if we haven’t hit attempts limit
                     # break
                     progress_time = max_wait_seconds
+                    error_data = state_data.get("Error")
+                    print("Zip process failed.")
+                    print(error_data)
                     continue
                 else:
                     # Possibly "CREATING" or other statuses; wait then poll again
