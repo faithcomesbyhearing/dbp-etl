@@ -245,17 +245,6 @@ class FilenameRegex:
 		if match != None:
 			if self.name in ("video1", "video2"):
 				file.addUnknown(match.group(1))
-				file.setBookId(match.group(3), parser.chapterMap)
-				file.setChapter(match.group(4), parser.maxChapterMap)
-				if file.chapter.isdigit():
-					file.setType(match.group(7))
-					file.setVerseStart(match.group(5))
-					file.setVerseEnd(match.group(6))
-					file.setChapterEnd(file.chapter, parser.maxChapterMap)
-				else:
-					file.setType(match.group(5))
-			elif self.name in ("video3", "video4"):
-				file.addUnknown(match.group(1))
 				file.setBookId(match.group(2), parser.chapterMap)
 				file.setChapter(match.group(3), parser.maxChapterMap)
 				if file.chapter.isdigit():
@@ -369,21 +358,27 @@ class FilenameParser:
 		self.totalFiles = []
 
 		self.videoTemplates = (
-			## Language[-BibleVersion]_Book_Chapter-VerseStart-VerseEnd.mp4
-			## Example: English-KJV_JHN_1-1-18.mp4
-			FilenameRegex("video1", r"^([A-Za-z]+)-([A-Z0-9]{3})_([A-Z0-9]{3})_(\d{1,3})-(\d{1,2})b?-(\d{1,2})\.(mp4)$"),
+			# Language_Book_Chapter-VerseStart-VerseEnd.mp4
+			# Language[-BibleVersion]_Book_Chapter-VerseStart-VerseEnd.mp4
+			# Language[ BibleVersion]_Book_Chapter-VerseStart-VerseEnd.mp4
+			# Language[-BibleVersion]-[other text separated by "-"]_Book_Chapter-VerseStart-VerseEnd.mp4
+
+			## Example:
+			# English_JHN_1-1-18.mp4
+			# English-KJV_JHN_1-1-18.mp4
+			# English KJV_JHN_1-1-18.mp4
+			# English-KJV-other-version-info_JHN_1-1-18.mp4
+			# English-other-version-info_JHN_1-1-18.mp4
+			FilenameRegex("video1", r"^([A-Za-z\- ]+)_([A-Z0-9]{3})_(\d{1,3})-(\d{1,2})b?-(\d{1,2})\.(mp4)$"),
 
 			## Language[-BibleVersion]_Book_End_credits.mp4
-			## Example: English-KJV_JHN_End_credits.mp4
-			FilenameRegex("video2", r"^([A-Za-z]+)-([A-Z0-9]{3})_([A-Z0-9]{3})_(End_[Cc]redits)\.(mp4)$"),
-
-			## Language_Book_Chapter-VerseStart-VerseEnd.mp4 (NO Bible Version)
-			## Example: English_JHN_1-1-18.mp4
-			FilenameRegex("video3", r"^([A-Za-z]+)_([A-Z0-9]{3})_(\d{1,3})-(\d{1,2})b?-(\d{1,2})\.(mp4)$"),
-
-			## Language_Book_End_credits.mp4 (NO Bible Version)
-			## Example: English_JHN_End_credits.mp4
-			FilenameRegex("video4", r"^([A-Za-z]+)_([A-Z0-9]{3})_(End_[Cc]redits)\.(mp4)$"),
+			## Example:
+			# English-KJV_JHN_End_credits.mp4
+			# English KJV_JHN_End_credits.mp4
+			# English_JHN_End_credits.mp4
+			# English-KJV-other-version-info_JHN_End_credits.mp4
+			# English-other-version-info_JHN_End_credits.mp4
+			FilenameRegex("video2", r"^([A-Za-z\- ]+)_([A-Z0-9]{3})_(End_[Cc]redits)\.(mp4)$"),
 
 			## Example: COVENANT_SEGMENT 01 – Intro and Garden of Eden.mp4
 			FilenameRegex("video5", r'^(COVENANT)_SEGMENT\s*(\d{1,2})(.*)\.(mp4)$'),
