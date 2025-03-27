@@ -29,7 +29,7 @@ RUN python -m venv $VIRTUAL_ENV
 RUN /bin/sh -c "source $VIRTUAL_ENV/bin/activate"
 # --
 
-RUN pip install boto3 pymysql pytz awscli
+RUN pip install boto3 pymysql pytz awscli requests
 
 COPY --from=Sofria /app/sofria-cli ./sofria-cli
 

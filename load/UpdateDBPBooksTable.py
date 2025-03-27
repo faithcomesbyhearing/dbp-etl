@@ -224,6 +224,9 @@ class UpdateDBPBooksTable:
 					bookSeq = row["sequence"]
 					bookName = row["book_name"]
 					chapter = row["chapter_start"]
+					if bookId == None or bookSeq == None or bookName == None or chapter == None:
+						print("ERROR: Missing required field in CSV file", row)
+						continue
 					if len(chapter) > 1 and chapter[0] == "0":
 						chapter = chapter[1:]
 					if bookId != priorBookId:
@@ -290,9 +293,10 @@ class UpdateDBPBooksTable:
 
 		for toc in tocBooks:
 			if toc.bookId not in bibleBookMap.keys():
-				name = toc.name.replace("'", "\\'")
-				nameShort = toc.nameShort.replace("'", "\\'")
-				insertRows.append((toc.bookSeq, name, nameShort, toc.chapters, bibleId, toc.bookId))
+				if toc.name != None and toc.nameShort != None:
+					name = toc.name.replace("'", "\\'")
+					nameShort = toc.nameShort.replace("'", "\\'")
+					insertRows.append((toc.bookSeq, name, nameShort, toc.chapters, bibleId, toc.bookId))
 
 			elif typeCode == "text":
 				(_, dbpBookSeq, dbpName, dbpNameShort, dbpChapters) = bibleBookMap[toc.bookId]
