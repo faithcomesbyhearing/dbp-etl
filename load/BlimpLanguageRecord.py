@@ -192,3 +192,6 @@ class BlimpLanguageRecord (LanguageRecordInterface):
             if stockNumber != None:
                 return stockNumber
         return None
+
+    def Version(self):
+        return self.record.get(BlimpLanguageRecord.propertiesName['volumneName'])

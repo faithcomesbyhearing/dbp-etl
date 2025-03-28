@@ -18,6 +18,8 @@ from UpdateDBPAccessTable import *
 from UpdateDBPBibleTranslations import *
 from UpdateDBPLanguageTranslation import *
 
+GospelFilmStockNumberPrefix = "P2"
+
 class UpdateDBPLPTSTable:
 
 	@staticmethod
@@ -209,6 +211,54 @@ class UpdateDBPLPTSTable:
 
 			self.dbOut.insert(tableNameGroup, pkeyNamesGroup, attrNamesGroup, insertRowsGroup, 0)
 			self.dbOut.update(tableNameFilesets, pkeyNamesFilesets, attrNamesToUpdate, updateRowsFilesets)
+
+	def updateBibleProductCode(self, inputFileset):
+		if inputFileset.typeCode == "video":
+			iso = "eng"
+			languageId = 6414
+			notes = None
+			hashId = self.getHashId(self.config.s3_bucket, inputFileset.filesetId, inputFileset.getSetTypeCode())
+			sql = "SELECT hash_id, name, description, admin_only FROM bible_fileset_tags WHERE language_id = %s AND hash_id = %s"
+			resultSet = self.db.select(sql, (languageId, hashId))
+
+			tagNameMap = {}
+			PRODUCT_CODE_TEMPLATE = "product_code:%s"
+
+			for row in resultSet:
+				(_, name, description, _) = row
+				tagNameMap[name] = description
+
+			insertRows = []
+			updateRows = []
+			deleteRows = []
+
+			tableName = "bible_fileset_tags"
+			pkeyNames = ("hash_id", "name", "language_id")
+			attrNames = ("description", "admin_only", "notes", "iso")
+			gospelBookNameMap = self.db.selectMap("SELECT id, notes FROM books where book_group = 'Gospels'", None)
+
+			(languageRecord, _) = self.languageReader.getLanguageRecordLoose(inputFileset.typeCode, inputFileset.bibleId, inputFileset.filesetId)
+
+			for bookId in gospelBookNameMap.keys():
+				listFiles = inputFileset.videoFileNamesByBook(bookId)
+				if len(listFiles) > 0:
+					oldProductCode = tagNameMap.get(PRODUCT_CODE_TEMPLATE % bookId, {})
+
+					stocknumber = languageRecord.StockNumberByFilesetId(inputFileset.filesetId)
+					productCode = GospelFilmStockNumberPrefix + stocknumber[2:] + "_" + bookId
+
+					if oldProductCode is not None:
+						if oldProductCode != productCode:
+							updateRows.append((productCode, 1, notes, iso, hashId, PRODUCT_CODE_TEMPLATE % bookId, languageId))
+					else:
+						insertRows.append((productCode, 1, notes, iso, hashId, PRODUCT_CODE_TEMPLATE % bookId, languageId))
+				else:
+					deleteRows.append((hashId, PRODUCT_CODE_TEMPLATE % bookId, languageId))
+
+			self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
+			self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
+			self.dbOut.delete(tableName, pkeyNames, deleteRows)
+
 	##
 	## Bible Fileset Tags
 	##

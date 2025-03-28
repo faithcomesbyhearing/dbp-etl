@@ -16,9 +16,12 @@ database.user_db_name = ${DATABASE_USER_DB_NAME}
 mysql.exe = /usr/bin/mysql
 node.exe = /usr/bin/node
 sofria_client.js =  /app/sofria-cli/biblebrain_uploader.js
+s3.aws_region = us-west-2
 s3.bucket = ${S3_BUCKET}
 s3.vid_bucket = ${S3_VID_BUCKET}
 s3.artifacts_bucket = ${S3_ARTIFACTS_BUCKET}
+s3.zipper.user_key = ${S3_ZIPPER_USER_KEY}
+s3.zipper.user_secret = ${S3_ZIPPER_USER_SECRET}
 directory.upload_aws = /efs/${S3_KEY_PREFIX}/etl_uploader/upload_aws/
 directory.upload = /efs/${S3_KEY_PREFIX}/etl_uploader/upload/
 directory.database = /efs/${S3_KEY_PREFIX}/etl_uploader/database/
@@ -48,6 +51,9 @@ audio.transcoder.output.0 = { "bucket": "${S3_BUCKET}", "key": "\$prefix-opus16"
 lambda.zip.function = arn:aws:lambda:us-west-2:078432969830:function:transcoding-api-create-zip-w9gxhplj7q9mju3h
 lambda.zip.region = us-west-2
 lambda.zip.timeout = 900
+cdn.partner_base = ${CDN_PARTNER_BASE}
+monday.completed_product_code.api_key = ${MONDAY_COMPLETED_PRODUCT_CODE_API_KEY}
+monday.completed_product_code.board_id = ${MONDAY_COMPLETED_PRODUCT_CODE_BOARD_ID}
 
 [data]
 database.host = ${DATABASE_HOST}
