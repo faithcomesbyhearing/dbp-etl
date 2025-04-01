@@ -140,7 +140,11 @@ class SQLUtility:
 			results[row[0]] = row[1]
 		return results
 
-
+	# Get a map of the first column to the second column
+	# The first column is the key, and the second is the value
+	# the value can be a list or a set
+	# Example: selectMapList("SELECT name, age FROM users", ())
+	# returns {'John': [25, 34, 12], 'Jane': [30, 46]}
 	def selectMapList(self, statement, values):
 		resultSet = self.select(statement, values)
 		results = {}
@@ -150,7 +154,6 @@ class SQLUtility:
 			results[row[0]] = values
 		return results
 
-
 	def selectMapSet(self, statement, values):
 		resultSet = self.select(statement, values)
 		results = {}
@@ -158,7 +161,18 @@ class SQLUtility:
 			values = results.get(row[0], set())
 			values.add(row[1])
 			results[row[0]] = values
-		return results		
+		return results
+
+	# Get a map of the first column to the rest of the columns
+	# The first column is the key, and the rest are the values
+	# Example: selectMapRow("SELECT id, name, age FROM users", ())
+	# returns {1: ('John', 25), 2: ('Jane', 30)}
+	def selectMapRow(self, statement, values):
+		resultSet = self.select(statement, values)
+		results = {}
+		for row in resultSet:
+			results[row[0]] = row[1:]
+		return results
 
 
 	def error(self, cursor, stmt, error):

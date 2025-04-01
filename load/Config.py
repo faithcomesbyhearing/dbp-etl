@@ -102,6 +102,7 @@ class Config:
 		print("Config:setConfigParametersFromProfile. profile: %s, programRunning: %s" % (profile, programRunning))
 		self.s3_artifacts_bucket = self._get("s3.artifacts_bucket")
 		self.s3_aws_profile = self._getOptional("s3.aws_profile") 
+		self.s3_aws_region = self._getOptional("s3.aws_region")
 		self.s3_aws_role_arn = self._getOptional("s3.aws_role_arn") 
 		self.s3_aws_role_profile = self._getOptional("s3.aws_role_profile") # this is temporary
 		if os.environ.get('DATA_MODEL_MIGRATION_STAGE') == 'B':
@@ -121,6 +122,11 @@ class Config:
 		self.filename_datetime = self._get("filename.datetime")
 		self.mysql_exe = self._getOptional("mysql.exe")
 		self.data_missing_verses_allowed = self._getOptional("data.missing_verses_allowed")
+		self.s3_zipper_user_key = self._getOptional("s3.zipper.user_key")
+		self.s3_zipper_user_secret = self._getOptional("s3.zipper.user_secret")
+		self.cdn_partner_base = self._getOptional("cdn.partner_base")
+		self.monday_completed_product_code_api_key = self._getOptional("monday.completed_product_code.api_key")
+		self.monday_completed_product_code_board_id = self._getOptional("monday.completed_product_code.board_id")
 
 		# TODO these dependencies need to be sorted out
 		if programRunning in {"DBPLoadController.py"}:
