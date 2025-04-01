@@ -3,7 +3,6 @@
 # Sample filenames for testing
 test_audio_files = [
     "ENGESVN2DA_B01_MAT_001.mp3",   # Full chapter - should match audio99
-    "ENGESVN2DA_B01_MAT_001.mp3",   # Full chapter - should match audio99
     "IRUNLCP1DA_B13_1TH_001_001-001_010.opus",  # Partial chapter - should match audio100
     "SPANESV1DA_A23_GEN_005.webm",  # Full chapter - should match audio99
     "FRENCHL1DA_A32_ZEC_010_003-011_009.mp3",  # Partial chapter - should match audio100
@@ -106,7 +105,6 @@ def test_parse_method(parser, test_cases):
         filename_tuple = (filename, len(filename), None)
 
         # Parse the filename
-        # file = parser.parseOneFilename3(parser.audioTemplates + parser.videoTemplates + parser.textTemplates, "", [filename_tuple])
         file = parser.parseOneFilename3(parser.audioTemplates + parser.videoTemplates + parser.textTemplates, "", filename_tuple)
 
         # Validate the results
@@ -161,7 +159,7 @@ if __name__ == '__main__':
     print("\nSummary:")
 
     # Validation check
-    expected_success_count = 38
+    expected_success_count = 37
     expected_failure_count = 14
 
     if total_success == expected_success_count and total_failure == expected_failure_count:
