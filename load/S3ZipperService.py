@@ -1,3 +1,4 @@
+import os
 import time
 import boto3
 import requests
@@ -62,26 +63,29 @@ class S3ZipperService:
             raise ValueError("No token returned from s3zipper /tokenv2")
 
     def get_temp_sts_credentials(self):
-        """Obtain 15-minute credentials from AWS STS."""
-        try:
-            response = self.sts_client.get_session_token(DurationSeconds=STS_EXPIRATION_TIME)  # 15 minutes
-            creds = response["Credentials"]
-            self.aws_access_key_id = creds["AccessKeyId"]
-            self.aws_secret_access_key = creds["SecretAccessKey"]
-            self.aws_session_token = creds["SessionToken"]
-            self.aws_creds_expiration = creds["Expiration"]  # datetime object
-        except Exception as e:
-            raise RuntimeError(f"Failed to get temporary AWS credentials: {e}")
+        """
+        Retrieves AWS temporary security credentials from environment variables.
 
-    def maybe_refresh_sts_credentials(self):
+        This method looks for AWS credentials in the following environment variables:
+        - AWS_ACCESS_KEY_ID
+        - AWS_SECRET_ACCESS_KEY
+        - AWS_SESSION_TOKEN
+
+        These credentials are typically provided by ECS when running in a container
+        with a Task Role. The credentials are stored as instance attributes.
+
+        Returns:
+            None
+
+        Side effects:
+            Sets the following instance attributes:
+            - self.aws_access_key_id
+            - self.aws_secret_access_key
+            - self.aws_session_token
         """
-        Check if the stored STS credentials are valid.
-        If expired (or close to expiration), refresh them.
-        """
-        now = datetime.now(timezone.utc)
-        # If we have no creds or we're within ~2 minutes of expiration, refresh
-        if (not self.aws_creds_expiration) or (self.aws_creds_expiration - now < timedelta(minutes=2)):
-            self.get_temp_sts_credentials()
+        self.aws_access_key_id = os.environ.get('AWS_ACCESS_KEY_ID')
+        self.aws_secret_access_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
+        self.aws_session_token = os.environ.get('AWS_SESSION_TOKEN')
 
     # def zip_files(self, bucket_name, file_paths, zip_file_name):
     def zip_files(self, bucket_name, file_paths, zip_output_prefix):
@@ -89,8 +93,9 @@ class S3ZipperService:
         Create a zip of specified `file_paths` in `bucket_name` using s3zipper's /v2/zipstart endpoint
         and poll /v2/zipstate until SUCCESS or FAILURE.
         """
-        # 1. Ensure STS credentials are current
-        self.maybe_refresh_sts_credentials()
+
+        # 1. Get temp credentials
+        self.get_temp_sts_credentials()
 
         # 2. Call /v2/zipstart
         start_url = f"{S3ZIPPER_BASE_URL}/v2/zipstart"
