@@ -292,7 +292,7 @@ class UpdateDBPBooksTable:
 					toc.name = mapping.get("name", "")
 					toc.nameShort = mapping.get("nameShort", "")
 
-		db.close()
+				db.close()
 		return tocBooks
 
 
