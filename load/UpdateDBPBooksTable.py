@@ -245,27 +245,54 @@ class UpdateDBPBooksTable:
 
 			if typeCode == "video":
 				seqMap = {"MAT": "B01", "MRK": "B02", "LUK": "B03", "JHN": "B04", "ACT": "B05"}
-				nameMap = {"MAT": "Matthew", "MRK": "Mark", "LUK": "Luke", "JHN": "John", "ACT": "Acts"}
+				nameMap = {
+					"MAT": {"name": "Matthew", "nameShort": "Matthew"},
+					"MRK": {"name": "Mark", "nameShort": "Mark"},
+					"LUK": {"name": "Luke", "nameShort": "Luke"},
+					"JHN": {"name": "John", "nameShort": "John"},
+					"ACT": {"name": "Acts", "nameShort": "Acts"},
+				}
+
+				# Update name_map with localized bible book names from the database.
+				# The goal is to overwrite the name and nameShort if the localized book name is available
+				# for the video fileset
+				db = SQLUtility(self.config)
+				sql = (
+					"SELECT book_id, name, name_short "
+					"FROM bible_books "
+					"WHERE bible_id = %s AND book_id IN ('MAT', 'MRK', 'LUK', 'JHN', 'ACT')"
+				)
+				bibleBooksMap = db.selectMapRow(sql, (bibleId,))
+				for bookId, (localized_name, localized_short) in bibleBooksMap.items():
+					if bookId in nameMap:
+						nameMap[bookId]["name"] = localized_name
+						nameMap[bookId]["nameShort"] = localized_short
+
+				# Build a lookup for tocBooks
+				toBooksDict = {toc.bookId: toc for toc in tocBooks}
 
 				# Extend Covenant Films with C01 to C12
 				# Extend seqMap with C01 to C12
 				for i in range(1, 13):
-					key = f"C{i:02}"  # Creates keys C01, C02, ... C12
-					seqMap[key] = key
+					key = f"C{i:02}"  # Creates keys C01, C02, ... C12.
+					seqMap[key] = key  # For Covenant Films, sequence is the same as the key.
 
 					# Add to nameMap from tocBooks if available else use default "Segment 01 to Segment 12"
-					matched_tocBook = next((tocBook for tocBook in tocBooks if tocBook.bookId == key), None)
-					if matched_tocBook:
-						nameMap[key] = matched_tocBook.name
+					if key in toBooksDict:
+						toc = toBooksDict[key]
+						nameMap[key] = {"name": toc.name, "nameShort": toc.nameShort}
 					else:
-						# Default fallback if no match found in tocBooks
-						nameMap[key] = f"Segment {i:02}"
+						default_name = f"Segment {i:02}"
+						nameMap[key] = {"name": default_name, "nameShort": default_name}
 
+				# Update tocBooks objects with the appropriate sequence and names.
+				for toc in tocBooks:
+					mapping = nameMap.get(toc.bookId, {})
+					toc.bookSeq = seqMap.get(toc.bookId)
+					toc.name = mapping.get("name", "")
+					toc.nameShort = mapping.get("nameShort", "")
 
-				for tocBook in tocBooks:
-					tocBook.bookSeq = seqMap.get(tocBook.bookId)
-					tocBook.name = nameMap.get(tocBook.bookId)
-					tocBook.nameShort = tocBook.name
+		db.close()
 		return tocBooks
 
 
@@ -391,7 +418,7 @@ if (__name__ == '__main__'):
 
 	dbOut.displayStatements()
 	dbOut.displayCounts()
-	#dbOut.execute("test-books")
+	# dbOut.execute("test-books")
 
 # Successful tests with source on local drive
 # time python3 load/UpdateDBPBooksTable.py test /Volumes/FCBH/all-dbp-etl-test/ ENGESVN2DA ENGESVN2DA16
@@ -400,3 +427,4 @@ if (__name__ == '__main__'):
 
 # time python3 load/UpdateDBPBooksTable.py test s3://etl-development-input/ "Covenant_Manobo, Obo SD_S2OBO_COV"
 # time python3 load/UpdateDBPBooksTable.py test s3://etl-development-input/ "Covenant_Aceh SD_S2ACE_COV"
+# time python3 load/UpdateDBPBooksTable.py test s3://etl-development-input/ "SPNBDAP2DV"
