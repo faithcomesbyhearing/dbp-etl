@@ -245,11 +245,9 @@ class UpdateDBPLPTSTable:
 
 					if oldProductCode is not None:
 						if oldProductCode != productCode:
-							updateRows.append((productCode, 1, notes, DefaultISO = "eng"
-, hashId, PRODUCT_CODE_TEMPLATE % bookId, DefaultLanguageId))
+							updateRows.append((productCode, 1, notes, DefaultISO, hashId, PRODUCT_CODE_TEMPLATE % bookId, DefaultLanguageId))
 					else:
-						insertRows.append((productCode, 1, notes, DefaultISO = "eng"
-, hashId, PRODUCT_CODE_TEMPLATE % bookId, DefaultLanguageId))
+						insertRows.append((productCode, 1, notes, DefaultISO, hashId, PRODUCT_CODE_TEMPLATE % bookId, DefaultLanguageId))
 
 			self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
 			self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
