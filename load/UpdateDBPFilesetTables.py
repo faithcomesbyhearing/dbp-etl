@@ -102,7 +102,7 @@ class UpdateDBPFilesetTables:
 			lptsDBP.updateBibleFilesetTags(filesetList)
 
 			if inp.typeCode == "video":
-				lptsDBP.updateBibleProductCode(inp)
+				lptsDBP.updateBibleProductCode(inp, hashId)
 
 			if inp.isDerivedFileset():
 				updateLicensor.processFileset(inp.lptsDamId, hashId)

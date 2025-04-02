@@ -32,24 +32,41 @@ class Log:
 		return count
 
 	def writeLog(config):
+		"""
+		Collects all messages starting with 'EROR' or 'FATAL' from Log.loggers,
+		writes them to an error file, prints them to stdout, and uploads the file
+		to S3 if any errors are found.
+		"""
 		errors = []
+
+		# Gather error messages
 		for key in sorted(Log.loggers.keys()):
 			logger = Log.loggers[key]
 			for message in logger.format():
-				errors.append(message)
+				if message.startswith("EROR") or message.startswith("FATAL"):
+					errors.append(message)
 
-		if len(errors) > 0:
-			errorDir = config.directory_errors
-			pattern = config.filename_datetime 
-			path = errorDir + "Errors.out"
-			print("openErrorReport", path)
-			errorFile = open(path, "a", encoding="utf-8")
+		# If no errors, just exit
+		if not errors:
+			print("Num Errors 0")
+			return
+
+		# If we have errors, append them to the log file
+		error_dir = config.directory_errors
+		path = f"{error_dir}Errors.out"
+		print(f"openErrorReport {path}")
+
+		# Write errors to the file
+		with open(path, "a", encoding="utf-8") as error_file:
 			for message in errors:
-				errorFile.write(message + '\n')
-				print(message, end='\n')
-			errorFile.close()
-			DBPRunFilesS3.uploadFile(config, path)
-		print("Num Errors ", len(errors))
+				error_file.write(message + '\n')
+				print(message)
+
+		# Upload error file to S3 (assuming DBPRunFilesS3.uploadFile is valid)
+		DBPRunFilesS3.uploadFile(config, path)
+
+		# Print number of errors
+		print(f"Num Errors {len(errors)}")
 
 
 	def addPreValidationErrors(messages):

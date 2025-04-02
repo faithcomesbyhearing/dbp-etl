@@ -110,7 +110,6 @@ class S3ZipperService:
             "awsBucket": bucket_name,
             "awsRegion": self.region,
             "filePaths": file_paths,
-            # "zipFileName": zip_file_name
             "zipTo": zip_output_prefix,
             "usePresignUrl": "false",
             # "fileMapper"
@@ -202,7 +201,12 @@ class S3ZipperService:
 
                 state_data = resp.json()
                 state = state_data.get("State")  # e.g. "SUCCESS", "FAILURE", etc.
-                print("s3Zipper State:", state, "progress time:", progress_time/60, "minutes")
+                # Print progress every minute instead of every poll interval
+                current_time = time.time()
+                if not hasattr(self, '_last_progress_print') or current_time - self._last_progress_print >= poll_interval * 30:
+                    # Print the progress time in minutes
+                    print("s3Zipper State:", state, "progress time:", progress_time/60, "minutes")
+                    self._last_progress_print = current_time
 
                 if state == "SUCCESS":
                     # Finished successfully

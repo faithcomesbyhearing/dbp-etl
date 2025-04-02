@@ -1,5 +1,6 @@
 from LanguageReader import LanguageRecordInterface
 from BlimpLanguageService import getMediaByIdAndFormat, getLicensorsByFilesetId, getCopyrightByFilesetId
+from typing import Optional
 
 class BlimpLanguageRecord (LanguageRecordInterface):
     propertiesName = {
@@ -192,6 +193,27 @@ class BlimpLanguageRecord (LanguageRecordInterface):
             if stockNumber != None:
                 return stockNumber
         return None
+
+    def CalculateProductCode(self, filesetId: str, typeCode: str, bookId: str) -> Optional[str]:
+        """
+        Determines the product code based on a stock number and (optionally) the book ID.
+
+        :param filesetId: The unique ID from which we derive the stock number.
+        :param typeCode: A string that may be 'video', 'audio', 'text'.
+        :param bookId: The book identifier, e.g. 'JHN'.
+        :return: A product code string or None if no stock number is found.
+        """
+
+        stocknumber = self.StockNumberByFilesetId(filesetId)
+        if stocknumber is None:
+            return None  # no valid stock number
+
+        # If type_code is 'video' (case-insensitive) and we have a bookId, append "_bookId"
+        if typeCode.lower() == "video" and bookId:
+            return f"{stocknumber}_{bookId}"
+
+        # Otherwise, just return the stock number alone
+        return stocknumber
 
     def Version(self):
         return self.record.get(BlimpLanguageRecord.propertiesName['volumneName'])
