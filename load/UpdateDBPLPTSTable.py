@@ -18,7 +18,8 @@ from UpdateDBPAccessTable import *
 from UpdateDBPBibleTranslations import *
 from UpdateDBPLanguageTranslation import *
 
-GospelFilmStockNumberPrefix = "P2"
+DefaultLanguageId = 6414
+DefaultISO = "eng"
 
 class UpdateDBPLPTSTable:
 
@@ -212,14 +213,12 @@ class UpdateDBPLPTSTable:
 			self.dbOut.insert(tableNameGroup, pkeyNamesGroup, attrNamesGroup, insertRowsGroup, 0)
 			self.dbOut.update(tableNameFilesets, pkeyNamesFilesets, attrNamesToUpdate, updateRowsFilesets)
 
-	def updateBibleProductCode(self, inputFileset):
+	def updateBibleProductCode(self, inputFileset, hashId):
 		if inputFileset.typeCode == "video":
-			iso = "eng"
-			languageId = 6414
 			notes = None
-			hashId = self.getHashId(self.config.s3_bucket, inputFileset.filesetId, inputFileset.getSetTypeCode())
+
 			sql = "SELECT hash_id, name, description, admin_only FROM bible_fileset_tags WHERE language_id = %s AND hash_id = %s"
-			resultSet = self.db.select(sql, (languageId, hashId))
+			resultSet = self.db.select(sql, (DefaultLanguageId, hashId))
 
 			tagNameMap = {}
 			PRODUCT_CODE_TEMPLATE = "product_code:%s"
@@ -230,7 +229,6 @@ class UpdateDBPLPTSTable:
 
 			insertRows = []
 			updateRows = []
-			deleteRows = []
 
 			tableName = "bible_fileset_tags"
 			pkeyNames = ("hash_id", "name", "language_id")
@@ -242,22 +240,19 @@ class UpdateDBPLPTSTable:
 			for bookId in gospelBookNameMap.keys():
 				listFiles = inputFileset.videoFileNamesByBook(bookId)
 				if len(listFiles) > 0:
-					oldProductCode = tagNameMap.get(PRODUCT_CODE_TEMPLATE % bookId, {})
-
-					stocknumber = languageRecord.StockNumberByFilesetId(inputFileset.filesetId)
-					productCode = GospelFilmStockNumberPrefix + stocknumber[2:] + "_" + bookId
+					oldProductCode = tagNameMap.get(PRODUCT_CODE_TEMPLATE % bookId, None)
+					productCode = languageRecord.CalculateProductCode(inputFileset.filesetId, inputFileset.typeCode, bookId)
 
 					if oldProductCode is not None:
 						if oldProductCode != productCode:
-							updateRows.append((productCode, 1, notes, iso, hashId, PRODUCT_CODE_TEMPLATE % bookId, languageId))
+							updateRows.append((productCode, 1, notes, DefaultISO = "eng"
+, hashId, PRODUCT_CODE_TEMPLATE % bookId, DefaultLanguageId))
 					else:
-						insertRows.append((productCode, 1, notes, iso, hashId, PRODUCT_CODE_TEMPLATE % bookId, languageId))
-				else:
-					deleteRows.append((hashId, PRODUCT_CODE_TEMPLATE % bookId, languageId))
+						insertRows.append((productCode, 1, notes, DefaultISO = "eng"
+, hashId, PRODUCT_CODE_TEMPLATE % bookId, DefaultLanguageId))
 
 			self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
 			self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
-			self.dbOut.delete(tableName, pkeyNames, deleteRows)
 
 	##
 	## Bible Fileset Tags
@@ -268,8 +263,8 @@ class UpdateDBPLPTSTable:
 		deleteRows = []
 		adminOnly = 0
 		notes = None
-		iso = "eng"
-		languageId = 6414
+		iso = DefaultISO
+		languageId = DefaultLanguageId
 		sql = "SELECT hash_id, name, description, admin_only FROM bible_fileset_tags WHERE language_id = %s"
 		tagHashIdMap = {}
 		resultSet = self.db.select(sql, (languageId))
@@ -340,8 +335,8 @@ class UpdateDBPLPTSTable:
 							description = stockNumber if stockNumber != None else languageRecord.Reg_StockNumber()
 							adminOnly = 1
 							oldAdminOnly = tagMap.get("%s_admin_only" % name)
-
-							if (oldAdminOnly != adminOnly):
+							# Update the admin_only field if it is different from the old value and exists already a value and it is not None
+							if (oldAdminOnly != adminOnly) and (oldAdminOnly != None):
 								valuesToUpdate = [("admin_only", adminOnly, oldAdminOnly, hashId, name, languageId)]
 								self.dbOut.updateCol("bible_fileset_tags", pkeyNames, valuesToUpdate)
 						elif name == "volume":

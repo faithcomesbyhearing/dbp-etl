@@ -149,12 +149,6 @@ class DBPLoadController:
 		db = SQLUtility(self.config)
 		self.db = db
 
-	def calculateProductCode(self, typeCode, stocknumber, bookId):
-		if typeCode == "video":
-			return GospelFilmStockNumberPrefix + stocknumber[2:] + "_" + bookId
-		else:
-			return stocknumber
-
 	def synchronizeMonday(self, inputFileset):
 		mondayService = MondayProductCodeBoard(self.config)
 		(languageRecord, _) = self.languageReader.getLanguageRecordLoose(inputFileset.typeCode, inputFileset.bibleId, inputFileset.filesetId)
@@ -181,8 +175,8 @@ class DBPLoadController:
 				mode = 0 if inputFileset.typeCode == "video" else 1
 
 				# The zipFile.name is the path to the zip file with the pattern video/{BibleId}/{FilesetId}/{Zipfile}.zip
-				biblebrainLink = self.config.cdn_partner_base + zipFile.name
-				productCode = self.calculateProductCode(inputFileset.typeCode, stocknumber, bookId)
+				biblebrainLink = self.config.cdn_partner_base + "/" + zipFile.name
+				productCode = languageRecord.CalculateProductCode(inputFileset.filesetId, inputFileset.typeCode, bookId)
 				productCodes[productCode] = {
 					ProductCodeColumns.StockNumber: stocknumber,
 					ProductCodeColumns.Language: languageRecord.LangName().strip() if languageRecord.LangName() != None else "",
