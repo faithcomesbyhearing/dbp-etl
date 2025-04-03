@@ -57,10 +57,10 @@ class UpdateDBPBibleFilesSecondary:
 			gospelBookNameMap = self.db.selectMap("SELECT id, notes FROM books where book_group = 'Gospels'", None)
 			AWSSession.shared() # ensure AWSSession init
 			session = boto3.Session(profile_name = self.config.s3_aws_profile)
-			s3Client = session.client('sts', region_name=self.config.s3_aws_region)
+			s3Client = session.client('s3')
 			Log.getLogger(inp.filesetId).message(Log.INFO, "Creating Zip for %s and creating temp credentials" % (inp.filesetId,))
 			print("Creating Zip for %s and creating temp credentials key: %s" % (inp.filesetId, self.config.s3_zipper_user_key))
-			zipperService = S3ZipperService(s3zipper_user_key=self.config.s3_zipper_user_key, s3zipper_user_secret=self.config.s3_zipper_user_secret, sts_client=s3Client, region=self.config.s3_aws_region)
+			zipperService = S3ZipperService(s3zipper_user_key=self.config.s3_zipper_user_key, s3zipper_user_secret=self.config.s3_zipper_user_secret, s3_client=s3Client, region=self.config.s3_aws_region)
 
 			for bookId in gospelBookNameMap.keys():
 				listFiles = inp.videoFileNamesByBook(bookId)

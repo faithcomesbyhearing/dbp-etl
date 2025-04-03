@@ -1,6 +1,7 @@
 import os
 import time
 import boto3
+import json
 import requests
 from datetime import datetime, timedelta, timezone
 
@@ -17,7 +18,7 @@ class S3ZipperService:
     and creating a zip file of specified files in an S3 bucket. It polls the s3zipper API until the zip
     process is complete (either SUCCESS or FAILURE).
     """
-    def __init__(self, s3zipper_user_key, s3zipper_user_secret, sts_client, region='us-west-2'):
+    def __init__(self, s3zipper_user_key, s3zipper_user_secret, s3_client, region='us-west-2'):
         """
         :param s3zipper_user_key: Username or key used for fetching the s3zipper token.
         :param s3zipper_user_secret: Password or secret used for fetching the s3zipper token.
@@ -37,9 +38,8 @@ class S3ZipperService:
         # Pre-fetch the s3zipper token on init
         self.get_s3zipper_token()
 
-        # Create STS client
-        # self.sts_client = boto3.client('sts', region_name=self.region)
-        self.sts_client = sts_client
+        self.s3_client = s3_client
+        self._last_progress_print = None
 
     def get_s3zipper_token(self):
         """Fetch a Bearer token from s3zipper /tokenv2 endpoint."""
@@ -87,17 +87,85 @@ class S3ZipperService:
         self.aws_secret_access_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
         self.aws_session_token = os.environ.get('AWS_SESSION_TOKEN')
 
+    def create_and_upload_file_mapper(self, bucket_name, file_paths, zip_output_prefix):
+        """
+        Extracts the directory names from all file_paths, creates a custom file mapper JSON that maps each directory
+        to the root directory "/", uploads it to the S3 bucket in the same directory as zip_output_prefix,
+        and returns the S3 key.
+
+        A timestamp suffix is added to the fileMapper.json name to avoid overwrites when executed in parallel.
+
+        Example output JSON:
+        {
+            "paths": [
+                { "key": "etl-development-input/ENGESVN2DA/", "name": "/" },
+                { "key": "/", "name": "/" }
+            ]
+        }
+        """
+        if not file_paths:
+            raise ValueError("file_paths list is empty.")
+
+        # Extract unique directory names from file_paths (ensuring each ends with a trailing slash).
+        directories = set()
+        for file_path in file_paths:
+            if '/' in file_path:
+                directory = file_path.rsplit('/', 1)[0] + '/'
+            else:
+                directory = ""  # file is in the root
+            directories.add(directory)
+
+        # Replace empty string with "/" to explicitly denote the root directory.
+        directories = {directory if directory else "/" for directory in directories}
+
+        # Build the file mapper content mapping each unique directory to "/".
+        file_mapper_content = {
+            "paths": [{"key": directory, "name": "/"} for directory in sorted(directories)]
+        }
+        json_data = json.dumps(file_mapper_content)
+
+        # Create a timestamp to add as a suffix (using UTC to ensure consistency).
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S")
+
+        # Determine the S3 key for fileMapper.json based on the zip_output_prefix location.
+        if '/' in zip_output_prefix:
+            zip_dir = zip_output_prefix.rsplit('/', 1)[0]
+            file_mapper_key = f"{zip_dir}/fileMapper_{timestamp}.json"
+        else:
+            file_mapper_key = f"fileMapper_{timestamp}.json"
+
+        self.s3_client.put_object(
+            Bucket=bucket_name,
+            Key=file_mapper_key,
+            Body=json_data,
+            ContentType='application/json'
+        )
+        # print(f"Uploaded fileMapper.json to s3://{bucket_name}/{file_mapper_key}")
+        return file_mapper_key
+
+    def delete_file_mapper(self, bucket_name, file_mapper_key):
+        """
+        Deletes the fileMapper.json from the S3 bucket to avoid conflicts.
+        """
+        self.s3_client.delete_object(Bucket=bucket_name, Key=file_mapper_key)
+        # print(f"Deleted fileMapper.json from s3://{bucket_name}/{file_mapper_key}")
+
     # def zip_files(self, bucket_name, file_paths, zip_file_name):
     def zip_files(self, bucket_name, file_paths, zip_output_prefix):
         """
         Create a zip of specified `file_paths` in `bucket_name` using s3zipper's /v2/zipstart endpoint
         and poll /v2/zipstate until SUCCESS or FAILURE.
         """
+        # Initialize the last progress print time
+        self._last_progress_print = None
 
         # 1. Get temp credentials
         self.get_temp_sts_credentials()
 
-        # 2. Call /v2/zipstart
+        # 2. Create and upload fileMapper.json to S3.
+        file_mapper_key = self.create_and_upload_file_mapper(bucket_name, file_paths, zip_output_prefix)
+
+         # 3. Prepare to call /v2/zipstart.
         start_url = f"{S3ZIPPER_BASE_URL}/v2/zipstart"
         headers = {
             "Authorization": f"Bearer {self.s3zipper_token}",
@@ -112,15 +180,20 @@ class S3ZipperService:
             "filePaths": file_paths,
             "zipTo": zip_output_prefix,
             "usePresignUrl": "false",
-            # "fileMapper"
+            "fileMapper": f"{bucket_name}/{file_mapper_key}",
         }
 
-        print("Starting zip process with payload:", "bucket:", bucket_name, "file_paths:", file_paths, "zip_output_prefix:", zip_output_prefix)
-
+        print("Starting zip process with payload:",
+              "bucket:", bucket_name,
+              "file_paths:", file_paths,
+              "zip_output_prefix:", zip_output_prefix,
+              "fileMapper:", f"{bucket_name}/{file_mapper_key}")
         try:
             resp = requests.post(start_url, json=payload, headers=headers, timeout=30)
             resp.raise_for_status()
         except requests.RequestException as e:
+            # Ensure the fileMapper is removed if zipstart fails.
+            self.delete_file_mapper(bucket_name, file_mapper_key)
             raise RuntimeError(f"zipstart request failed: {e}")
 
         # The response is something like:
@@ -135,17 +208,25 @@ class S3ZipperService:
         task_uuid_list = start_data.get("taskUUID", [])
         if not task_uuid_list or len(task_uuid_list) == 0:
             print("zipstart response:", start_data)
+            self.delete_file_mapper(bucket_name, file_mapper_key)
             raise RuntimeError("No taskUUID returned from zipstart response.")
 
         # We expect the first element to contain a key "streams3v2", whose value is our "zipper_s3_..." string
         first_item = task_uuid_list[0]
         if "streams3v2" not in first_item:
+            self.delete_file_mapper(bucket_name, file_mapper_key)
             raise RuntimeError("Expected 'streams3v2' field not found in taskUUID array.")
 
         task_uuid = first_item["streams3v2"]
 
-        # 3. Poll /v2/zipstate until SUCCESS or FAILURE
-        return self._poll_zip_state(task_uuid, headers)
+        try:
+            # 4. Poll /v2/zipstate until SUCCESS or FAILURE.
+            final_state = self._poll_zip_state(task_uuid, headers)
+        finally:
+            # 5. Remove fileMapper.json from S3 regardless of outcome.
+            self.delete_file_mapper(bucket_name, file_mapper_key)
+
+        return final_state
 
     def _poll_zip_state(self, task_uuid, headers, max_wait_seconds=MAX_WAIT_SECONDS, poll_interval=POLL_INTERVAL):
         """
@@ -203,7 +284,8 @@ class S3ZipperService:
                 state = state_data.get("State")  # e.g. "SUCCESS", "FAILURE", etc.
                 # Print progress every minute instead of every poll interval
                 current_time = time.time()
-                if not hasattr(self, '_last_progress_print') or current_time - self._last_progress_print >= poll_interval * 30:
+                # if not hasattr(self, '_last_progress_print') or current_time - self._last_progress_print >= poll_interval * 30:
+                if self._last_progress_print is None or current_time - self._last_progress_print >= poll_interval * 30:
                     # Print the progress time in minutes
                     print("s3Zipper State:", state, "progress time:", progress_time/60, "minutes")
                     self._last_progress_print = current_time
@@ -245,19 +327,18 @@ if __name__ == "__main__":
 
     session = boto3.Session(profile_name = config.s3_aws_profile)
 
-
-    s3_client = session.client('sts', region_name=config.s3_aws_region)
+    s3_client = session.client('s3')
 
     # Example usage:
     S3ZIPPER_KEY = "JjfXXXX"
     S3ZIPPER_SECRET = "fe79XXXXX"
     if config.s3_aws_region is None:
         raise ValueError("AWS region is not set in the configuration.")
-    service = S3ZipperService(s3zipper_user_key=S3ZIPPER_KEY, s3zipper_user_secret=S3ZIPPER_SECRET, sts_client=s3_client, region=config.s3_aws_region)
+    service = S3ZipperService(s3zipper_user_key=S3ZIPPER_KEY, s3zipper_user_secret=S3ZIPPER_SECRET, s3_client=s3_client, region=config.s3_aws_region)
 
     bucket_name = "etl-development-input"
     file_paths = ["etl-development-input/ENGESVN2DA/B01___01_Matthew_____ENGESVN2DA.mp3", "etl-development-input/ENGESVN2DA/B01___02_Matthew_____ENGESVN2DA.mp3", "B27___21_Revelation__ENGESVN2DA.mp3", "B27___22_Revelation__ENGESVN2DA.mp3"]
-    zip_output_prefix = "/s3zipper/python-test.zip"
+    zip_output_prefix = "s3zipper/python-test.zip"
 
     try:
         result = service.zip_files(bucket_name, file_paths, zip_output_prefix)
