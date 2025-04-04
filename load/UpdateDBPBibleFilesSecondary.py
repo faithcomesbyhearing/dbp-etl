@@ -54,30 +54,72 @@ class UpdateDBPBibleFilesSecondary:
 				Log.getLogger(inp.filesetId).message(Log.EROR, "Failure in zip file creation %s" % (err,))
 		# Handle video filesets related to the Gospel Films and the process to generate the zip file
 		if inp.typeCode == "video" and inp.isMP4Fileset() and len(inp.filesetId) == 10:
-			gospelBookNameMap = self.db.selectMap("SELECT id, notes FROM books where book_group = 'Gospels'", None)
-			AWSSession.shared() # ensure AWSSession init
-			session = boto3.Session(profile_name = self.config.s3_aws_profile)
-			s3Client = session.client('sts', region_name=self.config.s3_aws_region)
-			Log.getLogger(inp.filesetId).message(Log.INFO, "Creating Zip for %s and creating temp credentials" % (inp.filesetId,))
-			print("Creating Zip for %s and creating temp credentials key: %s" % (inp.filesetId, self.config.s3_zipper_user_key))
-			zipperService = S3ZipperService(s3zipper_user_key=self.config.s3_zipper_user_key, s3zipper_user_secret=self.config.s3_zipper_user_secret, sts_client=s3Client, region=self.config.s3_aws_region)
+			gospelBookNameMap = self.db.selectMap(
+				"SELECT id, notes FROM books WHERE book_group = 'Gospels'", None
+			)
 
-			for bookId in gospelBookNameMap.keys():
-				listFiles = inp.videoFileNamesByBook(bookId)
-				if len(listFiles) > 0:
-					Log.getLogger(inp.filesetId).message(Log.INFO, "Creating Zip for %s and # of mp4: %s bucket %s" % (bookId, len(listFiles), self.config.s3_vid_bucket))
+			# Ensure AWS Session initialization
+			AWSSession.shared()
+			session = boto3.Session(profile_name=self.config.s3_aws_profile)
+			s3Client = session.client('s3')
 
-					listCompleteFiles = [ "%s/%s/%s" % (self.config.s3_vid_bucket, inp.filesetPrefix, f) for f in listFiles ]
+			logger = Log.getLogger(inp.filesetId)
+			logger.message(Log.INFO, f"Creating Zip for {inp.filesetId} and creating temp credentials")
+			print(f"Creating Zip for {inp.filesetId} and creating temp credentials key: {self.config.s3_zipper_user_key}")
+
+			zipperService = S3ZipperService(
+				s3zipper_user_key=self.config.s3_zipper_user_key,
+				s3zipper_user_secret=self.config.s3_zipper_user_secret,
+				s3_client=s3Client,
+				region=self.config.s3_aws_region
+			)
+
+			for bookId in gospelBookNameMap:
+				files = inp.videoFileNamesByBook(bookId)
+				if files:
+					logger.message(
+						Log.INFO,
+						f"Creating Zip for {bookId} with {len(files)} mp4 files in bucket {self.config.s3_vid_bucket}"
+					)
+
+					# Construct full S3 keys for each file, updating .mp4 filenames to include '_web'
+					# We can assume that the transcoder has already created the _web.mp4 files
+					# and they are in the same bucket as the original files.
+					# Example: "s3://bucket/prefix/file.mp4" becomes "s3://bucket/prefix/file_web.mp4"
+					completeFiles = [
+						f"{self.config.s3_vid_bucket}/{inp.filesetPrefix}/{f[:-4] + '_web.mp4' if f.endswith('.mp4') else f}"
+						for f in files
+					]
+
+					# Validate that each S3 key exists in the video bucket.
+					# If the key does not exist, log a warning. However, the zip file creation should
+					# not fail if a file is missing and it should still proceed to create the zip file
+					# with the available files.
+					for s3Key in completeFiles:
+						# Remove the bucket portion from the key (expected format: "bucket/prefix/file")
+						parts = s3Key.split('/', 1)
+						key = parts[1] if len(parts) > 1 else s3Key
+						try:
+							s3Client.head_object(Bucket=self.config.s3_vid_bucket, Key=key)
+						except s3Client.exceptions.ClientError as e:
+							errorCode = e.response['Error']['Code']
+							if errorCode in ['404', 'NoSuchKey']:
+								print(f"\nWARN: Creating Zip Video File - Missing s3 key: {key}")
+							else:
+								logger.message(Log.EROR, f"Error checking S3 key: {key} - {errorCode}")
+								raise
+
 					try:
-						zipFilename = "%s/%s_%s.zip" % (inp.filesetPrefix, inp.filesetId, bookId)
-						result = zipperService.zip_files(self.config.s3_vid_bucket, listCompleteFiles, zipFilename)
+						zipFilename = f"{inp.filesetPrefix}/{inp.filesetId}_{bookId}.zip"
+						result = zipperService.zip_files(self.config.s3_vid_bucket, completeFiles, zipFilename)
 						if result.get("State") != "SUCCESS":
-							Log.getLogger(inp.filesetId).message(Log.EROR, "Failure creating Zip: %s" % (result,))
+							logger.message(Log.EROR, f"Failure creating Zip: {result}")
 						else:
 							inp.addInputFile(zipFilename, 0)
-							Log.getLogger(inp.filesetId).message(Log.INFO, "Zip created: %s" % (zipFilename,))
+							print(f"Zip created: {zipFilename}\n")
 					except Exception as e:
-						Log.getLogger(inp.filesetId).message(Log.EROR, "Error creating Zip: %s" % (e,))
+						logger.message(Log.EROR, f"Error creating Zip: {e}")
+
 
 	def getZipInternalDir(self, damId, languageRecord):
 		langName = languageRecord.LangName()
