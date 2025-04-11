@@ -156,6 +156,9 @@ class Filename:
 				self.errors.append("non-number verse start: %s" % (verseStart))
 		self.verseStartNum = int(self.verseStart)
 
+	## This is used to set the verse start number from the verse start string
+	def setVerseStartNum(self, verseStartNum):
+		self.verseStartNum = verseStartNum
 
 	def setVerseEnd(self, verseEnd):
 		self.verseEnd = verseEnd

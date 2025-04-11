@@ -123,6 +123,16 @@ class FilenameReducer:
 
 
 	def writeOutput(self, listType, fileList):
+		"""
+		Processes the given list of file objects and writes a CSV output to the designated directory based on listType.
+		It calculates the maximum chapter and verse per book to set verse start numbers for "end" chapter files, sorts the file list,
+		and then writes the CSV file before uploading it via DBPRunFilesS3.
+
+		Parameters:
+		- listType: A string indicating the type ("accepted", "duplicate", or "quarantine").
+		- fileList: A list of file objects. Each file is expected to have attributes like chapter, bookId, verseEnd, etc.,
+					and methods setSortSequence(), setVerseStartNum(), setVerseStart(), and getSequence().
+		"""
 		if listType == "accepted":
 			path = self.config.directory_accepted
 		elif listType == "duplicate":
@@ -133,8 +143,44 @@ class FilenameReducer:
 			print("ERROR: Unknown listType %s" % (listType))
 			sys.exit()
 
-		for file in fileList:
-			file.setSortSequence()
+		# Dictionaries to track the maximum chapter and verse per book
+		maxVerseByBook = {}
+		maxChapterByBook = {}
+
+		# Calculate the maximum chapter and verse for each book.
+		# This is used later to set the verse start number for files that are "end" files of a book.
+		for f in fileList:
+			f.setSortSequence()
+			if f.chapter is not None and f.chapter != "end":
+				try:
+					chapterNum = int(f.chapter)
+				except ValueError:
+					chapterNum = 0
+				maxChapterByBook[f.bookId] = max(maxChapterByBook.get(f.bookId, 0), chapterNum)
+
+				if f.bookId not in maxVerseByBook:
+					maxVerseByBook[f.bookId] = {}
+				try:
+					verseEndInt = int(f.verseEnd) if f.verseEnd else 0
+				except ValueError:
+					verseEndInt = 0
+				# Use the chapter (as a string) as the key, assuming f.chapter is stored as a string
+				currentMaxVerse = maxVerseByBook[f.bookId].get(f.chapter, 0)
+				maxVerseByBook[f.bookId][f.chapter] = max(currentMaxVerse, verseEndInt)
+
+		## Sort the files by sortSequence
+		sortedFileList = sorted(fileList, key=attrgetter('sortSequence'))
+		# Set the verse start number for files that are the end of a book
+		# We assume that there is only one end file per book
+		for f in sortedFileList:
+			if f.chapter == "end" and f.bookId in maxChapterByBook and f.bookId in maxVerseByBook:
+				# Get the maximum chapter number for the current book
+				maxChapterCurrentBook = maxChapterByBook[f.bookId]
+				chapterKey = str(maxChapterCurrentBook)  # file.chapter values are strings
+				if chapterKey in maxVerseByBook[f.bookId]:
+					verseStartNum = maxVerseByBook[f.bookId][chapterKey] + 1
+					f.setVerseStartNum(verseStartNum)
+					f.setVerseStart(str(verseStartNum))
 
 		filename = path + os.path.basename(self.csvFilename)
 		print("FilenameReducer. Create file: ", filename)
@@ -145,7 +191,7 @@ class FilenameReducer:
 			## prefix and some fields are redundant
 			## optional: bookSeq, fileSeq, name, title, usfx2, damid, filetype
 			(typeCode, bibleId, filesetId) = self.filePrefix.split("/")
-			for file in sorted(fileList, key=attrgetter('sortSequence')):
+			for file in sortedFileList:
 				writer.writerow((typeCode, bibleId, filesetId, file.getSequence(), 
 					file.file, file.bookId, file.name, file.chapter, file.chapterEnd, 
 					file.verseStart, file.verseStartNum, file.verseEnd, file.datetime, file.length,
