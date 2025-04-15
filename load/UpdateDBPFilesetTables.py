@@ -101,8 +101,8 @@ class UpdateDBPFilesetTables:
 			filesetList.append((inp.bibleId, inp.filesetId, setTypeCode, None, None, hashId))
 			lptsDBP.updateBibleFilesetTags(filesetList)
 
-			if inp.typeCode == "video":
-				lptsDBP.updateBibleProductCode(inp, hashId)
+			# update the bible_fileset_tags (product code) table with the new filesetId
+			lptsDBP.updateBibleProductCode(inp, hashId)
 
 			if inp.isDerivedFileset():
 				updateLicensor.processFileset(inp.lptsDamId, hashId)
@@ -188,7 +188,16 @@ class UpdateDBPFilesetTables:
 			for row in reader:
 				bookId = row["book_id"]
 				if row["chapter_start"] == "end":
-					(chapterStart, verseStart, verseEnd) = self.convertChapterStart(bookId)
+					# It will return error if the bookId is not in the list of books that are supported such as MAT, MRK, LUK, JHN
+					(chapterStart, _, _) = self.convertChapterStart(bookId)
+					verseStart = row["verse_start"] if row["verse_start"] != "" else "0"
+					try:
+						verseSequence = int(row["verse_sequence"]) if row["verse_sequence"] != "" else 0
+					except ValueError:
+						verseSequence = 0
+					# The verseStart will be modified for books that are not supported by the method convertChapterStart.
+					if verseSequence != 0:
+						verseStart = str(verseSequence)
 				else:
 					chapterStart = int(row["chapter_start"]) if row["chapter_start"] != "" else None
 					verseStart = row["verse_start"] if row["verse_start"] != "" else 1
@@ -236,7 +245,11 @@ class UpdateDBPFilesetTables:
 		self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
 		self.dbOut.delete(tableName, pkeyNames, deleteRows)
 
-
+	# We have a fixed values for chapterStart, verseStart, verseEnd for the following books
+	# MAT 28:21,21
+	# MRK 16:21,21
+	# LUK 24:54,54
+	# JHN 21:26,26
 	def convertChapterStart(self, bookId):
 		if bookId == "MAT":
 			return (28, "21", "21")
@@ -294,3 +307,4 @@ if (__name__ == '__main__'):
 # time python3 load/UpdateDBPFilesetTables.py
 
 # python3  load/UpdateDBPFilesetTables.py test s3://etl-development-input Spanish_N2SPNTLA_USX
+# python3  load/UpdateDBPFilesetTables.py test s3://etl-development-input SPNBDAP2DV

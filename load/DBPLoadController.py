@@ -154,29 +154,54 @@ class DBPLoadController:
 		(languageRecord, _) = self.languageReader.getLanguageRecordLoose(inputFileset.typeCode, inputFileset.bibleId, inputFileset.filesetId)
 		stocknumber = languageRecord.StockNumberByFilesetId(inputFileset.filesetId)
 
-		zipFiles = inputFileset.zipFilesIndexedByBookId()
+		# possible statuses are: {0: Video, 1: Audio}
+		mode = 0 if inputFileset.typeCode == "video" else 1
+
+		licensor = languageRecord.LicensorList()[0] if languageRecord.LicensorList() != None else ""
+		if len(licensor) >= 3:
+			(_, licensorName, _) = licensor
+		else:
+			licensorName = ""
+
 		productCodes = {}
-		gospelBookNameMap = self.db.selectMap("SELECT id, notes FROM books where book_group = 'Gospels'", None)
-		for bookId in gospelBookNameMap.keys():
-			zipFile = zipFiles.get(bookId)
-			if zipFile != None:
+		# Synchronize Monday product codes for video filesets
+		if inputFileset.typeCode == "video":
+			zipFiles = inputFileset.zipFilesIndexedByBookId()
+			gospelBookNameMap = self.db.selectMap("SELECT id, notes FROM books where book_group = 'Gospels'", None)
+			for bookId in gospelBookNameMap.keys():
+				zipFile = zipFiles.get(bookId)
+				if zipFile != None:
+					# Check if the zip file has a valid path E.g. video/{BibleId}/{FilesetId}/{Zipfile}.zip
+					if zipFile.hasValidFilesetPath(inputFileset.typeCode, inputFileset.bibleId, inputFileset.filesetId) is False:
+						Log.getLogger(inputFileset.filesetId).message(Log.WARN, "BiblebrainLink does not have a correct path: %s" % zipFile.name)
+						continue
+
+					# The zipFile.name is the path to the zip file with the pattern video/{BibleId}/{FilesetId}/{Zipfile}.zip
+					biblebrainLink = self.config.cdn_partner_base + "/" + zipFile.name
+					productCode = languageRecord.CalculateProductCode(inputFileset.filesetId, inputFileset.typeCode, bookId)
+					productCodes[productCode] = {
+						ProductCodeColumns.StockNumber: stocknumber,
+						ProductCodeColumns.Language: languageRecord.LangName().strip() if languageRecord.LangName() != None else "",
+						ProductCodeColumns.BiblebrainLink: biblebrainLink,
+						ProductCodeColumns.Licensor: licensorName,
+						ProductCodeColumns.CoLicensor: languageRecord.CoLicensor().strip() if languageRecord.CoLicensor() != None else "",
+						ProductCodeColumns.Mode: mode,
+						ProductCodeColumns.Version: languageRecord.Version(),
+						ProductCodeColumns.LanguageCountry: languageRecord.Country(),
+					}
+		# Synchronize Monday product codes for audio filesets
+		elif inputFileset.typeCode == "audio" and inputFileset.isDerivedFileset() is False:
+			zipFile = inputFileset.zipFile()
+
+			if zipFile is not None:
 				# Check if the zip file has a valid path E.g. video/{BibleId}/{FilesetId}/{Zipfile}.zip
 				if zipFile.hasValidFilesetPath(inputFileset.typeCode, inputFileset.bibleId, inputFileset.filesetId) is False:
-					Log.getLogger(inputFileset.filesetId).message(Log.EROR, "BiblebrainLink does not have a correct path: %s" % zipFile.name)
-					continue
+					Log.getLogger(inputFileset.filesetId).message(Log.WARN, "BiblebrainLink does not have a correct path: %s" % zipFile.name)
+					return
 
-				licensor = languageRecord.LicensorList()[0] if languageRecord.LicensorList() != None else ""
-				if len(licensor) >= 3:
-					(_, licensorName, _) = licensor
-				else:
-					licensorName = ""
-
-				# possible statuses are: {0: Video, 1: Audio}
-				mode = 0 if inputFileset.typeCode == "video" else 1
-
-				# The zipFile.name is the path to the zip file with the pattern video/{BibleId}/{FilesetId}/{Zipfile}.zip
+				# The zipFile.name is the path to the zip file with the pattern audio/{BibleId}/{FilesetId}/{Zipfile}.zip
 				biblebrainLink = self.config.cdn_partner_base + "/" + zipFile.name
-				productCode = languageRecord.CalculateProductCode(inputFileset.filesetId, inputFileset.typeCode, bookId)
+				productCode = languageRecord.CalculateProductCode(inputFileset.filesetId, inputFileset.typeCode, None)
 				productCodes[productCode] = {
 					ProductCodeColumns.StockNumber: stocknumber,
 					ProductCodeColumns.Language: languageRecord.LangName().strip() if languageRecord.LangName() != None else "",

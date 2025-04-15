@@ -189,7 +189,7 @@ class S3ZipperService:
               "zip_output_prefix:", zip_output_prefix,
               "fileMapper:", f"{bucket_name}/{file_mapper_key}")
         try:
-            resp = requests.post(start_url, json=payload, headers=headers, timeout=30)
+            resp = requests.post(start_url, json=payload, headers=headers, timeout=120)
             resp.raise_for_status()
         except requests.RequestException as e:
             # Ensure the fileMapper is removed if zipstart fails.

@@ -159,7 +159,7 @@ class BoardService(Board):
                     if columns_board_type_map[col_allowed] == "link":
                         column_values_to_update[col_id] = {
                             "url": value,
-                            "text": "File link"
+                            "text": value
                         }
                     else:
                         column_values_to_update[col_id] = value
@@ -189,35 +189,6 @@ class BoardService(Board):
             raise ValueError(f"response validation failed: {error_msg}")
         return board_response
 
-    # def update_multiple_rows_in_batch(self, board_id: int, updates: List[MondayBoardBatch]) -> None:
-    #     """
-    #     Equivalent to UpdateMultipleRowsInBatch in Go.
-    #     """
-    #     total_updates = len(updates)
-    #     for i in range(0, total_updates, self.BATCH_SIZE_UPDATE):
-    #         end = min(i + self.BATCH_SIZE_UPDATE, total_updates)
-    #         batch_updates = updates[i:end]
-
-    #         # Create the mutation query
-    #         query_str = self._update_multiple_board_mutation(board_id, batch_updates)
-    #         request_json = json.dumps({"query": query_str}).encode("utf-8")
-
-    #         response_bytes = self.http_service.make_monday_api_call(request_json)
-    #         logger.info("UpdateMultipleRowsInBatch success, batch %d-%d response: %s",
-    #                     i+1, end, response_bytes.decode("utf-8"))
-
-    # def _update_multiple_board_mutation(self, board_id: int, updates: List[MondayBoardBatch]) -> str:
-    #     """
-    #     Equivalent to UpdateMultipleBoardMutation in Go.
-    #     """
-    #     mutations = []
-    #     for i, update in enumerate(updates):
-    #         mutation = (f"update{i+1}: change_multiple_column_values("
-    #                     f"item_id: {update.board_monday_id}, "
-    #                     f"board_id: {board_id}, "
-    #                     f'column_values: "{update.column_values}") {{ id }}')
-    #         mutations.append(mutation)
-    #     return f"mutation {{{ ' '.join(mutations)} }}"
     def update_multiple_rows_in_batch(self, board_id: int, updates: List[MondayBoardBatch]) -> None:
         """
         Updates multiple rows in a single GraphQL call per batch.
@@ -273,9 +244,7 @@ class BoardService(Board):
             variables[board_id_var] = str(board_id)
             variables[item_id_var] = str(update.board_monday_id)
 
-            # If update.column_values is a dict or raw string, 
-            # handle escaping. Usually you'd do:
-            #   column_vals_str = self._ensure_json_string(update.column_values)
+            # If update.column_values is a dict or raw string,
             # But for brevity, assume it's already a properly escaped string or JSON dict:
             variables[col_values_var] = update.column_values
 
@@ -397,8 +366,6 @@ class BoardService(Board):
 
             # 3) The JSON for column values, but we store it as a *string* in 'variables' 
             #    so that the final request includes "columnValuesX":"{ \"key\":\"val\" }"
-            # col_values_str = self._ensure_json_string(create.column_values)
-            # variables[col_values_var] = col_values_str
             variables[col_values_var] = create.column_values
 
         # Build the top-level mutation definition with placeholders
@@ -419,33 +386,10 @@ class BoardService(Board):
 
         return mutation_str, variables
 
-    # def _ensure_json_string(self, val: Any) -> str:
-    #     """
-    #     If 'val' is already a string, assume it's properly escaped JSON.
-    #     If 'val' is a dict, convert it to a JSON string so Monday can parse it.
-    #     """
-    #     if isinstance(val, dict):
-    #         # Convert dict -> JSON string
-    #         return json.dumps(val)
-    #     elif isinstance(val, str):
-    #         # Try parsing as JSON:
-    #         try:
-    #             json.loads(val)
-    #             # If this works, val is valid JSON. Return as-is.
-    #             return val
-    #         except json.JSONDecodeError:
-    #             # If parse fails, wrap the string with quotes
-    #             return json.dumps(val)
-    #     else:
-    #         # Fallback: convert to string
-    #         return json.dumps(str(val))
-
-
     def _query_fetch_board_rows(self, board_id: int, ids: List[str], cursor: str, limit: int) -> dict:
         """
         Equivalent to queryFetchBoardRows in Go.
         """
-        # ids_json = json.dumps(ids)
 
         cursor_part = f', cursor: "{cursor}"' if cursor else ""
         query_str = f"""

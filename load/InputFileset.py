@@ -55,8 +55,6 @@ class InputFile:
 		directory = os.path.dirname(self.name)
 		directoryParts = directory.split('/')
 
-		print("directoryParts", directoryParts)
-		print("typeCode", typeCode, "bibleId", bibleId, "filesetId", filesetId)
 		if len(directoryParts) < 3:
 			return False
 
@@ -324,6 +322,13 @@ class InputFileset:
 		results = []
 		for file in self.files:
 			if bookId in file.name:
+				results.append(file.name)
+		return results
+
+	def audioFileNames(self):
+		results = []
+		for file in self.files:
+			if file.name.endswith(".mp3") and "opus16" not in file.name:
 				results.append(file.name)
 		return results
 

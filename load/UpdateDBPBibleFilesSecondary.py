@@ -2,7 +2,6 @@
 
 import sys
 import boto3
-import json
 from Log import *
 from Config import *
 from SQLUtility import *
@@ -26,53 +25,46 @@ class UpdateDBPBibleFilesSecondary:
 
 	def createZipFile(self, inputFileset):
 		inp = inputFileset
+		# Ensure AWS Session initialization
+		AWSSession.shared()
+		session = boto3.Session(profile_name=self.config.s3_aws_profile)
+		s3Client = session.client('s3')
+
+		zipperService = S3ZipperService(
+			s3zipper_user_key=self.config.s3_zipper_user_key,
+			s3zipper_user_secret=self.config.s3_zipper_user_secret,
+			s3_client=s3Client,
+			region=self.config.s3_aws_region
+		)
+
+		logger = Log.getLogger(inp.filesetId)
+
+		# Handle audio filesets related to the MP3 fileset and the process to generate the zip file
 		if inp.typeCode == "audio" and inp.isMP3Fileset() and len(inp.filesetId) == 10:
-			source = "s3://%s/%s/" % (self.config.s3_bucket, inp.filesetPrefix)
-			zipFilename = "%s.zip" % (inp.filesetId,)
-			target = "s3://%s/%s/%s" % (self.config.s3_bucket, inp.filesetPrefix, zipFilename)
-			zipDirectory = self.getZipInternalDir(inp.lptsDamId, inp.languageRecord)
-			fileTypes = ["mp3"]
-			data = { "source": source, "target": target, "directoryName": zipDirectory, "fileTypes": fileTypes }
-			print(data)
-			dataJson = json.dumps(data)
-			dataBytes = dataJson.encode("utf-8")
-			lambdaClient = AWSSession.shared().lambdaInvoker()
+			files = inp.audioFileNames()
+			completeFiles = [
+				f"{self.config.s3_bucket}/{inp.filesetPrefix}/{f}"
+				for f in files
+			]
+
 			try:
-				response = lambdaClient.invoke(
-													FunctionName = self.config.lambda_zip_function,
-													InvocationType = "RequestResponse",
-													Payload = dataBytes)
-				respData = response.get("Payload").read()
-				respStr = respData.decode("utf-8")
-				result = json.loads(respStr)
-				status = result.get("status")
-				inp.addInputFile(zipFilename, 0) # size is unknown and not needed
-				if status != "SUCCESS":
-					result = json.loads(result.get("body"))
-					Log.getLogger(inp.filesetId).message(Log.EROR, "Error in zip file creation %s" % (result.get("error"),))
-			except Exception as err:
-				Log.getLogger(inp.filesetId).message(Log.EROR, "Failure in zip file creation %s" % (err,))
+				zipFilename = f"{inp.filesetPrefix}/{inp.filesetId}.zip"
+				result = zipperService.zip_files(self.config.s3_bucket, completeFiles, zipFilename)
+				if result.get("State") != "SUCCESS":
+					logger.message(Log.EROR, f"Failure creating Zip: {result}")
+				else:
+					inp.addInputFile(zipFilename, 0)
+					print(f"Zip created: {zipFilename}\n")
+			except Exception as e:
+				logger.message(Log.EROR, f"Error creating Zip: {e}")
+
 		# Handle video filesets related to the Gospel Films and the process to generate the zip file
 		if inp.typeCode == "video" and inp.isMP4Fileset() and len(inp.filesetId) == 10:
 			gospelBookNameMap = self.db.selectMap(
 				"SELECT id, notes FROM books WHERE book_group = 'Gospels'", None
 			)
-
-			# Ensure AWS Session initialization
-			AWSSession.shared()
-			session = boto3.Session(profile_name=self.config.s3_aws_profile)
-			s3Client = session.client('s3')
-
-			logger = Log.getLogger(inp.filesetId)
 			logger.message(Log.INFO, f"Creating Zip for {inp.filesetId} and creating temp credentials")
 			print(f"Creating Zip for {inp.filesetId} and creating temp credentials key: {self.config.s3_zipper_user_key}")
-
-			zipperService = S3ZipperService(
-				s3zipper_user_key=self.config.s3_zipper_user_key,
-				s3zipper_user_secret=self.config.s3_zipper_user_secret,
-				s3_client=s3Client,
-				region=self.config.s3_aws_region
-			)
 
 			for bookId in gospelBookNameMap:
 				files = inp.videoFileNamesByBook(bookId)

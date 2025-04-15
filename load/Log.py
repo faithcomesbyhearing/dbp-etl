@@ -38,6 +38,7 @@ class Log:
 		to S3 if any errors are found.
 		"""
 		errors = []
+		warns = []
 
 		# Gather error messages
 		for key in sorted(Log.loggers.keys()):
@@ -45,6 +46,15 @@ class Log:
 			for message in logger.format():
 				if message.startswith("EROR") or message.startswith("FATAL"):
 					errors.append(message)
+				elif message.startswith("WARN"):
+					warns.append(message)
+
+
+		# print warnings if any
+		if warns:
+			print("Warnings:")
+			for message in warns:
+				print(message)
 
 		# If no errors, just exit
 		if not errors:
@@ -144,6 +154,6 @@ if (__name__ == '__main__'):
 	error.missingFilesetIds()
 	error.requiredFields("aStockNo", "aFieldName")
 	error.suggestedFields("aStockNo", "aFieldName")
-	error.invalidValues("afieldName", "aFieldValue")
+	error.invalidValues("aStockNo", "afieldName", "aFieldValue")
 	Log.writeLog(config)
 
