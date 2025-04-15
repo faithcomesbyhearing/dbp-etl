@@ -101,8 +101,8 @@ class UpdateDBPFilesetTables:
 			filesetList.append((inp.bibleId, inp.filesetId, setTypeCode, None, None, hashId))
 			lptsDBP.updateBibleFilesetTags(filesetList)
 
-			if inp.typeCode == "video":
-				lptsDBP.updateBibleProductCode(inp, hashId)
+			# update the bible_fileset_tags (product code) table with the new filesetId
+			lptsDBP.updateBibleProductCode(inp, hashId)
 
 			if inp.isDerivedFileset():
 				updateLicensor.processFileset(inp.lptsDamId, hashId)

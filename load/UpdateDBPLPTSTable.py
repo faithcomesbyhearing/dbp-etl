@@ -214,43 +214,58 @@ class UpdateDBPLPTSTable:
 			self.dbOut.update(tableNameFilesets, pkeyNamesFilesets, attrNamesToUpdate, updateRowsFilesets)
 
 	def updateBibleProductCode(self, inputFileset, hashId):
-		if inputFileset.typeCode == "video":
-			notes = None
+		notes = None
 
-			sql = "SELECT hash_id, name, description, admin_only FROM bible_fileset_tags WHERE language_id = %s AND hash_id = %s"
-			resultSet = self.db.select(sql, (DefaultLanguageId, hashId))
+		sql = "SELECT hash_id, name, description, admin_only FROM bible_fileset_tags WHERE language_id = %s AND hash_id = %s"
+		resultSet = self.db.select(sql, (DefaultLanguageId, hashId))
 
-			tagNameMap = {}
-			PRODUCT_CODE_TEMPLATE = "product_code:%s"
+		tagNameMap = {}
 
-			for row in resultSet:
-				(_, name, description, _) = row
-				tagNameMap[name] = description
+		for row in resultSet:
+			(_, name, description, _) = row
+			tagNameMap[name] = description
 
-			insertRows = []
-			updateRows = []
+		insertRows = []
+		updateRows = []
+		tableName = "bible_fileset_tags"
+		pkeyNames = ("hash_id", "name", "language_id")
+		attrNames = ("description", "admin_only", "notes", "iso")
 
-			tableName = "bible_fileset_tags"
-			pkeyNames = ("hash_id", "name", "language_id")
-			attrNames = ("description", "admin_only", "notes", "iso")
+		(languageRecord, _) = self.languageReader.getLanguageRecordLoose(inputFileset.typeCode, inputFileset.bibleId, inputFileset.filesetId)
+
+		if inputFileset.typeCode == "audio":
+			PRODUCT_CODE_AUDIO_TEMPLATE = "product_code"
+
+			listFiles = inputFileset.audioFileNames()
+			if len(listFiles) > 0:
+				oldProductCode = tagNameMap.get(PRODUCT_CODE_AUDIO_TEMPLATE, None)
+				productCode = languageRecord.CalculateProductCode(inputFileset.filesetId, inputFileset.typeCode, None)
+
+				if oldProductCode is not None:
+					if oldProductCode != productCode:
+						updateRows.append((productCode, 1, notes, DefaultISO, hashId, PRODUCT_CODE_AUDIO_TEMPLATE, DefaultLanguageId))
+				else:
+					insertRows.append((productCode, 1, notes, DefaultISO, hashId, PRODUCT_CODE_AUDIO_TEMPLATE, DefaultLanguageId))
+
+		elif inputFileset.typeCode == "video":
+			PRODUCT_CODE_VIDEO_TEMPLATE = "product_code:%s"
+
 			gospelBookNameMap = self.db.selectMap("SELECT id, notes FROM books where book_group = 'Gospels'", None)
-
-			(languageRecord, _) = self.languageReader.getLanguageRecordLoose(inputFileset.typeCode, inputFileset.bibleId, inputFileset.filesetId)
 
 			for bookId in gospelBookNameMap.keys():
 				listFiles = inputFileset.videoFileNamesByBook(bookId)
 				if len(listFiles) > 0:
-					oldProductCode = tagNameMap.get(PRODUCT_CODE_TEMPLATE % bookId, None)
+					oldProductCode = tagNameMap.get(PRODUCT_CODE_VIDEO_TEMPLATE % bookId, None)
 					productCode = languageRecord.CalculateProductCode(inputFileset.filesetId, inputFileset.typeCode, bookId)
 
 					if oldProductCode is not None:
 						if oldProductCode != productCode:
-							updateRows.append((productCode, 1, notes, DefaultISO, hashId, PRODUCT_CODE_TEMPLATE % bookId, DefaultLanguageId))
+							updateRows.append((productCode, 1, notes, DefaultISO, hashId, PRODUCT_CODE_VIDEO_TEMPLATE % bookId, DefaultLanguageId))
 					else:
-						insertRows.append((productCode, 1, notes, DefaultISO, hashId, PRODUCT_CODE_TEMPLATE % bookId, DefaultLanguageId))
+						insertRows.append((productCode, 1, notes, DefaultISO, hashId, PRODUCT_CODE_VIDEO_TEMPLATE % bookId, DefaultLanguageId))
 
-			self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
-			self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
+		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
+		self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
 
 	##
 	## Bible Fileset Tags
