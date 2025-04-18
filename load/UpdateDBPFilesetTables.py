@@ -17,6 +17,7 @@ import os
 import math
 import subprocess
 from SqliteUtility import SqliteUtility
+from S3Utility import S3Utility
 from Config import Config
 from SQLUtility import SQLUtility
 from SQLBatchExec import SQLBatchExec
@@ -169,81 +170,191 @@ class UpdateDBPFilesetTables:
 
 
 
-	def insertBibleFiles(self, dbConn, hashId, inputFileset, bookIdSet):
-		inp = inputFileset
+	def insertBibleFiles(self, db_conn, hash_id, input_fileset, book_id_set):
+		"""
+		Syncs bible_files rows for a given fileset:
+		1. SELECT existing rows for this hash_id + book_ids
+		2. Delegate to audio/video handler to get (inserts, updates, deletes)
+		3. Batch apply inserts, updates, deletes via dbOut
+		"""
+		# 1) Fetch existing rows
+		book_ids = list(book_id_set)
+		placeholders = ",".join(["%s"] * len(book_ids))
+		sql = (
+			"SELECT book_id, chapter_start, verse_start, chapter_end, verse_end, "
+			"file_name, file_size, duration "
+			f"FROM bible_files WHERE hash_id = %s AND book_id IN ({placeholders})"
+		)
+		params = [hash_id] + book_ids
+		existing_rows = db_conn.select(sql, tuple(params))
+
+		# 2) Delegate to the right handler
+		if input_fileset.typeCode == "audio":
+			inserts, updates, deletes = self.handle_input_files_for_audio(existing_rows, hash_id, input_fileset)
+		elif input_fileset.typeCode == "video":
+			inserts, updates, deletes = self.handle_input_files_for_video(existing_rows, hash_id, input_fileset)
+
+		# 3) Apply in batches
+		table = "bible_files"
+		pkeys = ("hash_id", "book_id", "chapter_start", "verse_start")
+		attrs = ("chapter_end", "verse_end", "file_name", "file_size", "duration", "verse_sequence")
+
+		self.dbOut.insert(table, pkeys, attrs, inserts, keyPosition=2)
+		self.dbOut.updateCol(table, pkeys, updates)
+		self.dbOut.delete(table, pkeys, deletes)
+
+	def handle_input_files_for_audio(self, resultSet, hashId, inputFileset):
 		insertRows = []
 		updateRows = []
-		deleteRows = []
-		sql = ("SELECT book_id, chapter_start, verse_start, chapter_end, verse_end, file_name, file_size, duration"
-				" FROM bible_files WHERE hash_id = %s AND book_id IN ('") + "','".join(bookIdSet) + "')"
-		resultSet = dbConn.select(sql, (hashId,))
 		dbpMap = {}
 		for row in resultSet:
 			(dbpBookId, dbpChapterStart, dbpVerseStart, dbpChapterEnd, dbpVerseEnd, dbpFileName, dbpFileSize, dbpDuration) = row
 			key = (dbpBookId, dbpChapterStart, dbpVerseStart)
 			value = (dbpChapterEnd, dbpVerseEnd, dbpFileName, dbpFileSize, dbpDuration)
 			dbpMap[key] = value
-		with open(inp.csvFilename, newline='\n') as csvfile:
+		with open(inputFileset.csvFilename, newline='\n') as csvfile:
 			reader = csv.DictReader(csvfile)
 			for row in reader:
-				bookId = row["book_id"]
-				if row["chapter_start"] == "end":
-					# It will return error if the bookId is not in the list of books that are supported such as MAT, MRK, LUK, JHN
-					(chapterStart, _, _) = self.convertChapterStart(bookId)
-					verseStart = row["verse_start"] if row["verse_start"] != "" else "0"
-					try:
-						verseSequence = int(row["verse_sequence"]) if row["verse_sequence"] != "" else 0
-					except ValueError:
-						verseSequence = 0
-					# The verseStart will be modified for books that are not supported by the method convertChapterStart.
-					if verseSequence != 0:
-						verseStart = str(verseSequence)
-				else:
-					chapterStart = int(row["chapter_start"]) if row["chapter_start"] != "" else None
-					verseStart = row["verse_start"] if row["verse_start"] != "" else 1
-					verseSequence = int(row["verse_sequence"]) if row["verse_sequence"] != 0 or row["verse_sequence"] != "" else 1
-					verseEnd = row["verse_end"] if row["verse_end"] != "" else None
-
-				chapterEnd = int(row["chapter_end"]) if row["chapter_end"] != "" else None
+				(chapterStart, chapterEnd, verseStart, verseSequence, verseEnd, fileSize) = self.parse_chapter_verse(row)
 				fileName = row["file_name"]
-				if inp.typeCode == "video":
-					fileName = fileName.split(".")[0] + "_stream.m3u8"
-				fileSize = int(row["file_size"]) if row["file_size"] != "" else None
-				inputFile = inp.getInputFile(fileName)
+
+				inputFile = inputFileset.getInputFile(fileName)
 				duration = inputFile.duration if inputFile != None else None
-				if inp.typeCode == "audio" and inp.locationType == InputFileset.LOCAL:
+				if inputFileset.locationType == InputFileset.LOCAL:
 					duration = self.getDuration(inp.fullPath() + os.sep + fileName)
-				key = (bookId, chapterStart, verseStart)
+				key = (row["book_id"], chapterStart, verseStart)
 				dbpValue = dbpMap.get(key)
 				if dbpValue == None:
 					insertRows.append((chapterEnd, verseEnd, fileName, fileSize, duration, verseSequence,
-						hashId, bookId, chapterStart, verseStart))
+						hashId, row["book_id"], chapterStart, verseStart))
 				else:
 					del dbpMap[key]
 					(dbpChapterEnd, dbpVerseEnd, dbpFileName, dbpFileSize, dbpDuration) = dbpValue
+					# primary keys: "hash_id", "book_id", "chapter_start", "verse_start"
+					if chapterEnd != dbpChapterEnd:
+						updateRows.append(("chapter_end", chapterEnd, dbpChapterEnd, hashId, row["book_id"], chapterStart, verseStart))
+					if verseEnd != dbpVerseEnd:
+						updateRows.append(("verse_end", verseEnd, dbpVerseEnd, hashId, row["book_id"], chapterStart, verseStart))
+					if fileName != dbpFileName:
+						updateRows.append(("file_name", fileName, dbpFileName, hashId, row["book_id"], chapterStart, verseStart))
+					if fileSize != dbpFileSize:
+						updateRows.append(("file_size", fileSize, dbpFileSize, hashId, row["book_id"], chapterStart, verseStart))
+					if duration != dbpDuration and duration != None and duration != "":
+						updateRows.append(("duration", duration, dbpDuration, hashId, row["book_id"], chapterStart, verseStart))
 
-					# If the duration value is empty, it will keep the value retrieved from the database.
-					if inp.typeCode == "video" and duration == None and (dbpDuration != None or dbpDuration != ""):
-						duration = dbpDuration
+		return (insertRows, updateRows, [])
 
-					if (chapterEnd != dbpChapterEnd or
-						verseEnd != dbpVerseEnd or
-						fileName != dbpFileName or
-						fileSize != dbpFileSize or
-						(duration != dbpDuration and duration != None and duration != "") ):
-						updateRows.append((chapterEnd, verseEnd, fileName, fileSize, duration, verseSequence,
-						hashId, bookId, chapterStart, verseStart))
+	def handle_input_files_for_video(self, existing_rows, hash_id, input_fileset):
+		"""
+		For video filesets:
+		- existing_rows: list of tuples from SELECT
+		- build a map:  (book_id, chap_start, verse_start, extension) -> (chap_end, verse_end, filename, size, duration)
+		- walk the CSV, generate three variants per row, check S3, then decide insert/update
+		- any leftover keys in dbp_map get deleted
+		"""
+		s3 = S3Utility(self.config)
 
-		if inp.typeCode == "video":
-			for (dbpBookId, dbpChapterStart, dbpVerseStart) in dbpMap.keys():
-				deleteRows.append((hashId, dbpBookId, dbpChapterStart, dbpVerseStart))
+		# 1) Build lookup of existing DB rows with correct 'web_' prefix handling
+		dbp_map = {}
+		for book_id, dbp_chapter_start, dbp_verse_start, dbp_chapter_end, dbp_verse_end, dbp_file_name, dbp_size, dpb_dur in existing_rows:
+			# get extension
+			ext = dbp_file_name.rsplit(".", 1)[-1]
+			if "web" in dbp_file_name:
+				ext = f"web_{ext}"
+			key = (book_id, dbp_chapter_start, dbp_verse_start, ext)
+			dbp_map[key] = (dbp_chapter_end, dbp_verse_end, dbp_file_name, dbp_size, dpb_dur)
 
-		tableName = "bible_files"
-		pkeyNames = ("hash_id", "book_id", "chapter_start", "verse_start")
-		attrNames = ("chapter_end", "verse_end", "file_name", "file_size", "duration", "verse_sequence")
-		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows, 2)
-		self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
-		self.dbOut.delete(tableName, pkeyNames, deleteRows)
+		inserts, updates = [], []
+		seen_keys = set()
+
+		with open(input_fileset.csvFilename, newline='\n') as csvfile:
+			reader = csv.DictReader(csvfile)
+			for row in reader:
+				c_start, c_end, v_start, v_seq, v_end, f_size = self.parse_chapter_verse(row)
+				base = row["file_name"]
+				prefix = input_fileset.filesetPrefix # e.g. "video/BIBLE_ID/FILESET_ID"
+
+				# 3) Define the three variants
+				variants = [
+					("_stream.m3u8", "m3u8"),
+					("_web.mp4",    "web_mp4"),
+					(".mp4",        "mp4"),
+				]
+
+				for suffix, ext_key in variants:
+					stem = base[:-4] if base.lower().endswith(".mp4") else base
+					filename = f"{stem}{suffix}"
+					s3_key  = f"{self.config.s3_vid_bucket}/{prefix}/{filename}"
+
+					if not s3.IsKeyValid(self.config.s3_vid_bucket, f"{prefix}/{filename}"):
+						continue
+
+					key = (row["book_id"], c_start, v_start, ext_key)
+					seen_keys.add(key)
+
+					dbp = dbp_map.get(key)
+					input_file = input_fileset.getInputFile(s3_key)
+					duration = getattr(input_file, "duration", None) or (dbp[4] if dbp else None)
+
+					if not dbp:
+						inserts.append((
+							c_end, v_end, filename, f_size, duration, v_seq,
+							hash_id, row["book_id"], c_start, v_start
+						))
+					else:
+						dbp_c_end, dbp_v_end, dbp_filename, dbp_size, dpb_dur = dbp
+
+						# primary keys: "hash_id", "book_id", "chapter_start", "verse_start"
+						if c_end   != dbp_c_end:
+							updates.append(("chapter_end", c_end, dbp_c_end, hash_id, row["book_id"], c_start, v_start))
+						if v_end   != dbp_v_end:
+							updates.append(("verse_end", v_end, dbp_v_end, hash_id, row["book_id"], c_start, v_start))
+						if filename != dbp_filename:
+							updates.append(("file_name", filename, dbp_filename, hash_id, row["book_id"], c_start, v_start))
+						if f_size  != dbp_size:
+							updates.append(("file_size", f_size, dbp_size, hash_id, row["book_id"], c_start, v_start))
+						if duration != dpb_dur and duration != None and duration != "":
+							updates.append(("duration", duration, dpb_dur, hash_id, row["book_id"], c_start, v_start))
+
+				# 4) Anything left in dbp_map wasn’t seen → delete
+				deletes = [
+					(hash_id, book_id, c_start, v_start)
+					for (book_id, c_start, v_start, _) in dbp_map
+					if (book_id, c_start, v_start, _) not in seen_keys
+				]
+
+		return inserts, updates, deletes
+
+	def parse_chapter_verse(self, row):
+		"""
+		Normalize CSV row values into canonical ints/strings or None:
+		- chapter_start, chapter_end: ints or None
+		- verse_start, verse_end: strings or None
+		- verse_sequence: int
+		- file_size: int or None
+		Handles the special “end of book” case when chapter_start == 'end'.
+		"""
+		def to_int(x, default=None):
+			return int(x) if x and x.isdigit() else default
+
+		book_id = row["book_id"]
+		if row["chapter_start"] == "end":
+			chap_start, _, _ = self.convertChapterStart(book_id)
+			verse_start = row["verse_start"] or "0"
+			verse_seq   = to_int(row["verse_sequence"], 0)
+			if verse_seq:
+				verse_start = str(verse_seq)
+			chap_end = chap_start
+			verse_end = verse_start
+		else:
+			chap_start   = to_int(row["chapter_start"])
+			chap_end     = to_int(row["chapter_end"])
+			verse_start  = row["verse_start"]  or "1"
+			verse_end    = row["verse_end"]    or None
+			verse_seq    = to_int(row["verse_sequence"], 1)
+
+		file_size = to_int(row["file_size"])
+		return chap_start, chap_end, verse_start, verse_seq, verse_end, file_size
 
 	# We have a fixed values for chapterStart, verseStart, verseEnd for the following books
 	# MAT 28:21,21
@@ -308,3 +419,4 @@ if (__name__ == '__main__'):
 
 # python3  load/UpdateDBPFilesetTables.py test s3://etl-development-input Spanish_N2SPNTLA_USX
 # python3  load/UpdateDBPFilesetTables.py test s3://etl-development-input SPNBDAP2DV
+# python3  load/UpdateDBPFilesetTables.py test s3://etl-development-input ENGESVN2DA
