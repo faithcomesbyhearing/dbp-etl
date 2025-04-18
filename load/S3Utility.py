@@ -6,6 +6,7 @@
 
 import os
 import subprocess
+import boto3
 from Log import *
 from Config import *
 from AWSSession import *
@@ -74,6 +75,23 @@ class S3Utility:
 			InputFileset.database.append(inp)
 			return True
 
+	def IsKeyValid(self, s3Bucket, s3Key):
+		session = boto3.Session(profile_name=self.config.s3_aws_profile)
+		s3Client = session.client('s3')
+		(isValid, _) = self.IsKeyValidWithError(s3Client, s3Bucket, s3Key)
+		return isValid
+
+	def IsKeyValidWithError(self, s3Client, s3Bucket, s3Key):
+		try:
+			s3Client.head_object(Bucket=s3Bucket, Key=s3Key)
+		except s3Client.exceptions.ClientError as e:
+			errorCode = e.response['Error']['Code']
+			if errorCode in ['404', 'NoSuchKey']:
+				return (False, errorCode)
+			else:
+				logger.message(Log.EROR, f"Error checking S3 key: {s3Key} - {errorCode}")
+
+		return (True, None)
 
 if (__name__ == '__main__'):
 	from SQLUtility import SQLUtility

@@ -60,6 +60,13 @@ class InputFile:
 
 		return directoryParts[0] == typeCode and directoryParts[1] == bibleId and directoryParts[2] == filesetId
 
+	def extension(self):
+		parts = self.name.split(".")
+		if len(parts) > 1:
+			return parts[-1]
+		else:
+			return None
+
 class InputFileset:
 
 	BUCKET = "BUCKET"
