@@ -193,6 +193,8 @@ class UpdateDBPFilesetTables:
 			inserts, updates, deletes = self.handle_input_files_for_audio(existing_rows, hash_id, input_fileset)
 		elif input_fileset.typeCode == "video":
 			inserts, updates, deletes = self.handle_input_files_for_video(existing_rows, hash_id, input_fileset)
+		elif input_fileset.typeCode == "text":
+			inserts, updates, deletes = self.handle_input_files_for_text(existing_rows, hash_id, input_fileset)
 
 		# 3) Apply in batches
 		table = "bible_files"
@@ -203,15 +205,64 @@ class UpdateDBPFilesetTables:
 		self.dbOut.updateCol(table, pkeys, updates)
 		self.dbOut.delete(table, pkeys, deletes)
 
-	def handle_input_files_for_audio(self, resultSet, hashId, inputFileset):
-		insertRows = []
-		updateRows = []
+	def handle_input_files_for_text(self, existing_rows, hashId, inputFileset):
+		"""
+		For text filesets:
+		- existing_rows: list of tuples from SELECT
+		- build a map:  (book_id, chap_start, verse_start, extension) -> (chap_end, verse_end, filename, size, duration)
+		- walk the CSV, generate three variants per row, then decide insert/update
+		- any leftover keys in dbp_map get deleted
+		"""
+		insertRows, updateRows = [], []
 		dbpMap = {}
-		for row in resultSet:
+		for row in existing_rows:
 			(dbpBookId, dbpChapterStart, dbpVerseStart, dbpChapterEnd, dbpVerseEnd, dbpFileName, dbpFileSize, dbpDuration) = row
 			key = (dbpBookId, dbpChapterStart, dbpVerseStart)
-			value = (dbpChapterEnd, dbpVerseEnd, dbpFileName, dbpFileSize, dbpDuration)
-			dbpMap[key] = value
+			dbpMap[key] = (dbpChapterEnd, dbpVerseEnd, dbpFileName, dbpFileSize, dbpDuration)
+		with open(inputFileset.csvFilename, newline='\n') as csvfile:
+			reader = csv.DictReader(csvfile)
+			for row in reader:
+				(chapterStart, chapterEnd, verseStart, verseSequence, verseEnd, fileSize) = self.parse_chapter_verse(row)
+				# For text files, we don't have a duration
+				duration = None
+
+				key = (row["book_id"], chapterStart, verseStart)
+				dbpValue = dbpMap.get(key)
+				if dbpValue == None:
+					insertRows.append((chapterEnd, verseEnd, row["file_name"], fileSize, duration, verseSequence,
+						hashId, row["book_id"], chapterStart, verseStart))
+				else:
+					del dbpMap[key]
+					(dbpChapterEnd, dbpVerseEnd, dbpFileName, dbpFileSize, dbpDuration) = dbpValue
+
+					# primary keys: "hash_id", "book_id", "chapter_start", "verse_start"
+					if chapterEnd != dbpChapterEnd:
+						updateRows.append(("chapter_end", chapterEnd, dbpChapterEnd, hashId, row["book_id"], chapterStart, verseStart))
+					if verseEnd != dbpVerseEnd:
+						updateRows.append(("verse_end", verseEnd, dbpVerseEnd, hashId, row["book_id"], chapterStart, verseStart))
+					if row["file_name"] != dbpFileName:
+						updateRows.append(("file_name", row["file_name"], dbpFileName, hashId, row["book_id"], chapterStart, verseStart))
+					if fileSize != dbpFileSize:
+						updateRows.append(("file_size", fileSize, dbpFileSize, hashId, row["book_id"], chapterStart, verseStart))
+					if duration != dbpDuration:
+						updateRows.append(("duration", duration, dbpDuration, hashId, row["book_id"], chapterStart, verseStart))
+
+		return (insertRows, updateRows, [])
+
+	def handle_input_files_for_audio(self, existing_rows, hashId, inputFileset):
+		"""
+		For audio filesets:
+		- existing_rows: list of tuples from SELECT
+		- build a map:  (book_id, chap_start, verse_start, extension) -> (chap_end, verse_end, filename, size, duration)
+		- walk the CSV, generate three variants per row, then decide insert/update
+		- any leftover keys in dbp_map get deleted
+		"""
+		insertRows, updateRows = [], []
+		dbpMap = {}
+		for row in existing_rows:
+			(dbpBookId, dbpChapterStart, dbpVerseStart, dbpChapterEnd, dbpVerseEnd, dbpFileName, dbpFileSize, dbpDuration) = row
+			key = (dbpBookId, dbpChapterStart, dbpVerseStart)
+			dbpMap[key] = (dbpChapterEnd, dbpVerseEnd, dbpFileName, dbpFileSize, dbpDuration)
 		with open(inputFileset.csvFilename, newline='\n') as csvfile:
 			reader = csv.DictReader(csvfile)
 			for row in reader:
@@ -221,7 +272,7 @@ class UpdateDBPFilesetTables:
 				inputFile = inputFileset.getInputFile(fileName)
 				duration = inputFile.duration if inputFile != None else None
 				if inputFileset.locationType == InputFileset.LOCAL:
-					duration = self.getDuration(inp.fullPath() + os.sep + fileName)
+					duration = self.getDuration(inputFileset.fullPath() + os.sep + fileName)
 				key = (row["book_id"], chapterStart, verseStart)
 				dbpValue = dbpMap.get(key)
 				if dbpValue == None:
@@ -248,6 +299,7 @@ class UpdateDBPFilesetTables:
 		"""
 		For video filesets:
 		- existing_rows: list of tuples from SELECT
+		- handle end of book case
 		- build a map:  (book_id, chap_start, verse_start, extension) -> (chap_end, verse_end, filename, size, duration)
 		- walk the CSV, generate three variants per row, check S3, then decide insert/update
 		- any leftover keys in dbp_map get deleted
@@ -417,6 +469,6 @@ if (__name__ == '__main__'):
 # time python3 load/UpdateDBPFilesetTables.py test /Volumes/FCBH/all-dbp-etl-test/ audio/UNRWFW/UNRWFWP1DA16
 # time python3 load/UpdateDBPFilesetTables.py
 
-# python3  load/UpdateDBPFilesetTables.py test s3://etl-development-input Spanish_N2SPNTLA_USX
-# python3  load/UpdateDBPFilesetTables.py test s3://etl-development-input SPNBDAP2DV
-# python3  load/UpdateDBPFilesetTables.py test s3://etl-development-input ENGESVN2DA
+# time python3 load/UpdateDBPFilesetTables.py test s3://etl-development-input Spanish_N2SPNTLA_USX
+# time python3 load/UpdateDBPFilesetTables.py test s3://etl-development-input SPNBDAP2DV
+# time python3 load/UpdateDBPFilesetTables.py test s3://etl-development-input ENGESVN2DA
