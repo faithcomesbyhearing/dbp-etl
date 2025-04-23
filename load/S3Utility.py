@@ -6,7 +6,6 @@
 
 import os
 import subprocess
-import boto3
 from Log import *
 from Config import *
 from AWSSession import *
@@ -75,23 +74,29 @@ class S3Utility:
 			InputFileset.database.append(inp)
 			return True
 
-	def IsKeyValid(self, s3Bucket, s3Key):
-		session = boto3.Session(profile_name=self.config.s3_aws_profile)
-		s3Client = session.client('s3')
-		(isValid, _) = self.IsKeyValidWithError(s3Client, s3Bucket, s3Key)
-		return isValid
+	def get_key_info(self, bucket: str, key: str) -> tuple[bool, int | None]:
+		"""
+		Check if `bucket/key` exists in S3 and (if so) return its size in bytes.
 
-	def IsKeyValidWithError(self, s3Client, s3Bucket, s3Key):
+		Args:
+			bucket: The name of the S3 bucket.
+			key: The key (path) of the object in the S3 bucket.
+
+		Returns:
+			(exists, size)
+			- exists: True if object is found, False if 404/NoSuchKey
+			- size:  ContentLength (int) if exists, else None
+		"""
 		try:
-			s3Client.head_object(Bucket=s3Bucket, Key=s3Key)
-		except s3Client.exceptions.ClientError as e:
-			errorCode = e.response['Error']['Code']
-			if errorCode in ['404', 'NoSuchKey']:
-				return (False, errorCode)
-			else:
-				logger.message(Log.EROR, f"Error checking S3 key: {s3Key} - {errorCode}")
-
-		return (True, None)
+			s3_client = AWSSession.shared().s3Client
+			resp = s3_client.head_object(Bucket=bucket, Key=key)
+			return True, resp.get('ContentLength')
+		except ClientError as e:
+			code = e.response['Error']['Code']
+			if code in ('404', 'NoSuchKey'):
+				return False, None
+			# re‑raise any other errors (permissions, networking, etc.)
+			raise
 
 if (__name__ == '__main__'):
 	from SQLUtility import SQLUtility

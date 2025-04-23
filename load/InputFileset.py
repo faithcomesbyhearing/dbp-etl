@@ -67,6 +67,14 @@ class InputFile:
 		else:
 			return None
 
+	def only_file_name(self) -> str:
+		"""
+		Return just the filename portion of self.name, stripping any trailing slashes.
+		"""
+		# Remove any trailing slash or backslash
+		cleaned = self.name.rstrip("/\\")
+		return os.path.basename(cleaned)
+
 class InputFileset:
 
 	BUCKET = "BUCKET"
