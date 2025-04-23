@@ -338,8 +338,14 @@ class UpdateDBPFilesetTables:
 					filename = f"{stem}{suffix}"
 					s3_key  = f"{self.config.s3_vid_bucket}/{prefix}/{filename}"
 
-					if not s3.IsKeyValid(self.config.s3_vid_bucket, f"{prefix}/{filename}"):
+					exists, variant_file_size = s3.get_key_info(self.config.s3_vid_bucket, f"{prefix}/{filename}")
+					if not exists:
+						print(f"WARN: missing S3 key: {key}")
 						continue
+
+					# We need to get the file size for web_mp4 and m3u8 from s3 because the csv file will have the size of the mp4 file
+					if ext_key == "mp4":
+						variant_file_size = f_size
 
 					key = (row["book_id"], c_start, v_start, ext_key)
 					seen_keys.add(key)
@@ -350,7 +356,7 @@ class UpdateDBPFilesetTables:
 
 					if not dbp:
 						inserts.append((
-							c_end, v_end, filename, f_size, duration, v_seq,
+							c_end, v_end, filename, variant_file_size, duration, v_seq,
 							hash_id, row["book_id"], c_start, v_start
 						))
 					else:
@@ -363,8 +369,8 @@ class UpdateDBPFilesetTables:
 							updates.append(("verse_end", v_end, dbp_v_end, hash_id, row["book_id"], c_start, v_start))
 						if filename != dbp_filename:
 							updates.append(("file_name", filename, dbp_filename, hash_id, row["book_id"], c_start, v_start))
-						if f_size  != dbp_size:
-							updates.append(("file_size", f_size, dbp_size, hash_id, row["book_id"], c_start, v_start))
+						if variant_file_size  != dbp_size:
+							updates.append(("file_size", variant_file_size, dbp_size, hash_id, row["book_id"], c_start, v_start))
 						if duration != dpb_dur and duration != None and duration != "":
 							updates.append(("duration", duration, dpb_dur, hash_id, row["book_id"], c_start, v_start))
 
