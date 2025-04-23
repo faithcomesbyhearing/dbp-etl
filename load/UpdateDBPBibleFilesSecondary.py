@@ -6,7 +6,8 @@ from Log import *
 from Config import *
 from SQLUtility import *
 from SQLBatchExec import *
-from AWSSession import *
+from AWSSession import AWSSession
+from S3Utility import S3Utility
 from S3ZipperService import S3ZipperService
 
 class UpdateDBPBibleFilesSecondary:
@@ -26,7 +27,7 @@ class UpdateDBPBibleFilesSecondary:
 	def createZipFile(self, inputFileset):
 		inp = inputFileset
 		# Ensure AWS Session initialization
-		AWSSession.shared()
+		s3 = S3Utility(self.config)
 		session = boto3.Session(profile_name=self.config.s3_aws_profile)
 		s3Client = session.client('s3')
 
@@ -91,15 +92,9 @@ class UpdateDBPBibleFilesSecondary:
 						# Remove the bucket portion from the key (expected format: "bucket/prefix/file")
 						parts = s3Key.split('/', 1)
 						key = parts[1] if len(parts) > 1 else s3Key
-						try:
-							s3Client.head_object(Bucket=self.config.s3_vid_bucket, Key=key)
-						except s3Client.exceptions.ClientError as e:
-							errorCode = e.response['Error']['Code']
-							if errorCode in ['404', 'NoSuchKey']:
-								print(f"\nWARN: Creating Zip Video File - Missing s3 key: {key}")
-							else:
-								logger.message(Log.EROR, f"Error checking S3 key: {key} - {errorCode}")
-								raise
+						s3KeyExists, _ = s3.get_key_info(self.config.s3_vid_bucket, key)
+						if not s3KeyExists:
+							print(f"\nWARN: Creating Zip Video File - Missing s3 key: {key}")
 
 					try:
 						zipFilename = f"{inp.filesetPrefix}/{inp.filesetId}_{bookId}.zip"
@@ -125,34 +120,70 @@ class UpdateDBPBibleFilesSecondary:
 		return "%s_%s_%s_%s_%s" % (langName, iso3, versionCode, scope, style)
 
 
-	def updateBibleFilesSecondary(self, hashId, inputFileset):
-		inp = inputFileset
-		insertRows = []
+	def updateBibleFilesSecondary(self, hash_id, input_fileset):
+		"""
+		Syncs the bible_files_secondary table for this fileset:
+		- For audio: art, zip, thumbnail
+		- For video: zip
+		Inserts any missing (hash_id, file_name, file_type) rows.
+		"""
+		type_code = input_fileset.typeCode
+
+		# Build a map file_type -> list of file-name‑or‑file‑obj
+		file_type_map = {}
+
+		if type_code == "audio":
+			file_type_map['art'] = input_fileset.artFiles()
+			file_type_map['thumbnail'] = input_fileset.thumbnailFiles()
+			zip_file = input_fileset.zipFile()
+			if zip_file:
+				# store the object, so we can call only_file_name() below
+				file_type_map['zip'] = [zip_file]
+
+		if type_code == "video":
+			zip_files_map = input_fileset.zipFilesIndexedByBookId()
+			# Fetch just the Gospel book IDs
+			gospel_book_name_map = self.db.selectMap("SELECT id, notes FROM books where book_group = 'Gospels'", None)
+			# Filter your zip_files_map to only those keys in gospel_book_ids
+			zip_files_by_book_id = [
+				zip_file
+				for book_id, zip_file in zip_files_map.items()
+				if book_id in gospel_book_name_map
+			]
+			if zip_files_by_book_id:
+				file_type_map['zip'] = zip_files_by_book_id
+
+		if not file_type_map:
+			return
 
 		sql = "SELECT file_name FROM bible_files_secondary WHERE hash_id = %s AND file_type = %s"
-		if inp.typeCode == "audio":
 
-			dbpArtSet = self.db.selectSet(sql, (hashId, 'art'))
-			for artFile in inp.artFiles():
-				if not artFile in dbpArtSet:
-					insertRows.append(('art', hashId, artFile))
+		insert_rows = []
+		# For each file_type, check if the file_name exists in the db
+		# If not, add it to the insert_rows list
+		for file_type, candidates in file_type_map.items():
+			if not candidates:
+				continue
 
-			zipFile = inp.zipFile()
-			if zipFile != None:
-				dbpZipSet = self.db.selectSet(sql, (hashId, 'zip'))
-				if not zipFile.name in dbpZipSet:
-					insertRows.append(('zip', hashId, zipFile.name))
+			existing_names = self.db.selectSet(sql, (hash_id, file_type))
 
-			dbpThumbnailSet = self.db.selectSet(sql, (hashId, 'thumbnail'))
-			for thumbnailFile in inp.thumbnailFiles():
-				if not thumbnailFile in dbpThumbnailSet:
-					insertRows.append(('thumbnail', hashId, thumbnailFile))
+			for candidate in candidates:
+				# if it's an object with only_file_name(), use that; else assume it's already a string
+				name = (
+					candidate.only_file_name()
+					if hasattr(candidate, 'only_file_name')
+					else candidate
+				)
 
+				if name not in existing_names:
+					insert_rows.append((file_type, hash_id, name))
 
-		tableName = "bible_files_secondary"
-		pkeyNames = ("hash_id", "file_name")
-		attrNames = ("file_type",)
-		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
+		if insert_rows:
+			# Insert the new rows into the bible_files_secondary table
+			# table_name = "bible_files_secondary"
+			# pkey_names = ("hash_id", "file_name")
+			# attr_names = ("file_type",)
+			self.dbOut.insert("bible_files_secondary", ("hash_id", "file_name"), ("file_type",), insert_rows)
 
 
 if (__name__ == '__main__'):
