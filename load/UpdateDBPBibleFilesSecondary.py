@@ -13,10 +13,11 @@ from S3ZipperService import S3ZipperService
 class UpdateDBPBibleFilesSecondary:
 
 
-	def __init__(self, config, db, dbOut):
+	def __init__(self, config, db, dbOut, languageReader):
 		self.config = config
 		self.db = db 
 		self.dbOut = dbOut
+		self.languageReader = languageReader
 
 
 	def createAllZipFiles(self, inputFilesetList):
@@ -61,13 +62,12 @@ class UpdateDBPBibleFilesSecondary:
 
 		# Handle video filesets related to the Gospel Films and the process to generate the zip file
 		if inp.typeCode == "video" and inp.isMP4Fileset() and len(inp.filesetId) == 10:
-			gospelBookNameMap = self.db.selectMap(
-				"SELECT id, notes FROM books WHERE book_group = 'Gospels'", None
-			)
+			# We need to get the list of books that are allowed for the video fileset (Gospels and Apostolic History)
+			booksAllowed = self.languageReader.getGospelsAndApostolicHistoryBooks()
 			logger.message(Log.INFO, f"Creating Zip for {inp.filesetId} and creating temp credentials")
 			print(f"Creating Zip for {inp.filesetId} and creating temp credentials key: {self.config.s3_zipper_user_key}")
 
-			for bookId in gospelBookNameMap:
+			for bookId in booksAllowed:
 				files = inp.videoFileNamesByBook(bookId)
 				if files:
 					logger.message(
@@ -143,7 +143,7 @@ class UpdateDBPBibleFilesSecondary:
 		if type_code == "video":
 			zip_files_map = input_fileset.zipFilesIndexedByBookId()
 			# Fetch just the Gospel book IDs
-			gospel_book_name_map = self.db.selectMap("SELECT id, notes FROM books where book_group = 'Gospels'", None)
+			gospel_book_name_map = self.db.selectMap("SELECT id, notes FROM books where book_group IN ('Gospels', 'Apostolic History')", None)
 			# Filter your zip_files_map to only those keys in gospel_book_ids
 			zip_files_by_book_id = [
 				zip_file
@@ -200,9 +200,9 @@ if (__name__ == '__main__'):
 	config = Config.shared()
 	db = SQLUtility(config)
 	dbOut = SQLBatchExec(config)
-	update = UpdateDBPBibleFilesSecondary(config, db, dbOut)
-	s3Client = AWSSession.shared().s3Client
 	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
+	update = UpdateDBPBibleFilesSecondary(config, db, dbOut, languageReader)
+	s3Client = AWSSession.shared().s3Client
 
 	sql = ("SELECT c.bible_id, f.id, f.hash_id FROM bible_filesets f, bible_fileset_connections c"
 			" WHERE f.hash_id = c.hash_id AND set_type_code in ('audio', 'audio_drama') AND length(f.id) = 10"
@@ -212,7 +212,7 @@ if (__name__ == '__main__'):
 		print(bibleId, filesetId, hashId)
 		location = "s3://%s" % (config.s3_bucket,)
 		filesetPath = "audio/%s/%s" % (bibleId, filesetId)
-		(dataList, messages) = PreValidate.validateDBPETL(s3Client, location, filesetId, filesetPath)
+		(dataList, messages) = PreValidate.validateDBPETL(s3Client, location, filesetId, filesetPath, None)
 		if messages != None and len(messages) > 0:
 			Log.addPreValidationErrors(messages)
 			#print(filesetPath, messages)

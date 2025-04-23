@@ -105,6 +105,7 @@ class PreValidate:
 
 	## Validate filesetId and return PreValidateResult
 	def validateFilesetId(self, directoryName):
+		# directoryName is the name of the directory, which is the filesetId
 		filesetId = directoryName
 		filesetId1 = directoryName.split("-")[0]
 		print("PreValidate.validateFilesetId. directoryName: %s, filesetId: %s, filesetId1: %s " % (directoryName, filesetId, filesetId1))
@@ -118,6 +119,7 @@ class PreValidate:
 
 			if results == None:
 				parts = directoryName.split("_")
+				# It supports the case when the directory name is example: "Covenant_Manobo, Obo SD_S2OBO_COV"
 				if len(parts) > 2 and parts[0] == "Covenant":
 					# check if the directory name is a covenant stock number
 					covenantStocknumber = directoryName[-9:]

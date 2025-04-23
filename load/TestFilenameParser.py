@@ -36,6 +36,8 @@ test_video_files = [
     "Tajik-WBT_LUK_End_Credits.mp4",   # Full chapter - should match video2
     "English-KJV_JHN_End_credits.mp4",   # Full chapter - should match video2
     "English_JHN_End_Credits.mp4",   # Full chapter - should match video1
+    "Fang-BSG_ACT_1.mp4",  # Full chapter - should match video1
+    "Fang-BSG_ACT_End_credits.mp4", # Full chapter - should match video2
     "COVENANT_SEGMENT 01 – Intro and Garden of Eden.mp4",   # Full chapter - should match video5
     "COVENANT_SEGMENT 02 – The Fall.mp4",   # Full chapter - should match video5
     "COVENANT - Fall.mp4",  # Invalid case - should not match any
@@ -60,6 +62,8 @@ test_cases_parser = [
     ("English-KJV_JHN_1-1-18.mp4", "JHN", "1", "1", "18", "mp4"),
     ("English-KJV_JHN_End_credits.mp4", "JHN", "end", "", "", "mp4"),
     ("COVENANT_SEGMENT 01 – Intro and Garden of Eden.mp4", "C01", "1", "1", "1", "mp4"),
+    ("Fang-BSG_ACT_1.mp4", "ACT", "1", "1", "", "mp4"),
+    ("Fang-BSG_ACT_End_credits.mp4", "ACT", "end", "", "", "mp4"),
     # Invalid cases
     ("001GEN_001-010.usx", "", "", "", "", ""),
     ("INVALID_FILENAME.mp3", "", "", "", "", ""),
@@ -134,6 +138,7 @@ if __name__ == '__main__':
         "MRK": 16,
         "JHN": 21,
         "C01": 2,
+        "ACT": 28,
     }
     parser.maxChapterMap = {
         "GEN": 50,
@@ -141,6 +146,7 @@ if __name__ == '__main__':
         "MRK": 16,
         "JHN": 21,
         "C01": 2,
+        "ACT": 28,
     }
     parser.covenantBookNameMap = {
         "C01": "Intro & Garden of Eden",
@@ -159,7 +165,7 @@ if __name__ == '__main__':
     print("\nSummary:")
 
     # Validation check
-    expected_success_count = 37
+    expected_success_count = 41
     expected_failure_count = 14
 
     if total_success == expected_success_count and total_failure == expected_failure_count:
