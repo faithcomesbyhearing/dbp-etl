@@ -83,7 +83,7 @@ class UpdateDBPFilesetTables:
 
 		dbConn = SQLUtility(self.config)
 		bookIdSet = self.getBibleBooks(inp.typeCode, inp.csvFilename, inp.databasePath)
-		updateBibleFilesSecondary = UpdateDBPBibleFilesSecondary(self.config, dbConn, self.dbOut)
+		updateBibleFilesSecondary = UpdateDBPBibleFilesSecondary(self.config, dbConn, self.dbOut, self.languageReader)
 		updateLicensor = UpdateDBPLicensorTables(dbConn, self.dbOut)
 		bucket = self.config.s3_vid_bucket if inp.typeCode == "video" else self.config.s3_bucket
 		# it needs to know if the new inputFileset has new files to set the flag content_loaded
@@ -340,7 +340,7 @@ class UpdateDBPFilesetTables:
 
 					exists, variant_file_size = s3.get_key_info(self.config.s3_vid_bucket, f"{prefix}/{filename}")
 					if not exists:
-						print(f"WARN: missing S3 key: {key}")
+						print(f"WARN: missing S3 key: {s3_key}")
 						continue
 
 					# We need to get the file size for web_mp4 and m3u8 from s3 because the csv file will have the size of the mp4 file
@@ -419,6 +419,7 @@ class UpdateDBPFilesetTables:
 	# MRK 16:21,21
 	# LUK 24:54,54
 	# JHN 21:26,26
+	# ACT 28:32,32
 	def convertChapterStart(self, bookId):
 		if bookId == "MAT":
 			return (28, "21", "21")
@@ -428,6 +429,8 @@ class UpdateDBPFilesetTables:
 			return (24, "54", "54")
 		elif bookId == "JHN":
 			return (21, "26", "26")
+		elif bookId == "ACT":
+			return (28, "32", "32")
 		else:
 			print("ERROR: Unexpected book %s in UpdateDBPDatabase." % (bookId))
 			sys.exit()

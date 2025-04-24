@@ -252,8 +252,10 @@ class FilenameRegex:
 				file.setChapter(match.group(3), parser.maxChapterMap)
 				if file.chapter.isdigit():
 					file.setType(match.group(6))
-					file.setVerseStart(match.group(4))
-					file.setVerseEnd(match.group(5))
+					if len(match.groups()) >= 4 and match.group(4) is not None:
+						file.setVerseStart(match.group(4))
+					if len(match.groups()) >= 5 and match.group(5) is not None:
+						file.setVerseEnd(match.group(5))
 					file.setChapterEnd(file.chapter, parser.maxChapterMap)
 				else:
 					file.setType(match.group(4))
@@ -372,7 +374,8 @@ class FilenameParser:
 			# English KJV_JHN_1-1-18.mp4
 			# English-KJV-other-version-info_JHN_1-1-18.mp4
 			# English-other-version-info_JHN_1-1-18.mp4
-			FilenameRegex("video1", r"^([A-Za-z\- ]+)_([A-Z0-9]{3})_(\d{1,3})-(\d{1,2})b?-(\d{1,2})\.(mp4)$"),
+			# Fang-BSG_ACT_1.mp4
+			FilenameRegex("video1", r"^([A-Za-z\- ]+)_([A-Z0-9]{3})_(\d{1,3})(?:-(\d{1,2})b?-(\d{1,2}))?\.(mp4)$"),
 
 			## Language[-BibleVersion]_Book_End_credits.mp4
 			## Example:

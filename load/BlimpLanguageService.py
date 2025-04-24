@@ -89,6 +89,24 @@ class BlimpLanguageService:
         )
 
 
+    def getGospelsAndApostolicHistoryMap(self):
+        sql = SQLUtility(self.config)
+        result = sql.selectMap("SELECT id, notes FROM books WHERE book_group IN ('Gospels', 'Apostolic History')", None)
+
+        # Validate and sanitize the result
+        validated_result = {}
+        for book_id, notes in result.items():
+            if not book_id or not isinstance(book_id, str):
+                continue
+            if not notes or not isinstance(notes, str):
+                notes = "No notes available"  # Default value for missing or invalid notes
+            validated_result[book_id] = notes.strip()
+
+        if not validated_result:
+            raise ValueError("No valid data found for Gospels and Apostolic History mapping.")
+
+        return validated_result
+
 # BWF note: this is only called for text processing
 def getMediaByIdAndFormat(bibleId, format):
     config = Config()

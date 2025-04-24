@@ -78,3 +78,6 @@ class BlimpLanguageReader (LanguageReaderInterface):
     def getStocknumber(self, stocknumber):
         (record) = self.service.getStocknumber(stocknumber)
         return record
+    # Get the list of books for the Gospels and Apostolic History group
+    def getGospelsAndApostolicHistoryBooks(self):
+       return self.service.getGospelsAndApostolicHistoryMap()
