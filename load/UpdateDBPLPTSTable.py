@@ -249,10 +249,10 @@ class UpdateDBPLPTSTable:
 
 		elif inputFileset.typeCode == "video":
 			PRODUCT_CODE_VIDEO_TEMPLATE = "product_code:%s"
+			# We need to get the list of books that are allowed for the video fileset (Gospels and Apostolic History)
+			booksAllowed = self.languageReader.getGospelsAndApostolicHistoryBooks()
 
-			gospelBookNameMap = self.db.selectMap("SELECT id, notes FROM books where book_group = 'Gospels'", None)
-
-			for bookId in gospelBookNameMap.keys():
+			for bookId in booksAllowed:
 				listFiles = inputFileset.videoFileNamesByBook(bookId)
 				if len(listFiles) > 0:
 					oldProductCode = tagNameMap.get(PRODUCT_CODE_VIDEO_TEMPLATE % bookId, None)

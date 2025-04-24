@@ -80,7 +80,7 @@ class DBPLoadController:
 		print("\n*** DBPLoadController:upload ***")
 		self.s3Utility.uploadAllFilesets(inputFilesets)
 		dbOut = SQLBatchExec(self.config)
-		secondary = UpdateDBPBibleFilesSecondary(self.config, self.db, dbOut)
+		secondary = UpdateDBPBibleFilesSecondary(self.config, self.db, dbOut, self.languageReader)
 		secondary.createAllZipFiles(inputFilesets)
 		Log.writeLog(self.config)
 
@@ -167,8 +167,9 @@ class DBPLoadController:
 		# Synchronize Monday product codes for video filesets
 		if inputFileset.typeCode == "video":
 			zipFiles = inputFileset.zipFilesIndexedByBookId()
-			gospelBookNameMap = self.db.selectMap("SELECT id, notes FROM books where book_group = 'Gospels'", None)
-			for bookId in gospelBookNameMap.keys():
+			# We need to get the list of books that are allowed for the video fileset (Gospels and Apostolic History)
+			booksAllowed = self.languageReader.getGospelsAndApostolicHistoryBooks()
+			for bookId in booksAllowed:
 				zipFile = zipFiles.get(bookId)
 				if zipFile != None:
 					# Check if the zip file has a valid path E.g. video/{BibleId}/{FilesetId}/{Zipfile}.zip
@@ -377,3 +378,4 @@ if (__name__ == '__main__'):
 # time python3 load/DBPLoadController.py test s3://etl-development-input/ "Covenant_Aceh SD_S2ACE_COV"
 
 # time python3 load/DBPLoadController.py test s3://etl-development-input/ "SPNBDAP2DV"
+# time python3 load/DBPLoadController.py test s3://etl-development-input/ "FANBSGP2DV"
