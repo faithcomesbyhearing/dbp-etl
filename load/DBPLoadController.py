@@ -154,15 +154,6 @@ class DBPLoadController:
 		(languageRecord, _) = self.languageReader.getLanguageRecordLoose(inputFileset.typeCode, inputFileset.bibleId, inputFileset.filesetId)
 		stocknumber = languageRecord.StockNumberByFilesetId(inputFileset.filesetId)
 
-		# possible statuses are: {0: Video, 1: Audio}
-		mode = 0 if inputFileset.typeCode == "video" else 1
-
-		licensor = languageRecord.LicensorList()[0] if languageRecord.LicensorList() != None else ""
-		if len(licensor) >= 3:
-			(_, licensorName, _) = licensor
-		else:
-			licensorName = ""
-
 		productCodes = {}
 		# Synchronize Monday product codes for video filesets
 		if inputFileset.typeCode == "video":
@@ -182,13 +173,7 @@ class DBPLoadController:
 					productCode = languageRecord.CalculateProductCode(inputFileset.filesetId, inputFileset.typeCode, bookId)
 					productCodes[productCode] = {
 						ProductCodeColumns.StockNumber: stocknumber,
-						ProductCodeColumns.Language: languageRecord.LangName().strip() if languageRecord.LangName() != None else "",
 						ProductCodeColumns.BiblebrainLink: biblebrainLink,
-						ProductCodeColumns.Licensor: licensorName,
-						ProductCodeColumns.CoLicensor: languageRecord.CoLicensor().strip() if languageRecord.CoLicensor() != None else "",
-						ProductCodeColumns.Mode: mode,
-						ProductCodeColumns.Version: languageRecord.Version(),
-						ProductCodeColumns.LanguageCountry: languageRecord.Country(),
 					}
 		# Synchronize Monday product codes for audio filesets
 		elif inputFileset.typeCode == "audio" and inputFileset.isDerivedFileset() is False:
@@ -205,13 +190,7 @@ class DBPLoadController:
 				productCode = languageRecord.CalculateProductCode(inputFileset.filesetId, inputFileset.typeCode, None)
 				productCodes[productCode] = {
 					ProductCodeColumns.StockNumber: stocknumber,
-					ProductCodeColumns.Language: languageRecord.LangName().strip() if languageRecord.LangName() != None else "",
 					ProductCodeColumns.BiblebrainLink: biblebrainLink,
-					ProductCodeColumns.Licensor: licensorName,
-					ProductCodeColumns.CoLicensor: languageRecord.CoLicensor().strip() if languageRecord.CoLicensor() != None else "",
-					ProductCodeColumns.Mode: mode,
-					ProductCodeColumns.Version: languageRecord.Version(),
-					ProductCodeColumns.LanguageCountry: languageRecord.Country(),
 				}
 
 		if productCodes != {}:
