@@ -4,7 +4,7 @@ from MondayHTTP import HTTPService  # Assuming HttpService is defined in HttpSer
 from typing import Dict
 
 class ProductCodeColumns:
-    StockNumber = "Stock Number"
+    StockNumber = "BB Stock Number"
     FCBHLanguageID = "FCBH Language ID"
     BiblebrainLink = "Biblebrain Link"
     Language = "Language"
