@@ -67,46 +67,55 @@ class UpdateDBPBibleFilesSecondary:
 			logger.message(Log.INFO, f"Creating Zip for {inp.filesetId} and creating temp credentials")
 			print(f"Creating Zip for {inp.filesetId} and creating temp credentials key: {self.config.s3_zipper_user_key}")
 
-			for bookId in booksAllowed:
-				files = inp.videoFileNamesByBook(bookId)
-				if files:
-					logger.message(
-						Log.INFO,
-						f"Creating Zip for {bookId} with {len(files)} mp4 files in bucket {self.config.s3_vid_bucket}"
-					)
+			def create_zip_for_fileset(book_id, files):
+				if not files:
+					return
 
-					# Construct full S3 keys for each file, updating .mp4 filenames to include '_web'
-					# We can assume that the transcoder has already created the _web.mp4 files
-					# and they are in the same bucket as the original files.
-					# Example: "s3://bucket/prefix/file.mp4" becomes "s3://bucket/prefix/file_web.mp4"
-					completeFiles = [
-						f"{self.config.s3_vid_bucket}/{inp.filesetPrefix}/{f[:-4] + '_web.mp4' if f.endswith('.mp4') else f}"
-						for f in files
-					]
+				logger.message(
+					Log.INFO,
+					f"Creating Zip for {book_id} with {len(files)} mp4 files in bucket {self.config.s3_vid_bucket}"
+				)
 
-					# Validate that each S3 key exists in the video bucket.
-					# If the key does not exist, log a warning. However, the zip file creation should
-					# not fail if a file is missing and it should still proceed to create the zip file
-					# with the available files.
-					for s3Key in completeFiles:
-						# Remove the bucket portion from the key (expected format: "bucket/prefix/file")
-						parts = s3Key.split('/', 1)
-						key = parts[1] if len(parts) > 1 else s3Key
-						s3KeyExists, _ = s3.get_key_info(self.config.s3_vid_bucket, key)
-						if not s3KeyExists:
-							print(f"\nWARN: Creating Zip Video File - Missing s3 key: {key}")
+				# Construct full S3 keys for each file, updating .mp4 filenames to include '_web'
+				# We can assume that the transcoder has already created the _web.mp4 files
+				# and they are in the same bucket as the original files.
+				# Example: "s3://bucket/prefix/file.mp4" becomes "s3://bucket/prefix/file_web.mp4"
+				completeFiles = [
+					f"{self.config.s3_vid_bucket}/{inp.filesetPrefix}/{f[:-4] + '_web.mp4' if f.endswith('.mp4') else f}"
+					for f in files
+				]
 
-					try:
-						zipFilename = f"{inp.filesetPrefix}/{inp.filesetId}_{bookId}.zip"
-						result = zipperService.zip_files(self.config.s3_vid_bucket, completeFiles, zipFilename)
-						if result.get("State") != "SUCCESS":
-							logger.message(Log.EROR, f"Failure creating Zip: {result}")
-						else:
-							inp.addInputFile(zipFilename, 0)
-							print(f"Zip created: {zipFilename}\n")
-					except Exception as e:
-						logger.message(Log.EROR, f"Error creating Zip: {e}")
+				# Validate that each S3 key exists in the video bucket.
+				# If the key does not exist, log a warning. However, the zip file creation should
+				# not fail if a file is missing and it should still proceed to create the zip file
+				# with the available files.
+				for s3Key in completeFiles:
+					key = s3Key.split('/', 1)[1]
+					exists, _ = s3.get_key_info(self.config.s3_vid_bucket, key)
+					if not exists:
+						print(f"\nWARN: Creating Zip Video File - Missing s3 key: {key}")
 
+				try:
+					zipFilename = f"{inp.filesetPrefix}/{inp.filesetId}_{book_id}.zip"
+					result = zipperService.zip_files(self.config.s3_vid_bucket, completeFiles, zipFilename)
+					if result.get("State") != "SUCCESS":
+						logger.message(Log.EROR, f"Failure creating Zip: {result}")
+					else:
+						inp.addInputFile(zipFilename, 0)
+						print(f"Zip created: {zipFilename}\n")
+				except Exception as e:
+					logger.message(Log.EROR, f"Error creating Zip: {e}")
+
+			if inputFileset.hasGospelAndActFilmsVideo(booksAllowed):
+				# Create a zip file for each book in the allowed list
+				# The zip file will contain the _web.mp4 files for each book.
+				for bookId in booksAllowed:
+					files = inp.videoFileNamesByBook(bookId)
+					create_zip_for_fileset(bookId, files)
+			else:
+				cov_book_id = self.languageReader.getCovenantBookId()
+				files = inputFileset.videoCovenantFileNames()
+				create_zip_for_fileset(cov_book_id, files)
 
 	def getZipInternalDir(self, damId, languageRecord):
 		langName = languageRecord.LangName()
@@ -143,7 +152,7 @@ class UpdateDBPBibleFilesSecondary:
 		if type_code == "video":
 			zip_files_map = input_fileset.zipFilesIndexedByBookId()
 			# Fetch just the Gospel book IDs
-			gospel_book_name_map = self.db.selectMap("SELECT id, notes FROM books where book_group IN ('Gospels', 'Apostolic History')", None)
+			gospel_book_name_map = self.languageReader.getGospelsAndApostolicHistoryBooks()
 			# Filter your zip_files_map to only those keys in gospel_book_ids
 			zip_files_by_book_id = [
 				zip_file
@@ -152,6 +161,11 @@ class UpdateDBPBibleFilesSecondary:
 			]
 			if zip_files_by_book_id:
 				file_type_map['zip'] = zip_files_by_book_id
+
+			# If the zip file is a covenant file, add it to the list
+			if input_fileset.zipFile() and self.languageReader.getCovenantBookId() in input_fileset.zipFile().only_file_name():
+				zip_files_by_covenant_id = input_fileset.zipFile()
+				file_type_map['zip'] = [zip_files_by_covenant_id]
 
 		if not file_type_map:
 			return
