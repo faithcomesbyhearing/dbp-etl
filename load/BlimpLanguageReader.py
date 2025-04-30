@@ -81,3 +81,6 @@ class BlimpLanguageReader (LanguageReaderInterface):
     # Get the list of books for the Gospels and Apostolic History group
     def getGospelsAndApostolicHistoryBooks(self):
        return self.service.getGospelsAndApostolicHistoryMap()
+    # Get the list of books for the Covenant group
+    def getCovenantBookId(self):
+        return "COV"

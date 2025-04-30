@@ -151,50 +151,44 @@ class DBPLoadController:
 
 	def synchronizeMonday(self, inputFileset):
 		mondayService = MondayProductCodeBoard(self.config)
-		(languageRecord, _) = self.languageReader.getLanguageRecordLoose(inputFileset.typeCode, inputFileset.bibleId, inputFileset.filesetId)
-		stocknumber = languageRecord.StockNumberByFilesetId(inputFileset.filesetId)
+		languageRecord, _ = self.languageReader.getLanguageRecordLoose(
+			inputFileset.typeCode, inputFileset.bibleId, inputFileset.filesetId
+		)
+		stock_number = languageRecord.StockNumberByFilesetId(inputFileset.filesetId)
 
-		productCodes = {}
-		# Synchronize Monday product codes for video filesets
-		if inputFileset.typeCode == "video":
-			zipFiles = inputFileset.zipFilesIndexedByBookId()
-			# We need to get the list of books that are allowed for the video fileset (Gospels and Apostolic History)
-			booksAllowed = self.languageReader.getGospelsAndApostolicHistoryBooks()
-			for bookId in booksAllowed:
-				zipFile = zipFiles.get(bookId)
-				if zipFile != None:
-					# Check if the zip file has a valid path E.g. video/{BibleId}/{FilesetId}/{Zipfile}.zip
-					if zipFile.hasValidFilesetPath(inputFileset.typeCode, inputFileset.bibleId, inputFileset.filesetId) is False:
-						Log.getLogger(inputFileset.filesetId).message(Log.WARN, "BiblebrainLink does not have a correct path: %s" % zipFile.name)
-						continue
+		product_codes = {}
 
-					# The zipFile.name is the path to the zip file with the pattern video/{BibleId}/{FilesetId}/{Zipfile}.zip
-					biblebrainLink = self.config.cdn_partner_base + "/" + zipFile.name
-					productCode = languageRecord.CalculateProductCode(inputFileset.filesetId, inputFileset.typeCode, bookId)
-					productCodes[productCode] = {
-						ProductCodeColumns.StockNumber: stocknumber,
-						ProductCodeColumns.BiblebrainLink: biblebrainLink,
-					}
-		# Synchronize Monday product codes for audio filesets
-		elif inputFileset.typeCode == "audio" and inputFileset.isDerivedFileset() is False:
-			zipFile = inputFileset.zipFile()
-
-			if zipFile is not None:
-				# Check if the zip file has a valid path E.g. video/{BibleId}/{FilesetId}/{Zipfile}.zip
-				if zipFile.hasValidFilesetPath(inputFileset.typeCode, inputFileset.bibleId, inputFileset.filesetId) is False:
-					Log.getLogger(inputFileset.filesetId).message(Log.WARN, "BiblebrainLink does not have a correct path: %s" % zipFile.name)
-					return
-
-				# The zipFile.name is the path to the zip file with the pattern audio/{BibleId}/{FilesetId}/{Zipfile}.zip
-				biblebrainLink = self.config.cdn_partner_base + "/" + zipFile.name
-				productCode = languageRecord.CalculateProductCode(inputFileset.filesetId, inputFileset.typeCode, None)
-				productCodes[productCode] = {
-					ProductCodeColumns.StockNumber: stocknumber,
-					ProductCodeColumns.BiblebrainLink: biblebrainLink,
+		def add_product_code(zip_file, book_id=None):
+			if zip_file and zip_file.hasValidFilesetPath(inputFileset.typeCode, inputFileset.bibleId, inputFileset.filesetId):
+				biblebrain_link = f"{self.config.cdn_partner_base}/{zip_file.name}"
+				product_code = languageRecord.CalculateProductCode(inputFileset.filesetId, inputFileset.typeCode, book_id)
+				product_codes[product_code] = {
+					ProductCodeColumns.StockNumber: stock_number,
+					ProductCodeColumns.BiblebrainLink: biblebrain_link,
 				}
+			else:
+				Log.getLogger(inputFileset.filesetId).message(
+					Log.WARN, f"BiblebrainLink does not have a correct path: {zip_file.name if zip_file else 'No zip file found'}"
+				)
 
-		if productCodes != {}:
-			mondayService.synchronize(productCodes)
+		if inputFileset.typeCode == "video":
+			books_allowed = self.languageReader.getGospelsAndApostolicHistoryBooks()
+			if inputFileset.hasGospelAndActFilmsVideo(books_allowed):
+				zip_files = inputFileset.zipFilesIndexedByBookId()
+				for book_id in books_allowed:
+					add_product_code(zip_files.get(book_id), book_id)
+			else:
+				covenant_book_id = self.languageReader.getCovenantBookId()
+				zip_file = inputFileset.zipFile()
+				if zip_file and covenant_book_id in zip_file.only_file_name():
+					add_product_code(zip_file, covenant_book_id)
+
+		elif inputFileset.typeCode == "audio" and not inputFileset.isDerivedFileset():
+			zip_file = inputFileset.zipFile()
+			add_product_code(zip_file)
+
+		if product_codes:
+			mondayService.synchronize(product_codes)
 			Log.getLogger(inputFileset.filesetId).message(Log.INFO, "Monday product codes synchronized")
 
 if (__name__ == '__main__'):

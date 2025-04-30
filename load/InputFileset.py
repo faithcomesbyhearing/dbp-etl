@@ -340,6 +340,19 @@ class InputFileset:
 				results.append(file.name)
 		return results
 
+	def hasGospelAndActFilmsVideo(self, books_allowed):
+		for book_id in books_allowed:
+			if self.videoFileNamesByBook(book_id):
+				return True
+		return False
+
+	def videoCovenantFileNames(self):
+		results = []
+		for file in self.files:
+			if "covenant" in file.name.lower() and file.name.endswith(".mp4"):
+				results.append(file.name)
+		return results
+
 	def audioFileNames(self):
 		results = []
 		for file in self.files:
