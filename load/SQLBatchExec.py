@@ -45,8 +45,7 @@ class SQLBatchExec:
 			names = attrNames + pkeyNames
 			valsubs = ["'%s'"] * len(names)
 			# temporary -- remove the error checks. This should only be used in exceptional circumstances
-			# sql = "INSERT INTO %s (%s) VALUES (%s);" % (tableName, ", ".join(names), ", ".join(valsubs))
-			sql = "INSERT  INTO %s (%s) VALUES (%s);" % (tableName, ", ".join(names), ", ".join(valsubs))
+			sql = "INSERT INTO %s (%s) VALUES (%s);" % (tableName, ", ".join(names), ", ".join(valsubs))
 			for value in values:
 				stmt = sql % value
 				stmt = self.unquoteValues(stmt)
