@@ -118,9 +118,9 @@ class S3ZipperService:
         # Replace empty string with "/" to explicitly denote the root directory.
         directories = {directory if directory else "/" for directory in directories}
 
-        # Build the file mapper content mapping each unique directory to "/".
+        # Build the file mapper content mapping each unique directory to "" (empty).
         file_mapper_content = {
-            "paths": [{"key": directory, "name": "/"} for directory in sorted(directories)]
+            "paths": [{"key": directory, "name": ""} for directory in sorted(directories)]
         }
         json_data = json.dumps(file_mapper_content)
 
