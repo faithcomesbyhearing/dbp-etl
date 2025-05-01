@@ -198,10 +198,10 @@ class UpdateDBPFilesetTables:
 
 		# 3) Apply in batches
 		table = "bible_files"
-		pkeys = ("hash_id", "book_id", "chapter_start", "verse_start")
-		attrs = ("chapter_end", "verse_end", "file_name", "file_size", "duration", "verse_sequence")
+		pkeys = ("hash_id", "book_id", "chapter_start", "verse_start", "file_name")
+		attrs = ("chapter_end", "verse_end", "file_size", "duration", "verse_sequence")
 
-		self.dbOut.insert(table, pkeys, attrs, inserts, keyPosition=2)
+		self.dbOut.insert(table, pkeys, attrs, inserts, keyPosition=9)
 		self.dbOut.updateCol(table, pkeys, updates)
 		self.dbOut.delete(table, pkeys, deletes)
 
@@ -229,23 +229,23 @@ class UpdateDBPFilesetTables:
 				key = (row["book_id"], chapterStart, verseStart)
 				dbpValue = dbpMap.get(key)
 				if dbpValue == None:
-					insertRows.append((chapterEnd, verseEnd, row["file_name"], fileSize, duration, verseSequence,
-						hashId, row["book_id"], chapterStart, verseStart))
+					insertRows.append((chapterEnd, verseEnd, fileSize, duration, verseSequence,
+						hashId, row["book_id"], chapterStart, verseStart, row["file_name"]))
 				else:
 					del dbpMap[key]
 					(dbpChapterEnd, dbpVerseEnd, dbpFileName, dbpFileSize, dbpDuration) = dbpValue
 
 					# primary keys: "hash_id", "book_id", "chapter_start", "verse_start"
 					if chapterEnd != dbpChapterEnd:
-						updateRows.append(("chapter_end", chapterEnd, dbpChapterEnd, hashId, row["book_id"], chapterStart, verseStart))
+						updateRows.append(("chapter_end", chapterEnd, dbpChapterEnd, hashId, row["book_id"], chapterStart, verseStart, dbpFileName))
 					if verseEnd != dbpVerseEnd:
-						updateRows.append(("verse_end", verseEnd, dbpVerseEnd, hashId, row["book_id"], chapterStart, verseStart))
+						updateRows.append(("verse_end", verseEnd, dbpVerseEnd, hashId, row["book_id"], chapterStart, verseStart, dbpFileName))
 					if row["file_name"] != dbpFileName:
-						updateRows.append(("file_name", row["file_name"], dbpFileName, hashId, row["book_id"], chapterStart, verseStart))
+						updateRows.append(("file_name", row["file_name"], dbpFileName, hashId, row["book_id"], chapterStart, verseStart, dbpFileName))
 					if fileSize != dbpFileSize:
-						updateRows.append(("file_size", fileSize, dbpFileSize, hashId, row["book_id"], chapterStart, verseStart))
+						updateRows.append(("file_size", fileSize, dbpFileSize, hashId, row["book_id"], chapterStart, verseStart, dbpFileName))
 					if duration != dbpDuration:
-						updateRows.append(("duration", duration, dbpDuration, hashId, row["book_id"], chapterStart, verseStart))
+						updateRows.append(("duration", duration, dbpDuration, hashId, row["book_id"], chapterStart, verseStart, dbpFileName))
 
 		return (insertRows, updateRows, [])
 
@@ -276,22 +276,22 @@ class UpdateDBPFilesetTables:
 				key = (row["book_id"], chapterStart, verseStart)
 				dbpValue = dbpMap.get(key)
 				if dbpValue == None:
-					insertRows.append((chapterEnd, verseEnd, fileName, fileSize, duration, verseSequence,
-						hashId, row["book_id"], chapterStart, verseStart))
+					insertRows.append((chapterEnd, verseEnd, fileSize, duration, verseSequence,
+						hashId, row["book_id"], chapterStart, verseStart, fileName))
 				else:
 					del dbpMap[key]
 					(dbpChapterEnd, dbpVerseEnd, dbpFileName, dbpFileSize, dbpDuration) = dbpValue
 					# primary keys: "hash_id", "book_id", "chapter_start", "verse_start"
 					if chapterEnd != dbpChapterEnd:
-						updateRows.append(("chapter_end", chapterEnd, dbpChapterEnd, hashId, row["book_id"], chapterStart, verseStart))
+						updateRows.append(("chapter_end", chapterEnd, dbpChapterEnd, hashId, row["book_id"], chapterStart, verseStart, dbpFileName))
 					if verseEnd != dbpVerseEnd:
-						updateRows.append(("verse_end", verseEnd, dbpVerseEnd, hashId, row["book_id"], chapterStart, verseStart))
+						updateRows.append(("verse_end", verseEnd, dbpVerseEnd, hashId, row["book_id"], chapterStart, verseStart, dbpFileName))
 					if fileName != dbpFileName:
-						updateRows.append(("file_name", fileName, dbpFileName, hashId, row["book_id"], chapterStart, verseStart))
+						updateRows.append(("file_name", fileName, dbpFileName, hashId, row["book_id"], chapterStart, verseStart, dbpFileName))
 					if fileSize != dbpFileSize:
-						updateRows.append(("file_size", fileSize, dbpFileSize, hashId, row["book_id"], chapterStart, verseStart))
+						updateRows.append(("file_size", fileSize, dbpFileSize, hashId, row["book_id"], chapterStart, verseStart, dbpFileName))
 					if duration != dbpDuration and duration != None and duration != "":
-						updateRows.append(("duration", duration, dbpDuration, hashId, row["book_id"], chapterStart, verseStart))
+						updateRows.append(("duration", duration, dbpDuration, hashId, row["book_id"], chapterStart, verseStart, dbpFileName))
 
 		return (insertRows, updateRows, [])
 
@@ -356,23 +356,23 @@ class UpdateDBPFilesetTables:
 
 					if not dbp:
 						inserts.append((
-							c_end, v_end, filename, variant_file_size, duration, v_seq,
-							hash_id, row["book_id"], c_start, v_start
+							c_end, v_end, variant_file_size, duration, v_seq,
+							hash_id, row["book_id"], c_start, v_start, filename
 						))
 					else:
 						dbp_c_end, dbp_v_end, dbp_filename, dbp_size, dpb_dur = dbp
 
 						# primary keys: "hash_id", "book_id", "chapter_start", "verse_start"
 						if c_end   != dbp_c_end:
-							updates.append(("chapter_end", c_end, dbp_c_end, hash_id, row["book_id"], c_start, v_start))
+							updates.append(("chapter_end", c_end, dbp_c_end, hash_id, row["book_id"], c_start, v_start, dbp_filename))
 						if v_end   != dbp_v_end:
-							updates.append(("verse_end", v_end, dbp_v_end, hash_id, row["book_id"], c_start, v_start))
+							updates.append(("verse_end", v_end, dbp_v_end, hash_id, row["book_id"], c_start, v_start, dbp_filename))
 						if filename != dbp_filename:
-							updates.append(("file_name", filename, dbp_filename, hash_id, row["book_id"], c_start, v_start))
+							updates.append(("file_name", filename, dbp_filename, hash_id, row["book_id"], c_start, v_start, dbp_filename))
 						if variant_file_size  != dbp_size:
-							updates.append(("file_size", variant_file_size, dbp_size, hash_id, row["book_id"], c_start, v_start))
+							updates.append(("file_size", variant_file_size, dbp_size, hash_id, row["book_id"], c_start, v_start, dbp_filename))
 						if duration != dpb_dur and duration != None and duration != "":
-							updates.append(("duration", duration, dpb_dur, hash_id, row["book_id"], c_start, v_start))
+							updates.append(("duration", duration, dpb_dur, hash_id, row["book_id"], c_start, v_start, dbp_filename))
 
 				# 4) Anything left in dbp_map wasn’t seen → delete
 				deletes = [
