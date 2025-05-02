@@ -375,11 +375,12 @@ class UpdateDBPFilesetTables:
 							updates.append(("duration", duration, dpb_dur, hash_id, row["book_id"], c_start, v_start, dbp_filename))
 
 				# 4) Anything left in dbp_map wasn’t seen → delete
-				deletes = [
-					(hash_id, book_id, c_start, v_start)
-					for (book_id, c_start, v_start, _) in dbp_map
-					if (book_id, c_start, v_start, _) not in seen_keys
-				]
+				deletes = []
+				for (book_id, chapter_start, verse_start, ext), value in dbp_map.items():
+					if (book_id, chapter_start, verse_start, ext) not in seen_keys:
+						# get the file name from the dbp_map
+						(_, _, dbp_file_name, _, _) = value
+						deletes.append((hash_id, book_id, chapter_start, verse_start, dbp_file_name))
 
 		return inserts, updates, deletes
 
