@@ -1,5 +1,6 @@
 from SQLUtility import SQLUtility
 from Config import Config
+from typing import List
 
 class BlimpLanguageService:
     def __init__(self):
@@ -106,6 +107,25 @@ class BlimpLanguageService:
             raise ValueError("No valid data found for Gospels and Apostolic History mapping.")
 
         return validated_result
+
+    def get_files_by_fileset_id(self, fileset_id: str) -> List[tuple[int, str]]:
+        """
+        Return a list of (file_id, file_name) for all files belonging to the given fileset.
+        """
+        sql = SQLUtility(self.config)
+        query = """
+            SELECT
+                bfl.id,
+                bfl.file_name
+            FROM bible_filesets AS bf
+            JOIN bible_files AS bfl
+            ON bf.hash_id = bfl.hash_id
+            WHERE bf.id = %s
+        """
+
+        rows = sql.select(query, (fileset_id,))
+
+        return [(file_id, file_name) for file_id, file_name in rows]
 
 # BWF note: this is only called for text processing
 def getMediaByIdAndFormat(bibleId, format):
