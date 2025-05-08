@@ -43,7 +43,9 @@ class UpdateDBPBibleFilesSecondary:
 
 		# Handle audio filesets related to the MP3 fileset and the process to generate the zip file
 		if inp.typeCode == "audio" and inp.isMP3Fileset() and len(inp.filesetId) == 10:
-			files = inp.audioFileNames()
+			# We need to get the list of files that are stored in the database
+			# and are associated with the filesetId plus the files that are being loaded
+			files = self.languageReader.list_existing_and_loaded_files(inp)
 			completeFiles = [
 				f"{self.config.s3_bucket}/{inp.filesetPrefix}/{f}"
 				for f in files
