@@ -398,12 +398,14 @@ class UpdateDBPFilesetTables:
 
 		book_id = row["book_id"]
 		if row["chapter_start"] == "end":
-			chap_start, _, _ = self.convertChapterStart(book_id)
+			chap_start, verse_start_end_chap, _ = self.convertChapterStart(book_id)
 			# we need to assign a chapter and verse greater than the current maximum by book
-			# to make sure the end of book is greater than the last chapter and verse
-			chap_start += 1
+			# we will set the chapter_start to the last chapter of the book
+			# row["verse_sequence"] will be the last verse with content which is being loaded
+			# however, we need to set the verse_start to the last verse of the book + 1
 			verse_start = row["verse_start"] or "0"
 			verse_seq   = to_int(row["verse_sequence"], 0)
+			verse_seq = max(verse_seq, to_int(verse_start_end_chap, 0))
 			if verse_seq:
 				verse_start = str(verse_seq)
 			chap_end = chap_start
