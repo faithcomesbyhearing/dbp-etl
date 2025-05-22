@@ -188,8 +188,18 @@ class DBPLoadController:
 			add_product_code(zip_file)
 
 		if product_codes:
-			mondayService.synchronize(product_codes)
-			Log.getLogger(inputFileset.filesetId).message(Log.INFO, "Monday product codes synchronized")
+			RunStatus.statusMap[RunStatus.MONDAY] = RunStatus.NOT_DONE
+
+			try:
+				mondayService.synchronize(product_codes)
+				Log.getLogger(inputFileset.filesetId).message(Log.INFO, "Monday product codes synchronized")
+				RunStatus.set(RunStatus.MONDAY, True)
+			except Exception as e:
+				Log.getLogger(inputFileset.filesetId).message(
+					Log.EROR, f"Error synchronizing product codes: {', '.join(product_codes.keys())} error: {e}"
+				)
+				RunStatus.set(RunStatus.MONDAY, False)
+
 
 if (__name__ == '__main__'):
 	print("*** DBPLoadController *** ")
@@ -211,6 +221,7 @@ if (__name__ == '__main__'):
 		hasError = False
 		for inp in InputFileset.upload:
 			logger = Log.getLogger(inp.filesetId)
+
 			if logger.errorCount() > 0:
 				print("")
 				print("DBPLoadController:validate. fileset: %s has errors" %(inp.filesetId))

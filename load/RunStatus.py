@@ -13,6 +13,7 @@ from Log import *
 
 
 class RunStatus:
+	MONDAY = "UpdateMonday"
 	BIBLE = "BIBLE"
 	LPTS = "LPTS"
 	NOT_DONE = "not done"
