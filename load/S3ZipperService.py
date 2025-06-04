@@ -3,7 +3,8 @@ import time
 import boto3
 import json
 import requests
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
+from RunStatus import RunStatus
 
 # Global variable for the s3zipper base URL
 S3ZIPPER_BASE_URL = "https://api.s3zipper.com"
@@ -143,6 +144,20 @@ class S3ZipperService:
         # print(f"Uploaded fileMapper.json to s3://{bucket_name}/{file_mapper_key}")
         return file_mapper_key
 
+    def _retryable_post(self, url, payload, headers, timeout=240, retries=2):
+        for attempt in range(retries):
+            try:
+                resp = requests.post(url, json=payload, headers=headers, timeout=timeout)
+                resp.raise_for_status()
+                return resp
+            except requests.Timeout:
+                print(f"Request timed out (attempt {attempt + 1} of {retries}). Retrying...")
+                if attempt == retries - 1:
+                    raise RuntimeError("Request failed after multiple timeouts.")
+                time.sleep(10)  # Wait 10 seconds before retrying
+            except requests.RequestException as e:
+                raise RuntimeError(f"Request failed: {e}")
+
     def delete_file_mapper(self, bucket_name, file_mapper_key):
         """
         Deletes the fileMapper.json from the S3 bucket to avoid conflicts.
@@ -183,19 +198,21 @@ class S3ZipperService:
             "fileMapper": f"{bucket_name}/{file_mapper_key}",
         }
 
+        RunStatus.statusMap[RunStatus.ZIP_STARTED] = RunStatus.NOT_DONE
         print("Starting zip process with payload:",
               "bucket:", bucket_name,
               "file_paths:", file_paths,
               "zip_output_prefix:", zip_output_prefix,
               "fileMapper:", f"{bucket_name}/{file_mapper_key}")
         try:
-            resp = requests.post(start_url, json=payload, headers=headers, timeout=120)
-            resp.raise_for_status()
+            resp = self._retryable_post(start_url, payload, headers)
         except requests.RequestException as e:
             # Ensure the fileMapper is removed if zipstart fails.
             self.delete_file_mapper(bucket_name, file_mapper_key)
+            RunStatus.set(RunStatus.ZIP_STARTED, False)
             raise RuntimeError(f"zipstart request failed: {e}")
 
+        RunStatus.set(RunStatus.ZIP_STARTED, True)
         # The response is something like:
         # {
         #   "message": "STARTED",
@@ -204,7 +221,7 @@ class S3ZipperService:
         #       { "streams3v2": "zipper_s3_65798267-3e04-43f3-b4bd-74c63585c119" }
         #   ]
         # }
-        start_data = resp.json()
+        start_data = resp.json() if resp is not None else {}
         task_uuid_list = start_data.get("taskUUID", [])
         if not task_uuid_list or len(task_uuid_list) == 0:
             print("zipstart response:", start_data)
@@ -275,12 +292,14 @@ class S3ZipperService:
                             {"email": ""}
                         ]
                     }
-                    resp = requests.post(zip_state_url, json=payload, headers=headers, timeout=10)
-                    resp.raise_for_status()
+                    resp = self._retryable_post(zip_state_url, payload, headers)
+                except requests.Timeout:
+                    print("Request timed out. Retrying...")
+                    break  # Exit inner loop and trigger a retry
                 except requests.RequestException as e:
                     raise RuntimeError(f"zipstate request failed: {e}")
 
-                state_data = resp.json()
+                state_data = resp.json() if resp is not None else {}
                 state = state_data.get("State")  # e.g. "SUCCESS", "FAILURE", etc.
                 # Print progress every minute instead of every poll interval
                 current_time = time.time()
@@ -321,6 +340,7 @@ class S3ZipperService:
 if __name__ == "__main__":
     from Config import Config
     from AWSSession import AWSSession
+    from RunStatus import RunStatus
 
     config = Config()
     AWSSession.shared() # ensure AWSSession init
@@ -346,3 +366,5 @@ if __name__ == "__main__":
         print("Final Zip State:", result)
     except Exception as e:
         print("Error:", e)
+
+    RunStatus.exit()
