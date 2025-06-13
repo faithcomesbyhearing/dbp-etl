@@ -9,7 +9,6 @@
 # 
 
 import sys
-import io
 import os
 from operator import attrgetter
 import csv
@@ -17,7 +16,6 @@ from datetime import datetime
 from Config import *
 from Log import *
 from FindDuplicateFilesets import *
-from DBPRunFilesS3 import *
 
 class FilenameReducer:
 
@@ -126,7 +124,7 @@ class FilenameReducer:
 		"""
 		Processes the given list of file objects and writes a CSV output to the designated directory based on listType.
 		It calculates the maximum chapter and verse per book to set verse start numbers for "end" chapter files, sorts the file list,
-		and then writes the CSV file before uploading it via DBPRunFilesS3.
+		and then writes the CSV file.
 
 		Parameters:
 		- listType: A string indicating the type ("accepted", "duplicate", or "quarantine").
@@ -182,7 +180,7 @@ class FilenameReducer:
 					f.setVerseStartNum(verseStartNum)
 					f.setVerseStart(str(verseStartNum))
 
-		filename = path + os.path.basename(self.csvFilename)
+		filename = os.path.join(path, os.path.basename(self.csvFilename))
 		print("FilenameReducer. Create file: ", filename)
 		with open(filename, 'w', newline='\n') as csvfile:
 			writer = csv.writer(csvfile, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
@@ -196,8 +194,6 @@ class FilenameReducer:
 					file.file, file.bookId, file.name, file.chapter, file.chapterEnd, 
 					file.verseStart, file.verseStartNum, file.verseEnd, file.datetime, file.length,
 					"; ".join(file.errors)))
-		DBPRunFilesS3.uploadParsedCSV(self.config, filename)
-
 
 	def writeErrors(self, logger):
 		logger.fileErrors(self.fileList)
