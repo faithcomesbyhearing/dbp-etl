@@ -23,6 +23,7 @@ from UpdateDBPLPTSTable import *
 from UpdateDBPVideoTables import *
 from UpdateDBPBibleFilesSecondary import *
 from MondayProductCodeBoard import MondayProductCodeBoard, ProductCodeColumns
+from DBPRunFilesS3 import DBPRunFilesS3
 
 
 class DBPLoadController:
@@ -53,13 +54,15 @@ class DBPLoadController:
 		validate.process(inputFilesets)
 		for inp in inputFilesets:
 			print("DBPLoadController:validate. fileset: %s, csvFilename: %s " %(inp.filesetId, inp.csvFilename))
-			if os.path.isfile(inp.csvFilename):
+			if inp.csvFilename and os.path.isfile(inp.csvFilename):
 				print("DBPLoadController:validate. fileset: %s added to upload list" %(inp.filesetId))
 				InputFileset.upload.append(inp)
+				# Upload the parsed CSV file to S3 if it exists
+				# The CSV file is created by the Validate class when the process method is called and it is successful
+				DBPRunFilesS3.uploadParsedCSV(self.config, inp.csvFilename)
 			else:
-				print("DBPLoadController:validate. fileset: %s not added added to upload list" %(inp.filesetId))
+				print("DBPLoadController:validate. fileset: %s not added to upload list" %(inp.filesetId))
 				RunStatus.set(inp.filesetId, False)
-		Log.writeLog(self.config)
 
 	def updateBibles(self):
 		# this should only be called when uploading an xml file, meaning (a) we are not uploading content and (b) Blimp is not the system of record
@@ -228,7 +231,7 @@ if (__name__ == '__main__'):
 				print("")
 				RunStatus.set(inp.filesetId, False)
 				hasError = True
-		if not hasError:
+		if not hasError and len(InputFileset.upload) > 0:
 			ctrl.upload(InputFileset.upload)
 			ctrl.updateFilesetTables(InputFileset.database)
 			for inputFileset in InputFileset.complete:
@@ -363,3 +366,5 @@ if (__name__ == '__main__'):
 
 # time python3 load/DBPLoadController.py test s3://etl-development-input/ "SPNBDAP2DV"
 # time python3 load/DBPLoadController.py test s3://etl-development-input/ "FANBSGP2DV"
+
+# time python3 load/DBPLoadController.py test s3://dbp-etl-upload-newdata-fiu49s0cnup1yr0q/ "2025-04-28-20-53-43/YAOGOIP1DA"

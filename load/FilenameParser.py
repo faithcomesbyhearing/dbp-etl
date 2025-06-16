@@ -476,6 +476,13 @@ class FilenameParser:
 
 			FilenameReducer.openAcceptErrorSet(self.config)
 			reducer = FilenameReducer(self.config, prefix, inp.csvFilename, files, extraChapters, missingChapters, missingVerses)
+			# Does not allow continue if there are errors related to the fileset parsing
+			# It will write the errors to the error file including the FilenameReducer errors
+			if numErrors > 0:
+				reducer.writeErrors(logger)
+				print("")
+				return False
+
 			reducer.process(logger)
 		print("")
 
