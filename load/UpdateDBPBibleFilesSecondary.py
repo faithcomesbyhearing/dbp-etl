@@ -2,13 +2,14 @@
 
 import sys
 import boto3
-from Log import *
-from Config import *
-from SQLUtility import *
-from SQLBatchExec import *
+from Log import Log
+from Config import Config
+from SQLUtility import SQLUtility
+from SQLBatchExec import SQLBatchExec
 from AWSSession import AWSSession
 from S3Utility import S3Utility
 from S3ZipperService import S3ZipperService
+from BibleBrainService import BibleBrainService, Package
 
 class UpdateDBPBibleFilesSecondary:
 
@@ -18,6 +19,17 @@ class UpdateDBPBibleFilesSecondary:
 		self.db = db 
 		self.dbOut = dbOut
 		self.languageReader = languageReader
+
+		s3_client = AWSSession.shared().s3Client
+
+		self.zipper_service = S3ZipperService(
+			s3zipper_user_key=self.config.s3_zipper_user_key,
+			s3zipper_user_secret=self.config.s3_zipper_user_secret,
+			s3_client=s3_client,
+			region=self.config.s3_aws_region
+		)
+
+		self.biblebrain_service = BibleBrainService(s3_client=s3_client, base_url=self.config.biblebrain_services_base_url)
 
 
 	def createAllZipFiles(self, inputFilesetList):
@@ -29,15 +41,6 @@ class UpdateDBPBibleFilesSecondary:
 		inp = inputFileset
 		# Ensure AWS Session initialization
 		s3 = S3Utility(self.config)
-		session = boto3.Session(profile_name=self.config.s3_aws_profile)
-		s3Client = session.client('s3')
-
-		zipperService = S3ZipperService(
-			s3zipper_user_key=self.config.s3_zipper_user_key,
-			s3zipper_user_secret=self.config.s3_zipper_user_secret,
-			s3_client=s3Client,
-			region=self.config.s3_aws_region
-		)
 
 		logger = Log.getLogger(inp.filesetId)
 
@@ -46,19 +49,39 @@ class UpdateDBPBibleFilesSecondary:
 			# We need to get the list of files that are stored in the database
 			# and are associated with the filesetId plus the files that are being loaded
 			files = self.languageReader.list_existing_and_loaded_files(inp)
-			completeFiles = [
+			complete_files = [
 				f"{self.config.s3_bucket}/{inp.filesetPrefix}/{f}"
 				for f in files
 			]
 
+			if not complete_files:
+				print(f"No files found for fileset {inp.filesetId}. Skipping zip creation.")
+				return
+
 			try:
-				zipFilename = f"{inp.filesetPrefix}/{inp.filesetId}.zip"
-				result = zipperService.zip_files(self.config.s3_bucket, completeFiles, zipFilename)
+				# Attempt to fetch and upload the PDF for the filesetId
+				# This will raise RuntimeError if the product code is not found or if the upload fails
+				package_id = self._fetch_and_upload_pdf(
+					fileset_id=inp.filesetId,
+					bible_id=inp.bibleId,
+					type_code=inp.typeCode,
+					bucket=self.config.s3_bucket,
+					prefix=inp.filesetPrefix
+				)
+				complete_files.append(f"{self.config.s3_bucket}/{inp.filesetPrefix}/{package_id}.pdf")
+				print(f"Uploaded PDF for fileset {inp.filesetId} → {package_id}.pdf")
+			except RuntimeError as e:
+				print(f"PDF step skipped for {inp.filesetId}: {e}")
+
+			try:
+				# Attempt to create a zip file with the complete files
+				zip_filename = f"{inp.filesetPrefix}/{inp.filesetId}.zip"
+				result = self.zipper_service.zip_files(self.config.s3_bucket, complete_files, zip_filename)
 				if result.get("State") != "SUCCESS":
 					logger.message(Log.EROR, f"Failure creating Zip: {result}")
 				else:
-					inp.addInputFile(zipFilename, 0)
-					print(f"Zip created: {zipFilename}\n")
+					inp.addInputFile(zip_filename, 0)
+					print(f"Zip created: {zip_filename}\n")
 			except Exception as e:
 				logger.message(Log.EROR, f"Error creating Zip: {e}")
 
@@ -82,29 +105,44 @@ class UpdateDBPBibleFilesSecondary:
 				# We can assume that the transcoder has already created the _web.mp4 files
 				# and they are in the same bucket as the original files.
 				# Example: "s3://bucket/prefix/file.mp4" becomes "s3://bucket/prefix/file_web.mp4"
-				completeFiles = [
+				complete_files = [
 					f"{self.config.s3_vid_bucket}/{inp.filesetPrefix}/{f[:-4] + '_web.mp4' if f.endswith('.mp4') else f}"
 					for f in files
 				]
+
+				try:
+					# Attempt to fetch and upload the PDF for the filesetId
+					# This will raise RuntimeError if the product code is not found or if the upload fails
+					package_id = self._fetch_and_upload_pdf(
+						fileset_id=inp.filesetId,
+						bible_id=inp.bibleId,
+						type_code=inp.typeCode,
+						bucket=self.config.s3_bucket,
+						prefix=inp.filesetPrefix
+					)
+					complete_files.append(f"{self.config.s3_bucket}/{inp.filesetPrefix}/{package_id}.pdf")
+					print(f"Uploaded PDF for fileset {inp.filesetId} → {package_id}.pdf")
+				except RuntimeError as e:
+					print(f"PDF step skipped for {inp.filesetId}: {e}")
 
 				# Validate that each S3 key exists in the video bucket.
 				# If the key does not exist, log a warning. However, the zip file creation should
 				# not fail if a file is missing and it should still proceed to create the zip file
 				# with the available files.
-				for s3Key in completeFiles:
-					key = s3Key.split('/', 1)[1]
+				for s3key in complete_files:
+					key = s3key.split('/', 1)[1]
 					exists, _ = s3.get_key_info(self.config.s3_vid_bucket, key)
 					if not exists:
 						print(f"\nWARN: Creating Zip Video File - Missing s3 key: {key}")
 
 				try:
-					zipFilename = f"{inp.filesetPrefix}/{inp.filesetId}_{book_id}.zip"
-					result = zipperService.zip_files(self.config.s3_vid_bucket, completeFiles, zipFilename)
+					zip_filename = f"{inp.filesetPrefix}/{inp.filesetId}_{book_id}.zip"
+					result = self.zipper_service.zip_files(self.config.s3_vid_bucket, complete_files, zip_filename)
 					if result.get("State") != "SUCCESS":
 						logger.message(Log.EROR, f"Failure creating Zip: {result}")
 					else:
-						inp.addInputFile(zipFilename, 0)
-						print(f"Zip created: {zipFilename}\n")
+						inp.addInputFile(zip_filename, 0)
+						print(f"Zip created: {zip_filename}\n")
 				except Exception as e:
 					logger.message(Log.EROR, f"Error creating Zip: {e}")
 
@@ -118,6 +156,38 @@ class UpdateDBPBibleFilesSecondary:
 				cov_book_id = self.languageReader.getCovenantBookId()
 				files = inputFileset.videoCovenantFileNames()
 				create_zip_for_fileset(cov_book_id, files)
+
+
+	def _fetch_and_upload_pdf(self, fileset_id: str, bible_id: str, type_code: str, bucket: str, prefix: str) -> str:
+		"""
+		Calculates the product code, fetches the PDF, and uploads it to S3.
+		Returns the package ID (sans .pdf).
+		Raises RuntimeError on any failure.
+		"""
+		languageRecord, _ = self.languageReader.getLanguageRecordLoose(
+			type_code, bible_id, fileset_id
+		)
+		# We are going to assume that the stock number is the product code, however, this may not always be the case.
+		# It is possible that we need to use the product code instead of stock number in the future.
+		product_code = languageRecord.StockNumberByFilesetId(fileset_id)
+		if not product_code:
+			raise RuntimeError("No product code returned")
+
+		# Build S3 key
+		# For now, we will use a fixed package_id (copyright) for copyright PDFs
+		package_id = "copyright"
+		pdf_key = f"{prefix}/{package_id}.pdf"
+
+		# Fetch & upload
+		self.biblebrain_service.fetch_and_upload(
+			product_codes=[product_code],
+			mode=type_code.lower(),
+			format="pdf",
+			bucket_name=bucket,
+			key=pdf_key,
+			extra_args={"ACL": "bucket-owner-full-control"}
+		)
+		return package_id
 
 	def getZipInternalDir(self, damId, languageRecord):
 		langName = languageRecord.LangName()
