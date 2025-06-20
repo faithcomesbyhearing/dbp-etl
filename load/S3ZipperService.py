@@ -343,11 +343,7 @@ if __name__ == "__main__":
     from RunStatus import RunStatus
 
     config = Config()
-    AWSSession.shared() # ensure AWSSession init
-
-    session = boto3.Session(profile_name = config.s3_aws_profile)
-
-    s3_client = session.client('s3')
+    s3_client = AWSSession.shared().s3Client
 
     # Example usage:
     S3ZIPPER_KEY = "JjfXXXX"
