@@ -22,6 +22,7 @@ s3.vid_bucket = ${S3_VID_BUCKET}
 s3.artifacts_bucket = ${S3_ARTIFACTS_BUCKET}
 s3.zipper.user_key = ${S3_ZIPPER_USER_KEY}
 s3.zipper.user_secret = ${S3_ZIPPER_USER_SECRET}
+biblebrain.services.base_url = ${BIBLEBRAIN_SERVICES_BASE_URL}
 directory.upload_aws = /efs/${S3_KEY_PREFIX}/etl_uploader/upload_aws/
 directory.upload = /efs/${S3_KEY_PREFIX}/etl_uploader/upload/
 directory.database = /efs/${S3_KEY_PREFIX}/etl_uploader/database/

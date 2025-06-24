@@ -124,6 +124,7 @@ class Config:
 		self.data_missing_verses_allowed = self._getOptional("data.missing_verses_allowed")
 		self.s3_zipper_user_key = self._getOptional("s3.zipper.user_key")
 		self.s3_zipper_user_secret = self._getOptional("s3.zipper.user_secret")
+		self.biblebrain_services_base_url = self._getOptional("biblebrain.services.base_url")
 		self.cdn_partner_base = self._getOptional("cdn.partner_base")
 		self.monday_completed_product_code_api_key = self._getOptional("monday.completed_product_code.api_key")
 		self.monday_completed_product_code_board_id = self._getOptional("monday.completed_product_code.board_id")
