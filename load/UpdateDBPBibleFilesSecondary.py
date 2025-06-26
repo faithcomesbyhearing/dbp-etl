@@ -117,10 +117,10 @@ class UpdateDBPBibleFilesSecondary:
 						fileset_id=inp.filesetId,
 						bible_id=inp.bibleId,
 						type_code=inp.typeCode,
-						bucket=self.config.s3_bucket,
+						bucket=self.config.s3_vid_bucket,
 						prefix=inp.filesetPrefix
 					)
-					complete_files.append(f"{self.config.s3_bucket}/{inp.filesetPrefix}/{package_id}.pdf")
+					complete_files.append(f"{self.config.s3_vid_bucket}/{inp.filesetPrefix}/{package_id}.pdf")
 					print(f"Uploaded PDF for fileset {inp.filesetId} → {package_id}.pdf")
 				except RuntimeError as e:
 					print(f"PDF step skipped for {inp.filesetId}: {e}")
