@@ -64,6 +64,7 @@ class UpdateDBPBibleFilesSecondary:
 				package_id = self._fetch_and_upload_pdf(
 					fileset_id=inp.filesetId,
 					bible_id=inp.bibleId,
+					book_id=None,  # No book_id for audio filesets
 					type_code=inp.typeCode,
 					bucket=self.config.s3_bucket,
 					prefix=inp.filesetPrefix
@@ -116,6 +117,7 @@ class UpdateDBPBibleFilesSecondary:
 					package_id = self._fetch_and_upload_pdf(
 						fileset_id=inp.filesetId,
 						bible_id=inp.bibleId,
+						book_id=book_id,
 						type_code=inp.typeCode,
 						bucket=self.config.s3_vid_bucket,
 						prefix=inp.filesetPrefix
@@ -158,7 +160,7 @@ class UpdateDBPBibleFilesSecondary:
 				create_zip_for_fileset(cov_book_id, files)
 
 
-	def _fetch_and_upload_pdf(self, fileset_id: str, bible_id: str, type_code: str, bucket: str, prefix: str) -> str:
+	def _fetch_and_upload_pdf(self, fileset_id: str, bible_id: str, type_code: str, book_id: str|None, bucket: str, prefix: str) -> str:
 		"""
 		Calculates the product code, fetches the PDF, and uploads it to S3.
 		Returns the package ID (sans .pdf).
@@ -167,9 +169,9 @@ class UpdateDBPBibleFilesSecondary:
 		languageRecord, _ = self.languageReader.getLanguageRecordLoose(
 			type_code, bible_id, fileset_id
 		)
-		# We are going to assume that the stock number is the product code, however, this may not always be the case.
-		# It is possible that we need to use the product code instead of stock number in the future.
-		product_code = languageRecord.StockNumberByFilesetId(fileset_id)
+
+		product_code = languageRecord.CalculateProductCode(fileset_id, type_code, book_id)
+
 		if not product_code:
 			raise RuntimeError("No product code returned")
 
