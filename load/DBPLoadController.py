@@ -82,11 +82,16 @@ class DBPLoadController:
 	def upload(self, inputFilesets):
 		print("\n*** DBPLoadController:upload ***")
 		self.s3Utility.uploadAllFilesets(inputFilesets)
+		Log.writeLog(self.config)
+
+	# Upload secondary files, such as zip files, that are not part of the main fileset
+	# This is necessary because the secondary files depend on the fileset tables being updated
+	# e.g. we need to have the product code and stock number in the fileset tables
+	def uploadSecondaryFiles(self, inputFilesets):
 		dbOut = SQLBatchExec(self.config)
 		secondary = UpdateDBPBibleFilesSecondary(self.config, self.db, dbOut, self.languageReader)
 		secondary.createAllZipFiles(inputFilesets)
 		Log.writeLog(self.config)
-
 
 	def updateFilesetTables(self, inputFilesets):
 		print("\n*** DBPLoadController:updateFilesetTables ***")
@@ -171,7 +176,7 @@ class DBPLoadController:
 				}
 			else:
 				Log.getLogger(inputFileset.filesetId).message(
-					Log.WARN, f"BiblebrainLink does not have a correct path: {zip_file.name if zip_file else 'No zip file found'}"
+					Log.WARN, f"BiblebrainLink does not have a correct path: {zip_file.name if zip_file else 'No zip file found'} | filesetId: {inputFileset.filesetId} | book_id: {book_id}"
 				)
 
 		if inputFileset.typeCode == "video":
@@ -234,6 +239,12 @@ if (__name__ == '__main__'):
 		if not hasError and len(InputFileset.upload) > 0:
 			ctrl.upload(InputFileset.upload)
 			ctrl.updateFilesetTables(InputFileset.database)
+			if len(InputFileset.complete) > 0:
+				# Upload secondary files but we need to ensure that the fileset tables are updated first
+				# This is necessary because the secondary files depend on the fileset tables being updated
+				# e.g. we need to have the product code and stock number in the fileset tables
+				# before we can upload the secondary files
+				ctrl.uploadSecondaryFiles(InputFileset.upload)
 			for inputFileset in InputFileset.complete:
 				print("Completed: ", inputFileset.filesetId)
 				ctrl.synchronizeMonday(inputFileset)
