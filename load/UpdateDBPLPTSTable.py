@@ -270,6 +270,11 @@ class UpdateDBPLPTSTable:
 	## Bible Fileset Tags
 	##
 	def updateBibleFilesetTags(self, filesetList):
+		hashIds = set()
+		# Collect all unique hashIds from the filesetList
+		for (_, _, _, _, _, hashId) in filesetList:
+			hashIds.add(hashId)
+
 		insertRows = []
 		updateRows = []
 		deleteRows = []
@@ -277,9 +282,19 @@ class UpdateDBPLPTSTable:
 		notes = None
 		iso = DefaultISO
 		languageId = DefaultLanguageId
-		sql = "SELECT hash_id, name, description, admin_only FROM bible_fileset_tags WHERE language_id = %s"
 		tagHashIdMap = {}
-		resultSet = self.db.select(sql, (languageId))
+		# Get the existing tags for the given hashIds
+		resultSet = []
+		if len(hashIds) > 0:
+			# Fetch existing tags for the specified language and hashIds
+			# Using tuple to ensure that hashIds is treated as a single parameter
+			# This is necessary to avoid SQL errors when hashIds is empty
+			placeholders = ', '.join(['%s'] * len(hashIds))
+			query = f"SELECT hash_id, name, description, admin_only FROM bible_fileset_tags WHERE language_id = %s AND hash_id IN ({placeholders})"
+			resultSet = self.db.select(
+				query,
+				(languageId, *hashIds)
+			)
 
 		tableName = "bible_fileset_tags"
 		pkeyNames = ("hash_id", "name", "language_id")
@@ -305,7 +320,6 @@ class UpdateDBPLPTSTable:
 				if typeCode == "audio":
 					if filesetId[8:10] == "SA":
 						tagNameList = ["stock_no", "volume"]
-						#tagNameList = ["container", "codec", "stock_no", "volume"]
 						codec = "mp3"
 					elif len(filesetId) > 10 and filesetId[10] == "-":
 						tagNameList = ["container", "codec", "bitrate", "stock_no", "volume"]

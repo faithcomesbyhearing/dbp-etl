@@ -73,68 +73,109 @@ class UpdateDBPFilesetTables:
 		self.textUpdater = UpdateDBPTextFilesets(self.config, self.db, self.dbOut)
 		self.booksUpdater = UpdateDBPBooksTable(self.config, self.dbOut)
 		self.languageReader = languageReader
+		self.bibleFilesSecondaryUpdater = UpdateDBPBibleFilesSecondary(self.config, self.db, self.dbOut, self.languageReader)
 
+	def calculateHashId(self, inputFileset):
+		""" Calculate the hash ID for a given fileset.
+		This method is used to generate a unique identifier for the fileset based on its type and ID.
+		"""
+		bucket = self.config.s3_vid_bucket if inputFileset.typeCode == "video" else self.config.s3_bucket
+		setTypeCode = None
+		if inputFileset.typeCode in {"audio", "video"}:
+			setTypeCode = inputFileset.getSetTypeCode()
+		elif inputFileset.typeCode == "text":
+			setTypeCode = inputFileset.subTypeCode()
 
+		if setTypeCode is None:
+			print(
+				"Unable to calculate hashId for fileset %s (typeCode=%s)",
+				inputFileset.filesetId,
+				inputFileset.typeCode,
+			)
+			return None
+
+		return UpdateDBPLPTSTable.getHashId(bucket, inputFileset.filesetId, setTypeCode)
+
+	def processFilesSecondary(self, inputFileset):
+		""" Process secondary files for a given fileset.
+		This method is called when the fileset is already in the database, and we need to update its secondary files.
+		It checks the type of the fileset and updates the secondary files accordingly.
+		"""
+		hashId = self.calculateHashId(inputFileset)
+		if hashId:
+			self.bibleFilesSecondaryUpdater.updateBibleFilesSecondary(hashId, inputFileset)
+			return hashId
+
+		return None
 
 	def processFileset(self, inputFileset):
+		""" Process a fileset and update the database.
+		This method handles the insertion and updating of filesets in the database.
+		"""
 		inp = inputFileset
 		print(inp.typeCode, inp.bibleId, inp.filesetId)
 		lptsDBP = UpdateDBPLPTSTable(self.config, self.dbOut, self.languageReader)
 
 		dbConn = SQLUtility(self.config)
 		bookIdSet = self.getBibleBooks(inp.typeCode, inp.csvFilename, inp.databasePath)
-		updateBibleFilesSecondary = UpdateDBPBibleFilesSecondary(self.config, dbConn, self.dbOut, self.languageReader)
 		updateLicensor = UpdateDBPLicensorTables(dbConn, self.dbOut)
-		bucket = self.config.s3_vid_bucket if inp.typeCode == "video" else self.config.s3_bucket
 		# it needs to know if the new inputFileset has new files to set the flag content_loaded
 		isContentLoaded = 1 if len(inp.files) > 0 else 0
 
+		hashId = self.calculateHashId(inp)
+		if hashId is None:
+			print("ERROR: Unable to calculate hashId for fileset %s with typeCode %s" % (inp.filesetId, inp.typeCode))
+			return None
+
+		setSizeCode = self.getSizeCode(dbConn, inp.typeCode, hashId, bookIdSet)
+
+		# Common upsert of fileset + connection
+		setTypeCode = (
+			inp.getSetTypeCode()
+			if inp.typeCode in {"audio", "video"}
+			else inp.subTypeCode()
+		)
+		lptsDBP.upsertBibleFileset(dbConn, setTypeCode, setSizeCode, inp.filesetId, isContentLoaded)
+		lptsDBP.upsertBibleFilesetConnection(dbConn, hashId, inp.bibleId)
+		# array to hold fileset tags for later update
+		# this is used to update the bible_fileset_tags table with the hashId
+		filesetList = []
+
 		if inp.typeCode in {"audio", "video"}:
 			setTypeCode = inp.getSetTypeCode()
-			hashId = lptsDBP.getHashId(bucket, inp.filesetId, setTypeCode)
-			setSizeCode = self.getSizeCode(dbConn, inp.typeCode, hashId, bookIdSet)
-			lptsDBP.upsertBibleFileset(dbConn, setTypeCode, setSizeCode, inp.filesetId, isContentLoaded)
-			lptsDBP.upsertBibleFilesetConnection(dbConn, hashId, inp.bibleId)
 			self.insertBibleFiles(dbConn, hashId, inputFileset, bookIdSet)
-			updateBibleFilesSecondary.updateBibleFilesSecondary(hashId, inp)
-
-			filesetList = []
+			# For audio and video filesets, we need to update the bible_fileset_tags table with the hashId
 			filesetList.append((inp.bibleId, inp.filesetId, setTypeCode, None, None, hashId))
-			lptsDBP.updateBibleFilesetTags(filesetList)
-
 			# update the bible_fileset_tags (product code) table with the new filesetId
 			lptsDBP.updateBibleProductCode(inp, hashId)
 
 			if inp.isDerivedFileset():
-				updateLicensor.processFileset(inp.lptsDamId, hashId)
 				# We need to create a license group for the derived audio fileset
 				lptsDBP.updateBibleFilesetLicenseGroup(inp, hashId=hashId)
 
 		elif inp.typeCode == "text":
-			hashId = lptsDBP.getHashId(bucket, inp.filesetId, inp.subTypeCode())
-			setSizeCode = self.getSizeCode(dbConn, inp.typeCode, hashId, bookIdSet)
-			lptsDBP.upsertBibleFileset(dbConn, inp.subTypeCode(), setSizeCode, inp.filesetId, isContentLoaded)
-			lptsDBP.upsertBibleFilesetConnection(dbConn, hashId, inp.bibleId)
-			# text_plain is still stored in the database; no upload 
+			# text_plain is still stored in the database; no upload
 			if inp.subTypeCode() == "text_plain":
 				self.textUpdater.updateFilesetTextPlain(inp.bibleId, inp.filesetId, hashId, bookIdSet, inp.databasePath)
-				filesetList = []
 				filesetList.append((inp.bibleId, inp.filesetId, inp.subTypeCode(), None, None, hashId))
-				lptsDBP.updateBibleFilesetTags(filesetList)
 				lptsDBP.updateBibleFilesetLicenseGroup(inp, hashId=hashId)
 			elif inp.subTypeCode() in {"text_usx", "text_json"}:
 				## The below code assumes Sofria-client has run. bookIdSet comes from Sofria-client. 
 				self.insertBibleFiles(dbConn, hashId, inputFileset, bookIdSet)
-				updateBibleFilesSecondary.updateBibleFilesSecondary(hashId, inp)
-				filesetList = []
+				# For text_usx and text_json, we need to update the bible_fileset_tags table with the hashId
 				filesetList.append((inp.bibleId, inp.filesetId, inp.subTypeCode(), None, None, hashId))
-				lptsDBP.updateBibleFilesetTags(filesetList)
 				lptsDBP.updateBibleFilesetLicenseGroup(inp, hashId=hashId)
 			else:
 				print("typeCode is text, but subTypeCode (%s) is not recognized. No hashId available to return, so it's going to fail next" % (inp.subTypeCode()))
+		else:
+			print("Unrecognized typeCode %s" % (inp.typeCode))
 
-			if inp.isDerivedFileset():
-				updateLicensor.processFileset(inp.lptsDamId, hashId)
+		# update the bible_fileset_tags table with the filesetList
+		if filesetList:
+			lptsDBP.updateBibleFilesetTags(filesetList)
+
+		if inp.isDerivedFileset():
+			updateLicensor.processFileset(inp.lptsDamId, hashId)
 
 		tocBooks = self.booksUpdater.getTableOfContents(inp.typeCode, inp.bibleId, inp.filesetId, inp.csvFilename, inp.databasePath)
 		self.booksUpdater.updateBibleBooks(inp.typeCode, inp.bibleId, tocBooks)
