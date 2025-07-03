@@ -9,3 +9,4 @@ lambda/**/*.zip
 lambda/**/dbp-etl.cfg
 .vscode/
 FilenameParser.out
+CLAUDE.md

@@ -93,6 +93,23 @@ class DBPLoadController:
 		secondary.createAllZipFiles(inputFilesets)
 		Log.writeLog(self.config)
 
+	def updateFilesSecondary(self, inputFilesets):
+		""" Update the secondary files for the given input filesets.
+		This method processes each input fileset and updates the secondary files in the database.
+		"""
+		print("\n*** DBPLoadController:updateFilesSecondary ***")
+		dbOut = SQLBatchExec(self.config)
+		update = UpdateDBPFilesetTables(self.config, self.db, dbOut, self.languageReader)
+		for inp in inputFilesets:
+			update.processFilesSecondary(inp)
+			dbOut.displayCounts()
+			success = dbOut.execute(inp.batchName() + "-secondary")
+
+			RunStatus.set(inp.filesetId, success)
+
+			if not success:
+				print("********** Fileset Table %s Update Files Secondary Failed **********" % (inp.filesetId))
+
 	def updateFilesetTables(self, inputFilesets):
 		print("\n*** DBPLoadController:updateFilesetTables ***")
 		inp = inputFilesets
@@ -245,6 +262,8 @@ if (__name__ == '__main__'):
 				# e.g. we need to have the product code and stock number in the fileset tables
 				# before we can upload the secondary files
 				ctrl.uploadSecondaryFiles(InputFileset.upload)
+				# Once the secondary files are uploaded, we can process them and store the reference in the database
+				ctrl.updateFilesSecondary(InputFileset.upload)
 			for inputFileset in InputFileset.complete:
 				print("Completed: ", inputFileset.filesetId)
 				ctrl.synchronizeMonday(inputFileset)
@@ -377,5 +396,7 @@ if (__name__ == '__main__'):
 
 # time python3 load/DBPLoadController.py test s3://etl-development-input/ "SPNBDAP2DV"
 # time python3 load/DBPLoadController.py test s3://etl-development-input/ "FANBSGP2DV"
+
+# time python3 load/DBPLoadController.py test s3://etl-development-input/ "BUNBSLN1DA"
 
 # time python3 load/DBPLoadController.py test s3://dbp-etl-upload-newdata-fiu49s0cnup1yr0q/ "2025-04-28-20-53-43/YAOGOIP1DA"
