@@ -163,7 +163,6 @@ class Config:
 		if profile == 'test':
 			# video
 			self.video_transcoder_pipeline = self._get("video.transcoder.pipeline")
-			self.video_transcoder_mock = self._get("video.transcoder.mock")
 			self.video_transcoder_region = self._get("video.transcoder.region")
 			self.video_preset_hls_1080p = self._get("video.preset.hls.1080p")
 			self.video_preset_hls_720p = self._get("video.preset.hls.720p")
@@ -171,11 +170,11 @@ class Config:
 			self.video_preset_hls_360p = self._get("video.preset.hls.360p")
 			self.video_preset_web = self._get("video.preset.web")
 			# audio
-			self.audio_transcoder_mock = self._get("audio.transcoder.mock")
 			self.audio_transcoder_sleep_sec = self._getInt("audio.transcoder.sleep.sec")
 			self.audio_transcoder_input = self._get("audio.transcoder.input")
 
 		if profile in {'test', 'dev'}:
+			self.video_transcoder_url = self._get("video.transcoder.url")
 			self.database_names['dbp'] = self.hashMap.get("database.db_name")
 			self.database_names['user_dbp'] = self.hashMap.get("database.user_db_name")
 			self.database_host = self._get("database.host")

@@ -33,21 +33,13 @@ class AWSTranscoder:
 		self.url = None
 		self.key = None
 
+
 	def setAudioTranscoderParameters(self):
-		if hasattr(self.config, 'audio_transcoder_mock') and self.config.audio_transcoder_mock != None:
-			audio_transcoder_mock = {}
-
-			try:
-				audio_transcoder_mock = json.loads(self.config.audio_transcoder_mock)
-			except json.JSONDecodeError:
-				# Handle the error and set a empty dict for self.audio_transcoder_mock
-				audio_transcoder_mock = {}
-
-			if audio_transcoder_mock.get("enable") == 1:
-				self.url = audio_transcoder_mock.get("endpoint_url")
-				self.key = audio_transcoder_mock.get("key")
-				return True
-
+		"""Sets the audio transcoder parameters.
+		If it is mocked, it will return the mock client.
+		Otherwise, it will return the real AWS audio transcoder client.
+		Set the audio.transcoder.url and audio.transcoder.key in dbp-etl.cfg to use the audio transcoder.
+		"""
 		self.url = self.config.audio_transcoder_url
 		self.key = self.config.audio_transcoder_key
 
