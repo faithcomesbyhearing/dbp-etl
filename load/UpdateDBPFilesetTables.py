@@ -203,7 +203,7 @@ class UpdateDBPFilesetTables:
 		if typeCode == "text":
 			existingBookIdSet = dbConn.selectSet("SELECT book_id FROM bible_verses WHERE hash_id = %s", (hashId,))
 		else:
-			existingBookIdSet = dbConn.selectSet("SELECT book_id FROM bible_files WHERE hash_id = %s", (hashId,))			
+			existingBookIdSet = dbConn.selectSet("SELECT book_id FROM bible_files WHERE hash_id = %s", (hashId,))
 		fullBookIdSet = existingBookIdSet.union(bookIdSet)
 		otBooks = fullBookIdSet.intersection(self.OT)
 		ntBooks = fullBookIdSet.intersection(self.NT)

@@ -42,20 +42,11 @@ class TranscodeVideo:
 		self.openJobs = []
 
 	def getTranscoderClient(self):
-		if hasattr(self.config, 'video_transcoder_mock') and self.config.video_transcoder_mock != None:
-			try:
-				self.video_transcoder_mock = json.loads(self.config.video_transcoder_mock)
-			except json.JSONDecodeError:
-				# Handle the error and set a empty dict for self.video_transcoder_mock
-				self.video_transcoder_mock = {}
-
-			if self.video_transcoder_mock.get("enable") == 1:
-				return boto3.client(
-					'elastictranscoder',
-					region_name=self.video_transcoder_mock.get("region_name"),
-					endpoint_url=self.video_transcoder_mock.get("endpoint_url")
-				)
-
+		"""Returns the Elastic Transcoder client.
+		If it is mocked, it will return the mock client.
+		Otherwise, it will return the real AWS Elastic Transcoder client.
+		Set the video.transcoder.url in dbp-etl.cfg to use the mock client.
+		"""
 		return AWSSession.shared().elasticTranscoder()
 
 	def createJob(self, file):
