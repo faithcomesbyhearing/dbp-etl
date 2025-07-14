@@ -178,6 +178,9 @@ class UpdateDBPBibleFilesSecondary:
 		# Build S3 key
 		# For now, we will use a fixed package_id (copyright) for copyright PDFs
 		package_id = "copyright"
+		if book_id is not None:
+			# For book-specific PDFs, use the book_id as the package_id (video filesets)
+			package_id = f"{package_id}_{book_id}"
 		pdf_key = f"{prefix}/{package_id}.pdf"
 
 		# Fetch & upload
