@@ -9,6 +9,7 @@ from FilenameReducer import *
 from SQLUtility import *
 from Config import *
 from Log import *
+from BibleBrainService import BibleBrainService
 
 class Filename:
 
@@ -41,7 +42,7 @@ class Filename:
 	def setBookSeq(self, bookSeq):
 		self.bookSeq = bookSeq
 		if not bookSeq.isdigit():
-			if not bookSeq[0] in {"A", "B"}:
+			if bookSeq[0] not in {"A", "B"}:
 				self.errors.append("non-number bookSeq")
 
 
@@ -152,7 +153,7 @@ class Filename:
 	def setVerseStart(self, verseStart):
 		self.verseStart = verseStart
 		if not verseStart.isdigit():
-			if not verseStart[:-1].isdigit() or not verseStart[-1] == "b":
+			if len(verseStart) == 0 or not verseStart[:-1].isdigit() or verseStart[-1] != "b":
 				self.errors.append("non-number verse start: %s" % (verseStart))
 		self.verseStartNum = int(self.verseStart)
 
@@ -162,9 +163,8 @@ class Filename:
 
 	def setVerseEnd(self, verseEnd):
 		self.verseEnd = verseEnd
-		if not verseEnd.isdigit():
-			if not verseEnd[:-1].isdigit() or not verseEnd[-1] == "r":
-				self.errors.append("non-number verse end: %s" % (verseEnd))
+		if not verseEnd.isdigit() and (not verseEnd or not verseEnd[:-1].isdigit() or verseEnd[-1] != "r"):
+			self.errors.append("non-number verse end: %s" % (verseEnd))
 		if self.verseStart.isdigit() and self.verseEnd.isdigit():
 			startInt = int(self.verseStart)
 			endInt = int(self.verseEnd)
@@ -246,41 +246,7 @@ class FilenameRegex:
 		file = Filename(self, filenameTuple)
 		match = self.regex.match(filenameTuple[0])
 		if match != None:
-			if self.name in ("video1", "video2"):
-				file.addUnknown(match.group(1))
-				file.setBookId(match.group(2), parser.chapterMap)
-				file.setChapter(match.group(3), parser.maxChapterMap)
-				if file.chapter.isdigit():
-					file.setType(match.group(6))
-					if len(match.groups()) >= 4 and match.group(4) is not None:
-						file.setVerseStart(match.group(4))
-					if len(match.groups()) >= 5 and match.group(5) is not None:
-						file.setVerseEnd(match.group(5))
-					file.setChapterEnd(file.chapter, parser.maxChapterMap)
-				else:
-					file.setType(match.group(4))
-			elif self.name == "video5":
-				# Covenant films
-				# example filename: COVENANT_SEGMENT 01 optional.mp4
-				# the segment id is used to establish the bookId, which establishes order
-				# the segment id is also used to map the book name. 
-				# Chapter for covenant is always 1 by default
-				segment = match.group(2)
-				bookId = "C"+segment if match.group(2) in ("01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12") else None
-				file.bookId = bookId
-				file.setCovenantBookNameById(bookId, parser.covenantBookNameMap)
-
-				file.addUnknown(match.group(1))
-				videoChapterAndVerse = "1"
-				videoType = match.group(4)
-				file.setChapter(videoChapterAndVerse, parser.maxChapterMap)
-				file.setType(videoType)
-
-				file.setBookId(bookId, parser.chapterMap)
-				file.setVerseStart(videoChapterAndVerse)
-				file.setVerseEnd(videoChapterAndVerse)
-				file.setChapterEnd(file.chapter, parser.maxChapterMap)
-			elif self.name == "text3":
+			if self.name == "text3":
 				if match.group(1) != None:
 					file.setBookSeq(match.group(1))
 				file.setBookId(match.group(2), parser.chapterMap)
@@ -293,27 +259,6 @@ class FilenameRegex:
 				file.setBookId(match.group(2), parser.chapterMap)
 				file.setChapter(match.group(3), parser.maxChapterMap)
 				file.setType(match.group(4))
-			elif self.name == "audio99":
-				file.setDamid(match.group(1))
-				file.setBookSeq(match.group(2))
-				file.setBookId(match.group(3), parser.chapterMap)
-				file.setChapter(match.group(4), parser.maxChapterMap)
-				file.setType(match.group(5))
-			elif self.name == "audio100":
-				file.setDamid(match.group(1))
-				file.setBookSeq(match.group(2))
-				file.setBookId(match.group(3), parser.chapterMap)
-				file.setChapter(match.group(4), parser.maxChapterMap)
-				file.setVerseStart(match.group(5))
-				file.setChapterEnd(match.group(6), parser.maxChapterMap)
-				file.setVerseEnd(match.group(7))				
-				file.setType(match.group(8))
-			elif self.name == "audio101":
-				file.setBookBySeq(match.group(1), parser.otOrder, parser.ntOrder, parser.chapterMap)
-				file.setChapter(match.group(2), parser.maxChapterMap)
-				file.checkBookName(match.group(3))
-				file.setDamid(match.group(4))
-				file.setType(match.group(5))
 			elif self.name == "audioStory1":
 				file.setFileSeq(match.group(1))
 				file.setTitle(match.group(2))
@@ -362,33 +307,8 @@ class FilenameParser:
 		self.successCount = {}
 		self.totalFiles = []
 
-		self.videoTemplates = (
-			# Language_Book_Chapter-VerseStart-VerseEnd.mp4
-			# Language[-BibleVersion]_Book_Chapter-VerseStart-VerseEnd.mp4
-			# Language[ BibleVersion]_Book_Chapter-VerseStart-VerseEnd.mp4
-			# Language[-BibleVersion]-[other text separated by "-"]_Book_Chapter-VerseStart-VerseEnd.mp4
+		self.biblebrain_service = BibleBrainService(s3_client=None, base_url=self.config.biblebrain_services_base_url)
 
-			## Example:
-			# English_JHN_1-1-18.mp4
-			# English-KJV_JHN_1-1-18.mp4
-			# English KJV_JHN_1-1-18.mp4
-			# English-KJV-other-version-info_JHN_1-1-18.mp4
-			# English-other-version-info_JHN_1-1-18.mp4
-			# Fang-BSG_ACT_1.mp4
-			FilenameRegex("video1", r"^([A-Za-z\- ]+)_([A-Z0-9]{3})_(\d{1,3})(?:-(\d{1,2})b?-(\d{1,2}))?\.(mp4)$"),
-
-			## Language[-BibleVersion]_Book_End_credits.mp4
-			## Example:
-			# English-KJV_JHN_End_credits.mp4
-			# English KJV_JHN_End_credits.mp4
-			# English_JHN_End_credits.mp4
-			# English-KJV-other-version-info_JHN_End_credits.mp4
-			# English-other-version-info_JHN_End_credits.mp4
-			FilenameRegex("video2", r"^([A-Za-z\- ]+)_([A-Z0-9]{3})_(End_[Cc]redits)\.(mp4)$"),
-
-			## Example: COVENANT_SEGMENT 01 – Intro and Garden of Eden.mp4
-			FilenameRegex("video5", r'^(COVENANT)_SEGMENT\s*(\d{1,2})(.*)\.(mp4)$'),
-		)
 		self.textTemplates = (
 			## {book order}{book code(USFM)}.usx
 			## Example: 001GEN.usx
@@ -398,28 +318,6 @@ class FilenameParser:
 			## Example: 041MRK_012.json
 			FilenameRegex("text4", r"([0-9]{3})?([A-Z0-9]{3})_([0-9]{3})?.(json)")
 		)
-		self.audioTemplates = (
-
-			## {filesetid}_{A/B}{ordering}_{book code(USFM)}_{chap_start}[_{verse_start}-{chapter_end}_{verse_end}].mp3
-			## Example: ENGESVN2DA_B01_MAT_001.mp3
-			FilenameRegex("audio99", r"^([A-Z0-9]{10})_([AB]\d{2})_([A-Z0-9]{3})_(\d{3})\.(mp3|opus|webm)$"),
-			## Example: IRUNLCP1DA_B13_1TH_001_001-001_010.mp3
-			FilenameRegex("audio100", r"^([A-Z0-9]{10})_([AB]\d{2})_([A-Z0-9]{3})_(\d{3})_(\d{3})-(\d{3})_(\d{3})\.(mp3|opus|webm)$"),
-
-			## {A/B}{ordering}___{chapter start}_{book name}__{mediaid}.mp3
-			## Example: B01___01_Matthew_____ENGGIDN2DA.mp3 or B07___01_1CorinthiansENGESVN2DA.mp3
-			FilenameRegex("audio101", r"^([AB]\d{2})_{3}(\d{2,3})_+([1-4]?[A-Za-z\-]+)_*([A-Z0-9]{10})\.(mp3|opus|webm)$"),
-
-			## A01_{seq3}_title_title_title__damid.mp3
-			FilenameRegex("audioStory1", r"A01_+([0-9]{3})_([A-Za-z0-9_]+)_+([A-Z0-9]+).(mp3|opus|webm)"),
-
-			## {seq2,3}_title_title_title_damid.mp3
-			FilenameRegex("audioStory2", r"([0-9]{2,3})_([A-Za-z0-9_]+)_([A-Z0-9]+).(mp3|opus|webm)"),
-
-			## {seq2,4}_title_tiltle_title.mp3
-			FilenameRegex("audioStory3", r"([0-9]{2,4})_([A-Za-z0-9_ \'\-&\(\)]+).(mp3|opus|webm)"),
-		)
-
 
 	def process3(self, filesets):
 		db = SQLUtility(self.config)
@@ -434,23 +332,24 @@ class FilenameParser:
 			prefix = inp.filesetPrefix
 			print("FilenameParser: %s typeCode: %s" % (prefix, inp.typeCode))
 			logger = Log.getLogger(inp.filesetId)
+			# Deprecated: audio and video templates are not used anymore. They are replaced by BibleBrainService
 			if inp.typeCode == "audio":
-				templates = self.audioTemplates
+				templates = []
 			elif inp.typeCode == "text":
 				templates = self.textTemplates
 			elif inp.typeCode == "video":
-				templates = self.videoTemplates
+				templates = []
 			else:
 				print("ERROR: unknown type_code: %s" % (inp.typeCode))
 				sys.exit()
 
 			if inp.typeCode == "audio" or inp.typeCode == "video":
 				## Validate filesetId
-				if not inp.filesetId[6:7] in {"C","N","O","P","S"}:
+				if inp.filesetId[6:7] not in {"C","N","O","P","S"}:
 					logger.message(Log.EROR, "filesetId must be C,N,O,P, or S in 7th position.")
-				if not inp.filesetId[7:8] in {"1", "2"}:
+				if inp.filesetId[7:8] not in {"1", "2"}:
 					logger.message(Log.EROR, "filesetId must be 1 or 2 in the 8th position.")
-				if not inp.filesetId[8:10] in {"DA", "DV"}:
+				if inp.filesetId[8:10] not in {"DA", "DV"}:
 					logger.message(Log.EROR, "filesetId must be DA or DV.")
 				if len(inp.filesetId) > 10 and inp.filesetId[10] != "-":
 					bitrateSuffix = inp.filesetId[10:12]
@@ -460,12 +359,17 @@ class FilenameParser:
 			self.otOrder = self.OTOrderTemp(inp.filesetId, inp.languageRecord)
 			self.ntOrder = self.NTOrderTemp(inp.filesetId, inp.languageRecord)
 
-			(numErrors, files) = self.parseOneFileset3(templates, prefix, inp.filenamesTuple())
+			if inp.typeCode == "audio" or inp.typeCode == "video":
+				(num_errors, files) = self.parse_fileset(inp.filenames())
+			else:
+				# Deprecated: This function won't be used anymore. It is replaced by parse_fileset which uses BibleBrainService
+				(num_errors, files) = self.parseOneFileset3(templates, prefix, inp.filenamesTuple())
+				
 			self.totalFiles.append((len(files), prefix))
-			if numErrors == 0:
+			if num_errors == 0:
 				self.parsedList.append((prefix))
 			else:
-				self.unparsedList.append((numErrors, prefix))
+				self.unparsedList.append((num_errors, prefix))
 
 			if inp.typeCode == "audio":
 				(extraChapters, missingChapters, missingVerses) = self.checkBookChapter(prefix, files)
@@ -478,7 +382,7 @@ class FilenameParser:
 			reducer = FilenameReducer(self.config, prefix, inp.csvFilename, files, extraChapters, missingChapters, missingVerses)
 			# Does not allow continue if there are errors related to the fileset parsing
 			# It will write the errors to the error file including the FilenameReducer errors
-			if numErrors > 0:
+			if num_errors > 0:
 				reducer.writeErrors(logger)
 				print("")
 				return False
@@ -486,7 +390,71 @@ class FilenameParser:
 			reducer.process(logger)
 		print("")
 
+	# This function uses BibleBrainService to parse the fileset
+	def parse_fileset(self, filenames):
+		parsed_results = self.biblebrain_service.parse(filenames)
 
+		num_errors = 0
+		files = []
+
+		for result in parsed_results:
+			file = Filename(None, (result.filename, 0, None))
+
+			if result.pattern is None:
+				file.errors.append("No pattern found for filename: %s" % result.filename)
+				files.append(file)
+				num_errors += 1
+				continue
+
+			if result.error is not None and result.error != "":
+				file.errors.append(result.error)
+				num_errors += 1
+				continue
+
+			file.addUnknown(result.pattern.description)
+
+			if result.pattern.media_id is not None and result.pattern.media_id != "":
+				file.setDamid(result.pattern.media_id)
+			if result.pattern.book_seq is not None and result.pattern.book_seq != "":
+				file.setBookSeq(result.pattern.book_seq)
+			if result.pattern.book_id is not None and result.pattern.book_id != "":
+				file.setBookId(result.pattern.book_id, self.chapterMap)
+			if result.pattern.book_name is not None and result.pattern.book_name != "":
+				file.checkBookName(result.pattern.book_name)
+			
+			file.setChapter(result.pattern.chapter, self.maxChapterMap)
+
+			if result.pattern.verse_start is not None and result.pattern.verse_start != "":
+				file.setVerseStart(result.pattern.verse_start)
+			if result.pattern.verse_end is not None and result.pattern.verse_end != "":
+				file.setVerseEnd(result.pattern.verse_end)
+
+			if "covenant" in result.filename.lower():
+				# Covenant films always have chapter 1 and verse 1
+				video_chapter_and_verse = "1"
+				covenant_book_id = result.pattern.book_id
+				# Ensure covenant book IDs start with "C"
+				if not covenant_book_id.startswith("C"):
+					covenant_book_id = "C" + covenant_book_id
+
+				file.setBookId(covenant_book_id, self.chapterMap)
+				file.setCovenantBookNameById(file.bookId, self.covenantBookNameMap)
+				file.setChapter(video_chapter_and_verse, self.maxChapterMap)
+				file.setVerseStart(video_chapter_and_verse)
+				file.setVerseEnd(video_chapter_and_verse)
+
+			if result.pattern.chapter_end is not None and result.pattern.chapter_end != "":
+				file.setChapterEnd(result.pattern.chapter_end, self.maxChapterMap)
+			elif file.chapter.isdigit():
+				file.setChapterEnd(file.chapter, self.maxChapterMap)
+
+			file.setType(result.pattern.extension)
+			files.append(file)
+
+		return (num_errors, files)
+
+	# Deprecated: This function is not used anymore. It is replaced by parse_fileset which uses BibleBrainService
+	# However, it is kept here because biblebrain_service does not cover text files yet.
 	def parseOneFileset3(self, templates, prefix, filenamesTuple):
 		numErrors = 0
 		files = []
@@ -500,7 +468,8 @@ class FilenameParser:
 				self.successCount[file.template.name] = self.successCount.get(file.template.name, 0) + 1
 		return (numErrors, files)
 
-
+	# Deprecated: This function is not used anymore. It is replaced by parse_fileset which uses BibleBrainService
+	# However, it is kept here because biblebrain_service does not cover text files yet.
 	def parseOneFilename3(self, templates, prefix, filenameTuple):
 		parserTries = []
 		for template in templates:
