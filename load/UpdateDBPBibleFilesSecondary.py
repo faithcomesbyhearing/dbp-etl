@@ -1,7 +1,6 @@
 # UpdateDBPBibleFilesSecondary
 
 import sys
-import boto3
 from Log import Log
 from Config import Config
 from SQLUtility import SQLUtility
@@ -9,7 +8,7 @@ from SQLBatchExec import SQLBatchExec
 from AWSSession import AWSSession
 from S3Utility import S3Utility
 from S3ZipperService import S3ZipperService
-from BibleBrainService import BibleBrainService, Package
+from BibleBrainService import BibleBrainService
 
 class UpdateDBPBibleFilesSecondary:
 

@@ -1,8 +1,49 @@
 import requests
 import logging
 import time
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from botocore.exceptions import BotoCoreError, ClientError
+
+class ParsedPattern:
+    """
+    Represents the pattern extracted from a filename.
+    """
+    def __init__(self, data: Dict[str, Any]):
+        self.description = data.get('description', '')
+        self.book_id = data.get('bookID', '')
+        self.book_seq = data.get('bookSEQ', '')
+        self.book_name = data.get('bookName', '')
+        self.chapter = data.get('chapter', '')
+        self.chapter_end = data.get('chapterEnd', '')
+        self.extension = data.get('extension', '')
+        self.media_id = data.get('mediaID', '')
+        self.verse_start = data.get('verseStart', '')
+        self.verse_end = data.get('verseEnd', '')
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'ParsedPattern':
+        """
+        Creates a ParsedPattern instance from a dictionary.
+        """
+        return cls(data)
+
+class ParsedFilename:
+    """
+    Represents a parsed filename with its original name and extracted pattern.
+    """
+    def __init__(self, filename: str, pattern: ParsedPattern, error: str = ''):
+        self.filename = filename
+        self.pattern = pattern
+        self.error = error
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'ParsedFilename':
+        """
+        Creates a ParsedFilename instance from a dictionary response.
+        """
+        pattern_data = data.get('pattern', {})
+        pattern = ParsedPattern.from_dict(pattern_data)
+        return cls(filename=data.get('filename', ''), pattern=pattern, error=data.get('error', ''))
 
 class Package:
     """
@@ -33,7 +74,7 @@ class BibleBrainService:
 
     def __init__(
         self,
-        s3_client,
+        s3_client: Optional[Any],
         base_url: str = "http://dev.biblebrain-service.com",
         timeout: int = 30
     ):
@@ -101,6 +142,68 @@ class BibleBrainService:
                 time.sleep(backoff)
 
         raise RuntimeError(f"Failed to fetch PDF after {self.RETRY_COUNT} attempts")
+
+    def parse(self, filenames: List[str]) -> List[ParsedFilename]:
+        """
+        Parses filenames via HTTP POST to the /api/parse endpoint,
+        retrying up to RETRY_COUNT on timeouts or HTTP 5xx errors.
+
+        :param filenames: List of filename strings to parse
+        :return: List of ParsedFilename objects with filename and pattern data
+        :raises RuntimeError: If the request fails or the response is invalid
+        """
+        url = f"{self.base_url}/api/storage/parse?strict=true"
+        payload = {"filenames": filenames}
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        }
+
+        for attempt in range(self.RETRY_COUNT):
+            try:
+                self.logger.debug(
+                    "Attempt %d: POST %s with payload %s",
+                    attempt + 1, url, payload
+                )
+                response = requests.post(url, json=payload, headers=headers, timeout=self.timeout)
+            except requests.Timeout as e:
+                self.logger.warning("Timeout on attempt %d: %s", attempt + 1, e)
+            except requests.RequestException as e:
+                self.logger.error("Error parsing filenames on attempt %d: %s", attempt + 1, e)
+                raise RuntimeError(f"Failed to parse filenames: {e}")
+            else:
+                status = response.status_code
+                if status >= 500:
+                    self.logger.warning("Server error %d on attempt %d", status, attempt + 1)
+                else:
+                    try:
+                        response.raise_for_status()
+                    except requests.RequestException as e:
+                        self.logger.error("HTTP error %d: %s", status, e)
+                        raise RuntimeError(f"Failed to parse filenames: {e}")
+
+                    content_type = response.headers.get("Content-Type", "")
+                    if not content_type.lower().startswith("application/json"):
+                        self.logger.error("Unexpected content type: %s", content_type)
+                        raise RuntimeError(f"Expected JSON response, got: {content_type}")
+
+                    try:
+                        json_response = response.json()
+                        return [ParsedFilename.from_dict(item) for item in json_response]
+                    except ValueError as e:
+                        self.logger.error("Invalid JSON response: %s", e)
+                        raise RuntimeError(f"Invalid JSON response: {e}")
+                    except (KeyError, TypeError) as e:
+                        self.logger.error("Invalid response structure: %s", e)
+                        raise RuntimeError(f"Invalid response structure: {e}")
+
+            # Exponential backoff before retrying
+            if attempt < self.RETRY_COUNT - 1:
+                backoff = self.BACKOFF_FACTOR ** attempt
+                self.logger.debug("Sleeping for %d seconds before retry", backoff)
+                time.sleep(backoff)
+
+        raise RuntimeError(f"Failed to parse filenames after {self.RETRY_COUNT} attempts")
 
     def upload_pdf(
         self,
