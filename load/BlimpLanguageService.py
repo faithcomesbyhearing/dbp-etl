@@ -125,7 +125,7 @@ class BlimpLanguageService:
 
         rows = sql.select(query, (fileset_id,))
 
-        return [(file_id, file_name) for file_id, file_name in rows]
+        return [(int(file_id), file_name) for file_id, file_name in rows]
 
 # BWF note: this is only called for text processing
 def getMediaByIdAndFormat(bibleId, format):
@@ -203,3 +203,27 @@ def getCopyrightByFilesetId(filesetId):
         records.append((copyright, copyrightDate, copyrightDescription))
 
     return records
+
+
+def get_published_snm_by_stocknumber(stocknumber: str) -> int:
+    config = Config()
+    sql = SQLUtility(config)
+
+    # All records with the same stocknumber should have the same published_snm.
+    # If they don't, and at least one record has a value of 1, all records will be set to 1.
+    # Therefore, this method will return 1 if at least one record has a published_snm of 1.
+    result = sql.select(
+        """SELECT CASE 
+           WHEN MAX(bf.published_snm) = 1 THEN 1 
+           ELSE 0 
+           END as published_snm
+        FROM bible_filesets bf
+        INNER JOIN bible_fileset_tags bft ON bft.hash_id = bf.hash_id
+        WHERE bft.name = 'stock_no'
+        AND bf.archived IS FALSE
+        AND bft.description = %s
+        """,
+        (stocknumber,)
+    )
+    
+    return result[0][0] if result and len(result) > 0 else 0
