@@ -148,7 +148,9 @@ class UpdateDBPLPTSTable:
 						isArchived = 1 if lptsRecord.IsActive() == False else 0
 
 						if bibleId != None and setTypeCode != None and setSizeCode != None and lptsFilesetProcessed.get(filesetId) == None:
-							hashId = self.upsertBibleFileset(dbConn=self.db, setTypeCode=setTypeCode, setSizeCode=setSizeCode, filesetId=filesetId, isArchived=isArchived)
+							publishedSnm = lptsRecord.HasPublishedStocknumber(filesetId)
+
+							hashId = self.upsertBibleFileset(dbConn=self.db, setTypeCode=setTypeCode, setSizeCode=setSizeCode, filesetId=filesetId, isArchived=isArchived, publishedSnm=publishedSnm)
 							if hashId != None:
 								self.upsertBibleFilesetConnection(self.db, hashId, bibleId)
 								bucket = self.config.s3_bucket
@@ -471,36 +473,44 @@ class UpdateDBPLPTSTable:
 		#unknownCopyrights = orgs.validateCopyrights()
 		orgs.update_licensors(filesetList)
 
-	def upsertBibleFileset(self, dbConn, setTypeCode, setSizeCode, filesetId, isContentLoaded=0, isArchived=0):
+	def upsertBibleFileset(self, dbConn, setTypeCode, setSizeCode, filesetId, isContentLoaded=0, isArchived=0, publishedSnm=0):
 		# Avoid creating or updating the fileset if both values are true
 		if isContentLoaded == True and isArchived == True:
 			return None
 
 		tableName = "bible_filesets"
 		pkeyNames = ("hash_id",)
-		attrNames = ("id", "asset_id", "set_type_code", "set_size_code", "content_loaded", "archived")
+		attrNames = ("id", "asset_id", "set_type_code", "set_size_code", "content_loaded", "archived", "published_snm")
 		updateRows = []
 		bucket = self.config.s3_vid_bucket if setTypeCode == "video_stream" else self.config.s3_bucket	
 		hashId = self.getHashId(bucket, filesetId, setTypeCode)
-		row = dbConn.selectRow("SELECT id, asset_id, set_type_code, set_size_code, content_loaded, archived FROM bible_filesets WHERE hash_id=%s", (hashId,))
+		row = dbConn.selectRow("SELECT id, asset_id, set_type_code, set_size_code, content_loaded, archived, published_snm FROM bible_filesets WHERE hash_id=%s", (hashId,))
 		if row == None:
-			updateRows.append((filesetId, bucket, setTypeCode, setSizeCode, isContentLoaded, isArchived, hashId))
+			updateRows.append((filesetId, bucket, setTypeCode, setSizeCode, isContentLoaded, isArchived, publishedSnm, hashId))
 			self.dbOut.insert(tableName, pkeyNames, attrNames, updateRows)
 			return hashId
 
 		if isContentLoaded == 1:
 			attrNamesToUpdate = ("id", "asset_id", "set_type_code", "set_size_code", "content_loaded")
-			(_, _, _, _, dbpContentLoaded, _) = row
+			(_, _, _, _, dbpContentLoaded, _, _) = row
 			if dbpContentLoaded != isContentLoaded:
 				updateRows.append((filesetId, bucket, setTypeCode, setSizeCode, isContentLoaded, hashId))
 				self.dbOut.update(tableName, pkeyNames, attrNamesToUpdate, updateRows)
 				return hashId
 
 		if isArchived == 1:
-			(_, _, _, _, _, dbpArchived) = row
+			(_, _, _, _, _, dbpArchived, _) = row
 			if dbpArchived != isArchived:
 				attrNamesToUpdate = ("id", "asset_id", "set_type_code", "set_size_code", "archived")
 				updateRows.append((filesetId, bucket, setTypeCode, setSizeCode, isArchived, hashId))
+				self.dbOut.update(tableName, pkeyNames, attrNamesToUpdate, updateRows)
+				return hashId
+
+		if publishedSnm == 1:
+			(_, _, _, _, _, _, dbpPublishedSnm) = row
+			if dbpPublishedSnm != publishedSnm:
+				attrNamesToUpdate = ("id", "asset_id", "set_type_code", "set_size_code", "published_snm")
+				updateRows.append((filesetId, bucket, setTypeCode, setSizeCode, publishedSnm, hashId))
 				self.dbOut.update(tableName, pkeyNames, attrNamesToUpdate, updateRows)
 				return hashId
 

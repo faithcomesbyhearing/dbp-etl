@@ -11,7 +11,7 @@ class ParsedPattern:
     def __init__(self, data: Dict[str, Any]):
         self.description = data.get('description', '')
         self.book_id = data.get('bookID', '')
-        self.book_seq = data.get('bookSEQ', '')
+        self.book_seq = data.get('bookSeq', '')
         self.book_name = data.get('bookName', '')
         self.chapter = data.get('chapter', '')
         self.chapter_end = data.get('chapterEnd', '')
