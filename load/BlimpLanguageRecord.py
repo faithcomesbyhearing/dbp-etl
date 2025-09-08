@@ -1,5 +1,5 @@
 from LanguageReader import LanguageRecordInterface
-from BlimpLanguageService import getMediaByIdAndFormat, getLicensorsByFilesetId, getCopyrightByFilesetId
+from BlimpLanguageService import getMediaByIdAndFormat, getLicensorsByFilesetId, getCopyrightByFilesetId, get_published_snm_by_stocknumber
 from typing import Optional
 
 class BlimpLanguageRecord (LanguageRecordInterface):
@@ -217,3 +217,12 @@ class BlimpLanguageRecord (LanguageRecordInterface):
 
     def Version(self):
         return self.record.get(BlimpLanguageRecord.propertiesName['volumneName'])
+
+    def HasPublishedStocknumber(self, fileset_id: str) -> int:
+        stocknumber = self.StockNumberByFilesetId(fileset_id)
+        if stocknumber is None:
+            return 0
+
+        published_snm = get_published_snm_by_stocknumber(stocknumber)
+
+        return 1 if published_snm == 1 else 0

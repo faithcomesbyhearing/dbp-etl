@@ -135,7 +135,10 @@ class UpdateDBPFilesetTables:
 			if inp.typeCode in {"audio", "video"}
 			else inp.subTypeCode()
 		)
-		lptsDBP.upsertBibleFileset(dbConn, setTypeCode, setSizeCode, inp.filesetId, isContentLoaded)
+
+		publishedSnm = inp.languageRecord.HasPublishedStocknumber(inp.filesetId)
+
+		lptsDBP.upsertBibleFileset(dbConn=dbConn, setTypeCode=setTypeCode, setSizeCode=setSizeCode, filesetId=inp.filesetId, isContentLoaded=isContentLoaded, isArchived=0, publishedSnm=publishedSnm)
 		lptsDBP.upsertBibleFilesetConnection(dbConn, hashId, inp.bibleId)
 		# array to hold fileset tags for later update
 		# this is used to update the bible_fileset_tags table with the hashId
@@ -203,7 +206,7 @@ class UpdateDBPFilesetTables:
 		if typeCode == "text":
 			existingBookIdSet = dbConn.selectSet("SELECT book_id FROM bible_verses WHERE hash_id = %s", (hashId,))
 		else:
-			existingBookIdSet = dbConn.selectSet("SELECT book_id FROM bible_files WHERE hash_id = %s", (hashId,))			
+			existingBookIdSet = dbConn.selectSet("SELECT book_id FROM bible_files WHERE hash_id = %s", (hashId,))
 		fullBookIdSet = existingBookIdSet.union(bookIdSet)
 		otBooks = fullBookIdSet.intersection(self.OT)
 		ntBooks = fullBookIdSet.intersection(self.NT)
