@@ -22,9 +22,13 @@ class S3Utility:
 
 
 	def getAsciiObject(self, s3Bucket, s3Key):
-		obj = AWSSession.shared().s3Client.get_object(Bucket=s3Bucket, Key=s3Key)
-		content = obj['Body'].read().decode('ascii')
-		return content
+		try:
+			obj = AWSSession.shared().s3Client.get_object(Bucket=s3Bucket, Key=s3Key)
+			content = obj['Body'].read().decode('ascii')
+			return content
+		except Exception as e:
+			print("Error fetching S3 object: %s" % e)
+			return None
 
 
 	def uploadAllFilesets(self, filesets):
