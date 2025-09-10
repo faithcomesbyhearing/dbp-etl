@@ -79,6 +79,11 @@ class InputFileset:
 
 	BUCKET = "BUCKET"
 	LOCAL = "LOCAL"
+	VIDEO_VARIANTS = [
+		("_stream.m3u8", "m3u8"),
+		("_web.mp4",    "web_mp4"),
+		(".mp4",        "mp4"),
+	]
 
 	## These arrays are the 5 stages that an InputFileset must pass through
 	validate = []
