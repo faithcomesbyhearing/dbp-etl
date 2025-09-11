@@ -17,9 +17,9 @@ select count(*) as bible_filesets from bible_filesets;
 
 select count(*) as bible_fileset_connections from bible_fileset_connections;
 
-select count(*) as bible_fileset_copyrights from bible_fileset_copyrights;
+select count(*) as license_group from license_group;
 
-select count(*) as bible_fileset_copyright_organizations from bible_fileset_copyright_organizations;
+select count(*) as license_group_licensor from license_group_licensor;
 
 select count(*) as bible_fileset_tags from bible_fileset_tags;
 

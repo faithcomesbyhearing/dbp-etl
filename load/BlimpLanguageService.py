@@ -161,17 +161,20 @@ def getLicensorsByFilesetId(filesetId):
     sqlClient = SQLUtility(config)
 
     licensors = sqlClient.select(
-        "SELECT organizations.id, organization_translations.name, organization_logos.url AS logo\
-        FROM organizations\
-        INNER JOIN organization_translations ON organization_translations.organization_id = organizations.id\
-        LEFT JOIN organization_logos ON organization_logos.organization_id = organizations.id AND organization_logos.icon = false\
-        INNER JOIN bible_fileset_copyright_organizations ON bible_fileset_copyright_organizations.organization_id = organizations.id\
-        INNER JOIN bible_filesets ON bible_filesets.hash_id = bible_fileset_copyright_organizations.hash_id\
-        WHERE organization_translations.language_id = 6414\
-        AND bible_fileset_copyright_organizations.organization_role = 2\
-        AND bible_filesets.id = %s\
-        GROUP BY organizations.id, organization_translations.name, organization_logos.url\
-        ", (filesetId)
+        """SELECT org.id,
+            orgt.name,
+            orgl.url AS logo
+        FROM organizations org
+        INNER JOIN organization_translations orgt ON orgt.organization_id = org.id
+        LEFT JOIN organization_logos orgl ON orgl.organization_id = org.id AND orgl.icon = false
+        INNER JOIN license_group_licensor lgl ON lgl.organization_id = org.id
+        INNER JOIN bible_filesets bf ON bf.license_group_id = lgl.license_group_id
+        INNER JOIN bible_fileset_types bfty ON bfty.set_type_code = bf.set_type_code
+        INNER JOIN bible_fileset_modes bfm ON bfm.id = bfty.mode_id AND bfm.id = lgl.mode_id
+        WHERE orgt.language_id = 6414
+        AND bf.id = %s
+        GROUP BY org.id, orgt.name, orgl.url
+        """, (filesetId)
     )
 
     records = []
@@ -188,19 +191,19 @@ def getCopyrightByFilesetId(filesetId):
     sqlClient = SQLUtility(config)
 
     licensors = sqlClient.select(
-        "SELECT bible_fileset_copyrights.copyright, bible_fileset_copyrights.copyright_date, bible_fileset_copyrights.copyright_description\
-        FROM bible_fileset_copyrights\
-        INNER JOIN bible_filesets ON bible_filesets.hash_id = bible_fileset_copyrights.hash_id\
-        AND bible_filesets.id = %s\
-        ", (filesetId)
+        """SELECT
+            lgc.copyright
+        FROM bible_filesets bf
+        INNER JOIN license_group lgc ON lgc.id = bf.license_group_id
+        WHERE bf.id = %s
+        LIMIT 1
+        """, (filesetId)
     )
 
     records = []
     for row in licensors:
         copyright = row[0]
-        copyrightDate = row[1]
-        copyrightDescription = row[2]
-        records.append((copyright, copyrightDate, copyrightDescription))
+        records.append((copyright,))
 
     return records
 

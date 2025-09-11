@@ -18,6 +18,7 @@ from SqliteUtility import *
 from PreValidate import *
 from AWSSession import *
 from LanguageReader import LanguageRecordInterface
+from InputFilesetMode import InputFilesetMode
 
 class InputFile:
 
@@ -323,6 +324,9 @@ class InputFileset:
 				return True
 
 		return False
+
+	def modeId(self):
+		return InputFilesetMode.mode_id(self.typeCode)
 
 	def isMP3Fileset(self):
 		for file in self.files:
