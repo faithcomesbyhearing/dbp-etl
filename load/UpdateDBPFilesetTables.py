@@ -226,7 +226,7 @@ class UpdateDBPFilesetTables:
 		placeholders = ",".join(["%s"] * len(book_ids))
 		sql = (
 			"SELECT book_id, chapter_start, verse_start, chapter_end, verse_end, "
-			"file_name, file_size, duration "
+			"file_name, file_size, duration, is_complete_chapter "
 			f"FROM bible_files WHERE hash_id = %s AND book_id IN ({placeholders})"
 		)
 		params = [hash_id] + book_ids
@@ -243,7 +243,7 @@ class UpdateDBPFilesetTables:
 		# 3) Apply in batches
 		table = "bible_files"
 		pkeys = ("hash_id", "book_id", "chapter_start", "verse_start", "file_name")
-		attrs = ("chapter_end", "verse_end", "file_size", "duration", "verse_sequence")
+		attrs = ("chapter_end", "verse_end", "file_size", "duration", "verse_sequence", "is_complete_chapter")
 
 		self.dbOut.insert(table, pkeys, attrs, inserts, keyPosition=9)
 		self.dbOut.updateCol(table, pkeys, updates)
@@ -260,7 +260,7 @@ class UpdateDBPFilesetTables:
 		insertRows, updateRows = [], []
 		dbpMap = {}
 		for row in existing_rows:
-			(dbpBookId, dbpChapterStart, dbpVerseStart, dbpChapterEnd, dbpVerseEnd, dbpFileName, dbpFileSize, dbpDuration) = row
+			(dbpBookId, dbpChapterStart, dbpVerseStart, dbpChapterEnd, dbpVerseEnd, dbpFileName, dbpFileSize, dbpDuration, _) = row
 			key = (dbpBookId, dbpChapterStart, dbpVerseStart)
 			dbpMap[key] = (dbpChapterEnd, dbpVerseEnd, dbpFileName, dbpFileSize, dbpDuration)
 		with open(inputFileset.csvFilename, newline='\n') as csvfile:
@@ -269,11 +269,12 @@ class UpdateDBPFilesetTables:
 				(chapterStart, chapterEnd, verseStart, verseSequence, verseEnd, fileSize) = self.parse_chapter_verse(row)
 				# For text files, we don't have a duration
 				duration = None
-
+				# For text files, we assume the chapter is complete
+				is_complete_chapter = 1
 				key = (row["book_id"], chapterStart, verseStart)
 				dbpValue = dbpMap.get(key)
 				if dbpValue == None:
-					insertRows.append((chapterEnd, verseEnd, fileSize, duration, verseSequence,
+					insertRows.append((chapterEnd, verseEnd, fileSize, duration, verseSequence, is_complete_chapter,
 						hashId, row["book_id"], chapterStart, verseStart, row["file_name"]))
 				else:
 					del dbpMap[key]
@@ -293,7 +294,7 @@ class UpdateDBPFilesetTables:
 
 		return (insertRows, updateRows, [])
 
-	def handle_input_files_for_audio(self, existing_rows, hashId, inputFileset):
+	def handle_input_files_for_audio(self, existing_rows, hashId, input_fileset):
 		"""
 		For audio filesets:
 		- existing_rows: list of tuples from SELECT
@@ -304,23 +305,34 @@ class UpdateDBPFilesetTables:
 		insertRows, updateRows = [], []
 		dbpMap = {}
 		for row in existing_rows:
-			(dbpBookId, dbpChapterStart, dbpVerseStart, dbpChapterEnd, dbpVerseEnd, dbpFileName, dbpFileSize, dbpDuration) = row
+			(dbpBookId, dbpChapterStart, dbpVerseStart, dbpChapterEnd, dbpVerseEnd, dbpFileName, dbpFileSize, dbpDuration, _) = row
 			key = (dbpBookId, dbpChapterStart, dbpVerseStart)
 			dbpMap[key] = (dbpChapterEnd, dbpVerseEnd, dbpFileName, dbpFileSize, dbpDuration)
-		with open(inputFileset.csvFilename, newline='\n') as csvfile:
+
+		# Build a map of files by (book_id, chapter_start, suffix) to determine if a chapter is complete
+		variants = [(".webm", "webm")] if input_fileset.isDerivedFileset() else [(".mp3", "mp3")]
+		map_files_by_chapter = self.map_files_by_book_chapter(input_fileset, variants)
+
+		with open(input_fileset.csvFilename, newline='\n') as csvfile:
 			reader = csv.DictReader(csvfile)
 			for row in reader:
 				(chapterStart, chapterEnd, verseStart, verseSequence, verseEnd, fileSize) = self.parse_chapter_verse(row)
 				fileName = row["file_name"]
 
-				inputFile = inputFileset.getInputFile(fileName)
+				inputFile = input_fileset.getInputFile(fileName)
 				duration = inputFile.duration if inputFile != None else None
-				if inputFileset.locationType == InputFileset.LOCAL:
-					duration = self.getDuration(inputFileset.fullPath() + os.sep + fileName)
+				if input_fileset.locationType == InputFileset.LOCAL:
+					duration = self.getDuration(input_fileset.fullPath() + os.sep + fileName)
 				key = (row["book_id"], chapterStart, verseStart)
 				dbpValue = dbpMap.get(key)
+
+				suffix = ".mp3" if fileName.lower().endswith(".mp3") else (".webm" if fileName.lower().endswith(".webm") else "")
+				# A chapter is considered complete if we have one file for each variant and chapter_start
+				count_files_by_book_chapter = len(map_files_by_chapter.get((row["book_id"], chapterStart, suffix), []))
+				is_complete_chapter = 1 if count_files_by_book_chapter == 1 and "end" != row["chapter_start"] else 0
+
 				if dbpValue == None:
-					insertRows.append((chapterEnd, verseEnd, fileSize, duration, verseSequence,
+					insertRows.append((chapterEnd, verseEnd, fileSize, duration, verseSequence, is_complete_chapter,
 						hashId, row["book_id"], chapterStart, verseStart, fileName))
 				else:
 					del dbpMap[key]
@@ -352,16 +364,19 @@ class UpdateDBPFilesetTables:
 
 		# 1) Build lookup of existing DB rows with correct 'web_' prefix handling
 		dbp_map = {}
-		for book_id, dbp_chapter_start, dbp_verse_start, dbp_chapter_end, dbp_verse_end, dbp_file_name, dbp_size, dpb_dur in existing_rows:
+		for book_id, dbp_chapter_start, dbp_verse_start, dbp_chapter_end, dbp_verse_end, dbp_file_name, dbp_size, dpb_dur, is_complete_chapter in existing_rows:
 			# get extension
 			ext = dbp_file_name.rsplit(".", 1)[-1]
 			if "web" in dbp_file_name:
 				ext = f"web_{ext}"
 			key = (book_id, dbp_chapter_start, dbp_verse_start, ext)
-			dbp_map[key] = (dbp_chapter_end, dbp_verse_end, dbp_file_name, dbp_size, dpb_dur)
+			dbp_map[key] = (dbp_chapter_end, dbp_verse_end, dbp_file_name, dbp_size, dpb_dur, is_complete_chapter)
 
 		inserts, updates = [], []
 		seen_keys = set()
+
+		# Build a map of files by (book_id, chapter_start, suffix) to determine if a chapter is complete
+		map_files_by_chapter = self.map_files_by_book_chapter(input_fileset, InputFileset.VIDEO_VARIANTS)
 
 		with open(input_fileset.csvFilename, newline='\n') as csvfile:
 			reader = csv.DictReader(csvfile)
@@ -370,14 +385,7 @@ class UpdateDBPFilesetTables:
 				base = row["file_name"]
 				prefix = input_fileset.filesetPrefix # e.g. "video/BIBLE_ID/FILESET_ID"
 
-				# 3) Define the three variants
-				variants = [
-					("_stream.m3u8", "m3u8"),
-					("_web.mp4",    "web_mp4"),
-					(".mp4",        "mp4"),
-				]
-
-				for suffix, ext_key in variants:
+				for suffix, ext_key in InputFileset.VIDEO_VARIANTS:
 					stem = base[:-4] if base.lower().endswith(".mp4") else base
 					filename = f"{stem}{suffix}"
 					s3_key  = f"{self.config.s3_vid_bucket}/{prefix}/{filename}"
@@ -397,14 +405,16 @@ class UpdateDBPFilesetTables:
 					dbp = dbp_map.get(key)
 					input_file = input_fileset.getInputFile(s3_key)
 					duration = getattr(input_file, "duration", None) or (dbp[4] if dbp else None)
+					count_files_by_book_chapter = len(map_files_by_chapter.get((row["book_id"], c_start, suffix), []))
+					is_complete_chapter = 1 if count_files_by_book_chapter == 1 and "end" != row["chapter_start"] else 0
 
 					if not dbp:
 						inserts.append((
-							c_end, v_end, variant_file_size, duration, v_seq,
+							c_end, v_end, variant_file_size, duration, v_seq, is_complete_chapter,
 							hash_id, row["book_id"], c_start, v_start, filename
 						))
 					else:
-						dbp_c_end, dbp_v_end, dbp_filename, dbp_size, dpb_dur = dbp
+						dbp_c_end, dbp_v_end, dbp_filename, dbp_size, dpb_dur, dbp_is_complete_chapter = dbp
 
 						# primary keys: "hash_id", "book_id", "chapter_start", "verse_start"
 						if c_end   != dbp_c_end:
@@ -417,6 +427,8 @@ class UpdateDBPFilesetTables:
 							updates.append(("file_size", variant_file_size, dbp_size, hash_id, row["book_id"], c_start, v_start, dbp_filename))
 						if duration != dpb_dur and duration != None and duration != "":
 							updates.append(("duration", duration, dpb_dur, hash_id, row["book_id"], c_start, v_start, dbp_filename))
+						if is_complete_chapter != dbp_is_complete_chapter and is_complete_chapter != None and is_complete_chapter != "":
+							updates.append(("is_complete_chapter", is_complete_chapter, dbp_is_complete_chapter, hash_id, row["book_id"], c_start, v_start, dbp_filename))
 
 				# 4) Anything left in dbp_map wasn’t seen → delete
 				deletes = []
@@ -427,6 +439,26 @@ class UpdateDBPFilesetTables:
 						deletes.append((hash_id, book_id, chapter_start, verse_start, dbp_file_name))
 
 		return inserts, updates, deletes
+
+	def map_files_by_book_chapter(self, input_fileset, variants):
+		"""
+		Builds a mapping of files by (book_id, chapter_start, suffix).
+		This is used to determine if a chapter is complete based on the number of files associated with it.
+		We can take advantage of the fact that the parsing of the chapter and verse in the validation step.
+		"""
+		mapFilesByChapter = {}
+		with open(input_fileset.csvFilename, newline='\n') as csvfile:
+			reader = csv.DictReader(csvfile)
+			for row in reader:
+				c_start, _, _, _, _, _ = self.parse_chapter_verse(row)
+				base = row["file_name"]
+
+				for suffix, _ in variants:
+					if (row["book_id"], c_start, suffix) not in mapFilesByChapter:
+						mapFilesByChapter[(row["book_id"], c_start, suffix)] = [base]
+					else:
+						mapFilesByChapter[(row["book_id"], c_start, suffix)].append(base)
+		return mapFilesByChapter
 
 	def parse_chapter_verse(self, row):
 		"""

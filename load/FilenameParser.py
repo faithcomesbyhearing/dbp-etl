@@ -227,11 +227,11 @@ class Filename:
 
 	def toString(self):
 		print(
-		"bookSeq: %s, fileSeq: %s, bookId: %s, chapter: %s, verseStart: %s, verseStartNum: %s, name: %s, damid: %s, type: %s, file: %s, errors: %s" % (
+		"bookSeq: %s, fileSeq: %s, bookId: %s, chapter: %s, verseStart: %s, verseStartNum: %s, name: %s, damid: %s, type: %s, file: %s, length: %s, errors: %s" % (
 			self.bookSeq, self.fileSeq, self.bookId,
 			self.chapter, self.verseStart, self.verseStartNum,
 			self.name, self.damid, self.type,
-			self.file, self.errors
+			self.file, self.length, self.errors
 		))
 
 
@@ -360,7 +360,7 @@ class FilenameParser:
 			self.ntOrder = self.NTOrderTemp(inp.filesetId, inp.languageRecord)
 
 			if inp.typeCode == "audio" or inp.typeCode == "video":
-				(num_errors, files) = self.parse_fileset(inp.filenames())
+				(num_errors, files) = self.parse_fileset(inp.filenamesTuple())
 			else:
 				# Deprecated: This function won't be used anymore. It is replaced by parse_fileset which uses BibleBrainService
 				(num_errors, files) = self.parseOneFileset3(templates, prefix, inp.filenamesTuple())
@@ -391,14 +391,21 @@ class FilenameParser:
 		print("")
 
 	# This function uses BibleBrainService to parse the fileset
-	def parse_fileset(self, filenames):
+	def parse_fileset(self, filenames_tuple):
+		# get only the filenames from the tuples
+		filenames = [f[0] for f in filenames_tuple]
+
+		filename_name_map = {f[0]: f for f in filenames_tuple}
 		parsed_results = self.biblebrain_service.parse(filenames)
 
 		num_errors = 0
 		files = []
 
 		for result in parsed_results:
-			file = Filename(None, (result.filename, 0, None))
+			# get the original tuple (filename, length, datetime) and if not found,
+			# create a new one with 0 length and None datetime
+			filename = filename_name_map.get(result.filename, (result.filename, 0, None))
+			file = Filename(None, filename)
 
 			if result.pattern is None:
 				file.errors.append("No pattern found for filename: %s" % result.filename)
@@ -408,6 +415,7 @@ class FilenameParser:
 
 			if result.error is not None and result.error != "":
 				file.errors.append(result.error)
+				files.append(file)
 				num_errors += 1
 				continue
 

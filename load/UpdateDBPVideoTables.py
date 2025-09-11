@@ -71,6 +71,10 @@ class UpdateDBPVideoTables:
 		for filename in filenames:
 			m3u8Files = self.downloadM3U8(filesetPrefix, filename)
 			for (m3u8Filename, m3u8Content) in m3u8Files.items():
+				if m3u8Content == None:
+					print("Error: Could not download m3u8 file %s/%s" % (filesetPrefix, m3u8Filename))
+					errorCount += 1
+					continue
 				if m3u8Filename.endswith("_stream.m3u8"):
 					self.processStreamM3U8(m3u8Filename, m3u8Content)
 				else:
