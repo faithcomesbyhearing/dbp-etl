@@ -435,7 +435,7 @@ class UpdateDBPFilesetTables:
 				for (book_id, chapter_start, verse_start, ext), value in dbp_map.items():
 					if (book_id, chapter_start, verse_start, ext) not in seen_keys:
 						# get the file name from the dbp_map
-						(_, _, dbp_file_name, _, _) = value
+						(_, _, dbp_file_name, _, _, _) = value
 						deletes.append((hash_id, book_id, chapter_start, verse_start, dbp_file_name))
 
 		return inserts, updates, deletes
