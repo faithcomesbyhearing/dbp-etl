@@ -26,7 +26,6 @@ from UpdateDBPTextFilesets import UpdateDBPTextFilesets
 from UpdateDBPBooksTable import UpdateDBPBooksTable
 from UpdateDBPBibleFilesSecondary import UpdateDBPBibleFilesSecondary
 from UpdateDBPLPTSTable import UpdateDBPLPTSTable
-from UpdateDBPLicensorTables import UpdateDBPLicensorTables
 
 
 class UpdateDBPFilesetTables:
@@ -118,7 +117,6 @@ class UpdateDBPFilesetTables:
 
 		dbConn = SQLUtility(self.config)
 		bookIdSet = self.getBibleBooks(inp.typeCode, inp.csvFilename, inp.databasePath)
-		updateLicensor = UpdateDBPLicensorTables(dbConn, self.dbOut)
 		# it needs to know if the new inputFileset has new files to set the flag content_loaded
 		isContentLoaded = 1 if len(inp.files) > 0 else 0
 
@@ -138,7 +136,7 @@ class UpdateDBPFilesetTables:
 
 		publishedSnm = inp.languageRecord.HasPublishedStocknumber(inp.filesetId)
 
-		lptsDBP.upsertBibleFileset(dbConn=dbConn, setTypeCode=setTypeCode, setSizeCode=setSizeCode, filesetId=inp.filesetId, isContentLoaded=isContentLoaded, isArchived=0, publishedSnm=publishedSnm)
+		lptsDBP.upsertBibleFileset(dbConn=dbConn, setTypeCode=setTypeCode, setSizeCode=setSizeCode, filesetId=inp.filesetId, isContentLoaded=isContentLoaded, isArchived=0, publishedSnm=publishedSnm, modeId=inp.modeId())
 		lptsDBP.upsertBibleFilesetConnection(dbConn, hashId, inp.bibleId)
 		# array to hold fileset tags for later update
 		# this is used to update the bible_fileset_tags table with the hashId
@@ -176,9 +174,6 @@ class UpdateDBPFilesetTables:
 		# update the bible_fileset_tags table with the filesetList
 		if filesetList:
 			lptsDBP.updateBibleFilesetTags(filesetList)
-
-		if inp.isDerivedFileset():
-			updateLicensor.processFileset(inp.lptsDamId, hashId)
 
 		tocBooks = self.booksUpdater.getTableOfContents(inp.typeCode, inp.bibleId, inp.filesetId, inp.csvFilename, inp.databasePath)
 		self.booksUpdater.updateBibleBooks(inp.typeCode, inp.bibleId, tocBooks)
@@ -435,7 +430,7 @@ class UpdateDBPFilesetTables:
 				for (book_id, chapter_start, verse_start, ext), value in dbp_map.items():
 					if (book_id, chapter_start, verse_start, ext) not in seen_keys:
 						# get the file name from the dbp_map
-						(_, _, dbp_file_name, _, _) = value
+						(_, _, dbp_file_name, _, _, _) = value
 						deletes.append((hash_id, book_id, chapter_start, verse_start, dbp_file_name))
 
 		return inserts, updates, deletes

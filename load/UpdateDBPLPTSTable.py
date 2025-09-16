@@ -13,10 +13,10 @@ from RunStatus import *
 from LanguageReader import *
 from SQLUtility import *
 from SQLBatchExec import *
-from LoadOrganizations import *
 from UpdateDBPAccessTable import *
 from UpdateDBPBibleTranslations import *
 from UpdateDBPLanguageTranslation import *
+from InputFileset import InputFileset
 
 DefaultLanguageId = 6414
 DefaultISO = "eng"
@@ -85,8 +85,6 @@ class UpdateDBPLPTSTable:
 		access = UpdateDBPAccessTable(self.config, self.db, self.dbOut, self.languageReader)
 		access.process(filesetList)
 		self.updateBibleFilesetTags(filesetList)
-		self.updateBibleFilesetCopyrights(filesetList)
-		self.updateBibleFilesetCopyrightOrganizations(filesetList)
 		bibletranslations = UpdateDBPBibleTranslations(self.config, self.db, self.dbOut, self.languageReader)
 		bibletranslations.insertEngVolumeName()
 		languageTranslations = UpdateDBPLanguageTranslation(self.config, self.db, self.dbOut, self.languageReader)
@@ -149,8 +147,8 @@ class UpdateDBPLPTSTable:
 
 						if bibleId != None and setTypeCode != None and setSizeCode != None and lptsFilesetProcessed.get(filesetId) == None:
 							publishedSnm = lptsRecord.HasPublishedStocknumber(filesetId)
-
-							hashId = self.upsertBibleFileset(dbConn=self.db, setTypeCode=setTypeCode, setSizeCode=setSizeCode, filesetId=filesetId, isArchived=isArchived, publishedSnm=publishedSnm)
+							modeId = lptsRecord.ModeId(typeCode)
+							hashId = self.upsertBibleFileset(dbConn=self.db, setTypeCode=setTypeCode, setSizeCode=setSizeCode, filesetId=filesetId, isArchived=isArchived, publishedSnm=publishedSnm, modeId=modeId)
 							if hashId != None:
 								self.upsertBibleFilesetConnection(self.db, hashId, bibleId)
 								bucket = self.config.s3_bucket
@@ -181,6 +179,7 @@ class UpdateDBPLPTSTable:
 
 		# Create license group if it does not exist
 		if row == None:
+			# Check if the license group id exists for the parent fileset
 			row = self.db.selectRow("SELECT lg.id, lg.name FROM license_group lg INNER JOIN bible_filesets bf ON bf.license_group_id = lg.id WHERE bf.id=%s LIMIT 1", (inputFileset.lptsDamId))
 
 			tableNameFilesets = "bible_filesets"
@@ -392,101 +391,24 @@ class UpdateDBPLPTSTable:
 		self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
 		self.dbOut.delete(tableName, pkeyNames, deleteRows)
 
+	def upsertBibleFileset(self, dbConn, setTypeCode, setSizeCode, filesetId, isContentLoaded=0, isArchived=0, publishedSnm=0, modeId=None):
+		if modeId is None:
+			print("ERROR: modeId is required for upsertBibleFileset")
+			return None
 
-	##
-	## Bible Fileset Copyrights
-	##
-	def updateBibleFilesetCopyrights(self, filesetList):
-		insertRows = []
-		updateRows = []
-		deleteRows = []
-		sql = ("SELECT hash_id, copyright_date, copyright, copyright_description, open_access"
-				" FROM bible_fileset_copyrights")
-		copyrightHashIdMap = {}
-		resultSet = self.db.select(sql, ())
-		for row in resultSet:
-			hashId = row[0]
-			newRow = row[1:]
-			copyrightHashIdMap[hashId] = newRow
-
-		for (bibleId, filesetId, setTypeCode, setSizeCode, assetId, hashId) in filesetList:
-			typeCode = setTypeCode.split("_")[0]
-			if filesetId[8:10] == "SA":
-				dbpFilesetId = filesetId[:8] + "DA" + filesetId[10:]
-			else:
-				dbpFilesetId = filesetId
-			#languageRecords = self.languageReader.getFilesetRecords(dbpFilesetId)
-			row = copyrightHashIdMap.get(hashId, None)
-
-			if typeCode != "app":
-				(languageRecord, lptsIndex) = self.languageReader.getLanguageRecordLoose(typeCode, bibleId, dbpFilesetId)
-				if languageRecord != None:
-					copyrightText = self.escapeChars(languageRecord.Copyrightc())
-					copyrightAudio = self.escapeChars(languageRecord.Copyrightp())
-					copyrightVideo = self.escapeChars(languageRecord.Copyright_Video())
-
-					if typeCode == "text":
-						copyright = copyrightText
-						copyrightMsg = copyrightText
-					elif typeCode == "audio":
-						copyright = copyrightAudio
-						copyrightMsg = "Text: %s\nAudio: %s" % (copyrightText, copyrightAudio)
-					elif typeCode == "video":
-						copyright = copyrightVideo
-						copyrightMsg = "Text: %s\nAudio: %s\nVideo: %s" % (copyrightText, copyrightAudio, copyrightVideo)
-
-					copyrightDate = None
-					if copyright != None:
-						datePattern = re.compile("([0-9]+)")
-						year = datePattern.search(copyright)
-						if year != None:
-							copyrightDate = year.group(1)
-
-				if row != None and languageRecord == None:
-					deleteRows.append((hashId,))
-
-				elif languageRecord != None and row == None and copyrightMsg != None:
-					copyrightMsg = copyrightMsg.replace("'", "\\'")
-					insertRows.append((copyrightDate, copyrightMsg, copyrightMsg, 1, hashId))
-
-				elif (row != None and
-					copyrightMsg != None and
-					(row[0] != copyrightDate or
-					row[1] != copyrightMsg or
-					row[2] != copyrightMsg or
-					row[3] != 1)):
-					copyrightMsg = copyrightMsg.replace("'", "\\'")
-					updateRows.append((copyrightDate, copyrightMsg, copyrightMsg, 1, hashId))
-
-		tableName = "bible_fileset_copyrights"
-		pkeyNames = ("hash_id",)
-		attrNames = ("copyright_date", "copyright", "copyright_description", "open_access")
-		self.dbOut.insert(tableName, pkeyNames, attrNames, insertRows)
-		self.dbOut.update(tableName, pkeyNames, attrNames, updateRows)
-		self.dbOut.delete(tableName, pkeyNames, deleteRows)
-
-
-	def updateBibleFilesetCopyrightOrganizations(self, filesetList):
-		orgs = LoadOrganizations(self.config, self.db, self.dbOut, self.languageReader)
-		# These methods should be called by Validate
-		#unknownLicensors = orgs.validateLicensors()
-		#unknownCopyrights = orgs.validateCopyrights()
-		orgs.update_licensors(filesetList)
-
-	def upsertBibleFileset(self, dbConn, setTypeCode, setSizeCode, filesetId, isContentLoaded=0, isArchived=0, publishedSnm=0):
 		# Avoid creating or updating the fileset if both values are true
 		if isContentLoaded == True and isArchived == True:
 			return None
 
 		tableName = "bible_filesets"
 		pkeyNames = ("hash_id",)
-		attrNames = ("id", "asset_id", "set_type_code", "set_size_code", "content_loaded", "archived", "published_snm")
+		attrNames = ("id", "asset_id", "set_type_code", "set_size_code", "content_loaded", "archived", "published_snm", "mode_id")
 		updateRows = []
 		bucket = self.config.s3_vid_bucket if setTypeCode == "video_stream" else self.config.s3_bucket	
 		hashId = self.getHashId(bucket, filesetId, setTypeCode)
 		row = dbConn.selectRow("SELECT id, asset_id, set_type_code, set_size_code, content_loaded, archived, published_snm FROM bible_filesets WHERE hash_id=%s", (hashId,))
 		if row == None:
-			updateRows.append((filesetId, bucket, setTypeCode, setSizeCode, isContentLoaded, isArchived, publishedSnm, hashId))
+			updateRows.append((filesetId, bucket, setTypeCode, setSizeCode, isContentLoaded, isArchived, publishedSnm, modeId, hashId))
 			self.dbOut.insert(tableName, pkeyNames, attrNames, updateRows)
 			return hashId
 
@@ -645,11 +567,4 @@ insert into bible_fileset_tags
 select * from bible_fileset_tags_backup;
 SET FOREIGN_KEY_CHECKS=1;
 select count(*) from bible_fileset_tags;
-
-truncate table bible_fileset_copyrights;
-SET FOREIGN_KEY_CHECKS=0;
-insert into bible_fileset_copyrights 
-select * from bible_fileset_copyrights_backup;
-SET FOREIGN_KEY_CHECKS=1;
-select count(*) from bible_fileset_copyrights;
 """
