@@ -11,7 +11,7 @@ from Config import *
 from AWSSession import *
 from InputFileset import *
 from TranscodeVideo import *
-from FilenameParser import *
+from FilenameParser import FilenameParser
 from AWSTranscoder import *
 
 class S3Utility:
