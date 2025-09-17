@@ -102,14 +102,33 @@ class CompleteCheck:
 
 
 	def filesetsWithoutCopyrights(self):
-		resultSet = self.db.select("SELECT id, hash_id FROM bible_filesets WHERE hash_id NOT IN" +
-			" (SELECT hash_id FROM bible_fileset_copyrights) ORDER by id", ())
+		sql = """
+			SELECT bf.id, bf.hash_id
+			FROM bible_filesets bf
+			WHERE NOT EXISTS (
+				SELECT 1
+				FROM license_group lgc
+				WHERE lgc.id = bf.license_group_id
+				AND lgc.copyright IS NOT NULL
+			)
+			ORDER BY bf.id
+			"""
+		resultSet = self.db.select(sql, ())
 		self.outputTable("Filesets without Copyrights.", ["filesetId", "hashId"], resultSet)
 
 
 	def filesetsWithoutOrganizations(self):
-		resultSet = self.db.select("SELECT id, hash_id FROM bible_filesets WHERE hash_id NOT IN" +
-			" (SELECT hash_id FROM bible_fileset_copyrights) ORDER by id", ())
+		sql = """
+			SELECT bf.id, bf.hash_id
+			FROM bible_filesets bf
+			WHERE NOT EXISTS (
+				SELECT 1
+				FROM license_group_licensor lgl
+				WHERE lgl.license_group_id = bf.license_group_id
+			)
+			ORDER BY bf.id
+			"""
+		resultSet = self.db.select(sql, ())
 		self.outputTable("Filesets without Organizations.", ["filesetId", "hashId"], resultSet)
 
 
@@ -118,7 +137,8 @@ class CompleteCheck:
 			" (SELECT hash_id FROM access_group_filesets) ORDER BY id", ())
 
 		migration_stage = "B" if os.getenv("DATA_MODEL_MIGRATION_STAGE") == None else os.getenv("DATA_MODEL_MIGRATION_STAGE")
-		languageReader = LanguageReaderCreator(migration_stage).create(config.filename_lpts_xml)
+		lpts_xml = config.filename_lpts_xml if migration_stage == "B" else ""
+		languageReader = LanguageReaderCreator(migration_stage).create(lpts_xml)
 
 		finalResultSet = []
 		for fileset in resultSet:
@@ -322,7 +342,8 @@ if (__name__ == '__main__'):
 		print("Usage: python3 load/CompleteCheck.py  config_profile  full|fast|restart")
 		sys.exit()
 	migration_stage = "B" if os.getenv("DATA_MODEL_MIGRATION_STAGE") == None else os.getenv("DATA_MODEL_MIGRATION_STAGE")
-	languageReader = LanguageReaderCreator(migration_stage).create(config.filename_lpts_xml)
+	lpts_xml = config.filename_lpts_xml if migration_stage == "B" else ""
+	languageReader = LanguageReaderCreator(migration_stage).create(lpts_xml)
 
 	db = SQLUtility(config)
 	check = CompleteCheck(config, db, languageReader)

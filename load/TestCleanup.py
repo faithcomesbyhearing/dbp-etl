@@ -27,8 +27,6 @@ def deleteFileset(db, filesetId):
 	sql.append("DELETE FROM access_group_filesets WHERE hash_id = %s")
 	sql.append("DELETE FROM bible_fileset_connections WHERE hash_id = %s")
 	sql.append("DELETE FROM bible_fileset_tags WHERE hash_id = %s")
-	sql.append("DELETE FROM bible_fileset_copyright_organizations WHERE hash_id = %s")
-	sql.append("DELETE FROM bible_fileset_copyrights WHERE hash_id = %s")
 	sql.append("DELETE FROM bible_filesets WHERE hash_id = %s")
 	for stmt in sql:
 		db.execute(stmt, (hashId,))

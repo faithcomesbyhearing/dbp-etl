@@ -45,37 +45,10 @@ class Filename:
 			if bookSeq[0] not in {"A", "B"}:
 				self.errors.append("non-number bookSeq")
 
-
-	def setBookBySeq(self, bookSeq, otOrder, ntOrder, chapterMap):
-		self.bookSeq = bookSeq
-		if bookSeq[0] == "A":
-			orderFunction = otOrder.replace("-", "") + "OT"	
-		elif bookSeq[0] == "B":
-			orderFunction = ntOrder.replace("-", "") + "NT"
-		else:
-			self.errors.append("book sequence must begin A or B")
-			return
-		booknames = Booknames()
-
-		func = getattr(booknames, orderFunction)
-		bookId = func(bookSeq)	
-		if bookId != None:
-			self.setBookId(bookId, chapterMap)
-
 	def setFileSeq(self, fileSeq):
 		self.fileSeq = fileSeq
 		if not fileSeq.isdigit():
 			self.errors.append("non-number fileSeq")
-
-
-	# Should be used before set chapter
-	def setBookName(self, name, chapterMap):
-		self.name = name
-		bookId = Booknames().usfmBookId(name)
-		if bookId == None:
-			self.errors.append("usfm not found for name: %s" % (name))
-		else:
-			self.setBookId(bookId, chapterMap)
 
 	def setCovenantBookNameById(self, bookId, covenantBookNameMap):
 		# retrieve names from DB; otherwise reference from Booknames.Covenant

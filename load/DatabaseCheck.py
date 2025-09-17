@@ -124,8 +124,17 @@ class DatabaseCheck:
 
 
 	def filesetsWithoutOrganizations(self):
-		resultSet = self.db.select("SELECT id, hash_id FROM bible_filesets WHERE hash_id NOT IN" +
-			" (SELECT hash_id FROM bible_fileset_copyrights) ORDER by id", ())
+		sql = """
+			SELECT bf.id, bf.hash_id
+			FROM bible_filesets bf
+			WHERE NOT EXISTS (
+				SELECT 1
+				FROM license_group_licensor lgl
+				WHERE lgl.license_group_id = bf.license_group_id
+			)
+			ORDER BY bf.id
+			"""
+		resultSet = self.db.select(sql, ())
 		self.outputTable("Filesets without Organizations.", ["filesetId", "hashId"], resultSet)
 
 	def filesetsWithoutAccessGroups(self):
@@ -260,8 +269,12 @@ class DatabaseCheck:
 
 
 if (__name__ == '__main__'):
+	from LanguageReaderCreator import LanguageReaderCreator
+
 	config = Config()
-	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
+	migration_stage = "B" if os.getenv("DATA_MODEL_MIGRATION_STAGE") == None else os.getenv("DATA_MODEL_MIGRATION_STAGE")
+	lpts_xml = config.filename_lpts_xml if migration_stage == "B" else ""
+	languageReader = LanguageReaderCreator(migration_stage).create(lpts_xml)
 	db = SQLUtility(config)
 	check = DatabaseCheck(config, db, languageReader)
 	check.process()
