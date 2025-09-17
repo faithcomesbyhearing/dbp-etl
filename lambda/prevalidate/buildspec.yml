@@ -7,7 +7,7 @@ phases:
       - pwd
       - cd lambda/prevalidate
       - sh ../generate-dbp-etl-cfg.sh
-      - zip -j lambda Handler.py dbp-etl.cfg ../../load/PreValidate.py ../../load/Config.py ../../load/LPTSExtractReader.py ../../load/PreValidateResult.py   ../../load/TextStockNumberProcessor.py ../../load/LanguageReaderCreator.py  ../../load/LanguageReader.py  ../../load/Blimp*.py ../../load/SQLUtility.py
+      - zip -j lambda Handler.py dbp-etl.cfg ../../load/PreValidate.py ../../load/Config.py ../../load/LPTSExtractReader.py ../../load/PreValidateResult.py   ../../load/TextStockNumberProcessor.py ../../load/LanguageReaderCreator.py  ../../load/LanguageReader.py  ../../load/Blimp*.py ../../load/SQLUtility.py ../../load/InputFilesetMode.py
   post_build:
     commands:
       - echo Build completed on `date`

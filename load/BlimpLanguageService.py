@@ -169,8 +169,6 @@ def getLicensorsByFilesetId(filesetId):
         LEFT JOIN organization_logos orgl ON orgl.organization_id = org.id AND orgl.icon = false
         INNER JOIN license_group_licensor lgl ON lgl.organization_id = org.id
         INNER JOIN bible_filesets bf ON bf.license_group_id = lgl.license_group_id
-        INNER JOIN bible_fileset_types bfty ON bfty.set_type_code = bf.set_type_code
-        INNER JOIN bible_fileset_modes bfm ON bfm.id = bfty.mode_id AND bfm.id = lgl.mode_id
         WHERE orgt.language_id = 6414
         AND bf.id = %s
         GROUP BY org.id, orgt.name, orgl.url

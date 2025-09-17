@@ -127,13 +127,10 @@ class DatabaseCheck:
 		sql = """
 			SELECT bf.id, bf.hash_id
 			FROM bible_filesets bf
-			INNER JOIN bible_fileset_types bft ON bft.set_type_code = bf.set_type_code
-			INNER JOIN bible_fileset_modes bfm ON bfm.id = bft.mode_id
 			WHERE NOT EXISTS (
 				SELECT 1
 				FROM license_group_licensor lgl
 				WHERE lgl.license_group_id = bf.license_group_id
-				AND lgl.mode_id = bfm.id
 			)
 			ORDER BY bf.id
 			"""
