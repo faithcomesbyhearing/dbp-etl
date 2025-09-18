@@ -8,6 +8,7 @@ import os
 import re
 from xml.dom import minidom
 from LanguageReader import LanguageReaderInterface, LanguageRecordInterface
+from InputFilesetMode import InputFilesetMode
 
 class LPTSExtractReader (LanguageReaderInterface):
 
@@ -368,6 +369,12 @@ class LanguageRecord (LanguageRecordInterface):
 			if status in {"Live", "live", None}:
 				results.add(damId)
 		return results
+
+	def ModeId(self, typeCode):
+		modeId = InputFilesetMode.mode_id(typeCode)
+		if modeId == None:
+			print("ERROR: Unknown typeCode '%s', audio, text, or video is expected." % (typeCode))
+		return modeId
 
 	## Return a map of {damId: status} of the damIds in a record
 	def DamIdMap(self, typeCode, index):

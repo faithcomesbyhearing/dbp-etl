@@ -128,22 +128,7 @@ class ValidatePage:
 				" FROM access_group_filesets a JOIN bible_filesets f ON a.hash_id = f.hash_id" +
 				" JOIN access_groups t ON a.access_group_id = t.id" +
 				" WHERE a.hash_id IN (%s) ORDER BY f.id, a.access_group_id" % (hashIdList,)), ())
-				
-		self.displayQuery("Bible_Fileset_Copyright_Organizations",
-			["fileset_id", "organization_id", "organization_slug", "organization_role", "created_at", "updated_at"],
-			("SELECT distinct s.id, f.organization_id, o.slug, f.organization_role, f.created_at, f.updated_at" +
-				" FROM bible_fileset_copyright_organizations f" +
-				" JOIN bible_filesets s ON f.hash_id = s.hash_id" +
-				" JOIN organizations o ON o.id = f.organization_id" +
-				" WHERE f.hash_id IN (%s) ORDER BY s.id" % (hashIdList,)), ())
-				
-		self.displayQuery("Bible_Fileset_Copyrights", 
-			["fileset_id", "copyright_date", "copyright", "copyright_description", "created_at", "updated_at"],
-			("SELECT distinct s.id, f.copyright_date, f.copyright, f.copyright_description, f.created_at, f.updated_at" + 
-				" FROM bible_fileset_copyrights f" +
-				" JOIN bible_filesets s ON f.hash_id = s.hash_id" +
-				" WHERE f.hash_id IN (%s) ORDER by s.id" % (hashIdList,)), ())
-				
+
 		self.displayQuery("Bible_Fileset_Tags",
 			["fileset_id", "name", "description", "created_at", "updated_at"],
 			("SELECT s.id, f.name, f.description, f.created_at, f.updated_at" +

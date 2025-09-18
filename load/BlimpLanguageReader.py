@@ -70,6 +70,8 @@ class BlimpLanguageReader (LanguageReaderInterface):
         if mediaId != None:
             result = parseResult(self.service.getMediaById(mediaId))
             languageRecord = result[0] if len(result) > 0 else None
+            if languageRecord == None:
+                return None
             response = set()
             response.add((languageRecord.Status(), languageRecord))
             return response
