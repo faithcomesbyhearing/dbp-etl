@@ -3,12 +3,13 @@
 import io
 import sys
 import re
+import os
 from operator import attrgetter
-from Booknames import *
-from FilenameReducer import *
-from SQLUtility import *
-from Config import *
-from Log import *
+from FilenameReducer import FilenameReducer
+from SQLUtility import SQLUtility
+from Config import Config
+from Log import Log
+from AWSSession import AWSSession
 from BibleBrainService import BibleBrainService
 
 class Filename:
@@ -51,35 +52,17 @@ class Filename:
 			self.errors.append("non-number fileSeq")
 
 	def setCovenantBookNameById(self, bookId, covenantBookNameMap):
-		# retrieve names from DB; otherwise reference from Booknames.Covenant
+		# retrieve names from DB; otherwise reference from biblebrain parse endpoint, which it should have been set already
 		bookName = covenantBookNameMap.get(bookId)
 		if bookName == None:
-			print("WARN: bookname not found in database for id: %s. It will try to fetch name from Booknames().Covenant" % (bookId))
-			bookName = Booknames().Covenant(bookId)
-			if bookName == None:
-				self.errors.append("bookname not found for id: %s" % (bookId))
+			print("WARN: bookname not found in database for id: %s. It will use name from biblebrain parse endpoint" % (bookId))
+			# we can early return because the name should have been set already from biblebrain parse when processing the video and it invokes setBookName
+			return
 
 		self.name = bookName
 
-	# This should only be used in cases where setBookBySeq was used to set bookId
-	# Deuterocanon DC 
-	def checkBookName(self, name):
+	def setBookName(self, name):
 		self.name = name
-		book = Booknames().usfmBookId(name)
-		if book == None:
-			self.errors.append("bookname %s is not recognized" % (name))
-		elif book != self.bookId and self.bookId != "":
-			if self.bookId == "EZA" and book == "EZR":
-				return
-			if self.bookId == "EZR" and book == "NEH":
-				return
-			if self.bookId == "ESG" and book == "EST":
-				return
-			if self.bookId == "DAG" and book == "DAN":
-				return
-			self.bookId = book
-			#self.errors.append("book id by sequence is %s and book id by name is %s" % (self.bookId, book))
-
 
 	def setBookId(self, bookId, chapterMap):
 		self.bookId = bookId
@@ -247,7 +230,7 @@ class FilenameRegex:
 				file.setTitle(match.group(2))
 				file.setType(match.group(3))
 			else:
-				print("ERROR: unknown templated %s" % (self.name))
+				print("ERROR: unknown template %s" % (self.name))
 				sys.exit()
 		else:
 			file.errors.append("no regex match to %s" % (self.name))
@@ -401,7 +384,7 @@ class FilenameParser:
 			if result.pattern.book_id is not None and result.pattern.book_id != "":
 				file.setBookId(result.pattern.book_id, self.chapterMap)
 			if result.pattern.book_name is not None and result.pattern.book_name != "":
-				file.checkBookName(result.pattern.book_name)
+				file.setBookName(result.pattern.book_name)
 			
 			file.setChapter(result.pattern.chapter, self.maxChapterMap)
 
@@ -412,15 +395,9 @@ class FilenameParser:
 
 			if "covenant" in result.filename.lower():
 				# Covenant films always have chapter 1 and verse 1
-				video_chapter_and_verse = "1"
-				covenant_book_id = result.pattern.book_id
-				# Ensure covenant book IDs start with "C"
-				if not covenant_book_id.startswith("C"):
-					covenant_book_id = "C" + covenant_book_id
+				video_chapter_and_verse = self._get_covenant_chapter_verse(result.pattern.chapter)
 
-				file.setBookId(covenant_book_id, self.chapterMap)
 				file.setCovenantBookNameById(file.bookId, self.covenantBookNameMap)
-				file.setChapter(video_chapter_and_verse, self.maxChapterMap)
 				file.setVerseStart(video_chapter_and_verse)
 				file.setVerseEnd(video_chapter_and_verse)
 
@@ -433,6 +410,15 @@ class FilenameParser:
 			files.append(file)
 
 		return (num_errors, files)
+
+	def _get_covenant_chapter_verse(self, chapter):
+		"""
+		Returns the chapter/verse value for Covenant films.
+		Covenant films default to chapter/verse "1" if no valid chapter is provided.
+		"""
+		if chapter is not None and chapter != "":
+			return chapter
+		return "1"
 
 	# Deprecated: This function is not used anymore. It is replaced by parse_fileset which uses BibleBrainService
 	# However, it is kept here because biblebrain_service does not cover text files yet.
@@ -605,3 +591,4 @@ if (__name__ == '__main__'):
 # time python3 load/FilenameParser.py test s3://etl-development-input/ "SLUYPMP2DV"
 # time python3 load/FilenameParser.py test s3://etl-development-input/ "URIWBTN2DV"
 # time python3 load/FilenameParser.py test s3://etl-development-input/ "SPNBDAP2DV"
+# time python3 load/FilenameParser.py test s3://etl-development-input/ "ACECOVS2DV"
