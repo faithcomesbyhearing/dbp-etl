@@ -26,6 +26,10 @@ class AWSSession:
 		return self._securityTokenService("lambda", "AssumeRoleSession3", self.config.lambda_zip_region, self.config.lambda_zip_timeout)
 
 
+	def ecsClient(self):
+		return self._securityTokenService("ecs", "AssumeRoleSession4", self.config.transcoder_ecs_region)
+
+
 	def _securityTokenService(self, clientType, roleSessionName, regionName, timeout=None):
 		session = boto3.Session(profile_name = self.config.s3_aws_profile, region_name = regionName)
 

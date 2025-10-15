@@ -86,6 +86,10 @@ class InputFileset:
 		(".mp4",        "mp4"),
 	]
 
+	ECS_TRANSCODE_VIDEO_VARIANTS = [
+		(".mp4",        "mp4"),
+	]
+
 	## These arrays are the 5 stages that an InputFileset must pass through
 	validate = []
 	upload = []

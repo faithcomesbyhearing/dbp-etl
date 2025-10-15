@@ -74,7 +74,17 @@ class S3Utility:
 			return False
 		else:
 			if inp.filesetPrefix.startswith("video"):
-				TranscodeVideo.transcodeVideoFileset(self.config, inp.filesetPrefix, inp.s3FileKeys())
+				response = TranscodeVideo.transcodeVideoFileset(
+					self.config,
+					inp.filesetPrefix,
+					inp.s3FileKeys(),
+					sourceBucket=inp.location,
+					filesetPath=inp.filesetPath
+				)
+				if response is False:
+					Log.getLogger(inp.filesetId).message(Log.FATAL, "ERROR: Transcode of %s in %s failed." % (inp.filesetPrefix, s3Bucket))
+					return False
+
 			InputFileset.database.append(inp)
 			return True
 
