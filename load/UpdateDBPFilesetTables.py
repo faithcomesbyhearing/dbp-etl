@@ -144,6 +144,8 @@ class UpdateDBPFilesetTables:
 
 		if inp.typeCode in {"audio", "video"}:
 			setTypeCode = inp.getSetTypeCode()
+			# The ECS transcoder will update the video tables and it will create the bible_files records. However,
+			# the method insertBibleFiles will check if the files already exist and will not duplicate them.
 			self.insertBibleFiles(dbConn, hashId, inputFileset, bookIdSet)
 			# For audio and video filesets, we need to update the bible_fileset_tags table with the hashId
 			filesetList.append((inp.bibleId, inp.filesetId, setTypeCode, None, None, hashId))
@@ -372,7 +374,7 @@ class UpdateDBPFilesetTables:
 
 		# Build a map of files by (book_id, chapter_start, suffix) to determine if a chapter is complete
 		map_files_by_chapter = self.map_files_by_book_chapter(input_fileset, InputFileset.VIDEO_VARIANTS)
-
+		video_variants = InputFileset.ECS_TRANSCODE_VIDEO_VARIANTS if self.config.transcoder_ecs_disabled is False else InputFileset.VIDEO_VARIANTS
 		with open(input_fileset.csvFilename, newline='\n') as csvfile:
 			reader = csv.DictReader(csvfile)
 			for row in reader:
@@ -380,7 +382,7 @@ class UpdateDBPFilesetTables:
 				base = row["file_name"]
 				prefix = input_fileset.filesetPrefix # e.g. "video/BIBLE_ID/FILESET_ID"
 
-				for suffix, ext_key in InputFileset.VIDEO_VARIANTS:
+				for suffix, ext_key in video_variants:
 					stem = base[:-4] if base.lower().endswith(".mp4") else base
 					filename = f"{stem}{suffix}"
 					s3_key  = f"{self.config.s3_vid_bucket}/{prefix}/{filename}"

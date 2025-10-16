@@ -32,6 +32,11 @@ class UpdateDBPVideoTables:
 
 
 	def processFileset(self, filesetPrefix, filenames, hashId):
+		# If ECS transcoder is enabled, then the video tables will be updated by the ECS service
+		if self.config.transcoder_ecs_disabled is False:
+			print("UpdateDBPVideoTables: ECS transcoder is enabled for video which will update video tables for %s" % (filesetPrefix))
+			return
+
 		if hashId != None:
 			self.populateDBPMaps(hashId)
 			done = self.updateVideoFileset(filesetPrefix, filenames)

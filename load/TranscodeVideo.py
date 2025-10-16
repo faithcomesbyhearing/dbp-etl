@@ -1,15 +1,24 @@
 # TranscodeVideo.py
 
-import json
-import boto3
+from itertools import count
+import time
 from S3Utility import *
 from RunStatus import *
 from AWSSession import *
-
+from BibleBrainServiceTranscoder import BibleBrainServiceTranscoder
 class TranscodeVideo:
 
 
-	def transcodeVideoFileset(config, filesetPrefix, s3FileKeys):
+	def transcodeVideoFileset(config, filesetPrefix, s3FileKeys, sourceBucket=None, filesetPath=None):
+		# If ECS transcoder is enabled, use it, otherwise use Elastic Transcoder
+		if config.transcoder_ecs_disabled is False:
+			return BibleBrainServiceTranscoder.transcodeVideoFilesetECS(config, filesetPrefix, s3FileKeys, sourceBucket, filesetPath)
+		else:
+			return TranscodeVideo.transcodeVideoFilesetET(config, filesetPrefix, s3FileKeys)
+
+	def transcodeVideoFilesetET(config, filesetPrefix, s3FileKeys):
+		"""Transcode video fileset using Elastic Transcoder."""
+
 		transcoder = TranscodeVideo(config, filesetPrefix)
 		RunStatus.printDuration("BEGIN SUBMIT TRANSCODE")
 		for s3FileKey in s3FileKeys:
@@ -21,6 +30,8 @@ class TranscodeVideo:
 		else:
 			print("Transcode %s FAILED." % (filesetPrefix))
 		RunStatus.printDuration("TRANSCODE DONE")
+
+		return done
 
 
 	## Used by UpdateDBPVideoTable
@@ -124,17 +135,25 @@ class TranscodeVideo:
 		return errorCount == 0
 
 
+
 if (__name__ == '__main__'):
 	from LanguageReaderCreator import LanguageReaderCreator
 	from InputProcessor import *
 
 	config = Config.shared()
-	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
+	languageReader = LanguageReaderCreator("BLIMP").create("")
 	filesets = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
 
+	print("Found %d filesets to process" % (len(filesets)))
+	count = 0
 	for inp in filesets:
 		if inp.typeCode == "video":
-			TranscodeVideo.transcodeVideoFileset(config, inp.filesetPrefix, inp.s3FileKeys())
+			source = "s3://%s" % (inp.fullPath()) if inp.locationType != InputFileset.LOCAL else inp.fullPath()
+			location = inp.location
+			filesetPath = inp.filesetPath
+			TranscodeVideo.transcodeVideoFileset(config, inp.filesetPrefix, inp.s3FileKeys(), sourceBucket=location, filesetPath=filesetPath)
+			count += 1
+	print("Processed %d video filesets." % (count))
 
 # Successful tests with source on local drive
 # time python3 load/S3Utility.py test-video /Volumes/FCBH/all-dbp-etl-test/ ENGESVP2DV
