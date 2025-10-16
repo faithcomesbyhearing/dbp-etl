@@ -51,8 +51,9 @@ class AWSSession:
 				client_args['config'] = boto_config
 
 			client = session.client(**client_args)
-
-			print("================> line 59 don't use Caller Identity")
+			response = client.get_caller_identity()
+			print(response)
+			print("================> LINE 59")
 
 			# Print the response (similar to CLI output)
 			return client 
@@ -60,11 +61,8 @@ class AWSSession:
 		# assume_role_arn explicitely provided
 		stsClient = session.client('sts')
 		response = stsClient.get_caller_identity()
-		print("================> line 68 Caller Identity")
 		print(response)
-
-		# Print the response (similar to CLI output)
-		print(response)
+		print("line 64")
 		print ("AWSSession. assume role arn: %s" % (self.config.s3_aws_role_arn) )
 		assumedRoleObject = stsClient.assume_role(
 			RoleArn = self.config.s3_aws_role_arn,
