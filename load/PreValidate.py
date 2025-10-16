@@ -316,3 +316,4 @@ if (__name__ == "__main__"):
 # python3 load/PreValidate.py test s3://etl-development-input/ "" TGKWBTP2DV
 # python3 load/PreValidate.py test s3://dbp-etl-upload-dev-ya1mbvdty8tlq15r 2024-07-24-17-15-56 Spanish_N2SPNBDA_USX
 # python3 load/PreValidate.py test s3://etl-development-input/ "" "Covenant_Manobo, Obo SD_S2OBO_COV"
+# python3 load/PreValidate.py test s3://etl-development-input/ "" ACECOVS2DV

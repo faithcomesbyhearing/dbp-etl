@@ -153,3 +153,4 @@ if (__name__ == '__main__'):
 # time python3 load/Validate.py test s3://test-dbp-etl ENGESVP2DV
 
 # python3 load/Validate.py test s3://etl-development-input Spanish_N2SPNTLA_USX
+# python3 load/Validate.py test s3://etl-development-input ACECOVS2DV
