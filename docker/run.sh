@@ -77,7 +77,7 @@ EOF
 # audio.transcoder.output.2 = { "bucket": "${S3_BUCKET}", "key": "\$prefix-opus32", "bitrate": 32, "container": "webm", "codec": "opus" }
 # audio.transcoder.output.3 = { "bucket": "${S3_BUCKET}", "key": "\$prefix-mp3-32", "bitrate": 32, "container": "mp3", "codec": "mp3" }
 
-eval "$(aws sts assume-role --role-arn "${ASSUME_ROLE_ARN}" --role-session-name session | jq -r '.Credentials | "export AWS_ACCESS_KEY_ID=\(.AccessKeyId)\nexport AWS_SECRET_ACCESS_KEY=\(.SecretAccessKey)\nexport AWS_SESSION_TOKEN=\(.SessionToken)"')"
+# eval "$(aws sts assume-role --role-arn "${ASSUME_ROLE_ARN}" --role-session-name session | jq -r '.Credentials | "export AWS_ACCESS_KEY_ID=\(.AccessKeyId)\nexport AWS_SECRET_ACCESS_KEY=\(.SecretAccessKey)\nexport AWS_SESSION_TOKEN=\(.SessionToken)"')"
 
 rm -rf "/efs/${S3_KEY_PREFIX}"
 mkdir -p "/efs/${S3_KEY_PREFIX}/etl_uploader"
