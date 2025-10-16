@@ -2,6 +2,7 @@ import json
 import time
 from RunStatus import RunStatus
 from AWSSession import AWSSession
+from Log import Log
 
 class BibleBrainServiceTranscoder:
 	def __init__(self, config, filesetPrefix):
@@ -29,8 +30,14 @@ class BibleBrainServiceTranscoder:
 		"""
 		transcoder = BibleBrainServiceTranscoder(config, filesetPrefix)
 		RunStatus.printDuration("BEGIN SUBMIT ECS TRANSCODE")
-		transcoder.createECSTask(s3FileKeys, sourceBucket, filesetPath)
+		createdTask = transcoder.createECSTask(s3FileKeys, sourceBucket, filesetPath)
 		RunStatus.printDuration("BEGIN CHECK ECS TRANSCODE")
+		if createdTask is None:
+			Log.getLogger(filesetPrefix).message(Log.FATAL, "ERROR: Transcode of %s in %s failed to run ECS Task." % (filesetPrefix, sourceBucket))
+			return False
+		else:
+			print("ECS Transcode %s started: %s" % (filesetPrefix, createdTask))
+
 		done = transcoder.completeECSTasks()
 		if done:
 			print("ECS Transcode %s succeeded." % (filesetPrefix))

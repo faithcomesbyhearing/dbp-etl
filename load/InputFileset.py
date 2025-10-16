@@ -87,6 +87,10 @@ class InputFileset:
 	]
 
 	ECS_TRANSCODE_VIDEO_VARIANTS = [
+		("_av360p.mp4", "av360p_mp4"),
+		("_av480p.mp4", "av480p_mp4"),
+		("_av720p.mp4", "av720p_mp4"),
+		("_web.mp4",    "web_mp4"),
 		(".mp4",        "mp4"),
 	]
 
