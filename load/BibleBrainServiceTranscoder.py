@@ -122,7 +122,7 @@ class BibleBrainServiceTranscoder:
 		try:
 			response = self.ecsClient.run_task(
 				cluster=self.config.transcoder_ecs_cluster_name,
-				taskDefinition=self.config.transcoder_ecs_task_definition,
+				taskDefinition="biblebrain-services-transcoder-dev",
 				launchType='FARGATE',
 				networkConfiguration={
 					'awsvpcConfiguration': {
