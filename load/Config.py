@@ -129,15 +129,6 @@ class Config:
 		self.monday_completed_product_code_api_key = self._getOptional("monday.completed_product_code.api_key")
 		self.monday_completed_product_code_board_id = self._getOptional("monday.completed_product_code.board_id")
 
-		# ECS-based video transcoding configuration
-		self.transcoder_ecs_region = self._get("transcoder.ecs_region")
-		self.transcoder_ecs_cluster_name = self._get("transcoder.ecs_cluster_name")
-		self.transcoder_ecs_container_name = self._get("transcoder.ecs_container_name")
-		self.transcoder_ecs_placement_security_group = self._get("transcoder.ecs_placement_security_group")
-		self.transcoder_ecs_placement_subnet = self._get("transcoder.ecs_placement_subnet")
-		self.transcoder_ecs_task_definition = self._get("transcoder.ecs_task_definition")
-		self.transcoder_ecs_disabled = False if self._getOptional("transcoder.ecs_disabled") is None else self._getOptional("transcoder.ecs_disabled") in {'1', 'true', 'True', 'TRUE'}
-
 		# TODO these dependencies need to be sorted out
 		if programRunning in {"DBPLoadController.py"}:
 			self.audio_transcoder_url = self._get("audio.transcoder.url")
@@ -156,6 +147,8 @@ class Config:
 			self.video_preset_hls_360p = self._get("video.preset.hls.360p")
 			self.video_preset_web = self._get("video.preset.web")
 
+			# ECS-based video transcoding configuration
+			self.setTranscoderECSParameters()
 
 			self.database_names['dbp'] = self.hashMap.get("database.db_name")
 			self.database_names['user_dbp'] = self.hashMap.get("database.user_db_name")
@@ -180,6 +173,10 @@ class Config:
 			self.video_preset_hls_480p = self._get("video.preset.hls.480p")
 			self.video_preset_hls_360p = self._get("video.preset.hls.360p")
 			self.video_preset_web = self._get("video.preset.web")
+
+			# ECS-based video transcoding configuration
+			self.setTranscoderECSParameters()
+
 			# audio
 			self.audio_transcoder_sleep_sec = self._getInt("audio.transcoder.sleep.sec")
 			self.audio_transcoder_input = self._get("audio.transcoder.input")
@@ -218,6 +215,16 @@ class Config:
 			self.database_port = self._getInt("database.port")
 			self.database_tunnel = self._getOptional("database.tunnel")
 			self.setCurrentDatabaseDBName(self.hashMap.get("database.db_name"))
+
+	def setTranscoderECSParameters(self):
+		# ECS-based video transcoding configuration
+		self.transcoder_ecs_region = self._get("transcoder.ecs_region")
+		self.transcoder_ecs_cluster_name = self._get("transcoder.ecs_cluster_name")
+		self.transcoder_ecs_container_name = self._get("transcoder.ecs_container_name")
+		self.transcoder_ecs_placement_security_group = self._get("transcoder.ecs_placement_security_group")
+		self.transcoder_ecs_placement_subnet = self._get("transcoder.ecs_placement_subnet")
+		self.transcoder_ecs_task_definition = self._get("transcoder.ecs_task_definition")
+		self.transcoder_ecs_disabled = False if self._getOptional("transcoder.ecs_disabled") is None else self._getOptional("transcoder.ecs_disabled") in {'1', 'true', 'True', 'TRUE'}
 
 	def setCurrentDatabaseDBName(self, name):
 		self.current_database_name = name

@@ -168,6 +168,7 @@ class BibleBrainServiceTranscoder:
 			self.ecsClient = AWSSession.shared().ecsClient()
 
 		errorCount = 0
+		successCount = 0
 
 		while len(self.openTasks) > 0:
 			stillOpenTasks = []
@@ -188,18 +189,38 @@ class BibleBrainServiceTranscoder:
 						containers = task.get('containers', [])
 						taskFailed = False
 
+						# Capture task-level stop information
+						taskStoppedReason = task.get('stoppedReason', 'No reason provided')
+						taskStopCode = task.get('stopCode', 'Unknown')
+
 						for container in containers:
 							exitCode = container.get('exitCode')
+							containerName = container.get('name', 'unknown')
+
+							print("DEBUG: Container '%s' exitCode=%s" % (containerName, exitCode))
+
 							if exitCode is not None and exitCode != 0:
 								print("ERROR: Task %s failed with exit code %s" % (taskArn, exitCode))
+								print("  Container Name: %s" % containerName)
 								print("  Reason: %s" % container.get('reason', 'Unknown'))
+								print("  Container Stopped Reason: %s" % container.get('stoppedReason', 'Not available'))
+								print("  Task Stop Code: %s" % taskStopCode)
+								print("  Task Stopped Reason: %s" % taskStoppedReason)
 								taskFailed = True
 								errorCount += 1
+							elif exitCode == 0:
+								print("Task Complete: %s (exit code: 0)" % taskArn)
+								successCount += 1
 							else:
-								print("Task Complete: %s" % taskArn)
+								print("WARNING: Task %s container '%s' has exitCode=None" % (taskArn, containerName))
+								print("  Task Stop Code: %s" % taskStopCode)
+								print("  Task Stopped Reason: %s" % taskStoppedReason)
+								print("  Container Stopped Reason: %s" % container.get('stoppedReason', 'Not available'))
 
 						if not taskFailed and not containers:
-							print("Task Complete: %s" % taskArn)
+							print("WARNING: Task %s completed but has no containers" % taskArn)
+							print("  Task Stop Code: %s" % taskStopCode)
+							print("  Task Stopped Reason: %s" % taskStoppedReason)
 
 					elif lastStatus in ['PENDING', 'RUNNING', 'PROVISIONING', 'DEPROVISIONING']:
 						stillOpenTasks.append(taskArn)
@@ -207,7 +228,7 @@ class BibleBrainServiceTranscoder:
 
 					else:
 						# Unexpected status
-						print("Task %s has unexpected status: %s" % (taskArn, lastStatus))
+						print("WARNING: Task %s has unexpected status: %s" % (taskArn, lastStatus))
 						stillOpenTasks.append(taskArn)
 
 			except Exception as e:
@@ -219,4 +240,5 @@ class BibleBrainServiceTranscoder:
 			if len(self.openTasks) > 0:
 				time.sleep(10)
 
+		print("DEBUG: completeECSTasks finished - successCount=%d, errorCount=%d" % (successCount, errorCount))
 		return errorCount == 0
