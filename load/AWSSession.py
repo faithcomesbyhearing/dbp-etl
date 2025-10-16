@@ -31,6 +31,7 @@ class AWSSession:
 
 
 	def _securityTokenService(self, clientType, roleSessionName, regionName, timeout=None):
+		print("================> AWSSession...creating %s client in region %s s3_aws_profile=%s" % (clientType, regionName, self.config.s3_aws_profile))
 		session = boto3.Session(profile_name = self.config.s3_aws_profile, region_name = regionName)
 
 		# for docker execution, assume_role_arn is provided by ECS task configuration
