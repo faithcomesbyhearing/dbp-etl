@@ -27,7 +27,7 @@ class AWSSession:
 
 
 	def ecsClient(self):
-		return self._securityTokenService("ecs", "AssumeRoleSession4", self.config.transcoder_ecs_region)
+		return self._securityTokenService("ecs", "AssumeRoleSession4", "us-west-2")
 
 
 	def _securityTokenService(self, clientType, roleSessionName, regionName, timeout=None):
