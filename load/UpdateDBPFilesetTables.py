@@ -142,7 +142,7 @@ class UpdateDBPFilesetTables:
 		# this is used to update the bible_fileset_tags table with the hashId
 		filesetList = []
 
-		if inp.typeCode in {"audio", "video"}:
+		if inp.typeCode in {"audio"}:
 			setTypeCode = inp.getSetTypeCode()
 			# The ECS transcoder will update the video tables and it will create the bible_files records. However,
 			# the method insertBibleFiles will check if the files already exist and will not duplicate them.
@@ -155,7 +155,19 @@ class UpdateDBPFilesetTables:
 			if inp.isDerivedFileset():
 				# We need to create a license group for the derived audio fileset
 				lptsDBP.updateBibleFilesetLicenseGroup(inp, hashId=hashId)
+		if inp.typeCode in {"video"}:
+			setTypeCode = inp.getSetTypeCode()
+			# The ECS transcoder will update the video tables and it will create the bible_files records. However,
+			# the method insertBibleFiles will check if the files already exist and will not duplicate them.
+			# self.insertBibleFiles(dbConn, hashId, inputFileset, bookIdSet)
+			# we need to update the bible_fileset_tags table with the hashId
+			filesetList.append((inp.bibleId, inp.filesetId, setTypeCode, None, None, hashId))
+			# update the bible_fileset_tags (product code) table with the new filesetId
+			lptsDBP.updateBibleProductCode(inp, hashId)
 
+			if inp.isDerivedFileset():
+				# We need to create a license group for the derived audio fileset
+				lptsDBP.updateBibleFilesetLicenseGroup(inp, hashId=hashId)
 		elif inp.typeCode == "text":
 			# text_plain is still stored in the database; no upload
 			if inp.subTypeCode() == "text_plain":
