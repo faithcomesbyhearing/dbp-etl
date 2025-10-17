@@ -6,6 +6,7 @@
 
 import os
 import subprocess
+import boto3
 from Log import *
 from Config import *
 from AWSSession import *
@@ -104,6 +105,11 @@ class S3Utility:
 		"""
 		try:
 			s3_client = AWSSession.shared().s3Client
+			print("================> LINE 107 S3Utility.get_key_info checking %s/%s" % (bucket, key))
+			sts_client = boto3.client('sts')
+			response = sts_client.get_caller_identity()
+			print("================> LINE 108 S3Utility.get_key_info caller identity: %s" % (response))
+
 			resp = s3_client.head_object(Bucket=bucket, Key=key)
 			return True, resp.get('ContentLength')
 		except ClientError as e:
