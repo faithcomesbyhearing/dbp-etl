@@ -42,21 +42,22 @@ class AWSSession:
 
 		client = session.client(clientType)
 
-		client_args = {
-			'service_name': clientType,
-		}
+		# this is duplicate of above
+		# client_args = {
+		# 	'service_name': clientType,
+		# }
 
-		client = session.client(**client_args)
+		# client = session.client(**client_args)
 
 		# Print the response (similar to CLI output)
 		return client
 
 
-	def role_profile(self):
-		if self.config.s3_aws_role_profile != None:
-			return "--profile %s" % (self.config.s3_aws_role_profile)
-		else:
-			return ""		
+	# def role_profile(self):
+	# 	if self.config.s3_aws_role_profile != None:
+	# 		return "--profile %s" % (self.config.s3_aws_role_profile)
+	# 	else:
+	# 		return ""		
 	
 
 # Unit Test

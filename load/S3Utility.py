@@ -60,13 +60,14 @@ class S3Utility:
 
 	def uploadFileset(self, s3Bucket, inputFileset):
 		inp = inputFileset
-		profile = AWSSession.shared().role_profile()
+		# profile = AWSSession.shared().role_profile()
 		if inp.locationType == InputFileset.LOCAL:
 			source = inp.fullPath()
 		else:
 			source = "s3://%s" % (inp.fullPath())
 		target = "s3://%s/%s" % (s3Bucket, inp.filesetPrefix)
-		cmd = "aws %s s3 sync --acl bucket-owner-full-control \"%s\" \"%s\"" % (profile, source, target)
+		# cmd = "aws %s s3 sync --acl bucket-owner-full-control \"%s\" \"%s\"" % (profile, source, target)
+		cmd = "aws s3 sync --acl bucket-owner-full-control \"%s\" \"%s\"" % (source, target)
 		print("upload:", cmd)
 		response = subprocess.run(cmd, shell=True, stderr=subprocess.PIPE)
 		if response.returncode != 0:

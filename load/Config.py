@@ -104,7 +104,7 @@ class Config:
 		self.s3_aws_profile = self._getOptional("s3.aws_profile") 
 		self.s3_aws_region = self._getOptional("s3.aws_region")
 		self.s3_aws_role_arn = self._getOptional("s3.aws_role_arn") 
-		self.s3_aws_role_profile = self._getOptional("s3.aws_role_profile") # this is temporary
+		# self.s3_aws_role_profile = self._getOptional("s3.aws_role_profile") # this is temporary
 		if os.environ.get('DATA_MODEL_MIGRATION_STAGE') == 'B':
 			self.filename_lpts_xml = self._getOptional("filename.lpts_xml")
 		self.filename_metadata_xml = self._getOptional("filename.metadata_xml")
