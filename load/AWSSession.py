@@ -15,49 +15,48 @@ class AWSSession:
 
 	def __init__(self):
 		self.config = Config.shared()
-		self.s3Client = self._securityTokenService("s3", "AssumeRoleSession1", "us-west-2")
+		if self.config.s3_aws_profile != None:
+			print("AWSSession...INIT creating Session with profile: %s" % (self.config.s3_aws_profile))
+			self.session = boto3.Session(region_name="us-west-2", profile_name=self.config.s3_aws_profile)
+		else:
+			print("AWSSession...INIT creating Session with default ecs-task-role")
+			self.session = boto3.Session(region_name="us-west-2")
+
+		# Get identity information using STS
+		sts_client = self.session.client("sts")
+		identity = sts_client.get_caller_identity()
+
+		arn = identity.get('Arn', '')
+		session_name = arn.split('/')[-1] if '/' in arn else 'N/A'
+
+		print("================> Session Identity:")
+		print("    Account: %s" % identity.get('Account'))
+		print("    UserId: %s" % identity.get('UserId'))
+		print("    Arn: %s" % arn)
+		print("    Session Name: %s" % session_name)
+
+		print("================> AWSSession...END creating Session with ecs-task-role")
+		self.s3Client = self._securityTokenService("s3")
 
 
 	def elasticTranscoder(self):
-		return self._securityTokenService("elastictranscoder", "AssumeRoleSession2", self.config.video_transcoder_region)
+		return self._securityTokenService("elastictranscoder")
 
 
 	def lambdaInvoker(self):
-		return self._securityTokenService("lambda", "AssumeRoleSession3", self.config.lambda_zip_region, self.config.lambda_zip_timeout)
+		return self._securityTokenService("lambda")
 
 
 	def ecsClient(self):
-		return self._securityTokenService("ecs", "AssumeRoleSession4", "us-west-2")
+		return self._securityTokenService("ecs")
 
 
 
-	def _securityTokenService(self, clientType, roleSessionName, regionName, timeout=None):
-		print("================> AWSSession...creating %s client in region %s " % (clientType, regionName))
-		session = boto3.Session(region_name=regionName) # here we have an STS session based on the role provided by ECS
+	def _securityTokenService(self, clientType):
+		print("_securityTokenService AWSSession...creating %s client" % (clientType))
 
-		sts_client = session.client("sts")
-		response = sts_client.get_caller_identity()
-		print("================> LINE 38 using role from ECS task")
-		print(response)
-
-		client = session.client(clientType)
-
-		# this is duplicate of above
-		# client_args = {
-		# 	'service_name': clientType,
-		# }
-
-		# client = session.client(**client_args)
-
-		# Print the response (similar to CLI output)
+		client = self.session.client(clientType)
 		return client
-
-
-	# def role_profile(self):
-	# 	if self.config.s3_aws_role_profile != None:
-	# 		return "--profile %s" % (self.config.s3_aws_role_profile)
-	# 	else:
-	# 		return ""		
 	
 
 # Unit Test
