@@ -290,7 +290,7 @@ if (__name__ == '__main__'):
 	config = Config.shared()
 	db = SQLUtility(config)
 	dbOut = SQLBatchExec(config)
-	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
+	languageReader = LanguageReaderCreator("BLIMP").create("")
 	update = UpdateDBPBibleFilesSecondary(config, db, dbOut, languageReader)
 	s3Client = AWSSession.shared().s3Client
 

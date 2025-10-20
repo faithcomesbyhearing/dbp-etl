@@ -104,19 +104,23 @@ class S3Utility:
 			- size:  ContentLength (int) if exists, else None
 		"""
 		try:
-			s3_client = AWSSession.shared().s3Client
-			print("================> LINE 107 S3Utility.get_key_info checking %s/%s" % (bucket, key))
-			sts_client = boto3.client('sts')
-			response = sts_client.get_caller_identity()
-			print("================> LINE 108 S3Utility.get_key_info caller identity: %s" % (response))
+			s3_client = AWSSession.shared().session.client("s3")
 
-			resp = s3_client.head_object(Bucket=bucket, Key=key)
-			return True, resp.get('ContentLength')
+			response = s3_client.list_objects_v2(
+				Bucket=bucket,
+				Prefix=key,
+				MaxKeys=1
+			)
+
+			# Check if the exact key exists
+			if 'Contents' in response:
+				for obj in response['Contents']:
+					if obj['Key'] == key:
+						return True, obj['Size']
+
+			return False, None
 		except ClientError as e:
-			code = e.response['Error']['Code']
-			if code in ('404', 'NoSuchKey'):
-				return False, None
-			# re‑raise any other errors (permissions, networking, etc.)
+			# re‑raise any errors (permissions, networking, etc.)
 			raise
 
 if (__name__ == '__main__'):

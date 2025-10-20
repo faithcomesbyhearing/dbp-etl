@@ -536,11 +536,9 @@ if (__name__ == '__main__'):
 	from InputProcessor import *	
 	from LanguageReaderCreator import LanguageReaderCreator
 
-	config = Config()
-	s3Client = AWSSession.shared().s3Client
-	session = boto3.Session(profile_name = config.s3_aws_profile)
-	s3Client = session.client('s3')
-	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
+	config = Config.shared()
+	languageReader = LanguageReaderCreator("BLIMP").create("")
+
 	InputFileset.validate = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
 	for inp in InputFileset.validate:
 		if inp.typeCode == "text" and inp.locationType == InputFileset.BUCKET:
