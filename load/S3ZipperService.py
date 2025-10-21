@@ -1,10 +1,9 @@
-import os
 import time
-import boto3
 import json
 import requests
 from datetime import datetime, timezone
 from RunStatus import RunStatus
+from AWSSession import AWSSession
 
 # Global variable for the s3zipper base URL
 S3ZIPPER_BASE_URL = "https://api.s3zipper.com"
@@ -65,15 +64,10 @@ class S3ZipperService:
 
     def get_temp_sts_credentials(self):
         """
-        Retrieves AWS temporary security credentials from environment variables.
+        Retrieves AWS temporary security credentials from the AWSSession's session object.
 
-        This method looks for AWS credentials in the following environment variables:
-        - AWS_ACCESS_KEY_ID
-        - AWS_SECRET_ACCESS_KEY
-        - AWS_SESSION_TOKEN
-
-        These credentials are typically provided by ECS when running in a container
-        with a Task Role. The credentials are stored as instance attributes.
+        This method gets credentials from the same session used by the s3_client,
+        ensuring consistent credentials across all AWS operations.
 
         Returns:
             None
@@ -84,9 +78,14 @@ class S3ZipperService:
             - self.aws_secret_access_key
             - self.aws_session_token
         """
-        self.aws_access_key_id = os.environ.get('AWS_ACCESS_KEY_ID')
-        self.aws_secret_access_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
-        self.aws_session_token = os.environ.get('AWS_SESSION_TOKEN')
+        # Get credentials from the AWSSession's session
+        session = AWSSession.shared().session
+        credentials = session.get_credentials()
+
+        # The credentials object will automatically refresh if they're temporary and expired
+        self.aws_access_key_id = credentials.access_key
+        self.aws_secret_access_key = credentials.secret_key
+        self.aws_session_token = credentials.token
 
     def create_and_upload_file_mapper(self, bucket_name, file_paths, zip_output_prefix):
         """
@@ -99,7 +98,7 @@ class S3ZipperService:
         Example output JSON:
         {
             "paths": [
-                { "key": "etl-development-input/ENGESVN2DA/", "name": "/" },
+                { "key": "dbp-staging/audio/ENGESV/ENGESVN2DA/", "name": "/" },
                 { "key": "/", "name": "/" }
             ]
         }
@@ -338,29 +337,69 @@ class S3ZipperService:
 
 
 if __name__ == "__main__":
+    import sys
     from Config import Config
     from AWSSession import AWSSession
     from RunStatus import RunStatus
 
-    config = Config()
+    # Usage: python3 load/S3ZipperService.py <config_profile> <bucket_name> <file_paths_json> [zip_output_prefix]
+    # Example: python3 load/S3ZipperService.py test etl-development-input '["path/to/file1.mp3", "path/to/file2.mp3"]' s3zipper/output.zip
+
+    if len(sys.argv) < 4:
+        print("Usage: python3 load/S3ZipperService.py <config_profile> <bucket_name> <file_paths_json> [zip_output_prefix]")
+        print("Example: python3 load/S3ZipperService.py test etl-development-input '[\"audio/file.mp3\"]' s3zipper/test.zip")
+        sys.exit(1)
+
+    config_profile = sys.argv[1]
+    bucket_name = sys.argv[2]
+    file_paths_json = sys.argv[3]
+    zip_output_prefix = sys.argv[4] if len(sys.argv) > 4 else "s3zipper/python-test.zip"
+
+    # Parse file_paths from JSON
+    try:
+        file_paths = json.loads(file_paths_json)
+        if not isinstance(file_paths, list):
+            raise ValueError("file_paths must be a JSON array")
+    except json.JSONDecodeError as e:
+        print(f"Error: Invalid JSON for file_paths: {e}")
+        sys.exit(1)
+
+    print(f"Config Profile: {config_profile}")
+    print(f"Bucket Name: {bucket_name}")
+    print(f"File Paths: {file_paths}")
+    print(f"Zip Output Prefix: {zip_output_prefix}")
+
+    # Initialize config with profile
+    config = Config.shared()
     s3_client = AWSSession.shared().s3Client
 
-    # Example usage:
-    S3ZIPPER_KEY = "JjfXXXX"
-    S3ZIPPER_SECRET = "fe79XXXXX"
+    s3zipper_user_key = config.s3_zipper_user_key
+    s3zipper_user_secret = config.s3_zipper_user_secret
+
     if config.s3_aws_region is None:
         raise ValueError("AWS region is not set in the configuration.")
-    service = S3ZipperService(s3zipper_user_key=S3ZIPPER_KEY, s3zipper_user_secret=S3ZIPPER_SECRET, s3_client=s3_client, region=config.s3_aws_region)
 
-    bucket_name = "etl-development-input"
-    file_paths = ["etl-development-input/ENGESVN2DA/B01___01_Matthew_____ENGESVN2DA.mp3", "etl-development-input/ENGESVN2DA/B01___02_Matthew_____ENGESVN2DA.mp3", "B27___21_Revelation__ENGESVN2DA.mp3", "B27___22_Revelation__ENGESVN2DA.mp3"]
-    zip_output_prefix = "s3zipper/python-test.zip"
+    service = S3ZipperService(
+        s3zipper_user_key=s3zipper_user_key,
+        s3zipper_user_secret=s3zipper_user_secret,
+        s3_client=s3_client,
+        region=config.s3_aws_region,
+    )
 
     try:
         result = service.zip_files(bucket_name, file_paths, zip_output_prefix)
-        # The final result will be a ZipStateResponse struct and you can access to the zip file URL in Results[0].Value, however, this is a signed URL and it will expire after a time as s3zipper documentation says that the URL will be always signed and will expire after a time (maximun 1 year). My proposal will be once the result is SUCCESS, we can use our CDN URL, the path of the zip file (zipOutputPrefix) and create a new signed URL without the expiration time.
+        print("=" * 80)
+        print("SUCCESS: Zip file created successfully")
         print("Final Zip State:", result)
+        print("=" * 80)
     except Exception as e:
+        print("=" * 80)
+        print("ERROR: Zip process failed")
         print("Error:", e)
+        print("=" * 80)
+        sys.exit(1)
 
     RunStatus.exit()
+
+# time python3 load/S3ZipperService.py test etl-development-input '["etl-development-input/audio/ENGESV/ENGESVN2DA/B01___01_Matthew_____ENGESVN2DA.mp3"]'
+# time python3 load/S3ZipperService.py test dbp-staging '["dbp-staging/audio/ENGESV/ENGESVN2DA/B01___01_Matthew_____ENGESVN2DA.mp3"]'
