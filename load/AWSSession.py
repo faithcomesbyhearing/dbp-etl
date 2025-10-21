@@ -42,22 +42,17 @@ class AWSSession:
 	def elasticTranscoder(self):
 		return self._securityTokenService("elastictranscoder")
 
-
 	def lambdaInvoker(self):
 		return self._securityTokenService("lambda")
 
-
 	def ecsClient(self):
 		return self._securityTokenService("ecs")
-
-
 
 	def _securityTokenService(self, clientType):
 		print("_securityTokenService AWSSession...creating %s client" % (clientType))
 
 		client = self.session.client(clientType)
 		return client
-	
 
 # Unit Test
 if (__name__ == '__main__'):
