@@ -138,7 +138,8 @@ class S3ZipperService:
             Bucket=bucket_name,
             Key=file_mapper_key,
             Body=json_data,
-            ContentType='application/json'
+            ContentType='application/json',
+            ACL='bucket-owner-full-control',
         )
         # print(f"Uploaded fileMapper.json to s3://{bucket_name}/{file_mapper_key}")
         return file_mapper_key
@@ -164,7 +165,6 @@ class S3ZipperService:
         self.s3_client.delete_object(Bucket=bucket_name, Key=file_mapper_key)
         # print(f"Deleted fileMapper.json from s3://{bucket_name}/{file_mapper_key}")
 
-    # def zip_files(self, bucket_name, file_paths, zip_file_name):
     def zip_files(self, bucket_name, file_paths, zip_output_prefix):
         """
         Create a zip of specified `file_paths` in `bucket_name` using s3zipper's /v2/zipstart endpoint
@@ -183,7 +183,8 @@ class S3ZipperService:
         start_url = f"{S3ZIPPER_BASE_URL}/v2/zipstart"
         headers = {
             "Authorization": f"Bearer {self.s3zipper_token}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "x-amz-acl": "bucket-owner-full-control",
         }
         payload = {
             "awsKey": self.aws_access_key_id,
@@ -403,3 +404,4 @@ if __name__ == "__main__":
 
 # time python3 load/S3ZipperService.py test etl-development-input '["etl-development-input/audio/ENGESV/ENGESVN2DA/B01___01_Matthew_____ENGESVN2DA.mp3"]'
 # time python3 load/S3ZipperService.py test dbp-staging '["dbp-staging/audio/ENGESV/ENGESVN2DA/B01___01_Matthew_____ENGESVN2DA.mp3"]'
+# time python3 load/S3ZipperService.py test dbp-vid-staging '["dbp-vid-staging/video/ENGESV/ENGESVP2DV/English_ESV_MRK_9-1-13.mp4"]'
