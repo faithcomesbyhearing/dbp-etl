@@ -77,7 +77,7 @@ class UpdateDBPBibleFilesSecondary:
 				# Attempt to create a zip file with the complete files
 				zip_filename = f"{inp.filesetPrefix}/{inp.filesetId}.zip"
 				result = self.zipper_service.zip_files(self.config.s3_bucket, complete_files, zip_filename)
-				if result.get("State") != "SUCCESS":
+				if result.get("State") != S3ZipperService.STATE_SUCCESS:
 					logger.message(Log.EROR, f"Failure creating Zip: {result}")
 				else:
 					inp.addInputFile(zip_filename, 0)
