@@ -7,9 +7,8 @@ from AWSSession import AWSSession
 
 # Global variable for the s3zipper base URL
 S3ZIPPER_BASE_URL = "https://api.s3zipper.com"
-MAX_WAIT_SECONDS = 3600  # 1 hour
+MAX_WAIT_SECONDS = 10800  # 3 hours
 POLL_INTERVAL = 2
-STS_EXPIRATION_TIME = 3600  # 1 hour
 
 class S3ZipperService:
     """
@@ -18,6 +17,14 @@ class S3ZipperService:
     and creating a zip file of specified files in an S3 bucket. It polls the s3zipper API until the zip
     process is complete (either SUCCESS or FAILURE).
     """
+    # S3Zipper API State Constants
+    STATE_PENDING = "PENDING"
+    STATE_RECEIVED = "RECEIVED"
+    STATE_STARTED = "STARTED"
+    STATE_RETRY = "RETRY"
+    STATE_SUCCESS = "SUCCESS"
+    STATE_FAILURE = "FAILURE"
+
     def __init__(self, s3zipper_user_key, s3zipper_user_secret, s3_client, region='us-west-2'):
         """
         :param s3zipper_user_key: Username or key used for fetching the s3zipper token.
@@ -169,6 +176,15 @@ class S3ZipperService:
         """
         Create a zip of specified `file_paths` in `bucket_name` using s3zipper's /v2/zipstart endpoint
         and poll /v2/zipstate until SUCCESS or FAILURE.
+
+        IMPORTANT: AWS STS credentials passed to S3Zipper must remain valid for the entire operation.
+        If credentials expire during processing, S3Zipper will fail with ExpiredToken error.
+        Credentials must be valid for at least MAX_WAIT_SECONDS.
+
+        :param bucket_name: S3 bucket name
+        :param file_paths: List of S3 object keys to zip
+        :param zip_output_prefix: S3 key where the zip file will be saved
+        :return: Final state response from S3Zipper
         """
         # Initialize the last progress print time
         self._last_progress_print = None
@@ -198,7 +214,7 @@ class S3ZipperService:
             "fileMapper": f"{bucket_name}/{file_mapper_key}",
         }
 
-        RunStatus.statusMap[RunStatus.ZIP_STARTED] = RunStatus.NOT_DONE
+        RunStatus.statusMap[RunStatus.ZIP_PROCESSING] = RunStatus.NOT_DONE
         print("Starting zip process with payload:",
               "bucket:", bucket_name,
               "file_paths:", file_paths,
@@ -209,10 +225,9 @@ class S3ZipperService:
         except requests.RequestException as e:
             # Ensure the fileMapper is removed if zipstart fails.
             self.delete_file_mapper(bucket_name, file_mapper_key)
-            RunStatus.set(RunStatus.ZIP_STARTED, False)
+            RunStatus.set(RunStatus.ZIP_PROCESSING, False)
             raise RuntimeError(f"zipstart request failed: {e}")
 
-        RunStatus.set(RunStatus.ZIP_STARTED, True)
         # The response is something like:
         # {
         #   "message": "STARTED",
@@ -243,12 +258,46 @@ class S3ZipperService:
             # 5. Remove fileMapper.json from S3 regardless of outcome.
             self.delete_file_mapper(bucket_name, file_mapper_key)
 
+        if final_state.get("State") == self.STATE_SUCCESS:
+            RunStatus.set(RunStatus.ZIP_PROCESSING, True)
+        else:
+            RunStatus.set(RunStatus.ZIP_PROCESSING, False)
+
         return final_state
+
+    def _handle_failure_attempt(self, failure_count, max_failures, poll_interval, error_message=None):
+        """
+        Handles a failure attempt (timeout or FAILURE state) by incrementing the counter
+        and optionally preparing for a retry.
+
+        :param failure_count: Current failure count
+        :param max_failures: Maximum allowed failures
+        :param poll_interval: Seconds to wait before retrying
+        :param error_message: Optional error message (if None, indicates a timeout)
+        :return: Updated failure_count
+        """
+        failure_count += 1
+
+        if error_message:
+            print(f"Zip process failed (attempt {failure_count} of {max_failures}): {error_message}")
+        else:
+            print(f"Request timed out while polling zipstate (attempt {failure_count} of {max_failures})")
+
+        if failure_count < max_failures:
+            print(f"Retrying zip process (attempt {failure_count + 1} of {max_failures})...")
+            time.sleep(poll_interval)
+
+        return failure_count
 
     def _poll_zip_state(self, task_uuid, headers, max_wait_seconds=MAX_WAIT_SECONDS, poll_interval=POLL_INTERVAL):
         """
         Polls the /v2/zipstate endpoint until it returns SUCCESS or FAILURE.
-        Retries if it sees FAILURE, up to 3 total attempts.
+
+        Retry behavior (max 3 total attempts):
+        - FAILURE state: Counts as 1 failure attempt, retries if attempts < max_failures
+        - TIMEOUT errors: Counts as 1 failure attempt, retries if attempts < max_failures
+        - Intermediate states (PENDING, RECEIVED, STARTED, RETRY): Continue polling without counting as failures
+        - Overall timeout: Respects max_wait_seconds limit for the entire operation
 
         We now send a JSON body that looks like:
         {
@@ -269,73 +318,99 @@ class S3ZipperService:
         ...
         }
 
+        Possible states:
+        - "PENDING" - initial state of a task
+        - "RECEIVED" - task has been received
+        - "STARTED" - task has started processing
+        - "RETRY" - failed task has been scheduled for retry
+        - "SUCCESS" - task has been processed successfully
+        - "FAILURE" - task processing has failed
+
         :param task_uuid: The "zipper_s3_..." string from zipstart
         :param headers: Headers for the s3zipper request (including Bearer token)
-        :param max_wait_seconds: Max total wait time (e.g., 600 for 10 minutes)
+        :param max_wait_seconds: Max total wait time for the entire operation (e.g., 3600 for 1 hour)
         :param poll_interval: Seconds to wait between checks
-        :return: Final JSON response from zipstate if SUCCESS, or raises RuntimeError on repeated FAILURE/timeouts
+        :return: Final JSON response from zipstate if SUCCESS
+        :raises RuntimeError: On repeated FAILURE states (3 attempts), timeout exceeding max_wait_seconds,
+                              or other request failures
         """
         zip_state_url = f"{S3ZIPPER_BASE_URL}/v2/zipstate"
-        attempts = 0
+        failure_count = 0
+        max_failures = 3
         start_time = time.time()
-        progress_time = (time.time() - start_time)
 
-        while attempts < 3:  # up to 3 tries if we see FAILURE
-            # Keep polling until max_wait_seconds has passed
-            # while (time.time() - start_time) < max_wait_seconds:
-            while progress_time < max_wait_seconds:
-                try:
-                    # Build the new payload with "message" and "chainTaskUUID"
-                    payload = {
-                        "chainTaskUUID": [
-                            {"streams3": task_uuid},
-                            {"email": ""}
-                        ]
-                    }
-                    resp = self._retryable_post(zip_state_url, payload, headers)
-                except requests.Timeout:
-                    print("Request timed out. Retrying...")
-                    break  # Exit inner loop and trigger a retry
-                except requests.RequestException as e:
-                    raise RuntimeError(f"zipstate request failed: {e}")
+        # Loop continues while we haven't exceeded failure limit and overall timeout
+        while failure_count < max_failures:
+            elapsed_time = time.time() - start_time
 
-                state_data = resp.json() if resp is not None else {}
-                state = state_data.get("State")  # e.g. "SUCCESS", "FAILURE", etc.
-                # Print progress every minute instead of every poll interval
-                current_time = time.time()
-                # if not hasattr(self, '_last_progress_print') or current_time - self._last_progress_print >= poll_interval * 30:
-                if self._last_progress_print is None or current_time - self._last_progress_print >= poll_interval * 30:
-                    # Print the progress time in minutes
-                    print("s3Zipper State:", state, "progress time:", progress_time/60, "minutes")
-                    self._last_progress_print = current_time
+            try:
+                # Build the payload
+                payload = {
+                    "chainTaskUUID": [
+                        {"streams3": task_uuid},
+                        {"email": ""}
+                    ]
+                }
+                resp = self._retryable_post(zip_state_url, payload, headers)
+            except requests.Timeout:
+                # Timeout counts as a failure attempt
+                failure_count = self._handle_failure_attempt(failure_count, max_failures, poll_interval)
+                # Check timeout after handling failure attempt
+                elapsed_time = time.time() - start_time
+                if elapsed_time > max_wait_seconds:
+                    raise RuntimeError(
+                        f"Zip process did not reach SUCCESS in {max_wait_seconds} seconds. "
+                        f"Elapsed: {elapsed_time:.0f}s. Failure count: {failure_count}"
+                    )
+                continue
+            except requests.RequestException as e:
+                raise RuntimeError(f"zipstate request failed: {e}")
 
-                if state == "SUCCESS":
-                    # Finished successfully
-                    return state_data
-                elif state == "FAILURE":
-                    # We will retry if we haven’t hit attempts limit
-                    # break
-                    progress_time = max_wait_seconds
-                    error_data = state_data.get("Error")
-                    print("Zip process failed.")
-                    print(error_data)
-                    continue
-                else:
-                    # Possibly "CREATING" or other statuses; wait then poll again
-                    time.sleep(poll_interval)
+            state_data = resp.json() if resp is not None else {}
+            state = state_data.get("State")
 
-                progress_time = time.time() - start_time
+            # Print progress every ~1 minute
+            current_time = time.time()
+            if self._last_progress_print is None or current_time - self._last_progress_print >= poll_interval * 30:
+                # Recalculate elapsed_time for accurate progress reporting
+                elapsed_time = time.time() - start_time
+                print(
+                    f"s3Zipper State: {state} | "
+                    f"Elapsed: {elapsed_time/60:.1f} minutes | "
+                    f"Max wait: {max_wait_seconds/60:.1f} minutes"
+                )
+                self._last_progress_print = current_time
 
-            # If we reach here, it means either FAILURE was returned or we timed out
-            attempts += 1
-            if attempts < 3:
-                print(f"Retrying zip process (attempt {attempts} of 3).")
+            if state == self.STATE_SUCCESS:
+                # Finished successfully
+                print("Zip process completed successfully!")
+                return state_data
+            elif state == self.STATE_FAILURE:
+                # Increment failure count and optionally retry
+                error_data = state_data.get("Error", "Unknown error")
+                failure_count = self._handle_failure_attempt(failure_count, max_failures, poll_interval, error_data)
+            elif state in [self.STATE_PENDING, self.STATE_RECEIVED, self.STATE_STARTED, self.STATE_RETRY]:
+                # These are intermediate states - continue polling
+                time.sleep(poll_interval)
             else:
-                raise RuntimeError(f"Zip process failed or timed out after {attempts} attempts.")
+                # Unknown state - log and continue polling
+                print(f"Unknown zip state: {state}. Continuing to poll...")
+                time.sleep(poll_interval)
 
-        # If we got here, we never saw SUCCESS in the allotted time or attempts
-        raise RuntimeError(f"Zip process did not reach SUCCESS in {max_wait_seconds} seconds.")
+            # Check overall timeout after handling all state cases
+            # This ensures we always attempt to get the state before failing on timeout
+            elapsed_time = time.time() - start_time
+            if elapsed_time > max_wait_seconds:
+                raise RuntimeError(
+                    f"Zip process did not reach SUCCESS in {max_wait_seconds} seconds. "
+                    f"Elapsed: {elapsed_time:.0f}s. Failure count: {failure_count}"
+                )
 
+        # If we exit the loop, we've reached max_failures without success
+        raise RuntimeError(
+            f"Zip process failed after {failure_count} attempts. "
+            f"Check logs for detailed error information."
+        )
 
 if __name__ == "__main__":
     import sys
@@ -405,3 +480,5 @@ if __name__ == "__main__":
 # time python3 load/S3ZipperService.py test etl-development-input '["etl-development-input/audio/ENGESV/ENGESVN2DA/B01___01_Matthew_____ENGESVN2DA.mp3"]'
 # time python3 load/S3ZipperService.py test dbp-staging '["dbp-staging/audio/ENGESV/ENGESVN2DA/B01___01_Matthew_____ENGESVN2DA.mp3"]'
 # time python3 load/S3ZipperService.py test dbp-vid-staging '["dbp-vid-staging/video/ENGESV/ENGESVP2DV/English_ESV_MRK_9-1-13.mp4"]'
+
+# time python3 load/S3ZipperService.py test dbp-vid-staging '["dbp-vid-staging/video/OBOCOV/OBOCOVS2DV/COVENANT_SEGMENT 01_Manobo-Obo_web.mp4", "dbp-vid-staging/video/OBOCOV/OBOCOVS2DV/COVENANT_SEGMENT 02_Manobo-Obo_web.mp4", "dbp-vid-staging/video/OBOCOV/OBOCOVS2DV/COVENANT_SEGMENT 03_Manobo-Obo_web.mp4", "dbp-vid-staging/video/OBOCOV/OBOCOVS2DV/COVENANT_SEGMENT 04_Manobo-Obo_web.mp4", "dbp-vid-staging/video/OBOCOV/OBOCOVS2DV/COVENANT_SEGMENT 05_Manobo-Obo_web.mp4", "dbp-vid-staging/video/OBOCOV/OBOCOVS2DV/COVENANT_SEGMENT 06_Manobo-Obo_web.mp4", "dbp-vid-staging/video/OBOCOV/OBOCOVS2DV/COVENANT_SEGMENT 07_Manobo-Obo_web.mp4", "dbp-vid-staging/video/OBOCOV/OBOCOVS2DV/COVENANT_SEGMENT 08_Manobo-Obo_web.mp4", "dbp-vid-staging/video/OBOCOV/OBOCOVS2DV/COVENANT_SEGMENT 09_Manobo-Obo_web.mp4", "dbp-vid-staging/video/OBOCOV/OBOCOVS2DV/COVENANT_SEGMENT 10_Manobo-Obo_web.mp4", "dbp-vid-staging/video/OBOCOV/OBOCOVS2DV/COVENANT_SEGMENT 11_Manobo-Obo_web.mp4", "dbp-vid-staging/video/OBOCOV/OBOCOVS2DV/COVENANT_SEGMENT 12_Manobo-Obo_web.mp4", "dbp-vid-staging/video/OBOCOV/OBOCOVS2DV/copyright_COV.pdf"]' s3zipper/python-test-complete-video.zip
