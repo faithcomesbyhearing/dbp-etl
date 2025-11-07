@@ -40,7 +40,26 @@ class AWSSession:
 
 
 	def elasticTranscoder(self):
-		return self._securityTokenService("elastictranscoder")
+		stsClient = self.session.client('sts')
+		print ("AWSSession. assume role arn: %s" % (self.config.s3_aws_role_arn) )
+		assumedRoleObject = stsClient.assume_role(
+			RoleArn = self.config.s3_aws_role_arn,
+		    RoleSessionName = "AssumeRoleSession2",
+			DurationSeconds = 3600
+		)
+		credentials = assumedRoleObject['Credentials']
+		botoConfig = BotoConfig()
+
+		client_args = {
+			'service_name': "elastictranscoder",
+			'aws_access_key_id': credentials['AccessKeyId'],
+			'aws_secret_access_key': credentials['SecretAccessKey'],
+			'aws_session_token': credentials['SessionToken'],
+			'region_name': self.config.video_transcoder_region,
+			'config': botoConfig
+		}
+		client = boto3.client(**client_args)
+		return client
 
 	def lambdaInvoker(self):
 		return self._securityTokenService("lambda")

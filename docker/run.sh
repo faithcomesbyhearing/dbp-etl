@@ -17,6 +17,7 @@ mysql.exe = /usr/bin/mysql
 node.exe = /usr/bin/node
 sofria_client.js =  /app/sofria-cli/biblebrain_uploader.js
 s3.aws_region = us-west-2
+s3.aws_role_arn = ${ASSUME_ROLE_ARN}
 s3.bucket = ${S3_BUCKET}
 s3.vid_bucket = ${S3_VID_BUCKET}
 s3.artifacts_bucket = ${S3_ARTIFACTS_BUCKET}
