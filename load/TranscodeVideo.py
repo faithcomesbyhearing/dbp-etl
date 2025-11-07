@@ -162,3 +162,5 @@ if (__name__ == '__main__'):
 
 
 # python3 load/DBPLoadController.py test s3://etl-development-input/ "ENGESVP2DV"
+
+# time python3 load/TranscodeVideo.py test s3://etl-development-input/ "ENGESVP2DV"
