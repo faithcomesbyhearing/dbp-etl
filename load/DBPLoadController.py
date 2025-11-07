@@ -229,8 +229,8 @@ class DBPLoadController:
 if (__name__ == '__main__'):
 	print("*** DBPLoadController *** ")
 	from LanguageReaderCreator import LanguageReaderCreator
-	config = Config()
-	AWSSession.shared() # ensure AWSSession init
+	config = Config.shared()
+	s3Client = AWSSession.shared().s3Client
 	db = SQLUtility(config)
 	migration_stage = os.getenv("DATA_MODEL_MIGRATION_STAGE", "B")
 	print("Migration Stage: %s " % migration_stage)
@@ -240,7 +240,7 @@ if (__name__ == '__main__'):
 		# load content will always point to BLIMP stage because the lpts.xml is no longer used
 		languageReader = LanguageReaderCreator("BLIMP").create("")
 		ctrl = DBPLoadController(config, db, languageReader)
-		InputFileset.validate = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
+		InputFileset.validate = InputProcessor.commandLineProcessor(config, s3Client, languageReader)
 		ctrl.repairAudioFileNames(InputFileset.validate)
 		ctrl.validate(InputFileset.validate)
 		hasError = False
@@ -405,3 +405,4 @@ if (__name__ == '__main__'):
 
 # time python3 load/DBPLoadController.py test s3://etl-development-input/ "audio/APDSWW/APDSWWP1DA"
 # time python3 load/DBPLoadController.py test s3://etl-development-input/ "ACECOVS2DV"
+# time python3 load/DBPLoadController.py test s3://etl-development-input/ "FANBSGP2DV"

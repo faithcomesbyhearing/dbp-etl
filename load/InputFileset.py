@@ -86,6 +86,14 @@ class InputFileset:
 		(".mp4",        "mp4"),
 	]
 
+	ECS_TRANSCODE_VIDEO_VARIANTS = [
+		("_av360p.mp4", "av360p_mp4"),
+		("_av480p.mp4", "av480p_mp4"),
+		("_av720p.mp4", "av720p_mp4"),
+		("_web.mp4",    "web_mp4"),
+		(".mp4",        "mp4"),
+	]
+
 	## These arrays are the 5 stages that an InputFileset must pass through
 	validate = []
 	upload = []
@@ -528,11 +536,9 @@ if (__name__ == '__main__'):
 	from InputProcessor import *	
 	from LanguageReaderCreator import LanguageReaderCreator
 
-	config = Config()
-	s3Client = AWSSession.shared().s3Client
-	session = boto3.Session(profile_name = config.s3_aws_profile)
-	s3Client = session.client('s3')
-	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
+	config = Config.shared()
+	languageReader = LanguageReaderCreator("BLIMP").create("")
+
 	InputFileset.validate = InputProcessor.commandLineProcessor(config, AWSSession.shared().s3Client, languageReader)
 	for inp in InputFileset.validate:
 		if inp.typeCode == "text" and inp.locationType == InputFileset.BUCKET:

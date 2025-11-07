@@ -6,6 +6,7 @@
 
 import os
 import subprocess
+import boto3
 from Log import *
 from Config import *
 from AWSSession import *
@@ -60,13 +61,14 @@ class S3Utility:
 
 	def uploadFileset(self, s3Bucket, inputFileset):
 		inp = inputFileset
-		profile = AWSSession.shared().role_profile()
+		# profile = AWSSession.shared().role_profile()
 		if inp.locationType == InputFileset.LOCAL:
 			source = inp.fullPath()
 		else:
 			source = "s3://%s" % (inp.fullPath())
 		target = "s3://%s/%s" % (s3Bucket, inp.filesetPrefix)
-		cmd = "aws %s s3 sync --acl bucket-owner-full-control \"%s\" \"%s\"" % (profile, source, target)
+		# cmd = "aws %s s3 sync --acl bucket-owner-full-control \"%s\" \"%s\"" % (profile, source, target)
+		cmd = "aws s3 sync --acl bucket-owner-full-control \"%s\" \"%s\"" % (source, target)
 		print("upload:", cmd)
 		response = subprocess.run(cmd, shell=True, stderr=subprocess.PIPE)
 		if response.returncode != 0:
@@ -74,7 +76,17 @@ class S3Utility:
 			return False
 		else:
 			if inp.filesetPrefix.startswith("video"):
-				TranscodeVideo.transcodeVideoFileset(self.config, inp.filesetPrefix, inp.s3FileKeys())
+				response = TranscodeVideo.transcodeVideoFileset(
+					self.config,
+					inp.filesetPrefix,
+					inp.s3FileKeys(),
+					sourceBucket=inp.location,
+					filesetPath=inp.filesetPath
+				)
+				if response is False:
+					Log.getLogger(inp.filesetId).message(Log.FATAL, "ERROR: Transcode of %s in %s failed." % (inp.filesetPrefix, s3Bucket))
+					return False
+
 			InputFileset.database.append(inp)
 			return True
 
@@ -92,14 +104,23 @@ class S3Utility:
 			- size:  ContentLength (int) if exists, else None
 		"""
 		try:
-			s3_client = AWSSession.shared().s3Client
-			resp = s3_client.head_object(Bucket=bucket, Key=key)
-			return True, resp.get('ContentLength')
+			s3_client = AWSSession.shared().session.client("s3")
+
+			response = s3_client.list_objects_v2(
+				Bucket=bucket,
+				Prefix=key,
+				MaxKeys=1
+			)
+
+			# Check if the exact key exists
+			if 'Contents' in response:
+				for obj in response['Contents']:
+					if obj['Key'] == key:
+						return True, obj['Size']
+
+			return False, None
 		except ClientError as e:
-			code = e.response['Error']['Code']
-			if code in ('404', 'NoSuchKey'):
-				return False, None
-			# re‑raise any other errors (permissions, networking, etc.)
+			# re‑raise any errors (permissions, networking, etc.)
 			raise
 
 if (__name__ == '__main__'):

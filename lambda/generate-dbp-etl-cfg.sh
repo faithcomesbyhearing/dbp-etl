@@ -70,6 +70,9 @@ lambda.zip.function = arn:aws:lambda:us-west-2:078432969830:function:transcoding
 lambda.zip.region = us-west-2
 lambda.zip.timeout = 900
 
+# biblebrain services
+biblebrain.services.base_url = ${BIBLEBRAIN_SERVICES_BASE_URL}
+
 [${PROFILE}]
 database.host = ${DATABASE_HOST}
 database.port = ${DATABASE_PORT}

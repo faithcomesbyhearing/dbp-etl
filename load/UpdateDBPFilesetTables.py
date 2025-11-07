@@ -142,8 +142,10 @@ class UpdateDBPFilesetTables:
 		# this is used to update the bible_fileset_tags table with the hashId
 		filesetList = []
 
-		if inp.typeCode in {"audio", "video"}:
+		if inp.typeCode in {"audio"}:
 			setTypeCode = inp.getSetTypeCode()
+			# The ECS transcoder will update the video tables and it will create the bible_files records. However,
+			# the method insertBibleFiles will check if the files already exist and will not duplicate them.
 			self.insertBibleFiles(dbConn, hashId, inputFileset, bookIdSet)
 			# For audio and video filesets, we need to update the bible_fileset_tags table with the hashId
 			filesetList.append((inp.bibleId, inp.filesetId, setTypeCode, None, None, hashId))
@@ -153,7 +155,19 @@ class UpdateDBPFilesetTables:
 			if inp.isDerivedFileset():
 				# We need to create a license group for the derived audio fileset
 				lptsDBP.updateBibleFilesetLicenseGroup(inp, hashId=hashId)
+		if inp.typeCode in {"video"}:
+			setTypeCode = inp.getSetTypeCode()
+			# The ECS transcoder will update the video tables and it will create the bible_files records. However,
+			# the method insertBibleFiles will check if the files already exist and will not duplicate them.
+			# self.insertBibleFiles(dbConn, hashId, inputFileset, bookIdSet)
+			# we need to update the bible_fileset_tags table with the hashId
+			filesetList.append((inp.bibleId, inp.filesetId, setTypeCode, None, None, hashId))
+			# update the bible_fileset_tags (product code) table with the new filesetId
+			lptsDBP.updateBibleProductCode(inp, hashId)
 
+			if inp.isDerivedFileset():
+				# We need to create a license group for the derived audio fileset
+				lptsDBP.updateBibleFilesetLicenseGroup(inp, hashId=hashId)
 		elif inp.typeCode == "text":
 			# text_plain is still stored in the database; no upload
 			if inp.subTypeCode() == "text_plain":
@@ -372,7 +386,7 @@ class UpdateDBPFilesetTables:
 
 		# Build a map of files by (book_id, chapter_start, suffix) to determine if a chapter is complete
 		map_files_by_chapter = self.map_files_by_book_chapter(input_fileset, InputFileset.VIDEO_VARIANTS)
-
+		video_variants = InputFileset.ECS_TRANSCODE_VIDEO_VARIANTS if self.config.transcoder_ecs_disabled is False else InputFileset.VIDEO_VARIANTS
 		with open(input_fileset.csvFilename, newline='\n') as csvfile:
 			reader = csv.DictReader(csvfile)
 			for row in reader:
@@ -380,30 +394,32 @@ class UpdateDBPFilesetTables:
 				base = row["file_name"]
 				prefix = input_fileset.filesetPrefix # e.g. "video/BIBLE_ID/FILESET_ID"
 
-				for suffix, ext_key in InputFileset.VIDEO_VARIANTS:
+				for suffix, ext_key in video_variants:
 					stem = base[:-4] if base.lower().endswith(".mp4") else base
 					filename = f"{stem}{suffix}"
-					s3_key  = f"{self.config.s3_vid_bucket}/{prefix}/{filename}"
 
-					exists, variant_file_size = s3.get_key_info(self.config.s3_vid_bucket, f"{prefix}/{filename}")
-					if not exists:
-						print(f"WARN: missing S3 key: {s3_key}")
-						continue
+					# s3_key  = f"{self.config.s3_vid_bucket}/{prefix}/{filename}"
+					# exists, variant_file_size = s3.get_key_info(self.config.s3_vid_bucket, f"{prefix}/{filename}")
+					# if not exists:
+					# 	print(f"WARN: missing S3 key: {s3_key}")
+					# 	continue
 
 					# We need to get the file size for web_mp4 and m3u8 from s3 because the csv file will have the size of the mp4 file
-					if ext_key == "mp4":
-						variant_file_size = f_size
+					# if ext_key == "mp4":
+					# 	variant_file_size = f_size
 
 					key = (row["book_id"], c_start, v_start, ext_key)
 					seen_keys.add(key)
 
 					dbp = dbp_map.get(key)
-					input_file = input_fileset.getInputFile(s3_key)
-					duration = getattr(input_file, "duration", None) or (dbp[4] if dbp else None)
+					# input_file = input_fileset.getInputFile(s3_key)
+					# duration = getattr(input_file, "duration", None) or (dbp[4] if dbp else None)
 					count_files_by_book_chapter = len(map_files_by_chapter.get((row["book_id"], c_start, suffix), []))
 					is_complete_chapter = 1 if count_files_by_book_chapter == 1 and "end" != row["chapter_start"] else 0
 
 					if not dbp:
+						duration = 0 
+						variant_file_size = 0 
 						inserts.append((
 							c_end, v_end, variant_file_size, duration, v_seq, is_complete_chapter,
 							hash_id, row["book_id"], c_start, v_start, filename
@@ -418,10 +434,10 @@ class UpdateDBPFilesetTables:
 							updates.append(("verse_end", v_end, dbp_v_end, hash_id, row["book_id"], c_start, v_start, dbp_filename))
 						if filename != dbp_filename:
 							updates.append(("file_name", filename, dbp_filename, hash_id, row["book_id"], c_start, v_start, dbp_filename))
-						if variant_file_size  != dbp_size:
-							updates.append(("file_size", variant_file_size, dbp_size, hash_id, row["book_id"], c_start, v_start, dbp_filename))
-						if duration != dpb_dur and duration != None and duration != "":
-							updates.append(("duration", duration, dpb_dur, hash_id, row["book_id"], c_start, v_start, dbp_filename))
+						# if variant_file_size  != dbp_size:
+						# 	updates.append(("file_size", variant_file_size, dbp_size, hash_id, row["book_id"], c_start, v_start, dbp_filename))
+						# if duration != dpb_dur and duration != None and duration != "":
+						# 	updates.append(("duration", duration, dpb_dur, hash_id, row["book_id"], c_start, v_start, dbp_filename))
 						if is_complete_chapter != dbp_is_complete_chapter and is_complete_chapter != None and is_complete_chapter != "":
 							updates.append(("is_complete_chapter", is_complete_chapter, dbp_is_complete_chapter, hash_id, row["book_id"], c_start, v_start, dbp_filename))
 

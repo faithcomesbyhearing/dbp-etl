@@ -16,7 +16,7 @@ class RunStatus:
 	MONDAY = "UpdateMonday"
 	BIBLE = "BIBLE"
 	LPTS = "LPTS"
-	ZIP_STARTED = "zipStarted"
+	ZIP_PROCESSING = "zipProcessing"
 	NOT_DONE = "not done"
 
 	start = time.time()

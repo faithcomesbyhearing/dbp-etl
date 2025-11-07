@@ -77,7 +77,7 @@ class UpdateDBPBibleFilesSecondary:
 				# Attempt to create a zip file with the complete files
 				zip_filename = f"{inp.filesetPrefix}/{inp.filesetId}.zip"
 				result = self.zipper_service.zip_files(self.config.s3_bucket, complete_files, zip_filename)
-				if result.get("State") != "SUCCESS":
+				if result.get("State") != S3ZipperService.STATE_SUCCESS:
 					logger.message(Log.EROR, f"Failure creating Zip: {result}")
 				else:
 					inp.addInputFile(zip_filename, 0)
@@ -101,14 +101,38 @@ class UpdateDBPBibleFilesSecondary:
 					f"Creating Zip for {book_id} with {len(files)} mp4 files in bucket {self.config.s3_vid_bucket}"
 				)
 
-				# Construct full S3 keys for each file, updating .mp4 filenames to include '_web'
-				# We can assume that the transcoder has already created the _web.mp4 files
-				# and they are in the same bucket as the original files.
-				# Example: "s3://bucket/prefix/file.mp4" becomes "s3://bucket/prefix/file_web.mp4"
-				complete_files = [
-					f"{self.config.s3_vid_bucket}/{inp.filesetPrefix}/{f[:-4] + '_web.mp4' if f.endswith('.mp4') else f}"
-					for f in files
-				]
+				# 1. Try _av720p.mp4 first (primary format from ECS transcoder)
+				# 2. Fall back to _web.mp4 (legacy format)
+				# 3. Warn if neither exists
+				complete_files = []
+
+				for f in files:
+					if not f.endswith('.mp4'):
+						# Non-video files
+						complete_files.append(f"{self.config.s3_vid_bucket}/{inp.filesetPrefix}/{f}")
+						continue
+
+					base_name = f[:-4]  # clean .mp4
+
+					# Try _av720p.mp4 first
+					av720p_key = f"{inp.filesetPrefix}/{base_name}_av720p.mp4"
+					exists_av720p, _ = s3.get_key_info(self.config.s3_vid_bucket, av720p_key)
+
+					if exists_av720p:
+						complete_files.append(f"{self.config.s3_vid_bucket}/{av720p_key}")
+					else:
+						# Fall back to _web.mp4
+						web_key = f"{inp.filesetPrefix}/{base_name}_web.mp4"
+						exists_web, _ = s3.get_key_info(self.config.s3_vid_bucket, web_key)
+
+						if exists_web:
+							# Using web (fallback)
+							complete_files.append(f"{self.config.s3_vid_bucket}/{web_key}")
+						else:
+							# format does not exist - print warning
+							print(f"\nWARN: Creating Zip Video File - Missing both formats:")
+							print(f"      - {av720p_key}")
+							print(f"      - {web_key}")
 
 				try:
 					# Attempt to fetch and upload the PDF for the filesetId
@@ -125,16 +149,6 @@ class UpdateDBPBibleFilesSecondary:
 					print(f"Uploaded PDF for fileset {inp.filesetId} → {package_id}.pdf")
 				except RuntimeError as e:
 					print(f"PDF step skipped for {inp.filesetId}: {e}")
-
-				# Validate that each S3 key exists in the video bucket.
-				# If the key does not exist, log a warning. However, the zip file creation should
-				# not fail if a file is missing and it should still proceed to create the zip file
-				# with the available files.
-				for s3key in complete_files:
-					key = s3key.split('/', 1)[1]
-					exists, _ = s3.get_key_info(self.config.s3_vid_bucket, key)
-					if not exists:
-						print(f"\nWARN: Creating Zip Video File - Missing s3 key: {key}")
 
 				try:
 					zip_filename = f"{inp.filesetPrefix}/{inp.filesetId}_{book_id}.zip"
@@ -290,7 +304,7 @@ if (__name__ == '__main__'):
 	config = Config.shared()
 	db = SQLUtility(config)
 	dbOut = SQLBatchExec(config)
-	languageReader = LanguageReaderCreator("B").create(config.filename_lpts_xml)
+	languageReader = LanguageReaderCreator("BLIMP").create("")
 	update = UpdateDBPBibleFilesSecondary(config, db, dbOut, languageReader)
 	s3Client = AWSSession.shared().s3Client
 
