@@ -172,6 +172,31 @@ class S3ZipperService:
         self.s3_client.delete_object(Bucket=bucket_name, Key=file_mapper_key)
         # print(f"Deleted fileMapper.json from s3://{bucket_name}/{file_mapper_key}")
 
+    def _change_zip_ownership(self, bucket_name, zip_key):
+        """
+        Changes the ownership of the zip file to the bucket owner by copying the object
+        to itself with the bucket-owner-full-control ACL.
+
+        This ensures the zip file is owned by the DBS bucket account instead of the
+        account that created it via S3Zipper.
+
+        :param bucket_name: S3 bucket name
+        :param zip_key: S3 key of the zip file
+        :return: None
+        :raises RuntimeError: If the copy operation fails
+        """
+        try:
+            self.s3_client.copy_object(
+                Bucket=bucket_name,
+                CopySource={'Bucket': bucket_name, 'Key': zip_key},
+                Key=zip_key,
+                ACL='bucket-owner-full-control',
+                MetadataDirective='REPLACE'
+            )
+            print(f"Changed ownership of zip file: s3://{bucket_name}/{zip_key}")
+        except Exception as e:
+            raise RuntimeError(f"Failed to change zip file ownership: {e}")
+
     def zip_files(self, bucket_name, file_paths, zip_output_prefix):
         """
         Create a zip of specified `file_paths` in `bucket_name` using s3zipper's /v2/zipstart endpoint
@@ -260,6 +285,8 @@ class S3ZipperService:
 
         if final_state.get("State") == self.STATE_SUCCESS:
             RunStatus.set(RunStatus.ZIP_PROCESSING, True)
+            # Change ownership of the zip file to the bucket owner
+            self._change_zip_ownership(bucket_name, zip_output_prefix)
         else:
             RunStatus.set(RunStatus.ZIP_PROCESSING, False)
 
