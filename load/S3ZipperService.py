@@ -5,7 +5,6 @@ from datetime import datetime, timezone
 from RunStatus import RunStatus
 from AWSSession import AWSSession
 
-
 # Global variable for the s3zipper base URL
 S3ZIPPER_BASE_URL = "https://api.s3zipper.com"
 MAX_WAIT_SECONDS = 10800  # 3 hours
@@ -181,41 +180,20 @@ class S3ZipperService:
         This ensures the zip file is owned by the DBS bucket account instead of the
         account that created it via S3Zipper.
 
-        Uses boto3's s3.meta.client.copy() which automatically handles multipart copy
-        for files larger than 5 GB without requiring manual size checking or implementation.
-
         :param bucket_name: S3 bucket name
         :param zip_key: S3 key of the zip file
         :return: None
         :raises RuntimeError: If the copy operation fails
         """
         try:
-            # Get the session from AWSSession to create an S3 resource
-            session = AWSSession.shared().session
-            s3_resource = session.resource('s3')
-
-            # Copy source configuration
-            copy_source = {
-                'Bucket': bucket_name,
-                'Key': zip_key
-            }
-
-            # Extra arguments for the copy operation
-            extra_args = {
-                'ACL': 'bucket-owner-full-control',
-                'MetadataDirective': 'REPLACE'
-            }
-
-            # Perform the copy - automatically handles multipart for files > 5 GB
-            s3_resource.meta.client.copy(
-                copy_source,
-                bucket_name,
-                zip_key,
-                ExtraArgs=extra_args
+            self.s3_client.copy_object(
+                Bucket=bucket_name,
+                CopySource={'Bucket': bucket_name, 'Key': zip_key},
+                Key=zip_key,
+                ACL='bucket-owner-full-control',
+                MetadataDirective='REPLACE'
             )
-
             print(f"Changed ownership of zip file: s3://{bucket_name}/{zip_key}")
-
         except Exception as e:
             raise RuntimeError(f"Failed to change zip file ownership: {e}")
 
