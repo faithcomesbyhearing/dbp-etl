@@ -1,0 +1,77 @@
+{
+	"name": "DBP ETL Python 3.12",
+	"dockerComposeFile": "docker-compose.yml",
+	"service": "dbp-etl",
+	"workspaceFolder": "/app",
+	// Configure tool-specific properties
+	"customizations": {
+		"vscode": {
+			// VS Code settings
+			"settings": {
+				// Python configuration
+				"python.defaultInterpreterPath": "/app/venv/bin/python",
+				"python.linting.enabled": true,
+				"python.linting.pylintEnabled": false,
+				"python.linting.flake8Enabled": true,
+				"python.formatting.provider": "black",
+				"python.formatting.blackPath": "/app/venv/bin/black",
+				"python.testing.unittestEnabled": true,
+				"python.testing.unittestArgs": [
+					"-v",
+					"-s",
+					"./load",
+					"-p",
+					"Test*.py"
+				],
+				// Editor settings
+				"editor.formatOnSave": true,
+				"editor.codeActionsOnSave": {
+					"source.organizeImports": "explicit"
+				},
+				"editor.rulers": [
+					100
+				],
+				"files.trimTrailingWhitespace": true,
+				"files.insertFinalNewline": true,
+				// Terminal settings - use login shell to source .profile
+				"terminal.integrated.defaultProfile.linux": "sh",
+				"terminal.integrated.profiles.linux": {
+					"sh": {
+						"path": "/bin/sh",
+						"args": [
+							"-l"
+						]
+					}
+				}
+			},
+			// VS Code extensions to install
+			"extensions": [
+				"ms-python.python",
+				"ms-python.vscode-pylance",
+				"ms-python.black-formatter",
+				"ms-azuretools.vscode-docker",
+				"redhat.vscode-yaml",
+				"ms-vscode.makefile-tools",
+				"streetsidesoftware.code-spell-checker"
+			]
+		}
+	},
+	// Features to add to the dev container
+	// Git is already installed in the Dockerfile via apk
+	"features": {},
+	// Post create command - run after container is created
+	"postCreateCommand": "sh /app/.devcontainer/post-create.sh",
+	// Run as vscode user (created automatically by DevContainers)
+	"remoteUser": "vscode",
+
+	// Container options to preserve file ownership
+	"containerEnv": {
+		"HOME": "/home/vscode"
+	},
+	// Environment variables
+	"remoteEnv": {
+		"VIRTUAL_ENV": "/app/venv",
+		"PYTHONPATH": "/app:/app/load",
+		"PATH": "/app/venv/bin:${containerEnv:PATH}"
+	}
+}
