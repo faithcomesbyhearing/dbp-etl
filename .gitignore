@@ -3,6 +3,7 @@
 *.log
 *.sql
 *.txt
+!requirements.txt
 Errors.out
 lpts-dbp.xml
 lambda/**/*.zip
@@ -10,3 +11,12 @@ lambda/**/dbp-etl.cfg
 .vscode/
 FilenameParser.out
 CLAUDE.md
+
+# Dev Container
+.devcontainer/.env
+.devcontainer/docker-compose.override.yml
+
+# Test data
+test_data/
+node_modules
+venv/

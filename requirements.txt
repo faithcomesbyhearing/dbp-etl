@@ -1,0 +1,5 @@
+boto3==1.40.53
+pymysql==1.1.2
+pytz==2025.2
+awscli==1.42.53
+requests==2.32.5

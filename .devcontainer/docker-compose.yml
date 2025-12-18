@@ -1,0 +1,117 @@
+version: '3.8'
+
+services:
+  # DBP ETL Service
+  dbp-etl:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+      args:
+        USER_ID: ${LOCAL_USER_ID:-1000}
+        GROUP_ID: ${LOCAL_GROUP_ID:-1000}
+    image: dbp-etl:dev
+    container_name: dbp-etl-dev
+
+    # Environment variables for ETL configuration
+    environment:
+      # Python Virtual Environment
+      VIRTUAL_ENV: /app/venv
+      PATH: /app/venv/bin:${PATH}
+
+      # Database Configuration
+      DATABASE_HOST: ${DATABASE_HOST:-mysql}
+      DATABASE_PORT: ${DATABASE_PORT:-3306}
+      DATABASE_DB_NAME: ${DATABASE_DB_NAME:-dbp}
+      DATABASE_USER: ${DATABASE_USER:-dbp_user}
+      DATABASE_PASSWD: ${DATABASE_PASSWD:-dbp_password}
+      DATABASE_USER_DB_NAME: ${DATABASE_USER_DB_NAME:-dbp_users}
+
+      # S3 Configuration
+      S3_BUCKET: ${S3_BUCKET:-etl-development-input}
+      S3_VID_BUCKET: ${S3_VID_BUCKET:-dbp-vid-staging}
+      S3_ARTIFACTS_BUCKET: ${S3_ARTIFACTS_BUCKET:-dbp-etl-artifacts}
+      S3_KEY_PREFIX: ${S3_KEY_PREFIX:-dev}
+      UPLOAD_BUCKET: ${UPLOAD_BUCKET:-etl-development-input}
+
+      # S3 Zipper Configuration
+      S3_ZIPPER_USER_KEY: ${S3_ZIPPER_USER_KEY}
+      S3_ZIPPER_USER_SECRET: ${S3_ZIPPER_USER_SECRET}
+
+      # AWS Credentials (will use mounted ~/.aws if not provided)
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_SESSION_TOKEN: ${AWS_SESSION_TOKEN}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-west-2}
+
+      # ECS Transcoder Configuration
+      TRANSCODER_ECS_DISABLED: ${TRANSCODER_ECS_DISABLED:-false}
+      TRANSCODER_ECS_CLUSTER_NAME: ${TRANSCODER_ECS_CLUSTER_NAME}
+      TRANSCODER_ECS_CONTAINER_NAME: ${TRANSCODER_ECS_CONTAINER_NAME}
+      TRANSCODER_ECS_PLACEMENT_SECURITY_GROUP: ${TRANSCODER_ECS_PLACEMENT_SECURITY_GROUP}
+      TRANSCODER_ECS_PLACEMENT_SUBNET: ${TRANSCODER_ECS_PLACEMENT_SUBNET}
+      TRANSCODER_ECS_TASK_DEFINITION: ${TRANSCODER_ECS_TASK_DEFINITION}
+
+      # Bible Brain Services
+      BIBLEBRAIN_SERVICES_BASE_URL: ${BIBLEBRAIN_SERVICES_BASE_URL:-https://api.biblebrain.com}
+
+      # Audio Transcoder
+      AUDIO_TRANSCODER_BASE_URL: ${AUDIO_TRANSCODER_BASE_URL}
+
+      # CDN Configuration
+      CDN_PARTNER_BASE: ${CDN_PARTNER_BASE}
+
+      # Monday.com Integration
+      MONDAY_COMPLETED_PRODUCT_CODE_API_KEY: ${MONDAY_COMPLETED_PRODUCT_CODE_API_KEY}
+      MONDAY_COMPLETED_PRODUCT_CODE_BOARD_ID: ${MONDAY_COMPLETED_PRODUCT_CODE_BOARD_ID}
+
+      # Data Migration Stage
+      DATA_MODEL_MIGRATION_STAGE: ${DATA_MODEL_MIGRATION_STAGE:-BLIMP}
+
+      # LPTS Upload Flag
+      LPTS_UPLOAD: ${LPTS_UPLOAD}
+
+    volumes:
+      # Mount entire project for full access and editing
+      - ..:/app:cached
+
+      # Mount AWS credentials (read-only) - will be accessible at $HOME/.aws
+      - ~/.aws:/home/vscode/.aws:rw
+
+      # Mount local config file if it exists - will be accessible at $HOME/dbp-etl.cfg
+      - ~/dbp-etl.cfg:/home/vscode/dbp-etl.cfg
+
+      # Persistent volume for EFS simulation (processing directories)
+      - etl-data:/efs
+
+      # Mount test data directory (optional)
+      - ${LOCAL_TEST_DATA:-../test_data}:/test_data:ro
+
+    # Keep container running for interactive use
+    # Override CMD to prevent automatic execution
+    command: sh /app/.devcontainer/entrypoint.sh
+
+    networks:
+      - dbp-network
+
+    # Allow container to access host machine services
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+    # Resource limits for development
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+
+networks:
+  dbp-network:
+    driver: bridge
+
+volumes:
+  # Persistent volume for ETL processing data
+  etl-data:
+    driver: local
