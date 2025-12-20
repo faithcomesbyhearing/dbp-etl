@@ -175,7 +175,7 @@ class UpdateDBPFilesetTables:
 				filesetList.append((inp.bibleId, inp.filesetId, inp.subTypeCode(), None, None, hashId))
 				lptsDBP.updateBibleFilesetLicenseGroup(inp, hashId=hashId)
 			elif inp.subTypeCode() in {"text_usx", "text_json"}:
-				## The below code assumes Sofria-client has run. bookIdSet comes from Sofria-client. 
+				## The below code assumes Sofria-client has run. bookIdSet comes from Sofria-client.
 				self.insertBibleFiles(dbConn, hashId, inputFileset, bookIdSet)
 				# For text_usx and text_json, we need to update the bible_fileset_tags table with the hashId
 				filesetList.append((inp.bibleId, inp.filesetId, inp.subTypeCode(), None, None, hashId))
@@ -191,7 +191,7 @@ class UpdateDBPFilesetTables:
 
 		tocBooks = self.booksUpdater.getTableOfContents(inp.typeCode, inp.bibleId, inp.filesetId, inp.csvFilename, inp.databasePath)
 		self.booksUpdater.updateBibleBooks(inp.typeCode, inp.bibleId, tocBooks)
-		
+
 		dbConn.close()
 		return hashId
 
@@ -314,9 +314,9 @@ class UpdateDBPFilesetTables:
 		insertRows, updateRows = [], []
 		dbpMap = {}
 		for row in existing_rows:
-			(dbpBookId, dbpChapterStart, dbpVerseStart, dbpChapterEnd, dbpVerseEnd, dbpFileName, dbpFileSize, dbpDuration, _) = row
+			(dbpBookId, dbpChapterStart, dbpVerseStart, dbpChapterEnd, dbpVerseEnd, dbpFileName, dbpFileSize, dbpDuration, dbpIsCompleteChapter) = row
 			key = (dbpBookId, dbpChapterStart, dbpVerseStart)
-			dbpMap[key] = (dbpChapterEnd, dbpVerseEnd, dbpFileName, dbpFileSize, dbpDuration)
+			dbpMap[key] = (dbpChapterEnd, dbpVerseEnd, dbpFileName, dbpFileSize, dbpDuration, dbpIsCompleteChapter)
 
 		# Build a map of files by (book_id, chapter_start, suffix) to determine if a chapter is complete
 		variants = [(".webm", "webm")] if input_fileset.isDerivedFileset() else [(".mp3", "mp3")]
@@ -345,7 +345,7 @@ class UpdateDBPFilesetTables:
 						hashId, row["book_id"], chapterStart, verseStart, fileName))
 				else:
 					del dbpMap[key]
-					(dbpChapterEnd, dbpVerseEnd, dbpFileName, dbpFileSize, dbpDuration) = dbpValue
+					(dbpChapterEnd, dbpVerseEnd, dbpFileName, dbpFileSize, dbpDuration, dbpIsCompleteChapter) = dbpValue
 					# primary keys: "hash_id", "book_id", "chapter_start", "verse_start"
 					if chapterEnd != dbpChapterEnd:
 						updateRows.append(("chapter_end", chapterEnd, dbpChapterEnd, hashId, row["book_id"], chapterStart, verseStart, dbpFileName))
@@ -357,6 +357,22 @@ class UpdateDBPFilesetTables:
 						updateRows.append(("file_size", fileSize, dbpFileSize, hashId, row["book_id"], chapterStart, verseStart, dbpFileName))
 					if duration != dbpDuration and duration != None and duration != "":
 						updateRows.append(("duration", duration, dbpDuration, hashId, row["book_id"], chapterStart, verseStart, dbpFileName))
+					if (
+						is_complete_chapter != dbpIsCompleteChapter
+						and is_complete_chapter is not None
+					):
+						updateRows.append(
+							(
+								"is_complete_chapter",
+								is_complete_chapter,
+								dbpIsCompleteChapter,
+								hashId,
+								row["book_id"],
+								chapterStart,
+								verseStart,
+								dbpFileName,
+							)
+						)
 
 		return (insertRows, updateRows, [])
 
@@ -418,8 +434,8 @@ class UpdateDBPFilesetTables:
 					is_complete_chapter = 1 if count_files_by_book_chapter == 1 and "end" != row["chapter_start"] else 0
 
 					if not dbp:
-						duration = 0 
-						variant_file_size = 0 
+						duration = 0
+						variant_file_size = 0
 						inserts.append((
 							c_end, v_end, variant_file_size, duration, v_seq, is_complete_chapter,
 							hash_id, row["book_id"], c_start, v_start, filename
@@ -543,7 +559,7 @@ class UpdateDBPFilesetTables:
 
 ## Unit Test
 if (__name__ == '__main__'):
-	from LanguageReaderCreator import LanguageReaderCreator	
+	from LanguageReaderCreator import LanguageReaderCreator
 	from InputProcessor import InputProcessor
 	from AWSSession import AWSSession
 	from DBPLoadController import DBPLoadController
@@ -574,3 +590,4 @@ if (__name__ == '__main__'):
 # time python3 load/UpdateDBPFilesetTables.py test s3://etl-development-input Spanish_N2SPNTLA_USX
 # time python3 load/UpdateDBPFilesetTables.py test s3://etl-development-input SPNBDAP2DV
 # time python3 load/UpdateDBPFilesetTables.py test s3://etl-development-input ENGESVN2DA
+# time python3 load/UpdateDBPFilesetTables.py test s3://etl-development-input KVQBSMN1DA
